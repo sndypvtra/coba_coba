@@ -39,16 +39,27 @@ TRACKER_DIR = Path(__file__).resolve().parent / "trackers"
 
 @dataclass
 class ClipConfig:
-    """Per-clip settings. Line coords are in source-video pixels."""
+    """Per-clip settings. Line geometry is in source-video pixels.
+
+    The counting line is not written down as two endpoints. It is built
+    perpendicular to ``motion`` - the belt's measured travel direction - and
+    then oriented so that travelling along ``motion`` always counts as IN.
+    That is the "look at where the conveyor is heading" rule, applied
+    automatically instead of hand-placed per clip.
+    """
 
     filename: str
     prompts: list[str]
     label: str  # single display/count label all prompts collapse into
     conf: float
-    line_start: tuple[int, int]
-    line_end: tuple[int, int]
+    line_center: tuple[int, int]
+    line_half_len: int
+    motion: tuple[float, float]  # median px/frame of tracked objects
     scene: str
     source_url: str
+    # an object must be held by the tracker this many frames before it is
+    # allowed to count - it has to be locked on well before it reaches the line
+    min_track_age: int = 6
     # drop boxes whose area exceeds this fraction of the frame (out-of-focus
     # foreground blobs that drift across the lens rather than ride the belt)
     max_box_area_frac: float = 0.12
@@ -58,16 +69,18 @@ class ClipConfig:
     roi_y: tuple[float, float] = (0.0, 1.0)
 
 
-# All three belts were measured with Farneback optical flow and move LEFT,
-# so every counting line is vertical and crossings accumulate in one direction.
+# `motion` is the median per-frame displacement of *tracked objects* (not raw
+# optical flow, which on these clips locks onto the rotating rollers rather than
+# the produce riding on them). Measured over 45-frame samples; see README.
 CLIPS: list[ClipConfig] = [
     ClipConfig(
         filename="01_oranges_production_line.mp4",
         prompts=["orange", "round orange fruit"],
         label="orange",
         conf=0.14,
-        line_start=(900, 260),
-        line_end=(900, 1030),
+        line_center=(900, 645),
+        line_half_len=385,
+        motion=(-3.21, 0.94),  # left, drifting slightly down
         scene="Citrus sorting line - oranges on roller conveyor",
         source_url="https://www.pexels.com/video/fruit-on-production-line-10576687/",
         max_box_area_frac=0.05,
@@ -77,8 +90,11 @@ CLIPS: list[ClipConfig] = [
         prompts=["tomato"],
         label="tomato",
         conf=0.13,
-        line_start=(1000, 200),
-        line_end=(1000, 770),
+        line_center=(1000, 485),
+        line_half_len=285,
+        # the belt recedes up-and-left, so the line tilts ~9.5 deg off vertical
+        # to sit square across the lane rather than parallel to the travel
+        motion=(-14.79, -2.47),
         scene="Tomato grading line - roller conveyor close-up",
         source_url="https://www.pexels.com/video/tomatoes-on-a-moving-conveyor-belt-8675102/",
         # the nearest lane sits well outside the depth of field; those tomatoes
@@ -93,8 +109,11 @@ CLIPS: list[ClipConfig] = [
         prompts=["cardboard box", "parcel", "plastic bag"],
         label="package",
         conf=0.22,
-        line_start=(1180, 380),
-        line_end=(1180, 900),
+        line_center=(1180, 640),
+        line_half_len=260,
+        # tracked median here is polluted by the stationary stack, so this uses
+        # the optical-flow direction for the belt itself: straight left
+        motion=(-1.52, 0.08),
         scene="Parcel unloading belt - mixed boxes, bags and parcels",
         source_url="https://www.pexels.com/video/unloading-packages-on-a-conveyor-belt-5370836/",
         max_box_area_frac=0.10,
@@ -103,6 +122,42 @@ CLIPS: list[ClipConfig] = [
         extra_notes="static pallet stack on the left is excluded by ROI",
     ),
 ]
+
+
+def build_counting_line(cfg: ClipConfig) -> tuple[sv.Point, sv.Point]:
+    """Build a line square across the belt, oriented so travel counts as IN.
+
+    Two steps:
+
+    1. *Perpendicular.* The line runs at 90 deg to ``motion``. A line parallel
+       to the travel direction would barely be crossed at all, so orientation
+       follows the belt rather than the frame axes.
+    2. *Inbound.* supervision counts IN when an object ends up on the side where
+       ``Vector.cross_product < 0`` (see ``LineZone._compute_anchor_sides``:
+       ``triggers = cross_product(...) < 0`` feeds ``tracker_state``, and
+       ``tracker_state`` True increments ``in_count``). Probing one step along
+       ``motion`` tells us which endpoint order lands on that side, so every
+       clip reports crossings as IN and never OUT.
+    """
+    cx, cy = cfg.line_center
+    mx, my = cfg.motion
+    norm = float(np.hypot(mx, my)) or 1.0
+    # unit normal to the direction of travel
+    px, py = -my / norm, mx / norm
+    a = (cx + px * cfg.line_half_len, cy + py * cfg.line_half_len)
+    b = (cx - px * cfg.line_half_len, cy - py * cfg.line_half_len)
+
+    # probe a point just past the line, in the direction the belt is heading
+    probe = (cx + mx / norm * 40.0, cy + my / norm * 40.0)
+
+    def cross(start, end, pt):
+        return (end[0] - start[0]) * (pt[1] - start[1]) - (end[1] - start[1]) * (
+            pt[0] - start[0]
+        )
+
+    if cross(a, b, probe) >= 0:  # would land on the OUT side -> flip
+        a, b = b, a
+    return sv.Point(int(a[0]), int(a[1])), sv.Point(int(b[0]), int(b[1]))
 
 PALETTE = sv.ColorPalette.from_hex(
     ["#FF3B30", "#FF9500", "#FFD60A", "#34C759", "#00C7BE", "#0A84FF", "#BF5AF2", "#FF2D55"]
@@ -118,14 +173,14 @@ class Hud:
         self.model_name = model_name
         self.total_frames = total_frames
 
-    def draw(self, frame, frame_idx, counts, per_class, active, unique_ids, ms):
+    def draw(self, frame, frame_idx, counts, per_class, active, unique_ids, ms, locked=0):
         h, w = frame.shape[:2]
         s = w / 1920.0  # scale everything off a 1080p reference
         pad = int(22 * s)
         line_h = int(34 * s)
 
         rows = [
-            (f"{self.cfg.label.upper()} COUNTED: {counts}", 1.05, (90, 255, 140)),
+            (f"{self.cfg.label.upper()} COUNTED (IN): {counts}", 1.05, (90, 255, 140)),
             (f"scene   : {self.cfg.scene}", 0.62, (235, 235, 235)),
             (f"model   : {self.model_name}  (zero-shot, text prompt)", 0.62, (235, 235, 235)),
             (f"prompts : {', '.join(self.cfg.prompts)}", 0.62, (150, 220, 255)),
@@ -138,9 +193,15 @@ class Hud:
                 (235, 235, 235),
             ),
             (
-                f"active tracks: {active}   unique IDs seen: {unique_ids}",
+                f"active tracks: {active}   locked [L]: {locked}"
+                f"   unique IDs seen: {unique_ids}",
                 0.62,
                 (235, 235, 235),
+            ),
+            (
+                f"counting rule: locked >= {self.cfg.min_track_age} frames, then crosses line",
+                0.62,
+                (150, 220, 255),
             ),
             (
                 f"frame {frame_idx}/{self.total_frames}   {ms:.0f} ms/frame",
@@ -253,9 +314,10 @@ def process(cfg: ClipConfig, args) -> dict:
     model.set_classes(cfg.prompts, model.get_text_pe(cfg.prompts))
     model_label = args.weights.replace(".pt", "")
 
+    line_a, line_b = build_counting_line(cfg)
     line = sv.LineZone(
-        start=sv.Point(*cfg.line_start),
-        end=sv.Point(*cfg.line_end),
+        start=line_a,
+        end=line_b,
         triggering_anchors=(sv.Position.CENTER,),
         minimum_crossing_threshold=2,
     )
@@ -271,13 +333,15 @@ def process(cfg: ClipConfig, args) -> dict:
     trace_ann = sv.TraceAnnotator(
         color=PALETTE, thickness=max(2, int(3 * scale)), trace_length=40, position=sv.Position.CENTER
     )
+    # every clip is oriented so travel across the line is IN, so OUT is always
+    # zero and is hidden rather than shown as a permanent "OUT: 0"
     line_ann = sv.LineZoneAnnotator(
         thickness=max(2, int(4 * scale)),
         color=sv.Color.from_hex("#FFD60A"),
         text_scale=0.9 * max(scale, 0.6),
         text_thickness=max(1, int(2 * scale)),
         custom_in_text="IN",
-        custom_out_text="OUT",
+        display_out_count=False,
     )
 
     hud = Hud(cfg, tracker_label, model_label, info.total_frames)
@@ -287,6 +351,7 @@ def process(cfg: ClipConfig, args) -> dict:
 
     per_class: dict[str, int] = {}
     unique_ids: set[int] = set()
+    track_age: dict[int, int] = {}  # frames each ID has been held by the tracker
     times: list[float] = []
     frames_written = 0
     total_dets = 0
@@ -336,12 +401,25 @@ def process(cfg: ClipConfig, args) -> dict:
                 tracked = det[np.zeros(len(det), dtype=bool)]
             if len(tracked):
                 unique_ids.update(int(t) for t in tracked.tracker_id)
+                for t in tracked.tracker_id:
+                    track_age[int(t)] = track_age.get(int(t), 0) + 1
 
-            crossed_in, crossed_out = line.trigger(tracked)
-            for flag_in, flag_out, name in zip(
-                crossed_in, crossed_out, tracked.data.get("class_name", [])
-            ):
-                if flag_in or flag_out:
+            # Maturity gate: an object is only eligible to be counted once the
+            # tracker has held the same ID for min_track_age frames. It must be
+            # picked up and locked on well before it reaches the line, so a
+            # flickering box that pops into existence on top of the line cannot
+            # register a crossing.
+            if len(tracked):
+                locked_mask = np.array(
+                    [track_age[int(t)] >= cfg.min_track_age for t in tracked.tracker_id]
+                )
+            else:
+                locked_mask = np.zeros(0, dtype=bool)
+            locked = tracked[locked_mask]
+
+            crossed_in, _ = line.trigger(locked)
+            for flag_in, name in zip(crossed_in, locked.data.get("class_name", [])):
+                if flag_in:
                     per_class[name] = per_class.get(name, 0) + 1
 
             annotated = draw_roi(frame.copy(), cfg, w, h)
@@ -350,38 +428,44 @@ def process(cfg: ClipConfig, args) -> dict:
                     annotated = mask_ann.annotate(annotated, tracked)
                 annotated = trace_ann.annotate(annotated, tracked)
                 annotated = box_ann.annotate(annotated, tracked)
+                # a locked track carries [L] - it is armed and will count on cross
                 labels = [
-                    f"#{int(tid)} {name} {conf:.2f}"
-                    for tid, name, conf in zip(
-                        tracked.tracker_id, tracked.data["class_name"], tracked.confidence
+                    f"#{int(tid)}{'[L]' if lock else ''} {name} {conf:.2f}"
+                    for tid, name, conf, lock in zip(
+                        tracked.tracker_id,
+                        tracked.data["class_name"],
+                        tracked.confidence,
+                        locked_mask,
                     )
                 ]
                 annotated = label_ann.annotate(annotated, tracked, labels)
 
             annotated = line_ann.annotate(annotated, line)
-            total = line.in_count + line.out_count
             annotated = hud.draw(
                 annotated,
                 idx,
-                total,
+                line.in_count,
                 per_class,
                 len(tracked),
                 len(unique_ids),
                 float(np.mean(times[-30:])),
+                len(locked),
             )
             sink.write_frame(annotated)
             frames_written += 1
 
             if frames_written % 50 == 0:
                 print(
-                    f"    frame {idx}/{info.total_frames} count={total} "
-                    f"active={len(tracked)} ids={len(unique_ids)} "
+                    f"    frame {idx}/{info.total_frames} IN={line.in_count} "
+                    f"active={len(tracked)} locked={len(locked)} ids={len(unique_ids)} "
                     f"{np.mean(times[-50:]):.0f}ms/f",
                     flush=True,
                 )
 
     cap.release()
-    total = line.in_count + line.out_count
+    # the line is oriented to the belt, so IN is the count and OUT should be 0;
+    # a non-zero OUT means the motion vector for this clip is wrong
+    total = line.in_count
     summary = {
         "video": cfg.filename,
         "scene": cfg.scene,
@@ -397,7 +481,10 @@ def process(cfg: ClipConfig, args) -> dict:
         "tracker": tracker_label,
         "count_total": int(total),
         "count_in": int(line.in_count),
-        "count_out": int(line.out_count),
+        "count_out_should_be_zero": int(line.out_count),
+        "line": [[line_a.x, line_a.y], [line_b.x, line_b.y]],
+        "motion_px_per_frame": list(cfg.motion),
+        "min_track_age": cfg.min_track_age,
         "per_class": per_class,
         "unique_track_ids": len(unique_ids),
         "avg_detections_per_frame": round(total_dets / max(frames_written, 1), 2),
@@ -405,7 +492,7 @@ def process(cfg: ClipConfig, args) -> dict:
         "notes": cfg.extra_notes,
     }
     print(
-        f"    DONE {out_path.name}  count={total} (in={line.in_count} out={line.out_count}) "
+        f"    DONE {out_path.name}  IN={line.in_count} (OUT={line.out_count}, want 0) "
         f"ids={len(unique_ids)} {np.mean(times):.0f}ms/f  "
         f"{out_path.stat().st_size/1e6:.1f}MB"
     )

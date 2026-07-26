@@ -22,15 +22,16 @@ tomatoes) and one parcel belt.
 Produced by `python src/conveyor_count.py` (CPU-only, 4 cores). Full numbers in
 [`output/summary.json`](output/summary.json).
 
-| Output clip | Scene | Prompts | Counted | Unique IDs | Frames |
-|---|---|---|---|---|---|
-| `01_oranges_production_line__counted.mp4` | Citrus sorting line | `orange`, `round orange fruit` | **4** | 23 | 286 |
-| `02_tomatoes_conveyor__counted.mp4` | Tomato grading line | `tomato` | **10** | 38 | 212 |
-| `03_packages_conveyor__counted.mp4` | Parcel unloading belt | `cardboard box`, `parcel`, `plastic bag` | see summary.json | | 511 |
+| Output clip | Scene | Prompts | Frames |
+|---|---|---|---|
+| `01_oranges_production_line__counted.mp4` | Citrus sorting line | `orange`, `round orange fruit` | 286 |
+| `02_tomatoes_conveyor__counted.mp4` | Tomato grading line | `tomato` | 212 |
+| `03_packages_conveyor__counted.mp4` | Parcel unloading belt | `cardboard box`, `parcel`, `plastic bag` | 511 |
 
-"Counted" is line crossings; "unique IDs" is every object the tracker ever held.
-They differ a lot on purpose — clip 1's belt moves ~1.2 px/frame, so in 9.5 s
-most detected oranges never reach the line. Crossings measure throughput past a
+Counts are in [`output/summary.json`](output/summary.json). "Counted" is line
+crossings by locked tracks; "unique IDs" is every object the tracker ever held.
+They differ a lot on purpose — clip 1's belt moves ~3 px/frame, so in 9.5 s most
+detected oranges never reach the line. Crossings measure throughput past a
 point, which is what a conveyor counter is for; unique IDs would measure
 "how much fruit appeared on screen".
 
@@ -62,11 +63,29 @@ Every clip is one `ClipConfig` in `src/conveyor_count.py`. Belt direction was
 measured with Farneback optical flow rather than eyeballed — all three belts run
 **left**, so all three counting lines are vertical.
 
-| Clip | conf | Line (x, y1→y2) | ROI | Note |
+| Clip | conf | Motion (px/frame) | Line tilt off vertical | ROI |
 |---|---|---|---|---|
-| oranges | 0.14 | 900, 260→1030 | full frame | slow belt (~1.2 px/frame) |
-| tomatoes | 0.13 | 1000, 200→770 | y < 0.70 | nearest lane is outside the depth of field; blurred tomatoes break identity, so they are excluded |
-| parcels | 0.22 | 1180, 380→900 | x > 0.34 | stationary pallet stack on the left is not belt traffic |
+| oranges | 0.14 | (−3.2, +0.9) | 16.4° | full frame |
+| tomatoes | 0.13 | (−14.8, −2.5) | 9.4° | y < 0.70 |
+| parcels | 0.22 | (−1.5, +0.1) | 3.0° | x > 0.34 |
+
+### Counting rules
+
+Two rules decide what becomes a count:
+
+**The line is built from the belt, not from the frame axes.** Each clip stores
+its measured `motion`, and `build_counting_line()` lays the line perpendicular
+to it, then orders the endpoints so travel along `motion` registers as **IN**.
+Every clip therefore reports IN only, and `OUT` is asserted to stay 0 — a
+non-zero OUT in `summary.json` means that clip's motion vector is wrong. A line
+parallel to the travel direction would hardly be crossed at all, which is why
+orientation follows the belt.
+
+**An object must be locked before it can count.** `min_track_age = 6`: the
+tracker has to hold the same ID for six consecutive frames before that object is
+eligible. Locked tracks are drawn with `[L]`. A box that flickers into existence
+on top of the line cannot register a crossing — it has to be acquired early,
+held, and only then counted as it passes.
 
 The ROI is drawn on the output as a dashed box, so what was and was not counted
 is visible rather than implied.
