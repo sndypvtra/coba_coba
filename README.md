@@ -22,11 +22,17 @@ tomatoes) and one parcel belt.
 Produced by `python src/conveyor_count.py` (CPU-only, 4 cores). Full numbers in
 [`output/summary.json`](output/summary.json).
 
-| Output clip | Scene | Prompts | Counted |
-|---|---|---|---|
-| `01_oranges_production_line__counted.mp4` | Citrus sorting line | `orange`, `round orange fruit` | see summary.json |
-| `02_tomatoes_conveyor__counted.mp4` | Tomato grading line | `tomato` | see summary.json |
-| `03_packages_conveyor__counted.mp4` | Parcel unloading belt | `cardboard box`, `parcel`, `plastic bag` | see summary.json |
+| Output clip | Scene | Prompts | Counted | Unique IDs | Frames |
+|---|---|---|---|---|---|
+| `01_oranges_production_line__counted.mp4` | Citrus sorting line | `orange`, `round orange fruit` | **4** | 23 | 286 |
+| `02_tomatoes_conveyor__counted.mp4` | Tomato grading line | `tomato` | **10** | 38 | 212 |
+| `03_packages_conveyor__counted.mp4` | Parcel unloading belt | `cardboard box`, `parcel`, `plastic bag` | see summary.json | | 511 |
+
+"Counted" is line crossings; "unique IDs" is every object the tracker ever held.
+They differ a lot on purpose — clip 1's belt moves ~1.2 px/frame, so in 9.5 s
+most detected oranges never reach the line. Crossings measure throughput past a
+point, which is what a conveyor counter is for; unique IDs would measure
+"how much fruit appeared on screen".
 
 Sources (Pexels, free for commercial use):
 [oranges](https://www.pexels.com/video/fruit-on-production-line-10576687/) ·
