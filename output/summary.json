@@ -1,0 +1,128 @@
+[
+  {
+    "video": "01_oranges_production_line.mp4",
+    "scene": "Citrus sorting line - oranges on roller conveyor",
+    "source_url": "https://www.pexels.com/video/fruit-on-production-line-10576687/",
+    "output": "01_oranges_production_line__counted.mp4",
+    "resolution": "1920x1080",
+    "fps": 30.0,
+    "frames_written": 286,
+    "model": "yoloe-11l-seg",
+    "prompts": [
+      "orange",
+      "round orange fruit"
+    ],
+    "conf": 0.14,
+    "imgsz": 1280,
+    "tracker": "TrackTrack (CVPR 2025) + ReID + GMC",
+    "count_total": 5,
+    "count_in": 5,
+    "count_out_should_be_zero": 0,
+    "line": [
+      [
+        1008,
+        1014
+      ],
+      [
+        791,
+        275
+      ]
+    ],
+    "motion_px_per_frame": [
+      -3.21,
+      0.94
+    ],
+    "min_track_age": 6,
+    "per_class": {
+      "orange": 5
+    },
+    "unique_track_ids": 23,
+    "avg_detections_per_frame": 6.74,
+    "avg_ms_per_frame": 1274.6,
+    "notes": ""
+  },
+  {
+    "video": "02_tomatoes_conveyor.mp4",
+    "scene": "Tomato grading line - roller conveyor close-up",
+    "source_url": "https://www.pexels.com/video/tomatoes-on-a-moving-conveyor-belt-8675102/",
+    "output": "02_tomatoes_conveyor__counted.mp4",
+    "resolution": "1920x1080",
+    "fps": 29.97,
+    "frames_written": 212,
+    "model": "yoloe-11l-seg",
+    "prompts": [
+      "tomato"
+    ],
+    "conf": 0.13,
+    "imgsz": 1280,
+    "tracker": "TrackTrack (CVPR 2025) + ReID + GMC",
+    "count_total": 10,
+    "count_in": 10,
+    "count_out_should_be_zero": 0,
+    "line": [
+      [
+        953,
+        766
+      ],
+      [
+        1046,
+        203
+      ]
+    ],
+    "motion_px_per_frame": [
+      -14.79,
+      -2.47
+    ],
+    "min_track_age": 6,
+    "per_class": {
+      "tomato": 10
+    },
+    "unique_track_ids": 38,
+    "avg_detections_per_frame": 7.17,
+    "avg_ms_per_frame": 1290.9,
+    "notes": "counts the in-focus lanes; blurred foreground lane excluded by ROI"
+  },
+  {
+    "video": "03_packages_conveyor.mp4",
+    "scene": "Parcel unloading belt - mixed boxes, bags and parcels",
+    "source_url": "https://www.pexels.com/video/unloading-packages-on-a-conveyor-belt-5370836/",
+    "output": "03_packages_conveyor__counted.mp4",
+    "resolution": "1920x1080",
+    "fps": 29.97,
+    "frames_written": 511,
+    "model": "yoloe-11l-seg",
+    "prompts": [
+      "cardboard box",
+      "parcel",
+      "plastic bag"
+    ],
+    "conf": 0.22,
+    "imgsz": 1280,
+    "tracker": "TrackTrack (CVPR 2025) + ReID + GMC",
+    "count_total": 5,
+    "count_in": 5,
+    "count_out_should_be_zero": 0,
+    "line": [
+      [
+        1193,
+        899
+      ],
+      [
+        1166,
+        380
+      ]
+    ],
+    "motion_px_per_frame": [
+      -1.52,
+      0.08
+    ],
+    "min_track_age": 6,
+    "per_class": {
+      "package": 5
+    },
+    "unique_track_ids": 21,
+    "avg_detections_per_frame": 7.41,
+    "avg_ms_per_frame": 1309.2,
+    "notes": "static pallet stack on the left is excluded by ROI"
+  }
+]
