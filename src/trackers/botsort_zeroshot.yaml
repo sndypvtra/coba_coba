@@ -1,0 +1,19 @@
+# BoT-SORT + ReID tuned for open-vocabulary / zero-shot detections.
+# Kept as a comparison baseline against tracktrack_zeroshot.yaml.
+
+tracker_type: botsort
+
+track_high_thresh: 0.22 # stock 0.25
+track_low_thresh: 0.06 # stock 0.1
+new_track_thresh: 0.28 # stock 0.25
+track_buffer: 45 # stock 30
+match_thresh: 0.8
+fuse_score: True
+
+gmc_method: sparseOptFlow
+
+proximity_thresh: 0.5
+appearance_thresh: 0.8
+# see tracktrack_zeroshot.yaml - "auto" is not usable with YOLOE seg heads
+with_reid: True
+model: weights/yolo11n-cls.pt

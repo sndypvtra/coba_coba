@@ -1,0 +1,13 @@
+# model weights (re-downloaded by scripts/fetch_assets.sh)
+weights/
+*.pt
+mobileclip_blt.ts
+
+# source clips (re-downloaded by scripts/fetch_assets.sh)
+videos/
+
+# runtime-resolved tracker configs
+output/.*_resolved.yaml
+
+__pycache__/
+*.pyc
