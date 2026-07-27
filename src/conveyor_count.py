@@ -131,7 +131,12 @@ CLIPS: list[ClipConfig] = [
     ),
     ClipConfig(
         filename="03_packages_conveyor.mp4",
-        prompts=["cardboard box", "parcel", "plastic bag"],
+        # "sports bag" is here because the black holdall on the belt was being
+        # missed entirely: against the first three prompts its best overlap with
+        # any box was IoU 0.01. It is fabric, so "plastic bag" never matched it.
+        # Adding this prompt finds it at conf 0.55 for +0.7 det/frame; a bare
+        # "bag" scores marginally higher but adds 2.4 det/frame of loose boxes.
+        prompts=["cardboard box", "parcel", "plastic bag", "sports bag"],
         label="package",
         # 0.22 -> 0.15 raises detections 8.4 -> 10.0/frame. Entry lag barely
         # responds here (0.559 -> 0.546) because the metric is dominated by the
