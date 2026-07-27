@@ -18,18 +18,36 @@ done
 # the first time YOLOE.get_text_pe() runs, into the working directory.
 
 echo "== source clips (Pexels, free for commercial use) =="
-# name|pexels-id|cdn-filename
+# Resolve the CDN file via the /download/ endpoint rather than guessing the
+# filename: resolutions are irregular (5532772 is uhd_2732_1440, 7012967 is
+# hd_1080_1350) and the HTML pages 403 to plain curl, but /download/ 302s
+# straight to the real asset.
+resolve () {
+  curl -sS -o /dev/null -w '%{redirect_url}' --max-time 30 \
+    "https://www.pexels.com/download/video/$1/"
+}
+
+# name|pexels-id
 clips=(
-  "01_oranges_production_line.mp4|10576687|10576687-hd_1920_1080_30fps.mp4"
-  "02_tomatoes_conveyor.mp4|8675102|8675102-hd_1920_1080_30fps.mp4"
-  "03_packages_conveyor.mp4|5370836|5370836-hd_1920_1080_30fps.mp4"
+  "01_oranges_production_line.mp4|10576687"
+  "02_tomatoes_conveyor.mp4|8675102"
+  "03_packages_conveyor.mp4|5370836"
+  "04_cans_canning_line_RAW.mp4|5532772"
+  "05_dough_bakery_line.mp4|6560778"
+  "06_chocolate_praline_line_RAW.mp4|7012967"
 )
 for row in "${clips[@]}"; do
-  IFS='|' read -r name id file <<<"$row"
+  IFS='|' read -r name id <<<"$row"
   [ -f "videos/$name" ] && { echo "  have $name"; continue; }
+  url=$(resolve "$id")
+  [ -z "$url" ] && { echo "  !! could not resolve pexels $id"; continue; }
   echo "  fetching $name (pexels $id)"
-  curl -sSL --fail -o "videos/$name" \
-    "https://videos.pexels.com/video-files/${id}/${file}"
+  curl -sSL --fail -o "videos/$name" "$url"
 done
+
+# Two clips need preparing before use (see README):
+#   04 cans      - downscaled 2732x1440 -> 1920x1012
+#   06 chocolate - trimmed to the continuous cooling-belt shot, frames 445-595
+python3 scripts/prepare_clips.py
 
 echo "done."

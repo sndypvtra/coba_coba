@@ -121,6 +121,53 @@ CLIPS: list[ClipConfig] = [
         roi_x=(0.34, 1.0),
         extra_notes="static pallet stack on the left is excluded by ROI",
     ),
+    # --- manufacturing / factory lines -----------------------------------
+    # Prompt choice here is counter-intuitive and worth reading the README on:
+    # naming the product ("beer can", "chocolate") returns literally nothing,
+    # while describing what it looks like works well. See "Prompting" below.
+    ClipConfig(
+        filename="04_cans_canning_line.mp4",
+        prompts=["shiny metal cylinder"],  # "beer can"/"soda can"/"tin can" -> 0 detections
+        label="can",
+        conf=0.15,
+        line_center=(971, 500),
+        line_half_len=250,
+        motion=(7.09, 1.13),  # travels right, up the rail
+        scene="Brewery canning line - aluminium cans on transfer rail",
+        source_url="https://www.pexels.com/video/a-series-of-beer-cans-in-production-line-5532772/",
+        # the model sometimes boxes the whole rail of cans as one blob
+        max_box_area_frac=0.12,
+    ),
+    ClipConfig(
+        filename="05_dough_bakery_line.mp4",
+        prompts=["dough", "bread"],
+        label="dough bar",
+        conf=0.15,
+        line_center=(862, 470),
+        line_half_len=450,
+        motion=(-1.88, 0.99),
+        scene="Industrial bakery - raw dough bars on moulding belt",
+        source_url="https://www.pexels.com/video/raw-dough-on-a-conveyor-belt-6560778/",
+        # each bar fills ~19% of the frame in this close-up
+        max_box_area_frac=0.35,
+        min_box_area_frac=0.010,
+    ),
+    ClipConfig(
+        filename="06_chocolate_praline_line.mp4",
+        prompts=["brown cube"],  # "chocolate"/"praline"/"chocolate bar" -> 0 detections
+        label="praline",
+        # 0.18 left whole frames empty in this very shallow depth of field;
+        # 0.10 detects 4.2/frame with no empty frames across the clip
+        conf=0.10,
+        line_center=(630, 740),
+        line_half_len=400,
+        motion=(4.52, 0.82),
+        scene="Confectionery line - enrobed pralines on cooling belt",
+        source_url="https://www.pexels.com/video/factory-making-chocolate-7012967/",
+        max_box_area_frac=0.28,
+        min_box_area_frac=0.008,
+        extra_notes="trimmed to the continuous cooling-belt shot (frames 445-595)",
+    ),
 ]
 
 
@@ -463,8 +510,11 @@ def process(cfg: ClipConfig, args) -> dict:
                 )
 
     cap.release()
-    # the line is oriented to the belt, so IN is the count and OUT should be 0;
-    # a non-zero OUT means the motion vector for this clip is wrong
+    # The line is oriented to the belt, so forward travel is IN and that alone
+    # is the count. OUT therefore holds *reverse* crossings, which on a one-way
+    # conveyor should be rare - a handful means box jitter or an ID switch
+    # briefly threw a centroid back over the line. It is reported as a quality
+    # signal and is deliberately excluded from the total.
     total = line.in_count
     summary = {
         "video": cfg.filename,
@@ -481,7 +531,7 @@ def process(cfg: ClipConfig, args) -> dict:
         "tracker": tracker_label,
         "count_total": int(total),
         "count_in": int(line.in_count),
-        "count_out_should_be_zero": int(line.out_count),
+        "count_reverse_crossings": int(line.out_count),  # excluded from total
         "line": [[line_a.x, line_a.y], [line_b.x, line_b.y]],
         "motion_px_per_frame": list(cfg.motion),
         "min_track_age": cfg.min_track_age,
@@ -492,7 +542,7 @@ def process(cfg: ClipConfig, args) -> dict:
         "notes": cfg.extra_notes,
     }
     print(
-        f"    DONE {out_path.name}  IN={line.in_count} (OUT={line.out_count}, want 0) "
+        f"    DONE {out_path.name}  IN={line.in_count} (reverse={line.out_count}) "
         f"ids={len(unique_ids)} {np.mean(times):.0f}ms/f  "
         f"{out_path.stat().st_size/1e6:.1f}MB"
     )

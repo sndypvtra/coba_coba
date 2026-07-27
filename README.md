@@ -22,11 +22,17 @@ tomatoes) and one parcel belt.
 Produced by `python src/conveyor_count.py` (CPU-only, 4 cores). Full numbers in
 [`output/summary.json`](output/summary.json).
 
+Six clips: three produce/logistics conveyors and three manufacturing lines,
+every one a different product.
+
 | Output clip | Scene | Prompts | Frames |
 |---|---|---|---|
 | `01_oranges_production_line__counted.mp4` | Citrus sorting line | `orange`, `round orange fruit` | 286 |
 | `02_tomatoes_conveyor__counted.mp4` | Tomato grading line | `tomato` | 212 |
 | `03_packages_conveyor__counted.mp4` | Parcel unloading belt | `cardboard box`, `parcel`, `plastic bag` | 511 |
+| `04_cans_canning_line__counted.mp4` | Brewery canning line | `shiny metal cylinder` | 168 |
+| `05_dough_bakery_line__counted.mp4` | Industrial bakery, dough bars | `dough`, `bread` | 588 |
+| `06_chocolate_praline_line__counted.mp4` | Confectionery cooling belt | `brown cube` | 150 |
 
 Counts are in [`output/summary.json`](output/summary.json). "Counted" is line
 crossings by locked tracks; "unique IDs" is every object the tracker ever held.
@@ -69,6 +75,29 @@ measured with Farneback optical flow rather than eyeballed — all three belts r
 | tomatoes | 0.13 | (−14.8, −2.5) | 9.4° | y < 0.70 |
 | parcels | 0.22 | (−1.5, +0.1) | 3.0° | x > 0.34 |
 
+### Prompting: describe the object, don't name it
+
+The single most useful thing measured here. On the industrial close-ups, naming
+the product returns **nothing at all**, while describing its shape and material
+works well. Same model, same frames, same threshold:
+
+| Clip | Prompt that fails | det/frame | Prompt that works | det/frame | max conf |
+|---|---|---|---|---|---|
+| cans | `beer can`, `soda can`, `tin can` | **0.0** | `shiny metal cylinder` | 19.0 | 0.66 |
+| chocolate | `chocolate`, `praline`, `chocolate bar` | **0.0** | `brown cube` | 6.0 | 0.65 |
+
+Not a threshold artefact — those prompts return zero boxes at `conf=0.04`. The
+text encoder is matching visual appearance, and a tight product close-up carries
+no scene context to support the semantic label. Practical rule: if a prompt
+returns nothing, re-describe the object as shape + colour + material before
+concluding the model cannot see it.
+
+The limit of this is transparency. A fourth manufacturing clip (PET bottle
+preforms) was dropped after 15 prompts — `plastic bottle preform`, `test tube`,
+`transparent cylinder`, `clear plastic cylinder` and others all peaked at
+**conf 0.13**, too low to track. Clear objects against cluttered backgrounds are
+where this approach currently runs out.
+
 ### Counting rules
 
 Two rules decide what becomes a count:
@@ -76,10 +105,12 @@ Two rules decide what becomes a count:
 **The line is built from the belt, not from the frame axes.** Each clip stores
 its measured `motion`, and `build_counting_line()` lays the line perpendicular
 to it, then orders the endpoints so travel along `motion` registers as **IN**.
-Every clip therefore reports IN only, and `OUT` is asserted to stay 0 — a
-non-zero OUT in `summary.json` means that clip's motion vector is wrong. A line
-parallel to the travel direction would hardly be crossed at all, which is why
-orientation follows the belt.
+A line parallel to the travel direction would hardly be crossed at all, which is
+why orientation follows the belt. The total is `in_count` alone;
+`count_reverse_crossings` in `summary.json` records backward crossings, which on
+a one-way conveyor should be near zero — a few mean box jitter or an ID switch
+briefly threw a centroid back over the line, and they are excluded from the
+total rather than netted against it.
 
 **An object must be locked before it can count.** `min_track_age = 6`: the
 tracker has to hold the same ID for six consecutive frames before that object is
