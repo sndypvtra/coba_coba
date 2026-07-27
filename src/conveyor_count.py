@@ -67,6 +67,11 @@ class ClipConfig:
     extra_notes: str = ""
     roi_x: tuple[float, float] = (0.0, 1.0)  # keep detections inside this x band
     roi_y: tuple[float, float] = (0.0, 1.0)
+    # per-clip tracker gate overrides, measured with src/tune_thresholds.py.
+    # Opening these lets a track spawn from the weak, partly-cropped detection
+    # an object gives off as it enters frame, instead of waiting until it is
+    # fully inside. How much they help is clip-specific - see README.
+    tracker_overrides: dict = field(default_factory=dict)
 
 
 # `motion` is the median per-frame displacement of *tracked objects* (not raw
@@ -77,7 +82,17 @@ CLIPS: list[ClipConfig] = [
         filename="01_oranges_production_line.mp4",
         prompts=["orange", "round orange fruit"],
         label="orange",
-        conf=0.14,
+        # 0.14 -> 0.095: lifts detections 5.9 -> 7.0/frame and pulls median
+        # entry lag 0.303 -> 0.276. Going lower (0.063) barely moved lag again
+        # but nearly doubled track count, i.e. fragments not earlier pickups.
+        conf=0.095,
+        min_track_age=4,
+        tracker_overrides={
+            "track_high_thresh": 0.16,
+            "track_low_thresh": 0.04,
+            "new_track_thresh": 0.20,
+            "min_track_len": 2,
+        },
         line_center=(900, 645),
         line_half_len=385,
         motion=(-3.21, 0.94),  # left, drifting slightly down
@@ -89,7 +104,17 @@ CLIPS: list[ClipConfig] = [
         filename="02_tomatoes_conveyor.mp4",
         prompts=["tomato"],
         label="tomato",
-        conf=0.13,
+        # the clip that actually responds to tuning: 0.13 -> 0.059 with opened
+        # gates cuts median entry lag 0.326 -> 0.203 and more than doubles the
+        # share of objects acquired within 15% of the edge (21% -> 50%)
+        conf=0.059,
+        min_track_age=3,
+        tracker_overrides={
+            "track_high_thresh": 0.12,
+            "track_low_thresh": 0.03,
+            "new_track_thresh": 0.15,
+            "min_track_len": 2,
+        },
         line_center=(1000, 485),
         line_half_len=285,
         # the belt recedes up-and-left, so the line tilts ~9.5 deg off vertical
@@ -108,7 +133,18 @@ CLIPS: list[ClipConfig] = [
         filename="03_packages_conveyor.mp4",
         prompts=["cardboard box", "parcel", "plastic bag"],
         label="package",
-        conf=0.22,
+        # 0.22 -> 0.15 raises detections 8.4 -> 10.0/frame. Entry lag barely
+        # responds here (0.559 -> 0.546) because the metric is dominated by the
+        # stationary pallet stack, which is present from frame 1 and never
+        # "enters" - belt items are already picked up close to the right edge.
+        conf=0.15,
+        min_track_age=4,
+        tracker_overrides={
+            "track_high_thresh": 0.16,
+            "track_low_thresh": 0.04,
+            "new_track_thresh": 0.20,
+            "min_track_len": 2,
+        },
         line_center=(1180, 640),
         line_half_len=260,
         # tracked median here is polluted by the stationary stack, so this uses
@@ -326,11 +362,12 @@ def filter_detections(det: sv.Detections, cfg: ClipConfig, w: int, h: int) -> sv
     return det[keep]
 
 
-def resolve_tracker_cfg(name: str) -> Path:
-    """Rewrite the tracker YAML with an absolute ReID weight path.
+def resolve_tracker_cfg(name: str, overrides: dict | None = None, tag: str = "") -> Path:
+    """Rewrite the tracker YAML with an absolute ReID path and clip overrides.
 
     Ultralytics resolves a relative ``model:`` against the working directory, so
     the checked-in relative path only works when run from the project root.
+    ``overrides`` carries the per-clip gate tuning from ClipConfig.
     """
     import yaml
 
@@ -339,7 +376,9 @@ def resolve_tracker_cfg(name: str) -> Path:
     reid = cfg.get("model")
     if reid and reid != "auto" and not Path(reid).is_absolute():
         cfg["model"] = str((ROOT / reid).resolve())
-    dst = OUTPUT_DIR / f".{name}_resolved.yaml"
+    if overrides:
+        cfg.update(overrides)
+    dst = OUTPUT_DIR / f".{name}{('_' + tag) if tag else ''}_resolved.yaml"
     dst.parent.mkdir(parents=True, exist_ok=True)
     dst.write_text(yaml.safe_dump(cfg, sort_keys=False))
     return dst
@@ -351,7 +390,7 @@ def process(cfg: ClipConfig, args) -> dict:
     w, h = info.width, info.height
     scale = w / 1920.0
 
-    tracker_cfg = resolve_tracker_cfg(args.tracker)
+    tracker_cfg = resolve_tracker_cfg(args.tracker, cfg.tracker_overrides, cfg.filename[:2])
     tracker_label = {
         "tracktrack": "TrackTrack (CVPR 2025) + ReID + GMC",
         "botsort": "BoT-SORT + ReID + GMC",
