@@ -94,13 +94,14 @@
     "prompts": [
       "cardboard box",
       "parcel",
-      "plastic bag"
+      "plastic bag",
+      "sports bag"
     ],
     "conf": 0.15,
     "imgsz": 1280,
     "tracker": "TrackTrack (CVPR 2025) + ReID + GMC",
-    "count_total": 6,
-    "count_in": 6,
+    "count_total": 7,
+    "count_in": 7,
     "count_reverse_crossings": 0,
     "line": [
       [
@@ -118,11 +119,11 @@
     ],
     "min_track_age": 4,
     "per_class": {
-      "package": 6
+      "package": 7
     },
-    "unique_track_ids": 23,
-    "avg_detections_per_frame": 8.4,
-    "avg_ms_per_frame": 1426.1,
+    "unique_track_ids": 24,
+    "avg_detections_per_frame": 8.95,
+    "avg_ms_per_frame": 1412.1,
     "notes": "static pallet stack on the left is excluded by ROI"
   },
   {
