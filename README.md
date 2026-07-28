@@ -1,4 +1,16 @@
-# Conveyor Counting — Zero-Shot Detection + Tracking + Supervision
+# Conveyor Vision — Zero-Shot Counting + Fill-Level Measurement
+
+Two pipelines share this repo:
+
+- **Conveyor counting** (`src/conveyor_count.py`) — counts objects crossing a
+  line, from text prompts only. Three clips, documented below.
+- **LiquidLevel-Vision** (`src/liquid_level.py`) — segments product inside a
+  bottle on a filling line and estimates how much went in. See the section at
+  the end.
+
+---
+
+## Conveyor Counting — Zero-Shot Detection + Tracking + Supervision
 
 Counting and classifying objects on conveyor belts **without training a single
 class**. Objects are found from plain-English text prompts, given stable IDs by
@@ -201,3 +213,64 @@ output/                                rendered .mp4 results + summary.json
 - Encoding is `mp4v` — this sandbox has no ffmpeg/H.264 encoder, so the files
   are MPEG-4 Part 2. Plays in VLC/QuickTime; re-encode if you need H.264.
 - CPU-only: ~1.3 s/frame at `imgsz=1280`. On a GPU this is real-time territory.
+
+
+---
+
+# LiquidLevel-Vision
+
+Measures how much liquid a filling machine puts into a bottle, from video alone.
+
+    python src/liquid_level.py --capacity-ml 500
+    python src/liquid_level.py --detect        # overlay live YOLOE segmentation
+
+Source: [Pexels 8720278](https://www.pexels.com/video/empty-bottles-in-a-filling-machine-8720278/),
+inline filler, clear bottles, amber product. Output:
+`output/07_bottle_filling__liquid.mp4`, series in `output/liquid_level_summary.json`.
+
+## How it measures
+
+**Segmentation is by saturation, not hue.** Calibrated from pixel statistics
+rather than guessed: product sits at S~255, while the shiny conveyor (S~36-55)
+and the empty glass (S~8-60) overlap the product's *hue* almost exactly. Hue
+alone cannot separate them; `S>=150` can.
+
+**Volume is integrated, not read off as a height.** The product fills the
+bottle's cross-section, so the mask's width at each row *is* the internal
+diameter there. Volume is the disc stack `sum pi*(w(y)/2)^2`. This matters: at
+the end of the clip the bottle is **81.1% full by height but 90.0% by volume**,
+because the body is wider than the neck. A height reading would under-report the
+fill by nine points.
+
+**The ROI is anchored, not detected per frame.** YOLOE does find the bottles
+(`transparent bottle`, conf 0.78, masks included) but on clear plastic its boxes
+wander 194-328 px and swap between neighbouring bottles — a fill series built on
+them jumped 5% → 60% → 46% and was meaningless. Template matching showed the
+bottle itself moves **7 px** across the whole fill cycle, so the ROI is measured
+once and micro-aligned per frame. `--detect` overlays the live detector so you
+can see it running and judge that call yourself.
+
+**The denominator is fixed in a first pass.** Learning the bottle profile while
+also reporting fractions against it makes the series non-monotonic — an early
+version reported 72% fill on the frame where product first appeared, because the
+capacity it was dividing by was only the sliver of bottle wetted so far.
+
+## What the numbers mean
+
+| Reported | Status |
+|---|---|
+| fill fraction by volume | **measured** |
+| fill fraction by height | **measured** |
+| millilitres | **assumed capacity x measured fraction** |
+
+`--capacity-ml` is not observable from the video. The fill *fraction* is real;
+millilitres are that fraction scaled by whatever capacity you supply. Pass the
+real SKU capacity and the number means something; the 500 mL default is
+illustrative. Disc integration also assumes a solid of revolution — true for
+these round bottles, false for a flask or a rectangular jerrycan.
+
+Residual limits worth knowing: the fill series still dips up to 5.3% frame to
+frame while the surface is turbulent under the nozzle, and the ROI clips a
+little of the bottle's base bulge, so the profile is slightly truncated. Both
+affect the fraction only mildly because numerator and denominator are measured
+the same way, but neither is zero.
