@@ -32,9 +32,6 @@ clips=(
   "01_oranges_production_line.mp4|10576687"
   "02_tomatoes_conveyor.mp4|8675102"
   "03_packages_conveyor.mp4|5370836"
-  "04_cans_canning_line_RAW.mp4|5532772"
-  "05_dough_bakery_line.mp4|6560778"
-  "06_chocolate_praline_line_RAW.mp4|7012967"
 )
 for row in "${clips[@]}"; do
   IFS='|' read -r name id <<<"$row"
@@ -44,10 +41,5 @@ for row in "${clips[@]}"; do
   echo "  fetching $name (pexels $id)"
   curl -sSL --fail -o "videos/$name" "$url"
 done
-
-# Two clips need preparing before use (see README):
-#   04 cans      - downscaled 2732x1440 -> 1920x1012
-#   06 chocolate - trimmed to the continuous cooling-belt shot, frames 445-595
-python3 scripts/prepare_clips.py
 
 echo "done."

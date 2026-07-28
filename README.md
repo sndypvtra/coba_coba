@@ -22,17 +22,11 @@ tomatoes) and one parcel belt.
 Produced by `python src/conveyor_count.py` (CPU-only, 4 cores). Full numbers in
 [`output/summary.json`](output/summary.json).
 
-Six clips: three produce/logistics conveyors and three manufacturing lines,
-every one a different product.
-
 | Output clip | Scene | Prompts | Frames |
 |---|---|---|---|
 | `01_oranges_production_line__counted.mp4` | Citrus sorting line | `orange`, `round orange fruit` | 286 |
 | `02_tomatoes_conveyor__counted.mp4` | Tomato grading line | `tomato` | 212 |
-| `03_packages_conveyor__counted.mp4` | Parcel unloading belt | `cardboard box`, `parcel`, `plastic bag` | 511 |
-| `04_cans_canning_line__counted.mp4` | Brewery canning line | `shiny metal cylinder` | 168 |
-| `05_dough_bakery_line__counted.mp4` | Industrial bakery, dough bars | `dough`, `bread` | 588 |
-| `06_chocolate_praline_line__counted.mp4` | Confectionery cooling belt | `brown cube` | 150 |
+| `03_packages_conveyor__counted.mp4` | Parcel unloading belt | `cardboard box`, `parcel`, `plastic bag`, `sports bag` | 511 |
 
 Counts are in [`output/summary.json`](output/summary.json). "Counted" is line
 crossings by locked tracks; "unique IDs" is every object the tracker ever held.
@@ -65,38 +59,84 @@ per-clip `conf` values below were chosen rather than guessed.
 
 ## How each clip is configured
 
-Every clip is one `ClipConfig` in `src/conveyor_count.py`. Belt direction was
-measured with Farneback optical flow rather than eyeballed — all three belts run
-**left**, so all three counting lines are vertical.
+Every clip is one `ClipConfig` in `src/conveyor_count.py`. Belt direction is
+measured from tracked-object displacement, not eyeballed. All three belts run
+left, so all three lines sit near-vertical — but each is tilted to be square to
+its own belt rather than to the frame.
 
-| Clip | conf | Motion (px/frame) | Line tilt off vertical | ROI |
-|---|---|---|---|---|
-| oranges | 0.14 | (−3.2, +0.9) | 16.4° | full frame |
-| tomatoes | 0.13 | (−14.8, −2.5) | 9.4° | y < 0.70 |
-| parcels | 0.22 | (−1.5, +0.1) | 3.0° | x > 0.34 |
-
-### Prompting: describe the object, don't name it
-
-The single most useful thing measured here. On the industrial close-ups, naming
-the product returns **nothing at all**, while describing its shape and material
-works well. Same model, same frames, same threshold:
-
-| Clip | Prompt that fails | det/frame | Prompt that works | det/frame | max conf |
+| Clip | conf | min_track_age | Motion (px/frame) | Line tilt off vertical | ROI |
 |---|---|---|---|---|---|
-| cans | `beer can`, `soda can`, `tin can` | **0.0** | `shiny metal cylinder` | 19.0 | 0.66 |
-| chocolate | `chocolate`, `praline`, `chocolate bar` | **0.0** | `brown cube` | 6.0 | 0.65 |
+| oranges | 0.095 | 4 | (−3.2, +0.9) | 16.4° | full frame |
+| tomatoes | 0.059 | 3 | (−14.8, −2.5) | 9.4° | y < 0.70 |
+| parcels | 0.15 | 4 | (−1.5, +0.1) | 3.0° | x > 0.34 |
 
-Not a threshold artefact — those prompts return zero boxes at `conf=0.04`. The
-text encoder is matching visual appearance, and a tight product close-up carries
-no scene context to support the semantic label. Practical rule: if a prompt
-returns nothing, re-describe the object as shape + colour + material before
-concluding the model cannot see it.
+### Threshold tuning is clip-specific, and often not the answer
 
-The limit of this is transparency. A fourth manufacturing clip (PET bottle
-preforms) was dropped after 15 prompts — `plastic bottle preform`, `test tube`,
-`transparent cylinder`, `clear plastic cylinder` and others all peaked at
-**conf 0.13**, too low to track. Clear objects against cluttered backgrounds are
-where this approach currently runs out.
+`src/tune_thresholds.py` measures **entry lag**: how far into the frame an object
+travels before the pipeline locks onto it. 0.00 means caught at the edge, 0.30
+means it was already 30% across. Lowering `conf` and opening the tracker gates
+helps one clip a lot and the other two barely at all:
+
+| Clip | entry lag before → after | acquired within 15% of edge | verdict |
+|---|---|---|---|
+| tomatoes | 0.326 → **0.203** | 21% → **50%** | real win |
+| oranges | 0.303 → 0.276 | 22% → 15% | mostly fragments |
+| parcels | 0.559 → 0.546 | 20% → 17% | no effect |
+
+On the oranges, dropping `conf` 2.2× nearly doubled the track count while the
+share acquired early *fell* — the extra detections were fragments of objects
+already tracked, not earlier pickups, so the settings were left moderate.
+
+The parcels number is a measurement artefact worth knowing about: that clip's
+entry lag is dominated by the **stationary pallet stack**, which is present from
+frame 1 and never "enters" the frame at all. Belt items are in fact acquired
+close to the right edge. A latency metric over all tracks quietly measures the
+furniture unless static objects are excluded.
+
+### Prompting: the prompt list defines what exists
+
+The most useful thing measured here, and the easiest way to get a silently wrong
+count. **An object type nobody named is not missed — it is invisible.** Nothing
+in the output flags it.
+
+The parcel belt is the live example. It ran for several passes with
+`cardboard box`, `parcel`, `plastic bag`, and a black holdall sat on the belt
+undetected the whole time: against those three prompts its best overlap with any
+predicted box was **IoU 0.01**. It is fabric, so `plastic bag` never matched it.
+It was not a threshold, ROI or size problem — the bag sits inside the ROI, fills
+~1.5% of frame, and stayed invisible even at `conf=0.04`.
+
+What fixed it is not what you would guess. Measured against the bag's true box:
+
+| Prompt | IoU | conf |
+|---|---|---|
+| `sports bag` | 0.81 | 0.56 |
+| `duffel bag` | 0.81 | 0.41 |
+| `holdall` | 0.81 | 0.46 |
+| `black object` | 0.00 | — |
+| `luggage` | 0.00 | — |
+
+`black object` is an accurate description and finds nothing; `holdall` is an
+obscure word and works. What matters is how close the phrase sits to a concrete
+object category, not how correctly it describes the thing.
+
+The same effect showed up on two manufacturing clips that have since been
+removed from this repo: `beer can`/`soda can`/`tin can` returned **0.0**
+det/frame on a canning line where `shiny metal cylinder` returned 19.0 at
+conf 0.66, and `chocolate`/`praline`/`chocolate bar` returned **0.0** on a
+confectionery belt where `brown cube` returned 6.0 at conf 0.65.
+
+Two rules that follow:
+
+1. Build the prompt list from an inventory of what can travel the belt, not from
+   whatever happens to be visible in the frames you calibrate on.
+2. If a prompt returns nothing, try neighbouring nouns and a shape/colour/material
+   description before concluding the model cannot see the object.
+
+The limit is transparency. A PET bottle-preform clip was dropped after 15
+prompts — `plastic bottle preform`, `test tube`, `transparent cylinder`,
+`clear plastic cylinder` and others all peaked at **conf 0.13**, too low to
+track. Clear objects on cluttered backgrounds are where this runs out.
 
 ### Counting rules
 
