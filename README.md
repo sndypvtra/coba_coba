@@ -357,11 +357,29 @@ The measurement is provably untouched by this — it reads identically before an
 after (67.4% volume / 74.4% height / ~1011 mL, no dip, worst jump 2.3%), because
 the level comes from the strict mask and the volume integrates the bore.
 
-**Residual:** the rods and probe themselves stay unshaded, which is correct —
-they are in front of the bottle, not liquid. Product genuinely spilled on the
-conveyor does get shaded, and it inflates the learned bore slightly at the lowest
-rows; that is only partly cancelled by using the same profile in numerator and
-denominator. A polygonal ROI following the bottle silhouette would fix it.
+**The ROI is a silhouette, not a rectangle.** A rectangle cannot express a
+bottle: it necessarily takes in conveyor at the base corners, where product
+spilled on the belt was both shading the overlay outside the bottle and inflating
+the learned bore at the lowest rows. `BOTTLE_OUTLINE` is eight hand-measured
+`(y, x_left, x_right)` points, interpolated between — the camera is fixed, so a
+measured outline is exact and costs nothing. Final reading moved 1011 → 1006 mL
+once the spill stopped counting.
+
+**Residual:** the rods and probe stay unshaded, which is correct — they sit in
+front of the bottle and are not liquid.
+
+## Readout panel
+
+Built for a portfolio proof-of-concept, so the panel states results rather than
+narrating the implementation: a headline volume and fill percentage, then a short
+spec table (nominal capacity, level height, reference datum, frame) and a two-item
+colour legend. The earlier version printed internal notes on the frame —
+thresholds, occlusion caveats, ROI behaviour — which belong in this README, not on
+a demo reel.
+
+Nominal capacity is a parameter (`--capacity-ml`, default 1500). What the vision
+measures is the **fill fraction**; the millilitre figure is that fraction against
+the capacity you configure for the SKU.
 
 **The ROI is anchored, not detected per frame.** YOLOE does find the bottles
 (`transparent bottle`, conf 0.78, masks included) but on clear plastic its boxes

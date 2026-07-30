@@ -120,6 +120,46 @@ LIQUID_LO_SHADOW = (13, 95, 90)
 # one, so colour cannot separate them - only position can.
 SURFACE_BAND = (700, 890)
 
+# Bottle silhouette, (y, x_left, x_right), read off the frame and interpolated
+# between. The camera is fixed, so a hand-measured outline is exact and cheap.
+# A rectangular ROI cannot express a bottle: it necessarily includes conveyor at
+# the base corners, where product spilled on the belt was both shading the
+# overlay outside the bottle and inflating the learned bore at the lowest rows.
+BOTTLE_OUTLINE = [
+    (585, 620, 1000),
+    (650, 618, 1005),
+    (700, 620, 1005),
+    (800, 612, 1012),
+    (900, 628, 1000),
+    (960, 650, 975),
+    (1010, 690, 935),
+    (1029, 720, 900),
+]
+
+
+def bottle_silhouette(shape: tuple[int, int]) -> np.ndarray:
+    """Boolean mask of the bottle interior, interpolated from BOTTLE_OUTLINE."""
+    h, w = shape
+    ys = np.array([p[0] for p in BOTTLE_OUTLINE], dtype=float)
+    xl = np.array([p[1] for p in BOTTLE_OUTLINE], dtype=float)
+    xr = np.array([p[2] for p in BOTTLE_OUTLINE], dtype=float)
+    sil = np.zeros((h, w), dtype=bool)
+    rows = np.arange(int(ys.min()), min(int(ys.max()) + 1, h))
+    left = np.interp(rows, ys, xl).astype(int)
+    right = np.interp(rows, ys, xr).astype(int)
+    for y, a, b in zip(rows, left, right):
+        sil[y, max(a, 0):min(b, w)] = True
+    return sil
+
+
+_SIL_CACHE: dict[tuple[int, int], np.ndarray] = {}
+
+
+def silhouette_for(shape: tuple[int, int]) -> np.ndarray:
+    if shape not in _SIL_CACHE:
+        _SIL_CACHE[shape] = bottle_silhouette(shape)
+    return _SIL_CACHE[shape]
+
 
 def liquid_mask(frame: np.ndarray, roi: tuple[int, int, int, int]) -> np.ndarray:
     """Segment product inside the ROI, keeping only the base-anchored pool."""
@@ -131,6 +171,7 @@ def liquid_mask(frame: np.ndarray, roi: tuple[int, int, int, int]) -> np.ndarray
 
     inside = np.zeros_like(m)
     inside[y1:y2, x1:x2] = m[y1:y2, x1:x2]
+    inside[~silhouette_for(m.shape)] = 0   # nothing outside the bottle counts
 
     # Liquid rests on the base, so keep EVERY component that reaches the lower
     # quarter - not just the largest. The machine's rods and probe cross the
@@ -174,6 +215,7 @@ def display_mask(frame: np.ndarray, roi: tuple[int, int, int, int],
     m = cv2.morphologyEx(m, cv2.MORPH_CLOSE, np.ones((25, 25), np.uint8))
     band = np.zeros_like(m)
     band[ysurf:y2, x1:x2] = m[ysurf:y2, x1:x2]
+    band[~silhouette_for(m.shape)] = 0
 
     n, lab, _, _ = cv2.connectedComponentsWithStats((band > 0).astype(np.uint8), 8)
     out = strict.copy()
@@ -571,6 +613,79 @@ def main():
           f"~{summary['final_estimated_ml']:.0f} mL (assumed {args.capacity_ml:.0f} mL bottle)")
 
 
+def _text(img, s, org, scale, colour, weight=1, font=cv2.FONT_HERSHEY_SIMPLEX):
+    cv2.putText(img, s, org, font, scale, colour, weight, cv2.LINE_AA)
+
+
+def _text_right(img, s, right_x, y, scale, colour, weight=1,
+                font=cv2.FONT_HERSHEY_SIMPLEX):
+    (w, _), _ = cv2.getTextSize(s, font, scale, weight)
+    cv2.putText(img, s, (right_x - w, y), font, scale, colour, weight, cv2.LINE_AA)
+
+
+# panel palette
+INK = (238, 238, 238)      # primary text
+MUTED = (162, 162, 162)    # labels
+ACCENT = (120, 240, 170)   # headline figure
+RULE = (78, 78, 78)        # dividers
+PRODUCT = (215, 0, 190)    # product overlay
+STREAM = (255, 205, 60)    # dispensing stream overlay
+
+
+def draw_panel(vis, frac, level_h, ml, cap_ml, idx, total):
+    """Readout panel. Deliberately plain: a headline figure, then a spec table."""
+    pad = 26
+    w, h = 470, 384
+    ov = vis.copy()
+    cv2.rectangle(ov, (pad, pad), (pad + w, pad + h), (16, 18, 20), -1)
+    cv2.addWeighted(ov, 0.78, vis, 0.22, 0, vis)
+    cv2.rectangle(vis, (pad, pad), (pad + w, pad + h), (58, 62, 66), 1)
+    cv2.line(vis, (pad, pad), (pad, pad + h), ACCENT, 3)
+
+    left, right = pad + 22, pad + w - 22
+    y = pad + 42
+    _text(vis, "LiquidLevel-Vision", (left, y), 0.72, INK, 1, cv2.FONT_HERSHEY_DUPLEX)
+    y += 26
+    _text(vis, "Automated fill-volume inspection", (left, y), 0.5, MUTED)
+    y += 22
+    cv2.line(vis, (left, y), (right, y), RULE, 1)
+
+    # headline figures
+    y += 62
+    _text(vis, f"{ml:,.0f}", (left, y), 1.55, ACCENT, 2, cv2.FONT_HERSHEY_DUPLEX)
+    (nw, _), _ = cv2.getTextSize(f"{ml:,.0f}", cv2.FONT_HERSHEY_DUPLEX, 1.55, 2)
+    _text(vis, "mL", (left + nw + 10, y), 0.66, MUTED, 1)
+    _text_right(vis, f"{frac*100:.1f}%", right, y, 1.1, INK, 2, cv2.FONT_HERSHEY_DUPLEX)
+    y += 24
+    _text(vis, "DISPENSED", (left, y), 0.44, MUTED)
+    _text_right(vis, "OF CAPACITY", right, y, 0.44, MUTED)
+
+    y += 20
+    cv2.line(vis, (left, y), (right, y), RULE, 1)
+
+    rows = [
+        ("Nominal capacity", f"{cap_ml:,.0f} mL"),
+        ("Level height", f"{level_h*100:.1f} %"),
+        ("Reference datum", "base to thread line"),
+        ("Frame", f"{idx} / {total}"),
+    ]
+    y += 30
+    for label, value in rows:
+        _text(vis, label, (left, y), 0.5, MUTED)
+        _text_right(vis, value, right, y, 0.52, INK)
+        y += 27
+
+    # legend
+    y += 6
+    cv2.line(vis, (left, y), (right, y), RULE, 1)
+    y += 24
+    cv2.rectangle(vis, (left, y - 10), (left + 14, y + 2), PRODUCT, -1)
+    _text(vis, "product", (left + 22, y), 0.46, MUTED)
+    cv2.rectangle(vis, (left + 130, y - 10), (left + 144, y + 2), STREAM, -1)
+    _text(vis, "dispensing stream", (left + 152, y), 0.46, MUTED)
+    return vis
+
+
 def render(frame, roi, mask, surface, frac, level_h, ml, cap_ml, idx, total, model):
     vis = frame.copy()
     x1, y1, x2, y2 = roi
@@ -581,59 +696,33 @@ def render(frame, roi, mask, surface, frac, level_h, ml, cap_ml, idx, total, mod
         if d.mask is not None:
             for m in d.mask:
                 b = m.astype(bool)
-                vis[b] = (0.82 * vis[b] + 0.18 * np.array([255, 255, 0])).astype(np.uint8)
+                vis[b] = (0.86 * vis[b] + 0.14 * np.array([255, 255, 0])).astype(np.uint8)
 
     mask = display_mask(frame, roi, surface, mask)
 
-    # Split the mask at the surface: what is counted vs what is falling.
-    # Magenta = standing liquid (measured). Dim cyan = the jet, excluded.
+    # Product below the surface is what is measured; the stream above it is not.
     b = mask > 0
     ysurf = y1 + surface if surface is not None else y2
     pool = np.zeros_like(b)
     pool[ysurf:, :] = b[ysurf:, :]
-    jet = b & ~pool
-    vis[jet] = (0.6 * vis[jet] + 0.4 * np.array([255, 220, 0])).astype(np.uint8)
-    vis[pool] = (0.45 * vis[pool] + 0.55 * np.array([255, 0, 220])).astype(np.uint8)
+    stream = b & ~pool
+    vis[stream] = (0.68 * vis[stream] + 0.32 * np.array(STREAM)).astype(np.uint8)
+    vis[pool] = (0.5 * vis[pool] + 0.5 * np.array(PRODUCT)).astype(np.uint8)
 
-    cv2.rectangle(vis, (x1, y1), (x2, y2), (0, 255, 0), 3)
     if surface is not None:
-        cv2.line(vis, (x1 - 25, ysurf), (x2 + 25, ysurf), (0, 255, 255), 4)
-        cv2.putText(vis, "LEVEL", (x2 + 32, ysurf + 8), cv2.FONT_HERSHEY_SIMPLEX, 0.8,
-                    (0, 255, 255), 2, cv2.LINE_AA)
-    if jet.any():
-        cv2.putText(vis, "jet excluded", (x1 - 10, y1 - 14), cv2.FONT_HERSHEY_SIMPLEX,
-                    0.7, (255, 220, 0), 2, cv2.LINE_AA)
+        cv2.line(vis, (x1 - 18, ysurf), (x2 + 18, ysurf), (90, 240, 255), 2, cv2.LINE_AA)
+        _text(vis, f"{level_h*100:.0f}%", (x2 + 26, ysurf + 6), 0.62, (90, 240, 255), 1)
 
-    # vertical gauge
-    gx = x2 + 120
-    cv2.rectangle(vis, (gx, y1), (gx + 46, y2), (230, 230, 230), 2)
-    fh = int((y2 - y1) * frac)
-    cv2.rectangle(vis, (gx + 3, y2 - fh), (gx + 43, y2 - 3), (0, 200, 255), -1)
+    # fill gauge
+    gx, gw = x2 + 96, 34
+    cv2.rectangle(vis, (gx, y1), (gx + gw, y2), (70, 74, 78), 1)
+    fh = int((y2 - y1 - 4) * frac)
+    cv2.rectangle(vis, (gx + 2, y2 - 2 - fh), (gx + gw - 2, y2 - 2), ACCENT, -1)
+    for q in (0.25, 0.5, 0.75):
+        ty = int(y2 - (y2 - y1) * q)
+        cv2.line(vis, (gx + gw + 4, ty), (gx + gw + 12, ty), RULE, 1)
 
-    panel = [
-        (f"FILL {frac*100:5.1f}%  ~{ml:.0f} mL", 1.15, (90, 255, 140)),
-        (f"volume fraction (disc integration)  {frac*100:.1f}%", 0.62, (235, 235, 235)),
-        (f"height fraction                     {level_h*100:.1f}%", 0.62, (235, 235, 235)),
-        (f"capacity {cap_ml:.0f} mL = filled to thread line  <- ASSUMED", 0.62, (150, 220, 255)),
-        ("rods occlude the mask but not the volume:", 0.62, (185, 185, 185)),
-        ("volume integrates the bore below the level", 0.62, (185, 185, 185)),
-        ("surface = topmost row spanning >=45% of bore", 0.62, (150, 220, 255)),
-        ("falling jet excluded from the measurement", 0.62, (255, 220, 0)),
-        ("ROI anchored: bottle moves only 7 px", 0.62, (235, 235, 235)),
-        (f"frame {idx}/{total}", 0.62, (185, 185, 185)),
-    ]
-    pad, lh = 22, 34
-    bw, bh = 780, pad * 2 + lh * len(panel)
-    ov = vis.copy()
-    cv2.rectangle(ov, (pad, pad), (pad + bw, pad + bh), (18, 18, 18), -1)
-    cv2.addWeighted(ov, 0.62, vis, 0.38, 0, vis)
-    cv2.rectangle(vis, (pad, pad), (pad + bw, pad + bh), (90, 255, 140), 2)
-    yy = pad + int(lh * 0.95)
-    for t, s, c in panel:
-        cv2.putText(vis, t, (pad + 18, yy), cv2.FONT_HERSHEY_SIMPLEX, s, c,
-                    3 if s > 1 else 2, cv2.LINE_AA)
-        yy += lh
-    return vis
+    return draw_panel(vis, frac, level_h, ml, cap_ml, idx, total)
 
 
 if __name__ == "__main__":
