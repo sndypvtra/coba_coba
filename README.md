@@ -257,6 +257,20 @@ Two follow-on faults surfaced while fixing it:
   rather than measurement. Nothing is extrapolated now: 100% is the fullest
   level actually reached in the clip, which is also the industrially meaningful
   datum since a filler targets a level at the shoulder, not the brim.
+- *Splash written into the bore, which then invited the level to climb into it.*
+  Reported as "at the end it jumps to the top and joins the pool at the base".
+  Three separate faults fed it, each found by printing the learned bore rather
+  than trusting it: the bore was learned from **any** wide row, so a turbulent
+  sheet under the nozzle was recorded as bore — at the datum row the "bore" was
+  **41 px against a real 282 px**, a tall thin column that both inflated the
+  reference and gave the surface a low bar to clear. The bore is now learned
+  only from the run of rows that reaches the base, so a sheet separated from the
+  pool cannot enter it. Second, `pool_surface` compared against
+  `max(bore, 1.0)`, so above the known bore it compared against **1 px** and
+  passed on anything; rows with no measured bore are now rejected outright.
+  Third, a wave crest can still connect to the pool through a thin neck, so any
+  learned bore under 30% of the widest is discarded as implausible — no bottle
+  bore narrows that far inside its fillable body.
 
 **Volume is integrated over the bore, not the mask.** Below the surface the
 bottle is full, so the true cross-section is the bore; a narrower mask is glare

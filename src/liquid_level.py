@@ -83,6 +83,9 @@ TEMPLATE_BOX = (640, 520, 900, 640)
 # runs 7-11 px; the shallowest pool is 80+. Used only to learn the bore, where a
 # ratio test cannot be applied yet because the bore is what is being measured.
 JET_MAX_WIDTH_PX = 40.0
+# Rows whose learned bore falls below this fraction of the widest bore are
+# treated as never observed. See bottle_profile for why.
+BORE_MIN_FRACTION = 0.30
 
 LIQUID_LO = (13, 150, 120)
 LIQUID_HI = (30, 255, 255)
@@ -138,6 +141,36 @@ POOL_MIN_RATIO = 0.45
 POOL_GAP_TOLERANCE = 10
 
 
+def pool_top_absolute(widths: np.ndarray, gap_tol: int = 6) -> int | None:
+    """Top of the contiguous pool, using an absolute width cut.
+
+    Used to learn the bore, where no bore is known yet so no ratio test is
+    possible. Contiguity is what excludes splash: a turbulent sheet under the
+    nozzle can be as wide as the pool, but it is separated from it by a narrow
+    band, so a run that must reach the base cannot include it.
+
+    Without this the bore was learned from splash. At the topmost row it
+    accepted, the recorded bore was 41 px against a real bore of 282 px - and
+    because the ratio test then compared later splashes against that tiny value,
+    the surface climbed into the splash region near the end of the fill. Exactly
+    the "level jumps to the top and joins the base pool" symptom.
+    """
+    wide = widths >= JET_MAX_WIDTH_PX
+    if not wide.any():
+        return None
+    y = int(np.where(wide)[0].max())  # lowest wide row = the base
+    top, gap = y, 0
+    while y >= 0:
+        if wide[y]:
+            top, gap = y, 0
+        else:
+            gap += 1
+            if gap > gap_tol:
+                break
+        y -= 1
+    return top
+
+
 def pool_surface(widths: np.ndarray, profile: np.ndarray) -> int | None:
     """Row index of the liquid surface, walking up from the base.
 
@@ -154,11 +187,16 @@ def pool_surface(widths: np.ndarray, profile: np.ndarray) -> int | None:
     lit = np.where(widths > 0)[0]
     if len(lit) == 0:
         return None
+    # A row with no measured bore cannot qualify. Guarding this matters: the
+    # ratio test used max(bore, 1.0), so above the known bore it compared
+    # against 1 px and passed on anything, letting the surface climb into rows
+    # the liquid had never reached and reporting a datum with bore = 0.
+    known = profile > 0
     ref = np.maximum(profile, 1.0)
     y = int(lit.max())  # lowest lit row = the base
     surface, gap = None, 0
     while y >= 0:
-        if widths[y] >= POOL_MIN_RATIO * ref[y]:
+        if known[y] and widths[y] >= POOL_MIN_RATIO * ref[y]:
             surface, gap = y, 0
         else:
             gap += 1
@@ -181,7 +219,7 @@ def liquid_volume(surface: int | None, profile: np.ndarray) -> float:
     return float(np.sum(np.pi * (profile[surface:] / 2.0) ** 2))
 
 
-def bottle_profile(observed: np.ndarray) -> tuple[np.ndarray, int]:
+def bottle_profile(observed: np.ndarray) -> np.ndarray:
     """Bore width per row, measured only. Returns (profile, reference_row).
 
     Earlier versions extrapolated the unwetted neck up to a hand-read mouth
@@ -200,11 +238,10 @@ def bottle_profile(observed: np.ndarray) -> tuple[np.ndarray, int]:
     prof = observed.copy()
     known = np.where(prof > 0)[0]
     if len(known) == 0:
-        return prof, len(prof) - 1
-    ref_row = int(known.min())
-    # fill any interior holes so the disc stack has no gaps
+        return prof
+    top = int(known.min())
     idx = np.arange(len(prof))
-    body = slice(ref_row, len(prof))
+    body = slice(top, len(prof))
     seg = prof[body]
     holes = seg <= 0
     if holes.any() and (~holes).any():
@@ -212,8 +249,22 @@ def bottle_profile(observed: np.ndarray) -> tuple[np.ndarray, int]:
         prof[body] = seg
     k = 15
     sm = np.convolve(prof, np.ones(k) / k, mode="same")
-    sm[:ref_row] = 0.0          # never observed -> contributes nothing
-    return sm, ref_row
+    sm[:top] = 0.0
+
+    # Trim the top of the learned bore where it is implausibly narrow. Even with
+    # contiguity, a wave crest can connect to the pool by a thin neck and get
+    # recorded as bore - the datum ended up on a row whose "bore" was 41 px
+    # against a real bore of 282 px, a tall thin column that both inflated the
+    # reference and gave the surface somewhere to climb. A real bottle's bore
+    # does not drop below ~30% of its widest point inside the fillable body.
+    floor = BORE_MIN_FRACTION * float(sm.max())
+    ok = sm >= floor
+    if ok.any():
+        y = int(np.where(ok)[0].max())
+        while y >= 0 and ok[y]:
+            y -= 1
+        sm[: y + 1] = 0.0
+    return sm
 
 
 def main():
@@ -266,18 +317,17 @@ def main():
         n_seen += 1
         roi = roi_for(frame)
         widths = row_widths(liquid_mask(frame, roi), roi)
-        # Learn the bore with an absolute cut, not a ratio: a ratio against the
-        # frame's own max penalises rows where the bore is genuinely narrower
-        # (the base taper, and the static rod), which previously truncated the
-        # learned profile to the bottom 40% of the bottle.
-        keep = np.where(widths >= JET_MAX_WIDTH_PX, widths, 0.0)
-        k = min(len(keep), len(max_profile))
-        max_profile[:k] = np.maximum(max_profile[:k], keep[:k])
-    prof, ref_row = bottle_profile(max_profile)
-    v_bottle = float(np.sum(np.pi * (prof / 2.0) ** 2)) or 1.0
-    print(f"pass 1: bore measured over {n_seen} frames, rows {ref_row}..{len(prof)-1} "
-          f"observed, reference volume {v_bottle:.3e} px^3 "
-          f"(100% = fullest level reached in this clip)")
+        # Absolute cut, and only the run that reaches the base. The absolute cut
+        # avoids a ratio against a bore that is not known yet; the contiguity
+        # keeps splash out of the bore.
+        top = pool_top_absolute(widths)
+        if top is not None:
+            keep = np.zeros_like(widths)
+            keep[top:] = widths[top:]
+            k = min(len(keep), len(max_profile))
+            max_profile[:k] = np.maximum(max_profile[:k], keep[:k])
+    prof = bottle_profile(max_profile)
+    print(f"pass 1: bore measured over {n_seen} frames from contiguous pool rows only")
 
     # ---- pass 2: locate the surface on every frame, then de-flicker ---------
     # Splash under the nozzle throws single-frame spikes: the raw series jumped
@@ -301,7 +351,15 @@ def main():
     padded = np.pad(arr, pad, mode="edge")
     smooth = np.array([np.median(padded[i:i + win]) for i in range(len(arr))])
     surfaces = [None if v >= EMPTY else int(round(v)) for v in smooth]
-    print(f"pass 2: {len(raw)} surfaces located, median-filtered over {win} frames")
+    # 100% is the highest *de-flickered* surface, so a single splash frame cannot
+    # define the datum. Clamp every surface to it so nothing exceeds 100%.
+    seen = [s for s in surfaces if s is not None]
+    ref_row = min(seen) if seen else len(prof) - 1
+    surfaces = [None if s is None else max(s, ref_row) for s in surfaces]
+    v_bottle = float(np.sum(np.pi * (prof[ref_row:] / 2.0) ** 2)) or 1.0
+    print(f"pass 2: {len(raw)} surfaces located, median-filtered over {win} frames; "
+          f"datum row {ref_row} (bore {prof[ref_row]:.0f} px), "
+          f"reference volume {v_bottle:.3e} px^3")
 
     # ---- pass 3: render against the fixed reference -------------------------
     cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
