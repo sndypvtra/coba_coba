@@ -418,6 +418,9 @@ def bottle_profile(observed: np.ndarray) -> np.ndarray:
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--video", default=str(VIDEO),
+                    help="source clip; note the calibration is per-installation")
+    ap.add_argument("--out-name", default="07_bottle_filling__liquid.mp4")
     ap.add_argument("--capacity-ml", type=float, default=1500.0,
                     help="ASSUMED bottle capacity; scales the mL readout")
     ap.add_argument("--detect", action="store_true",
@@ -426,7 +429,8 @@ def main():
     args = ap.parse_args()
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    info = sv.VideoInfo.from_video_path(str(VIDEO))
+    src_video = Path(args.video)
+    info = sv.VideoInfo.from_video_path(str(src_video))
     w, h = info.width, info.height
 
     model = None
@@ -436,7 +440,7 @@ def main():
         model = YOLOE(str(ROOT / "weights" / "yoloe-11l-seg.pt"))
         model.set_classes(["transparent bottle"], model.get_text_pe(["transparent bottle"]))
 
-    cap = cv2.VideoCapture(str(VIDEO))
+    cap = cv2.VideoCapture(str(src_video))
     cap.set(cv2.CAP_PROP_POS_FRAMES, TEMPLATE_FRAME)
     ok, ref = cap.read()
     tx1, ty1, tx2, ty2 = TEMPLATE_BOX
@@ -564,7 +568,7 @@ def main():
     # ---- pass 3: render against the fixed reference -------------------------
     cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
     series: list[dict] = []
-    out_path = OUT_DIR / "07_bottle_filling__liquid.mp4"
+    out_path = OUT_DIR / args.out_name
     sink = sv.VideoSink(str(out_path), sv.VideoInfo(width=w, height=h, fps=info.fps,
                                                     total_frames=info.total_frames),
                         codec="mp4v")
@@ -597,7 +601,7 @@ def main():
 
     summary = {
         "project": "LiquidLevel-Vision",
-        "video": VIDEO.name,
+        "video": src_video.name,
         "output": out_path.name,
         "frames": idx,
         "assumed_capacity_ml": args.capacity_ml,

@@ -381,6 +381,47 @@ Nominal capacity is a parameter (`--capacity-ml`, default 1500). What the vision
 measures is the **fill fraction**; the millilitre figure is that fraction against
 the capacity you configure for the SKU.
 
+## Scope: this is a calibrated station, not a general model
+
+It will **not** transfer to another clip unchanged, even at the same angle on the
+same bottle. Tested rather than assumed — the same scene re-rendered with an 8%
+zoom and a 60/30 px shift, the sort of difference a re-mounted camera produces:
+
+| | Volume | Fill |
+|---|---|---|
+| Calibrated clip | 1,006 mL | 67.1% |
+| Same scene, framing shifted | **239 mL** | **15.9%** |
+
+Four times out, and reported through the same confident panel with no error flag.
+That silence is the real hazard: nothing in the output says the calibration no
+longer matches the scene.
+
+Eleven constants are tied to this installation:
+
+- **Absolute pixel geometry** — `ROI`, `THREAD_DATUM_Y`, `TEMPLATE_BOX`,
+  `SURFACE_BAND`, and the eight-point `BOTTLE_OUTLINE`.
+- **Colour tuned to this product and lighting** — `LIQUID_LO` (the `S>=200` cut
+  that separates product from product-seen-through-glass) and `LIQUID_LO_SHADOW`.
+- **Scale-dependent thresholds** — `JET_MAX_WIDTH_PX` is in pixels, so it moves
+  with zoom; `POOL_MIN_RATIO`, `POOL_GAP_TOLERANCE`, `BORE_MIN_FRACTION` are
+  tuned to this bore in this framing.
+
+Plus the isotonic fit, which assumes a single monotonic fill of one bottle.
+
+**Where it does run unchanged:** the same physical station — camera bolted, same
+lens and working distance, same SKU, same lighting. That is the normal case for
+filling-line vision, which is camera-fixed with a recipe per SKU, so the
+constraint is ordinary rather than a flaw. `--video` points it at new footage from
+that station.
+
+**To widen it**, in increasing order of work: express the pixel thresholds as
+fractions of the measured bore, which removes most of the zoom sensitivity;
+recalibrate per station (~15 minutes — outline, thread line, band, one colour
+sample); or derive the outline and colour automatically from a bottle
+segmentation. The last is why `--detect` exists, and why it is not the default:
+YOLOE finds these bottles at conf 0.78 but its boxes wander 194-328 px on clear
+plastic, which is not stable enough to measure against.
+
 **The ROI is anchored, not detected per frame.** YOLOE does find the bottles
 (`transparent bottle`, conf 0.78, masks included) but on clear plastic its boxes
 wander 194-328 px and swap between neighbouring bottles — a fill series built on
