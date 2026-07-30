@@ -338,12 +338,30 @@ robust upper-body median (272 px).
 Volume % now sits *below* height % (64.7 vs 74.4), which is the right way round
 for this jar: the empty neck is wide while the filled base tapers in.
 
-**Residual, and visible in the output:** the rods and the pointed probe crossing
-the bottle punch holes in the mask, and at the base the rectangular ROI picks up
-product spilled on the conveyor. Neither shifts the level, because the volume
-integrates the bore below the surface rather than counting mask pixels — but the
-spill does inflate the learned bore at the lowest rows, and that is not fully
-cancelled by using the same profile top and bottom.
+**Closing the mask for demo use.** The bottom-left corner of the liquid was left
+unshaded, and for a demo the overlay has to look complete. Two causes, both real:
+
+- *The blob was being thrown away.* The rods and probe cut the liquid's image into
+  separate components, and the mask kept only the **largest** base-anchored one.
+  On the last frame the bottom-left corner was its own 5040 px component,
+  discarded purely for being smaller. Now every component that reaches the base is
+  kept; a splash clinging high on the shoulder is still dropped, since it never
+  reaches the base.
+- *Rod shadows desaturate the product.* In that corner saturation falls to
+  **S 120-185**, under the strict `S>=200` cut. A relaxed cut (`S>=95`) now closes
+  the mask, but **display only** and fenced in twice: confined to rows below the
+  already-measured surface, and only for blobs that touch the strict mask, so
+  conveyor spill is never painted into the bottle.
+
+The measurement is provably untouched by this — it reads identically before and
+after (67.4% volume / 74.4% height / ~1011 mL, no dip, worst jump 2.3%), because
+the level comes from the strict mask and the volume integrates the bore.
+
+**Residual:** the rods and probe themselves stay unshaded, which is correct —
+they are in front of the bottle, not liquid. Product genuinely spilled on the
+conveyor does get shaded, and it inflates the learned bore slightly at the lowest
+rows; that is only partly cancelled by using the same profile in numerator and
+denominator. A polygonal ROI following the bottle silhouette would fix it.
 
 **The ROI is anchored, not detected per frame.** YOLOE does find the bottles
 (`transparent bottle`, conf 0.78, masks included) but on clear plastic its boxes

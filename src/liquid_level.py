@@ -108,6 +108,12 @@ BORE_MIN_FRACTION = 0.30
 LIQUID_LO = (13, 200, 120)
 LIQUID_HI = (30, 255, 255)
 
+# Below the surface the region is liquid by definition, so a relaxed cut is used
+# there purely to close the mask for display. The rods cast shadows that pull the
+# product down to S 120-185, under the strict cut. This never moves the level:
+# the surface is found with the strict cut, and volume integrates the bore.
+LIQUID_LO_SHADOW = (13, 95, 90)
+
 # Columns used to locate the surface: strictly inside the front bottle and right
 # of where the neighbouring bottle's product is directly visible (it reaches
 # x~690). Product in the bottle behind is just as saturated as product in this
@@ -126,22 +132,55 @@ def liquid_mask(frame: np.ndarray, roi: tuple[int, int, int, int]) -> np.ndarray
     inside = np.zeros_like(m)
     inside[y1:y2, x1:x2] = m[y1:y2, x1:x2]
 
-    # Liquid rests on the base. Keep the largest blob reaching the lower
-    # quarter; a splash clinging to the shoulder is not part of the fill.
+    # Liquid rests on the base, so keep EVERY component that reaches the lower
+    # quarter - not just the largest. The machine's rods and probe cross the
+    # bottle and cut the liquid's image into pieces: on the last frame the
+    # bottom-left corner was its own 5040 px component and was being thrown away
+    # purely for being smaller. A splash clinging high on the shoulder still gets
+    # dropped, because it never reaches the base.
     n, lab, stats, _ = cv2.connectedComponentsWithStats((inside > 0).astype(np.uint8), 8)
     if n <= 1:
         return inside
     base_y = y2 - (y2 - y1) // 4
-    best, best_area = 0, 0
-    for i in range(1, n):
-        top = stats[i, cv2.CC_STAT_TOP]
-        bottom = top + stats[i, cv2.CC_STAT_HEIGHT]
-        area = stats[i, cv2.CC_STAT_AREA]
-        if bottom >= base_y and area > best_area:
-            best, best_area = i, area
     out = np.zeros_like(inside)
-    if best:
-        out[lab == best] = 255
+    for i in range(1, n):
+        bottom = stats[i, cv2.CC_STAT_TOP] + stats[i, cv2.CC_STAT_HEIGHT]
+        if bottom >= base_y and stats[i, cv2.CC_STAT_AREA] >= 400:
+            out[lab == i] = 255
+    return out
+
+
+def display_mask(frame: np.ndarray, roi: tuple[int, int, int, int],
+                 surface: int | None, strict: np.ndarray) -> np.ndarray:
+    """Mask for DISPLAY only - closes rod shadows below the measured surface.
+
+    Purely cosmetic, and deliberately fenced in so it cannot influence anything:
+    it is confined to rows below the already-measured surface, and only keeps
+    relaxed-threshold blobs that touch the strict mask, so product spilled on the
+    conveyor is not painted into the bottle. The level and the volume are still
+    computed from the strict mask and the bore, untouched by this.
+
+    Needed because the rods and probe crossing the bottle cast shadows that pull
+    the product to S 120-185, under the strict S>=200 cut, leaving slivers of
+    real liquid unshaded in the demo.
+    """
+    if surface is None:
+        return strict
+    x1, y1, x2, y2 = roi
+    ysurf = y1 + surface
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    m = cv2.inRange(hsv, LIQUID_LO_SHADOW, LIQUID_HI)
+    m = cv2.morphologyEx(m, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
+    m = cv2.morphologyEx(m, cv2.MORPH_CLOSE, np.ones((25, 25), np.uint8))
+    band = np.zeros_like(m)
+    band[ysurf:y2, x1:x2] = m[ysurf:y2, x1:x2]
+
+    n, lab, _, _ = cv2.connectedComponentsWithStats((band > 0).astype(np.uint8), 8)
+    out = strict.copy()
+    for i in range(1, n):
+        blob = lab == i
+        if (blob & (strict > 0)).any():      # must touch measured product
+            out[blob] = 255
     return out
 
 
@@ -543,6 +582,8 @@ def render(frame, roi, mask, surface, frac, level_h, ml, cap_ml, idx, total, mod
             for m in d.mask:
                 b = m.astype(bool)
                 vis[b] = (0.82 * vis[b] + 0.18 * np.array([255, 255, 0])).astype(np.uint8)
+
+    mask = display_mask(frame, roi, surface, mask)
 
     # Split the mask at the surface: what is counted vs what is falling.
     # Magenta = standing liquid (measured). Dim cyan = the jet, excluded.

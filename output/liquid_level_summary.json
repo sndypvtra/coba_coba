@@ -4,8 +4,8 @@
   "output": "07_bottle_filling__liquid.mp4",
   "frames": 232,
   "assumed_capacity_ml": 1500.0,
-  "final_fill_volume_frac": 0.6471,
-  "final_estimated_ml": 970.7,
+  "final_fill_volume_frac": 0.6741,
+  "final_estimated_ml": 1011.2,
   "caveat": "fill fraction is measured; mL is that fraction times the ASSUMED capacity, which is not observable from the video",
   "series": [
     {
@@ -838,567 +838,567 @@
     },
     {
       "frame": 139,
-      "fill_volume_frac": 0.0084,
-      "fill_height_frac": 0.0629,
-      "estimated_ml": 12.7
+      "fill_volume_frac": 0.0,
+      "fill_height_frac": 0.0,
+      "estimated_ml": 0.0
     },
     {
       "frame": 140,
-      "fill_volume_frac": 0.0084,
-      "fill_height_frac": 0.0629,
-      "estimated_ml": 12.7
+      "fill_volume_frac": 0.0093,
+      "fill_height_frac": 0.0517,
+      "estimated_ml": 13.9
     },
     {
       "frame": 141,
-      "fill_volume_frac": 0.0084,
-      "fill_height_frac": 0.0629,
-      "estimated_ml": 12.7
+      "fill_volume_frac": 0.0093,
+      "fill_height_frac": 0.0517,
+      "estimated_ml": 13.9
     },
     {
       "frame": 142,
-      "fill_volume_frac": 0.0084,
-      "fill_height_frac": 0.0629,
-      "estimated_ml": 12.7
+      "fill_volume_frac": 0.0093,
+      "fill_height_frac": 0.0517,
+      "estimated_ml": 13.9
     },
     {
       "frame": 143,
-      "fill_volume_frac": 0.0084,
-      "fill_height_frac": 0.0629,
-      "estimated_ml": 12.7
+      "fill_volume_frac": 0.0093,
+      "fill_height_frac": 0.0517,
+      "estimated_ml": 13.9
     },
     {
       "frame": 144,
-      "fill_volume_frac": 0.0098,
-      "fill_height_frac": 0.0697,
-      "estimated_ml": 14.7
+      "fill_volume_frac": 0.0093,
+      "fill_height_frac": 0.0517,
+      "estimated_ml": 13.9
     },
     {
       "frame": 145,
-      "fill_volume_frac": 0.0117,
-      "fill_height_frac": 0.0787,
-      "estimated_ml": 17.6
+      "fill_volume_frac": 0.0122,
+      "fill_height_frac": 0.0607,
+      "estimated_ml": 18.4
     },
     {
       "frame": 146,
-      "fill_volume_frac": 0.0137,
-      "fill_height_frac": 0.0876,
-      "estimated_ml": 20.6
+      "fill_volume_frac": 0.0156,
+      "fill_height_frac": 0.0697,
+      "estimated_ml": 23.4
     },
     {
       "frame": 147,
-      "fill_volume_frac": 0.0158,
-      "fill_height_frac": 0.0966,
-      "estimated_ml": 23.8
+      "fill_volume_frac": 0.0193,
+      "fill_height_frac": 0.0787,
+      "estimated_ml": 28.9
     },
     {
       "frame": 148,
-      "fill_volume_frac": 0.0181,
-      "fill_height_frac": 0.1056,
-      "estimated_ml": 27.1
+      "fill_volume_frac": 0.0233,
+      "fill_height_frac": 0.0876,
+      "estimated_ml": 34.9
     },
     {
       "frame": 149,
-      "fill_volume_frac": 0.0211,
-      "fill_height_frac": 0.1169,
-      "estimated_ml": 31.6
+      "fill_volume_frac": 0.0286,
+      "fill_height_frac": 0.0989,
+      "estimated_ml": 43.0
     },
     {
       "frame": 150,
-      "fill_volume_frac": 0.0243,
-      "fill_height_frac": 0.1281,
-      "estimated_ml": 36.4
+      "fill_volume_frac": 0.0344,
+      "fill_height_frac": 0.1101,
+      "estimated_ml": 51.6
     },
     {
       "frame": 151,
-      "fill_volume_frac": 0.0278,
-      "fill_height_frac": 0.1393,
-      "estimated_ml": 41.7
+      "fill_volume_frac": 0.0416,
+      "fill_height_frac": 0.1236,
+      "estimated_ml": 62.3
     },
     {
       "frame": 152,
-      "fill_volume_frac": 0.0317,
-      "fill_height_frac": 0.1506,
-      "estimated_ml": 47.5
+      "fill_volume_frac": 0.0491,
+      "fill_height_frac": 0.1371,
+      "estimated_ml": 73.6
     },
     {
       "frame": 153,
-      "fill_volume_frac": 0.0367,
-      "fill_height_frac": 0.164,
-      "estimated_ml": 55.1
+      "fill_volume_frac": 0.057,
+      "fill_height_frac": 0.1506,
+      "estimated_ml": 85.5
     },
     {
       "frame": 154,
-      "fill_volume_frac": 0.0433,
-      "fill_height_frac": 0.1798,
-      "estimated_ml": 65.0
+      "fill_volume_frac": 0.0668,
+      "fill_height_frac": 0.1663,
+      "estimated_ml": 100.2
     },
     {
       "frame": 155,
-      "fill_volume_frac": 0.0474,
-      "fill_height_frac": 0.1888,
-      "estimated_ml": 71.1
+      "fill_volume_frac": 0.0788,
+      "fill_height_frac": 0.1843,
+      "estimated_ml": 118.1
     },
     {
       "frame": 156,
-      "fill_volume_frac": 0.0518,
-      "fill_height_frac": 0.1978,
-      "estimated_ml": 77.6
+      "fill_volume_frac": 0.0851,
+      "fill_height_frac": 0.1933,
+      "estimated_ml": 127.6
     },
     {
       "frame": 157,
-      "fill_volume_frac": 0.0587,
-      "fill_height_frac": 0.2112,
-      "estimated_ml": 88.1
+      "fill_volume_frac": 0.0949,
+      "fill_height_frac": 0.2067,
+      "estimated_ml": 142.3
     },
     {
       "frame": 158,
-      "fill_volume_frac": 0.065,
-      "fill_height_frac": 0.2225,
-      "estimated_ml": 97.4
+      "fill_volume_frac": 0.1051,
+      "fill_height_frac": 0.2202,
+      "estimated_ml": 157.7
     },
     {
       "frame": 159,
-      "fill_volume_frac": 0.0729,
-      "fill_height_frac": 0.236,
-      "estimated_ml": 109.4
+      "fill_volume_frac": 0.1157,
+      "fill_height_frac": 0.2337,
+      "estimated_ml": 173.6
     },
     {
       "frame": 160,
-      "fill_volume_frac": 0.0786,
+      "fill_volume_frac": 0.125,
       "fill_height_frac": 0.2449,
-      "estimated_ml": 117.9
+      "estimated_ml": 187.4
     },
     {
       "frame": 161,
-      "fill_volume_frac": 0.0862,
+      "fill_volume_frac": 0.1347,
       "fill_height_frac": 0.2562,
-      "estimated_ml": 129.4
+      "estimated_ml": 202.1
     },
     {
       "frame": 162,
-      "fill_volume_frac": 0.0929,
+      "fill_volume_frac": 0.1431,
       "fill_height_frac": 0.2652,
-      "estimated_ml": 139.4
+      "estimated_ml": 214.7
     },
     {
       "frame": 163,
-      "fill_volume_frac": 0.1002,
+      "fill_volume_frac": 0.1521,
       "fill_height_frac": 0.2742,
-      "estimated_ml": 150.2
+      "estimated_ml": 228.1
     },
     {
       "frame": 164,
-      "fill_volume_frac": 0.108,
+      "fill_volume_frac": 0.1619,
       "fill_height_frac": 0.2831,
-      "estimated_ml": 162.0
+      "estimated_ml": 242.8
     },
     {
       "frame": 165,
-      "fill_volume_frac": 0.1122,
+      "fill_volume_frac": 0.1671,
       "fill_height_frac": 0.2876,
-      "estimated_ml": 168.3
+      "estimated_ml": 250.7
     },
     {
       "frame": 166,
-      "fill_volume_frac": 0.1188,
+      "fill_volume_frac": 0.1754,
       "fill_height_frac": 0.2944,
-      "estimated_ml": 178.3
+      "estimated_ml": 263.2
     },
     {
       "frame": 167,
-      "fill_volume_frac": 0.1282,
+      "fill_volume_frac": 0.1873,
       "fill_height_frac": 0.3034,
-      "estimated_ml": 192.3
+      "estimated_ml": 280.9
     },
     {
       "frame": 168,
-      "fill_volume_frac": 0.1306,
+      "fill_volume_frac": 0.1903,
       "fill_height_frac": 0.3056,
-      "estimated_ml": 195.9
+      "estimated_ml": 285.5
     },
     {
       "frame": 169,
-      "fill_volume_frac": 0.1355,
+      "fill_volume_frac": 0.1965,
       "fill_height_frac": 0.3101,
-      "estimated_ml": 203.3
+      "estimated_ml": 294.7
     },
     {
       "frame": 170,
-      "fill_volume_frac": 0.1406,
+      "fill_volume_frac": 0.2026,
       "fill_height_frac": 0.3146,
-      "estimated_ml": 210.9
+      "estimated_ml": 303.8
     },
     {
       "frame": 171,
-      "fill_volume_frac": 0.1457,
+      "fill_volume_frac": 0.2085,
       "fill_height_frac": 0.3191,
-      "estimated_ml": 218.6
+      "estimated_ml": 312.7
     },
     {
       "frame": 172,
-      "fill_volume_frac": 0.1483,
+      "fill_volume_frac": 0.2114,
       "fill_height_frac": 0.3213,
-      "estimated_ml": 222.5
+      "estimated_ml": 317.1
     },
     {
       "frame": 173,
-      "fill_volume_frac": 0.1536,
+      "fill_volume_frac": 0.2171,
       "fill_height_frac": 0.3258,
-      "estimated_ml": 230.4
+      "estimated_ml": 325.6
     },
     {
       "frame": 174,
-      "fill_volume_frac": 0.1589,
+      "fill_volume_frac": 0.2226,
       "fill_height_frac": 0.3303,
-      "estimated_ml": 238.4
+      "estimated_ml": 333.9
     },
     {
       "frame": 175,
-      "fill_volume_frac": 0.167,
+      "fill_volume_frac": 0.2306,
       "fill_height_frac": 0.3371,
-      "estimated_ml": 250.5
+      "estimated_ml": 345.9
     },
     {
       "frame": 176,
-      "fill_volume_frac": 0.1752,
+      "fill_volume_frac": 0.2383,
       "fill_height_frac": 0.3438,
-      "estimated_ml": 262.8
+      "estimated_ml": 357.4
     },
     {
       "frame": 177,
-      "fill_volume_frac": 0.1807,
+      "fill_volume_frac": 0.2434,
       "fill_height_frac": 0.3483,
-      "estimated_ml": 271.1
+      "estimated_ml": 365.1
     },
     {
       "frame": 178,
-      "fill_volume_frac": 0.1862,
+      "fill_volume_frac": 0.2484,
       "fill_height_frac": 0.3528,
-      "estimated_ml": 279.3
+      "estimated_ml": 372.7
     },
     {
       "frame": 179,
-      "fill_volume_frac": 0.1917,
+      "fill_volume_frac": 0.2535,
       "fill_height_frac": 0.3573,
-      "estimated_ml": 287.5
+      "estimated_ml": 380.2
     },
     {
       "frame": 180,
-      "fill_volume_frac": 0.197,
+      "fill_volume_frac": 0.2584,
       "fill_height_frac": 0.3618,
-      "estimated_ml": 295.5
+      "estimated_ml": 387.6
     },
     {
       "frame": 181,
-      "fill_volume_frac": 0.1996,
+      "fill_volume_frac": 0.2609,
       "fill_height_frac": 0.364,
-      "estimated_ml": 299.4
+      "estimated_ml": 391.3
     },
     {
       "frame": 182,
-      "fill_volume_frac": 0.2022,
+      "fill_volume_frac": 0.2632,
       "fill_height_frac": 0.3663,
-      "estimated_ml": 303.3
+      "estimated_ml": 394.8
     },
     {
       "frame": 183,
-      "fill_volume_frac": 0.2072,
+      "fill_volume_frac": 0.2678,
       "fill_height_frac": 0.3708,
-      "estimated_ml": 310.7
+      "estimated_ml": 401.7
     },
     {
       "frame": 184,
-      "fill_volume_frac": 0.2095,
+      "fill_volume_frac": 0.27,
       "fill_height_frac": 0.373,
-      "estimated_ml": 314.3
+      "estimated_ml": 405.0
     },
     {
       "frame": 185,
-      "fill_volume_frac": 0.2118,
+      "fill_volume_frac": 0.2721,
       "fill_height_frac": 0.3753,
-      "estimated_ml": 317.7
+      "estimated_ml": 408.2
     },
     {
       "frame": 186,
-      "fill_volume_frac": 0.2162,
+      "fill_volume_frac": 0.2762,
       "fill_height_frac": 0.3798,
-      "estimated_ml": 324.3
+      "estimated_ml": 414.3
     },
     {
       "frame": 187,
-      "fill_volume_frac": 0.2183,
+      "fill_volume_frac": 0.2781,
       "fill_height_frac": 0.382,
-      "estimated_ml": 327.4
+      "estimated_ml": 417.1
     },
     {
       "frame": 188,
-      "fill_volume_frac": 0.2203,
+      "fill_volume_frac": 0.2799,
       "fill_height_frac": 0.3843,
-      "estimated_ml": 330.4
+      "estimated_ml": 419.9
     },
     {
       "frame": 189,
-      "fill_volume_frac": 0.2222,
+      "fill_volume_frac": 0.2817,
       "fill_height_frac": 0.3865,
-      "estimated_ml": 333.3
+      "estimated_ml": 422.6
     },
     {
       "frame": 190,
-      "fill_volume_frac": 0.224,
+      "fill_volume_frac": 0.2834,
       "fill_height_frac": 0.3888,
-      "estimated_ml": 336.0
+      "estimated_ml": 425.1
     },
     {
       "frame": 191,
-      "fill_volume_frac": 0.2275,
+      "fill_volume_frac": 0.2867,
       "fill_height_frac": 0.3933,
-      "estimated_ml": 341.3
+      "estimated_ml": 430.0
     },
     {
       "frame": 192,
-      "fill_volume_frac": 0.2292,
+      "fill_volume_frac": 0.2882,
       "fill_height_frac": 0.3955,
-      "estimated_ml": 343.8
+      "estimated_ml": 432.3
     },
     {
       "frame": 193,
-      "fill_volume_frac": 0.2323,
+      "fill_volume_frac": 0.2911,
       "fill_height_frac": 0.4,
-      "estimated_ml": 348.5
+      "estimated_ml": 436.6
     },
     {
       "frame": 194,
-      "fill_volume_frac": 0.2353,
+      "fill_volume_frac": 0.2938,
       "fill_height_frac": 0.4045,
-      "estimated_ml": 352.9
+      "estimated_ml": 440.7
     },
     {
       "frame": 195,
-      "fill_volume_frac": 0.238,
+      "fill_volume_frac": 0.2964,
       "fill_height_frac": 0.409,
-      "estimated_ml": 357.1
+      "estimated_ml": 444.5
     },
     {
       "frame": 196,
-      "fill_volume_frac": 0.2419,
+      "fill_volume_frac": 0.3,
       "fill_height_frac": 0.4157,
-      "estimated_ml": 362.9
+      "estimated_ml": 449.9
     },
     {
       "frame": 197,
-      "fill_volume_frac": 0.2444,
+      "fill_volume_frac": 0.3023,
       "fill_height_frac": 0.4202,
-      "estimated_ml": 366.6
+      "estimated_ml": 453.4
     },
     {
       "frame": 198,
-      "fill_volume_frac": 0.2482,
+      "fill_volume_frac": 0.3057,
       "fill_height_frac": 0.427,
-      "estimated_ml": 372.2
+      "estimated_ml": 458.5
     },
     {
       "frame": 199,
-      "fill_volume_frac": 0.2521,
+      "fill_volume_frac": 0.3093,
       "fill_height_frac": 0.4337,
-      "estimated_ml": 378.1
+      "estimated_ml": 464.0
     },
     {
       "frame": 200,
-      "fill_volume_frac": 0.2565,
+      "fill_volume_frac": 0.3134,
       "fill_height_frac": 0.4404,
-      "estimated_ml": 384.7
+      "estimated_ml": 470.1
     },
     {
       "frame": 201,
-      "fill_volume_frac": 0.2615,
+      "fill_volume_frac": 0.318,
       "fill_height_frac": 0.4472,
-      "estimated_ml": 392.2
+      "estimated_ml": 477.0
     },
     {
       "frame": 202,
-      "fill_volume_frac": 0.2672,
+      "fill_volume_frac": 0.3233,
       "fill_height_frac": 0.4539,
-      "estimated_ml": 400.9
+      "estimated_ml": 485.0
     },
     {
       "frame": 203,
-      "fill_volume_frac": 0.2738,
+      "fill_volume_frac": 0.3294,
       "fill_height_frac": 0.4607,
-      "estimated_ml": 410.7
+      "estimated_ml": 494.1
     },
     {
       "frame": 204,
-      "fill_volume_frac": 0.2839,
+      "fill_volume_frac": 0.3387,
       "fill_height_frac": 0.4697,
-      "estimated_ml": 425.8
+      "estimated_ml": 508.0
     },
     {
       "frame": 205,
-      "fill_volume_frac": 0.2923,
+      "fill_volume_frac": 0.3465,
       "fill_height_frac": 0.4764,
-      "estimated_ml": 438.5
+      "estimated_ml": 519.7
     },
     {
       "frame": 206,
-      "fill_volume_frac": 0.3046,
+      "fill_volume_frac": 0.3578,
       "fill_height_frac": 0.4854,
-      "estimated_ml": 456.9
+      "estimated_ml": 536.7
     },
     {
       "frame": 207,
-      "fill_volume_frac": 0.3211,
+      "fill_volume_frac": 0.3731,
       "fill_height_frac": 0.4966,
-      "estimated_ml": 481.7
+      "estimated_ml": 559.6
     },
     {
       "frame": 208,
-      "fill_volume_frac": 0.3379,
+      "fill_volume_frac": 0.3886,
       "fill_height_frac": 0.5079,
-      "estimated_ml": 506.9
+      "estimated_ml": 582.9
     },
     {
       "frame": 209,
-      "fill_volume_frac": 0.3547,
+      "fill_volume_frac": 0.4041,
       "fill_height_frac": 0.5191,
-      "estimated_ml": 532.1
+      "estimated_ml": 606.1
     },
     {
       "frame": 210,
-      "fill_volume_frac": 0.3716,
+      "fill_volume_frac": 0.4197,
       "fill_height_frac": 0.5303,
-      "estimated_ml": 557.3
+      "estimated_ml": 629.5
     },
     {
       "frame": 211,
-      "fill_volume_frac": 0.3852,
+      "fill_volume_frac": 0.4323,
       "fill_height_frac": 0.5393,
-      "estimated_ml": 577.8
+      "estimated_ml": 648.4
     },
     {
       "frame": 212,
-      "fill_volume_frac": 0.4025,
+      "fill_volume_frac": 0.4483,
       "fill_height_frac": 0.5506,
-      "estimated_ml": 603.8
+      "estimated_ml": 672.4
     },
     {
       "frame": 213,
-      "fill_volume_frac": 0.4161,
+      "fill_volume_frac": 0.4608,
       "fill_height_frac": 0.5596,
-      "estimated_ml": 624.2
+      "estimated_ml": 691.2
     },
     {
       "frame": 214,
-      "fill_volume_frac": 0.426,
+      "fill_volume_frac": 0.4699,
       "fill_height_frac": 0.5663,
-      "estimated_ml": 639.0
+      "estimated_ml": 704.8
     },
     {
       "frame": 215,
-      "fill_volume_frac": 0.4386,
+      "fill_volume_frac": 0.4815,
       "fill_height_frac": 0.5753,
-      "estimated_ml": 657.8
+      "estimated_ml": 722.3
     },
     {
       "frame": 216,
-      "fill_volume_frac": 0.4477,
+      "fill_volume_frac": 0.4899,
       "fill_height_frac": 0.582,
-      "estimated_ml": 671.5
+      "estimated_ml": 734.9
     },
     {
       "frame": 217,
-      "fill_volume_frac": 0.4567,
+      "fill_volume_frac": 0.4983,
       "fill_height_frac": 0.5888,
-      "estimated_ml": 685.1
+      "estimated_ml": 747.4
     },
     {
       "frame": 218,
-      "fill_volume_frac": 0.4627,
+      "fill_volume_frac": 0.5039,
       "fill_height_frac": 0.5933,
-      "estimated_ml": 694.1
+      "estimated_ml": 755.8
     },
     {
       "frame": 219,
-      "fill_volume_frac": 0.4781,
+      "fill_volume_frac": 0.518,
       "fill_height_frac": 0.6045,
-      "estimated_ml": 717.1
+      "estimated_ml": 777.0
     },
     {
       "frame": 220,
-      "fill_volume_frac": 0.4908,
+      "fill_volume_frac": 0.5297,
       "fill_height_frac": 0.6135,
-      "estimated_ml": 736.1
+      "estimated_ml": 794.6
     },
     {
       "frame": 221,
-      "fill_volume_frac": 0.5078,
+      "fill_volume_frac": 0.5454,
       "fill_height_frac": 0.6247,
-      "estimated_ml": 761.6
+      "estimated_ml": 818.1
     },
     {
       "frame": 222,
-      "fill_volume_frac": 0.526,
+      "fill_volume_frac": 0.5623,
       "fill_height_frac": 0.636,
-      "estimated_ml": 789.0
+      "estimated_ml": 843.4
     },
     {
       "frame": 223,
-      "fill_volume_frac": 0.5491,
+      "fill_volume_frac": 0.5836,
       "fill_height_frac": 0.6494,
-      "estimated_ml": 823.7
+      "estimated_ml": 875.4
     },
     {
       "frame": 224,
-      "fill_volume_frac": 0.5718,
+      "fill_volume_frac": 0.6046,
       "fill_height_frac": 0.6629,
-      "estimated_ml": 857.7
+      "estimated_ml": 906.8
     },
     {
       "frame": 225,
-      "fill_volume_frac": 0.5972,
+      "fill_volume_frac": 0.6281,
       "fill_height_frac": 0.6787,
-      "estimated_ml": 895.9
+      "estimated_ml": 942.1
     },
     {
       "frame": 226,
-      "fill_volume_frac": 0.6154,
-      "fill_height_frac": 0.6921,
-      "estimated_ml": 923.1
-    },
-    {
-      "frame": 227,
-      "fill_volume_frac": 0.6282,
-      "fill_height_frac": 0.7056,
-      "estimated_ml": 942.3
-    },
-    {
-      "frame": 228,
-      "fill_volume_frac": 0.6365,
-      "fill_height_frac": 0.7191,
-      "estimated_ml": 954.8
-    },
-    {
-      "frame": 229,
-      "fill_volume_frac": 0.6422,
-      "fill_height_frac": 0.7303,
-      "estimated_ml": 963.3
-    },
-    {
-      "frame": 230,
       "fill_volume_frac": 0.6449,
-      "fill_height_frac": 0.7371,
+      "fill_height_frac": 0.6921,
       "estimated_ml": 967.3
     },
     {
+      "frame": 227,
+      "fill_volume_frac": 0.6566,
+      "fill_height_frac": 0.7056,
+      "estimated_ml": 985.0
+    },
+    {
+      "frame": 228,
+      "fill_volume_frac": 0.6644,
+      "fill_height_frac": 0.7191,
+      "estimated_ml": 996.5
+    },
+    {
+      "frame": 229,
+      "fill_volume_frac": 0.6696,
+      "fill_height_frac": 0.7303,
+      "estimated_ml": 1004.3
+    },
+    {
+      "frame": 230,
+      "fill_volume_frac": 0.6721,
+      "fill_height_frac": 0.7371,
+      "estimated_ml": 1008.1
+    },
+    {
       "frame": 231,
-      "fill_volume_frac": 0.6464,
+      "fill_volume_frac": 0.6735,
       "fill_height_frac": 0.7416,
-      "estimated_ml": 969.6
+      "estimated_ml": 1010.2
     },
     {
       "frame": 232,
-      "fill_volume_frac": 0.6471,
+      "fill_volume_frac": 0.6741,
       "fill_height_frac": 0.7438,
-      "estimated_ml": 970.7
+      "estimated_ml": 1011.2
     }
   ]
 }
