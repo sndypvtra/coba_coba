@@ -9,13 +9,20 @@ Per frame:
   2. The mask is confined to the bottle's measurement ROI and reduced to the
      single base-anchored blob, so product splashed on the conveyor outside the
      bottle cannot inflate the reading.
-  3. Volume is integrated as a stack of discs rather than read off as a height.
-     The liquid fills the bottle's cross-section, so the mask's width at each
-     row *is* the internal diameter at that row: V = sum over rows of
-     pi*(w(y)/2)^2. That handles the bottle's shoulder and base taper, which a
-     linear height reading gets wrong.
-  4. Fill fraction is V_liquid / V_bottle, and millilitres are that fraction of
-     the bottle's nominal capacity.
+  3. The surface is the topmost row where the mask spans at least 45% of the
+     bore, found by climbing from the base. This is the important bit: the
+     falling jet is a thin column ~3% of the bore, so taking the topmost lit
+     pixel measured the *nozzle stream* instead of the *level* and over-read the
+     fill badly. The jet is drawn but excluded.
+  4. Volume is integrated as a stack of discs over the bore below the surface:
+     V = sum of pi*(bore(y)/2)^2. Using the bore rather than the per-frame mask
+     width means glare or the machine's rod crossing the bottle cannot shrink
+     the reading - only the surface position matters.
+  5. Surfaces are median-filtered over 7 frames. Splash under the nozzle throws
+     single-frame spikes that a real surface cannot produce.
+  6. 100% is the fullest level reached in this clip - a measured datum, with no
+     extrapolation into the unwetted neck. Millilitres are that fraction of the
+     capacity you supply.
 
 Why the ROI is anchored rather than detected per frame: YOLOE does find the
 bottles (`transparent bottle`, conf ~0.78) but the boxes are unstable on clear
@@ -72,8 +79,10 @@ TEMPLATE_BOX = (640, 520, 900, 640)
 #   liquid          H 15-20   S 105-255  V 162-207
 #   conveyor        H 11-22   S   8-55   V 105-137
 #   empty glass     H  6-20   S   8-60   V 111-175
-# Mouth inner diameter in px, read off the frame; used to taper the neck.
-MOUTH_WIDTH_PX = 185.0
+# Absolute width that separates the falling jet from standing liquid. The jet
+# runs 7-11 px; the shallowest pool is 80+. Used only to learn the bore, where a
+# ratio test cannot be applied yet because the bore is what is being measured.
+JET_MAX_WIDTH_PX = 40.0
 
 LIQUID_LO = (13, 150, 120)
 LIQUID_HI = (30, 255, 255)
@@ -109,34 +118,102 @@ def liquid_mask(frame: np.ndarray, roi: tuple[int, int, int, int]) -> np.ndarray
     return out
 
 
-def disc_volume(mask: np.ndarray, roi: tuple[int, int, int, int]) -> tuple[float, np.ndarray]:
-    """Integrate a mask as a stack of discs. Returns (volume_px3, width_per_row)."""
+def row_widths(mask: np.ndarray, roi: tuple[int, int, int, int]) -> np.ndarray:
+    """Width of the liquid mask on each row of the ROI, top row first."""
     x1, y1, x2, y2 = roi
-    band = mask[y1:y2, x1:x2] > 0
-    widths = band.sum(axis=1).astype(float)  # pixels of liquid per row
-    vol = float(np.sum(np.pi * (widths / 2.0) ** 2))
-    return vol, widths
+    return (mask[y1:y2, x1:x2] > 0).sum(axis=1).astype(float)
 
 
-def bottle_profile(observed: np.ndarray) -> np.ndarray:
-    """Internal width per row for the whole bottle, built once from a full pass.
+# A row only counts as standing liquid if the mask spans this much of the
+# bottle's internal width there. The falling jet is ~3% wide; the pool is 50%+.
+POOL_MIN_RATIO = 0.45
+# Rows the mask may lose to specular highlights. Deliberately small: while the
+# machine is filling there is a turbulent splash sheet 30-40 rows above the
+# settled pool, separated from it by a narrow band. A tolerance large enough to
+# bridge that band made the reading bistable, flipping between ~30% and ~50% on
+# alternate frames (f161 30%, f162 49%). The settled pool is the fill level; the
+# splash crest sits above it and overestimates. The static rod that crosses the
+# bottle needs no bridging - it occludes every frame, so the learned bore
+# profile already accounts for it and the ratio test self-calibrates.
+POOL_GAP_TOLERANCE = 10
 
-    Rows the liquid ever reached are measured directly — the product fills the
-    cross-section, so its width there *is* the internal diameter. Rows above the
-    highest level were never wetted, so they are tapered linearly from the
-    topmost measured width to the mouth diameter (~185 px, read off the frame).
-    That taper matters: assuming the neck is as wide as the body would inflate
-    capacity and silently under-report fill %.
+
+def pool_surface(widths: np.ndarray, profile: np.ndarray) -> int | None:
+    """Row index of the liquid surface, walking up from the base.
+
+    This is the fix for measuring the *jet* instead of the *level*. Liquid at
+    rest spans the full cross-section of the vessel; a stream still falling from
+    the nozzle is a thin column. Taking the topmost lit row therefore tracked
+    the nozzle, not the surface — on frame 229 that put the line at y=597 (mask
+    9 px wide, 3% of the bore) when the real surface was at y=660 (146 px).
+
+    So instead: start at the lowest lit row and climb while each row is at least
+    POOL_MIN_RATIO of the bore, tolerating short gaps where a highlight or the
+    machine's rod hides the edge. Returns None if no standing liquid is found.
+    """
+    lit = np.where(widths > 0)[0]
+    if len(lit) == 0:
+        return None
+    ref = np.maximum(profile, 1.0)
+    y = int(lit.max())  # lowest lit row = the base
+    surface, gap = None, 0
+    while y >= 0:
+        if widths[y] >= POOL_MIN_RATIO * ref[y]:
+            surface, gap = y, 0
+        else:
+            gap += 1
+            if gap > POOL_GAP_TOLERANCE:
+                break
+        y -= 1
+    return surface
+
+
+def liquid_volume(surface: int | None, profile: np.ndarray) -> float:
+    """Volume of liquid below `surface`, integrated as a stack of discs.
+
+    Integration uses the *bore* profile rather than the per-frame mask width.
+    Below the surface the bottle is full, so the true cross-section is the bore;
+    a mask narrower than that is occlusion or glare, not less liquid. This makes
+    the reading depend only on locating the surface, not on a pixel-perfect mask.
+    """
+    if surface is None:
+        return 0.0
+    return float(np.sum(np.pi * (profile[surface:] / 2.0) ** 2))
+
+
+def bottle_profile(observed: np.ndarray) -> tuple[np.ndarray, int]:
+    """Bore width per row, measured only. Returns (profile, reference_row).
+
+    Earlier versions extrapolated the unwetted neck up to a hand-read mouth
+    diameter. That was wrong twice over: the figure was taken from the bottle's
+    outer rim (185 px) while the mask measures the inner bore (max 159 px), so
+    the neck came out *wider* than the body — an inverted funnel — and the
+    extrapolation covered 60% of the profile, meaning most of the "capacity" was
+    a guess rather than a measurement.
+
+    Now nothing is extrapolated. The bore is known only for rows the liquid
+    actually reached, and `reference_row` is the highest of those: the fullest
+    level the machine reached in this clip. Fill is reported against that, which
+    is also the industrially meaningful datum, since a filler targets a nominal
+    level at the shoulder rather than the brim.
     """
     prof = observed.copy()
-    known = prof > 0
-    if not known.any():
-        return prof
-    top_known = int(np.argmax(known))
-    if top_known > 0:
-        prof[:top_known] = np.linspace(MOUTH_WIDTH_PX, prof[top_known], top_known)
+    known = np.where(prof > 0)[0]
+    if len(known) == 0:
+        return prof, len(prof) - 1
+    ref_row = int(known.min())
+    # fill any interior holes so the disc stack has no gaps
+    idx = np.arange(len(prof))
+    body = slice(ref_row, len(prof))
+    seg = prof[body]
+    holes = seg <= 0
+    if holes.any() and (~holes).any():
+        seg[holes] = np.interp(idx[body][holes], idx[body][~holes], seg[~holes])
+        prof[body] = seg
     k = 15
-    return np.convolve(prof, np.ones(k) / k, mode="same")
+    sm = np.convolve(prof, np.ones(k) / k, mode="same")
+    sm[:ref_row] = 0.0          # never observed -> contributes nothing
+    return sm, ref_row
 
 
 def main():
@@ -188,15 +265,45 @@ def main():
             break
         n_seen += 1
         roi = roi_for(frame)
-        _, widths = disc_volume(liquid_mask(frame, roi), roi)
-        k = min(len(widths), len(max_profile))
-        max_profile[:k] = np.maximum(max_profile[:k], widths[:k])
-    prof = bottle_profile(max_profile)
+        widths = row_widths(liquid_mask(frame, roi), roi)
+        # Learn the bore with an absolute cut, not a ratio: a ratio against the
+        # frame's own max penalises rows where the bore is genuinely narrower
+        # (the base taper, and the static rod), which previously truncated the
+        # learned profile to the bottom 40% of the bottle.
+        keep = np.where(widths >= JET_MAX_WIDTH_PX, widths, 0.0)
+        k = min(len(keep), len(max_profile))
+        max_profile[:k] = np.maximum(max_profile[:k], keep[:k])
+    prof, ref_row = bottle_profile(max_profile)
     v_bottle = float(np.sum(np.pi * (prof / 2.0) ** 2)) or 1.0
-    print(f"pass 1: profile learned over {n_seen} frames, "
-          f"bottle volume {v_bottle:.3e} px^3")
+    print(f"pass 1: bore measured over {n_seen} frames, rows {ref_row}..{len(prof)-1} "
+          f"observed, reference volume {v_bottle:.3e} px^3 "
+          f"(100% = fullest level reached in this clip)")
 
-    # ---- pass 2: measure and render against the fixed capacity -------------
+    # ---- pass 2: locate the surface on every frame, then de-flicker ---------
+    # Splash under the nozzle throws single-frame spikes: the raw series jumped
+    # to 69% on f204 and 83% on f211 while the trend around them sat near 45%.
+    # A liquid surface cannot rise a third of the bottle and fall back within
+    # 1/25 s, so a short temporal median removes those without touching the
+    # trend. Rendering is deferred to pass 3 so the filter can see ahead.
+    cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+    EMPTY = len(prof)
+    raw: list[int] = []
+    while True:
+        ok, frame = cap.read()
+        if not ok or (args.max_frames and len(raw) >= args.max_frames):
+            break
+        roi = roi_for(frame)
+        s = pool_surface(row_widths(liquid_mask(frame, roi), roi), prof)
+        raw.append(EMPTY if s is None else int(s))
+    win = 7
+    pad = win // 2
+    arr = np.array(raw, dtype=float)
+    padded = np.pad(arr, pad, mode="edge")
+    smooth = np.array([np.median(padded[i:i + win]) for i in range(len(arr))])
+    surfaces = [None if v >= EMPTY else int(round(v)) for v in smooth]
+    print(f"pass 2: {len(raw)} surfaces located, median-filtered over {win} frames")
+
+    # ---- pass 3: render against the fixed reference -------------------------
     cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
     series: list[dict] = []
     out_path = OUT_DIR / "07_bottle_filling__liquid.mp4"
@@ -209,22 +316,24 @@ def main():
             ok, frame = cap.read()
             if not ok or (args.max_frames and idx >= args.max_frames):
                 break
-            idx += 1
             roi = roi_for(frame)
             mask = liquid_mask(frame, roi)
-            v_liq, widths = disc_volume(mask, roi)
+            widths = row_widths(mask, roi)
+            surface = surfaces[idx] if idx < len(surfaces) else None
+            idx += 1
+            v_liq = liquid_volume(surface, prof)
 
             frac = min(v_liq / v_bottle, 1.0)
             ml = frac * args.capacity_ml
-            rows = np.where(widths > 0)[0]
-            level_h = (len(widths) - rows.min()) / len(widths) if len(rows) else 0.0
+            span = max(len(widths) - ref_row, 1)
+            level_h = min((len(widths) - surface) / span, 1.0) if surface is not None else 0.0
 
             series.append({"frame": idx, "fill_volume_frac": round(frac, 4),
                            "fill_height_frac": round(float(level_h), 4),
                            "estimated_ml": round(ml, 1)})
 
-            vis = render(frame, roi, mask, frac, level_h, ml, args.capacity_ml, idx,
-                         info.total_frames, model)
+            vis = render(frame, roi, mask, surface, frac, level_h, ml,
+                         args.capacity_ml, idx, info.total_frames, model)
             sink.write_frame(vis)
     cap.release()
 
@@ -246,7 +355,7 @@ def main():
           f"~{summary['final_estimated_ml']:.0f} mL (assumed {args.capacity_ml:.0f} mL bottle)")
 
 
-def render(frame, roi, mask, frac, level_h, ml, cap_ml, idx, total, model):
+def render(frame, roi, mask, surface, frac, level_h, ml, cap_ml, idx, total, model):
     vis = frame.copy()
     x1, y1, x2, y2 = roi
 
@@ -258,17 +367,24 @@ def render(frame, roi, mask, frac, level_h, ml, cap_ml, idx, total, model):
                 b = m.astype(bool)
                 vis[b] = (0.82 * vis[b] + 0.18 * np.array([255, 255, 0])).astype(np.uint8)
 
-    # liquid segmentation
+    # Split the mask at the surface: what is counted vs what is falling.
+    # Magenta = standing liquid (measured). Dim cyan = the jet, excluded.
     b = mask > 0
-    vis[b] = (0.45 * vis[b] + 0.55 * np.array([255, 0, 220])).astype(np.uint8)
+    ysurf = y1 + surface if surface is not None else y2
+    pool = np.zeros_like(b)
+    pool[ysurf:, :] = b[ysurf:, :]
+    jet = b & ~pool
+    vis[jet] = (0.6 * vis[jet] + 0.4 * np.array([255, 220, 0])).astype(np.uint8)
+    vis[pool] = (0.45 * vis[pool] + 0.55 * np.array([255, 0, 220])).astype(np.uint8)
 
     cv2.rectangle(vis, (x1, y1), (x2, y2), (0, 255, 0), 3)
-    rows = np.where(mask[y1:y2, x1:x2].any(axis=1))[0]
-    if len(rows):
-        ytop = y1 + int(rows.min())
-        cv2.line(vis, (x1 - 25, ytop), (x2 + 25, ytop), (0, 255, 255), 4)
-        cv2.putText(vis, "LEVEL", (x2 + 32, ytop + 8), cv2.FONT_HERSHEY_SIMPLEX, 0.8,
+    if surface is not None:
+        cv2.line(vis, (x1 - 25, ysurf), (x2 + 25, ysurf), (0, 255, 255), 4)
+        cv2.putText(vis, "LEVEL", (x2 + 32, ysurf + 8), cv2.FONT_HERSHEY_SIMPLEX, 0.8,
                     (0, 255, 255), 2, cv2.LINE_AA)
+    if jet.any():
+        cv2.putText(vis, "jet excluded", (x1 - 10, y1 - 14), cv2.FONT_HERSHEY_SIMPLEX,
+                    0.7, (255, 220, 0), 2, cv2.LINE_AA)
 
     # vertical gauge
     gx = x2 + 120
@@ -281,7 +397,8 @@ def render(frame, roi, mask, frac, level_h, ml, cap_ml, idx, total, model):
         (f"volume fraction (disc integration)  {frac*100:.1f}%", 0.62, (235, 235, 235)),
         (f"height fraction                     {level_h*100:.1f}%", 0.62, (235, 235, 235)),
         (f"assumed capacity                    {cap_ml:.0f} mL  <- NOT measured", 0.62, (150, 220, 255)),
-        ("liquid: HSV S>=150 (conveyor S~40)", 0.62, (235, 235, 235)),
+        ("surface = topmost row spanning >=45% of bore", 0.62, (150, 220, 255)),
+        ("falling jet excluded from the measurement", 0.62, (255, 220, 0)),
         ("ROI anchored: bottle moves only 7 px", 0.62, (235, 235, 235)),
         (f"frame {idx}/{total}", 0.62, (185, 185, 185)),
     ]

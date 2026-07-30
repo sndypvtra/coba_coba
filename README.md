@@ -235,12 +235,36 @@ rather than guessed: product sits at S~255, while the shiny conveyor (S~36-55)
 and the empty glass (S~8-60) overlap the product's *hue* almost exactly. Hue
 alone cannot separate them; `S>=150` can.
 
-**Volume is integrated, not read off as a height.** The product fills the
-bottle's cross-section, so the mask's width at each row *is* the internal
-diameter there. Volume is the disc stack `sum pi*(w(y)/2)^2`. This matters: at
-the end of the clip the bottle is **81.1% full by height but 90.0% by volume**,
-because the body is wider than the neck. A height reading would under-report the
-fill by nine points.
+**The surface is found by width, not by the topmost lit pixel.** This was a real
+bug, caught on review. The falling jet is connected to the pool, so "topmost lit
+row" tracked the *nozzle stream*: on frame 229 it put the level line at y=597,
+where the mask is 9 px wide — 3% of the bore — when the actual surface was at
+y=660 at 146 px. Fill read 88.6% instead of the true level. Now the surface is
+the highest row spanning >=45% of the bore, found by climbing from the base, and
+the jet is drawn separately as excluded.
+
+Two follow-on faults surfaced while fixing it:
+
+- *Bistable readings.* A gap tolerance wide enough to bridge occlusions also
+  bridged the turbulent splash sheet sitting 30-40 rows above the settled pool,
+  so the fill flipped between ~30% and ~50% on alternate frames. The tolerance
+  is now 10 rows. The static rod crossing the bottle needs no bridging — it
+  occludes every frame, so the learned bore already accounts for it.
+- *An inverted bore profile.* The unwetted neck was extrapolated to a hand-read
+  mouth diameter of 185 px, but that came from the bottle's **outer rim** while
+  the mask measures the inner bore, whose observed maximum is 159 px. The neck
+  came out wider than the body, and 60% of the "capacity" was extrapolation
+  rather than measurement. Nothing is extrapolated now: 100% is the fullest
+  level actually reached in the clip, which is also the industrially meaningful
+  datum since a filler targets a level at the shoulder, not the brim.
+
+**Volume is integrated over the bore, not the mask.** Below the surface the
+bottle is full, so the true cross-section is the bore; a narrower mask is glare
+or occlusion, not less liquid. The reading depends only on locating the surface.
+
+**Surfaces are median-filtered over 7 frames.** Splash spikes took the raw
+series to 69% on f204 and 83% on f211 against a trend near 45%. Filtering cut
+the worst backward dip from 27.6% to 2.5%.
 
 **The ROI is anchored, not detected per frame.** YOLOE does find the bottles
 (`transparent bottle`, conf 0.78, masks included) but on clear plastic its boxes
