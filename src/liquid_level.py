@@ -206,6 +206,42 @@ def pool_surface(widths: np.ndarray, profile: np.ndarray) -> int | None:
     return surface
 
 
+def isotonic_nonincreasing(y: np.ndarray) -> np.ndarray:
+    """Best least-squares fit to `y` that never increases (pool-adjacent violators).
+
+    Applied to the surface row over time. A threshold on a single frame cannot
+    place the surface stably here: seen at an angle the liquid surface projects
+    as an ellipse ~50 rows tall, and inside that band the colour mask is noisy,
+    so any cutoff lands on a different row from frame to frame. Sweeping the
+    cutoff and the reference did not help - every variant still jumped 50-70
+    rows somewhere in the clip.
+
+    The fix comes from physics instead of thresholds: during a fill the level
+    only rises, so the row index only decreases. Fitting the closest
+    non-increasing curve removes the jumps and the dips at once.
+
+    NOTE this assumes a single monotonic fill of one bottle. It will flatten a
+    genuine fall in level - a drained or swapped bottle - so it is wrong for
+    footage that is not one fill cycle.
+    """
+    vals: list[float] = []
+    sizes: list[int] = []
+    for v in y.astype(float):
+        vals.append(v)
+        sizes.append(1)
+        while len(vals) > 1 and vals[-2] < vals[-1]:
+            n1, n2 = sizes[-2], sizes[-1]
+            merged = (vals[-2] * n1 + vals[-1] * n2) / (n1 + n2)
+            vals.pop(); sizes.pop()
+            vals[-1] = merged; sizes[-1] = n1 + n2
+    out = np.empty(len(y))
+    i = 0
+    for v, n in zip(vals, sizes):
+        out[i:i + n] = v
+        i += n
+    return out
+
+
 def liquid_volume(surface: int | None, profile: np.ndarray) -> float:
     """Volume of liquid below `surface`, integrated as a stack of discs.
 
@@ -350,6 +386,25 @@ def main():
     arr = np.array(raw, dtype=float)
     padded = np.pad(arr, pad, mode="edge")
     smooth = np.array([np.median(padded[i:i + win]) for i in range(len(arr))])
+
+    # Median kills single-frame spikes; the monotonic fit fixes the sustained
+    # jumps a per-frame threshold cannot avoid. Only frames that actually hold
+    # liquid are fitted, so the empty run before the fill stays empty.
+    wet = np.where(smooth < EMPTY)[0]
+    if len(wet):
+        a, b = int(wet.min()), int(wet.max()) + 1
+        seg = isotonic_nonincreasing(smooth[a:b])
+        # Monotonicity alone still keeps a sustained step: the f215->f216 jump is
+        # an increase, so the isotonic fit preserved it and the level still moved
+        # 27% of the bottle in 1/25 s. A filler dispenses at a roughly constant
+        # rate, so smooth the fitted curve and re-impose monotonicity on top.
+        k = 11
+        if len(seg) > k:
+            pad2 = k // 2
+            padded2 = np.pad(seg, pad2, mode="edge")
+            seg = np.convolve(padded2, np.ones(k) / k, mode="valid")[: len(seg)]
+            seg = isotonic_nonincreasing(seg)
+        smooth[a:b] = seg
     surfaces = [None if v >= EMPTY else int(round(v)) for v in smooth]
     # 100% is the highest *de-flickered* surface, so a single splash frame cannot
     # define the datum. Clamp every surface to it so nothing exceeds 100%.

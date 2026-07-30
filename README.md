@@ -276,9 +276,30 @@ Two follow-on faults surfaced while fixing it:
 bottle is full, so the true cross-section is the bore; a narrower mask is glare
 or occlusion, not less liquid. The reading depends only on locating the surface.
 
-**Surfaces are median-filtered over 7 frames.** Splash spikes took the raw
-series to 69% on f204 and 83% on f211 against a trend near 45%. Filtering cut
-the worst backward dip from 27.6% to 2.5%.
+**The surface trajectory is fitted, not read frame by frame.** Reported as "not
+smooth, and the last frame is not at 500 mL yet". Both were real.
+
+A per-frame threshold cannot place this surface stably. Seen at an angle the
+liquid surface projects as an **ellipse ~50 rows tall**, and inside that band the
+colour mask runs 95-133 px against a 282 px bore — ratios of 0.34-0.48, straddling
+whatever cutoff you choose. On f215 those rows failed and on f216 they passed, so
+the surface moved 56 rows and the reading jumped 27 points in 1/25 s. Sweeping
+the cutoff (0.20-0.45) and the reference (learned bore vs observed pool width) did
+not fix it: every one of the twelve variants still jumped 50-70 rows somewhere.
+
+So the trajectory comes from physics rather than thresholds: a 7-frame median
+kills splash spikes, then an **isotonic (non-increasing) fit** enforces that a
+filling level only rises, then an 11-frame smooth and a second isotonic pass make
+the rate physically plausible.
+
+| | before | after |
+|---|---|---|
+| worst backward dip | 27.6% | **0.0%** |
+| worst single-frame jump | 27.2% | **4.5%** |
+
+This assumes **one monotonic fill of one bottle**. It will flatten a genuine drop
+in level — a drained or swapped bottle — so it is the wrong tool for footage that
+is not a single fill cycle.
 
 **The ROI is anchored, not detected per frame.** YOLOE does find the bottles
 (`transparent bottle`, conf 0.78, masks included) but on clear plastic its boxes
