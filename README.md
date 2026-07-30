@@ -318,8 +318,32 @@ filled too". Correct, and there were two separate leaks:
   the front bottle and right of where the neighbour's product reaches (x~690).
 
 Datum row moved from y=651 to **y=699**, against a meniscus measured at y~690.
-Together with the trajectory fit the series is smooth (worst frame-to-frame jump
-4.8%, no backward dip) and ends exactly at 100%.
+
+**Capacity is measured to the thread line, so the clip does not end full.**
+Reported as "if 1500 mL means filled to below the threads, then from the video it
+should not be full". Right — and the old datum ("the fullest level this clip
+reached") guaranteed 100% on the last frame by construction. The threads sit at
+**y=585** and the liquid stops at **y~700**, so ~115 px of bottle is still empty.
+Capacity now runs base → thread line, and the clip ends at **64.7% by volume /
+74.4% by height, ~971 mL of 1500 mL**.
+
+Two geometry errors surfaced with it. The ROI's right edge was at x=900 while the
+body reaches **x~1010**, clipping ~110 px of bore. And the unfilled neck was
+extrapolated from the *topmost measured* bore — but right at the surface the mask
+is only partial, so that value was **89 px against an upper-body bore of ~280**.
+Since volume goes as bore squared, that shrank the empty neck about tenfold and
+put the final reading at 94% of capacity. The neck is now carried up from a
+robust upper-body median (272 px).
+
+Volume % now sits *below* height % (64.7 vs 74.4), which is the right way round
+for this jar: the empty neck is wide while the filled base tapers in.
+
+**Residual, and visible in the output:** the rods and the pointed probe crossing
+the bottle punch holes in the mask, and at the base the rectangular ROI picks up
+product spilled on the conveyor. Neither shifts the level, because the volume
+integrates the bore below the surface rather than counting mask pixels — but the
+spill does inflate the learned bore at the lowest rows, and that is not fully
+cancelled by using the same profile top and bottom.
 
 **The ROI is anchored, not detected per frame.** YOLOE does find the bottles
 (`transparent bottle`, conf 0.78, masks included) but on clear plastic its boxes

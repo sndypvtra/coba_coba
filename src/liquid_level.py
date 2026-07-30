@@ -20,9 +20,11 @@ Per frame:
      the reading - only the surface position matters.
   5. Surfaces are median-filtered over 7 frames. Splash under the nozzle throws
      single-frame spikes that a real surface cannot produce.
-  6. 100% is the fullest level reached in this clip - a measured datum, with no
-     extrapolation into the unwetted neck. Millilitres are that fraction of the
-     capacity you supply.
+  6. Capacity runs from the base up to the THREAD LINE, because that is what a
+     stated fill volume means. It is deliberately not "the fullest level this
+     clip reached" - that made the last frame read 100% by construction, when
+     the liquid actually stops ~115 px below the threads and the bottle is only
+     about three quarters full. Millilitres are that fraction of --capacity-ml.
 
 Why the ROI is anchored rather than detected per frame: YOLOE does find the
 bottles (`transparent bottle`, conf ~0.78) but the boxes are unstable on clear
@@ -66,9 +68,18 @@ OUT_DIR = ROOT / "output"
 
 # Front bottle, measured off the 1920x1080 frame: mouth y=490, inner base
 # y=1020, body spans x=615..865.
-ROI = (618, 490, 900, 1030)  # right edge widened; left is kept tight because
-#                              the bottle behind also holds product and the
-#                              two masks would otherwise merge into one blob
+# Right edge is 1010: the bottle body actually reaches x~1010 and the previous
+# 900 clipped ~110 px of bore off it. Left stays tight at 618 because the bottle
+# behind also holds product; nothing amber sits right of 1010, only background.
+ROI = (618, 490, 1010, 1030)
+
+# Bottom of the neck threads, read off the frame. This is the datum the stated
+# capacity refers to - a filler's nominal volume is "up to the thread line", not
+# "to the brim" and not "the fullest this clip happened to get". Using the
+# fullest observed level made the last frame read 100% by construction, which is
+# wrong: the liquid ends at y~700, some 115 px below the threads, so the bottle
+# is visibly NOT full at the end of this clip.
+THREAD_DATUM_Y = 585
 
 # Template used to cancel the few px of camera shake, taken from the bottle's
 # neck/shoulder which stays sharp and never fills with product.
@@ -440,12 +451,33 @@ def main():
     surfaces = [None if v >= EMPTY else int(round(v)) for v in smooth]
     # 100% is the highest *de-flickered* surface, so a single splash frame cannot
     # define the datum. Clamp every surface to it so nothing exceeds 100%.
-    seen = [s for s in surfaces if s is not None]
-    ref_row = min(seen) if seen else len(prof) - 1
-    surfaces = [None if s is None else max(s, ref_row) for s in surfaces]
-    v_bottle = float(np.sum(np.pi * (prof[ref_row:] / 2.0) ** 2)) or 1.0
+    # Capacity runs from the base up to the thread line, not up to the fullest
+    # level seen. This bottle is a wide-mouth jar - its neck is nearly as wide as
+    # its body - so the bore above the highest wetted row is carried up as a
+    # constant rather than tapered. That is a real approximation, but a small one
+    # here, and it is the only stretch of bore no liquid ever revealed.
+    ref_row = max(THREAD_DATUM_Y - ROI[1], 0)
+    cap_prof = prof.copy()
+    measured = np.where(cap_prof > 0)[0]
+    if len(measured):
+        top_measured = int(measured.min())
+        # The neck bore is carried up from a robust estimate of the UPPER BODY,
+        # not from the topmost measured row. Right at the surface the mask is
+        # only partial - the topmost measured bore here is 89 px against an
+        # upper-body bore of ~280 - and because volume goes as bore squared,
+        # extrapolating with 89 shrank the unfilled neck tenfold and pushed the
+        # final reading to 94% of capacity when the bottle is visibly ~3/4 full.
+        lo = min(top_measured + 30, len(cap_prof) - 1)
+        hi = min(top_measured + 150, len(cap_prof))
+        window = cap_prof[lo:hi]
+        neck = float(np.median(window[window > 0])) if (window > 0).any() else 0.0
+        if top_measured > ref_row and neck > 0:
+            cap_prof[ref_row:top_measured] = neck
+            print(f"        neck bore extrapolated as {neck:.0f} px "
+                  f"(topmost measured was {cap_prof[top_measured]:.0f} px)")
+    v_bottle = float(np.sum(np.pi * (cap_prof[ref_row:] / 2.0) ** 2)) or 1.0
     print(f"pass 2: {len(raw)} surfaces located, median-filtered over {win} frames; "
-          f"datum row {ref_row} (bore {prof[ref_row]:.0f} px), "
+          f"capacity datum = thread line y={THREAD_DATUM_Y} (row {ref_row}), "
           f"reference volume {v_bottle:.3e} px^3")
 
     # ---- pass 3: render against the fixed reference -------------------------
@@ -466,11 +498,11 @@ def main():
             widths = row_widths(mask, roi)
             surface = surfaces[idx] if idx < len(surfaces) else None
             idx += 1
-            v_liq = liquid_volume(surface, prof)
+            v_liq = liquid_volume(surface, cap_prof)
 
             frac = min(v_liq / v_bottle, 1.0)
             ml = frac * args.capacity_ml
-            span = max(len(widths) - ref_row, 1)
+            span = max(len(prof) - ref_row, 1)
             level_h = min((len(widths) - surface) / span, 1.0) if surface is not None else 0.0
 
             series.append({"frame": idx, "fill_volume_frac": round(frac, 4),
@@ -541,7 +573,9 @@ def render(frame, roi, mask, surface, frac, level_h, ml, cap_ml, idx, total, mod
         (f"FILL {frac*100:5.1f}%  ~{ml:.0f} mL", 1.15, (90, 255, 140)),
         (f"volume fraction (disc integration)  {frac*100:.1f}%", 0.62, (235, 235, 235)),
         (f"height fraction                     {level_h*100:.1f}%", 0.62, (235, 235, 235)),
-        (f"assumed capacity                    {cap_ml:.0f} mL  <- NOT measured", 0.62, (150, 220, 255)),
+        (f"capacity {cap_ml:.0f} mL = filled to thread line  <- ASSUMED", 0.62, (150, 220, 255)),
+        ("rods occlude the mask but not the volume:", 0.62, (185, 185, 185)),
+        ("volume integrates the bore below the level", 0.62, (185, 185, 185)),
         ("surface = topmost row spanning >=45% of bore", 0.62, (150, 220, 255)),
         ("falling jet excluded from the measurement", 0.62, (255, 220, 0)),
         ("ROI anchored: bottle moves only 7 px", 0.62, (235, 235, 235)),
