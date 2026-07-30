@@ -87,8 +87,21 @@ JET_MAX_WIDTH_PX = 40.0
 # treated as never observed. See bottle_profile for why.
 BORE_MIN_FRACTION = 0.30
 
-LIQUID_LO = (13, 150, 120)
+# Saturation is raised to 200 to reject product seen *through* glass. The front
+# bottle's upper half is transparent and other filled bottles sit behind it, so
+# their amber shows through and colour alone called it liquid inside this bottle.
+# The extra glass layer desaturates it, and that is separable:
+#   product, direct view          S 251-255
+#   product seen through glass    S 104-199   <- was passing at S>=150
+# At S>=150 the surface on the last frame read y=652; the real meniscus is y~690.
+LIQUID_LO = (13, 200, 120)
 LIQUID_HI = (30, 255, 255)
+
+# Columns used to locate the surface: strictly inside the front bottle and right
+# of where the neighbouring bottle's product is directly visible (it reaches
+# x~690). Product in the bottle behind is just as saturated as product in this
+# one, so colour cannot separate them - only position can.
+SURFACE_BAND = (700, 890)
 
 
 def liquid_mask(frame: np.ndarray, roi: tuple[int, int, int, int]) -> np.ndarray:
@@ -125,6 +138,14 @@ def row_widths(mask: np.ndarray, roi: tuple[int, int, int, int]) -> np.ndarray:
     """Width of the liquid mask on each row of the ROI, top row first."""
     x1, y1, x2, y2 = roi
     return (mask[y1:y2, x1:x2] > 0).sum(axis=1).astype(float)
+
+
+def band_widths(mask: np.ndarray, roi: tuple[int, int, int, int],
+                dx: int = 0) -> np.ndarray:
+    """Row widths within SURFACE_BAND only, used to locate the surface."""
+    _, y1, _, y2 = roi
+    a, b = SURFACE_BAND[0] + dx, SURFACE_BAND[1] + dx
+    return (mask[y1:y2, a:b] > 0).sum(axis=1).astype(float)
 
 
 # A row only counts as standing liquid if the mask spans this much of the
@@ -305,7 +326,7 @@ def bottle_profile(observed: np.ndarray) -> np.ndarray:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--capacity-ml", type=float, default=500.0,
+    ap.add_argument("--capacity-ml", type=float, default=1500.0,
                     help="ASSUMED bottle capacity; scales the mL readout")
     ap.add_argument("--detect", action="store_true",
                     help="also run YOLOE and overlay its bottle segmentation")
@@ -345,6 +366,7 @@ def main():
     # The denominator must be fixed before any fraction is computed. Growing it
     # frame by frame makes the fill series non-monotonic and meaningless.
     max_profile = np.zeros(ROI[3] - ROI[1])
+    band_max = np.zeros(ROI[3] - ROI[1])
     n_seen = 0
     while True:
         ok, frame = cap.read()
@@ -362,8 +384,17 @@ def main():
             keep[top:] = widths[top:]
             k = min(len(keep), len(max_profile))
             max_profile[:k] = np.maximum(max_profile[:k], keep[:k])
+        bw = band_widths(liquid_mask(frame, roi), roi, roi[0] - ROI[0])
+        btop = pool_top_absolute(bw, gap_tol=6)
+        if btop is not None:
+            bk = np.zeros_like(bw)
+            bk[btop:] = bw[btop:]
+            k2 = min(len(bk), len(band_max))
+            band_max[:k2] = np.maximum(band_max[:k2], bk[:k2])
     prof = bottle_profile(max_profile)
-    print(f"pass 1: bore measured over {n_seen} frames from contiguous pool rows only")
+    band_prof = bottle_profile(band_max)
+    print(f"pass 1: bore measured over {n_seen} frames from contiguous pool rows only; "
+          f"surface band x={SURFACE_BAND[0]}-{SURFACE_BAND[1]}")
 
     # ---- pass 2: locate the surface on every frame, then de-flicker ---------
     # Splash under the nozzle throws single-frame spikes: the raw series jumped
@@ -379,7 +410,8 @@ def main():
         if not ok or (args.max_frames and len(raw) >= args.max_frames):
             break
         roi = roi_for(frame)
-        s = pool_surface(row_widths(liquid_mask(frame, roi), roi), prof)
+        m = liquid_mask(frame, roi)
+        s = pool_surface(band_widths(m, roi, roi[0] - ROI[0]), band_prof)
         raw.append(EMPTY if s is None else int(s))
     win = 7
     pad = win // 2

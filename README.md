@@ -301,6 +301,26 @@ This assumes **one monotonic fill of one bottle**. It will flatten a genuine dro
 in level — a drained or swapped bottle — so it is the wrong tool for footage that
 is not a single fill cycle.
 
+**Neighbouring bottles were setting the level.** Reported as "the level is not at
+the surface on the last frame, it is affected by the bottle next to it being
+filled too". Correct, and there were two separate leaks:
+
+- *Product seen through glass.* The front bottle's upper half is transparent and
+  other filled bottles sit behind it, so their amber showed through and colour
+  called it liquid **inside** this bottle. The extra glass layer desaturates it,
+  which turns out to be cleanly separable: product in direct view sits at
+  **S 251-255**, product seen through glass at **S 104-199**. The old cut of
+  `S>=150` passed it, putting the surface at y=652 when the real meniscus was at
+  y~690. The cut is now `S>=200`.
+- *The neighbour in direct view.* Product in the bottle behind is exactly as
+  saturated as product in this one, so no colour rule can separate them — only
+  position can. The surface is now located in a column band `x=700-890`: inside
+  the front bottle and right of where the neighbour's product reaches (x~690).
+
+Datum row moved from y=651 to **y=699**, against a meniscus measured at y~690.
+Together with the trajectory fit the series is smooth (worst frame-to-frame jump
+4.8%, no backward dip) and ends exactly at 100%.
+
 **The ROI is anchored, not detected per frame.** YOLOE does find the bottles
 (`transparent bottle`, conf 0.78, masks included) but on clear plastic its boxes
 wander 194-328 px and swap between neighbouring bottles — a fill series built on
