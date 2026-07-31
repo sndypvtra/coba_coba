@@ -10,7 +10,8 @@ Measures how much liquid a filling machine puts into a bottle, from video alone.
 
 Source: [Pexels 8720278](https://www.pexels.com/video/empty-bottles-in-a-filling-machine-8720278/),
 inline filler, clear bottles, amber product. Output:
-`output/07_bottle_filling__liquid.mp4`, series in `output/liquid_level_summary.json`.
+`output/07_bottle_filling__liquid.mp4` (gitignored — regenerate by running the
+case script), series in `output/liquid_level_summary.json`.
 
 ## How it measures
 

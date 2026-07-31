@@ -32,9 +32,11 @@ volume below it is integrated over the bottle's bore.
 | Clip | 232 frames @ 25 fps, 1920x1080 |
 | Trajectory quality | monotonic; worst frame-to-frame step 2.4 % |
 
-Result video: **[`output/07_bottle_filling__liquid.mp4`](output/07_bottle_filling__liquid.mp4)**
-· per-frame series in [`output/liquid_level_summary.json`](output/liquid_level_summary.json)
+Per-frame series in [`output/liquid_level_summary.json`](output/liquid_level_summary.json)
 · method and limits in **[`docs/liquid-level.md`](docs/liquid-level.md)**
+
+The rendered video is not committed — run the case script below to produce
+`output/07_bottle_filling__liquid.mp4` yourself.
 
 ```bash
 python cases/case4_bottle_fill_volume.py                    # this case, end to end
@@ -60,11 +62,11 @@ Objects are found from plain-English text prompts, tracked with TrackTrack
 
 ![Conveyor counting result](output/preview_counting.jpg)
 
-| Output clip | Scene | Prompts | Counted | Frames |
+| Case | Scene | Prompts | Counted | Frames |
 |---|---|---|---|---|
-| `01_oranges_production_line__counted.mp4` | Citrus sorting line | `orange`, `round orange fruit` | 5 | 286 |
-| `02_tomatoes_conveyor__counted.mp4` | Tomato grading line | `tomato` | 16 | 212 |
-| `03_packages_conveyor__counted.mp4` | Parcel unloading belt | `cardboard box`, `parcel`, `plastic bag`, `sports bag` | 7 | 511 |
+| 1 | Citrus sorting line | `orange`, `round orange fruit` | 5 | 286 |
+| 2 | Tomato grading line | `tomato` | 16 | 212 |
+| 3 | Parcel unloading belt | `cardboard box`, `parcel`, `plastic bag`, `sports bag` | 7 | 511 |
 
 Full numbers in [`output/summary.json`](output/summary.json) · method, tuning
 results and failure modes in **[`docs/conveyor-counting.md`](docs/conveyor-counting.md)**
@@ -130,8 +132,13 @@ src/trackers/*.yaml                    trackers retuned for zero-shot scores
 scripts/fetch_assets.sh                weights + source clips
 docs/liquid-level.md                   fill-volume: method, tuning, limits
 docs/conveyor-counting.md              counting: method, tuning, limits
-output/                                rendered results, previews, JSON series
+output/                                previews + JSON series (videos gitignored)
 ```
+
+Rendered `.mp4` results are **not committed** — they are build artefacts, and a
+repository of source should not carry ~60 MB of video. Run any case script to
+regenerate its own video into `output/`. The preview stills above and the JSON
+series are committed, so the results are visible and checkable without them.
 
 ## Sources
 

@@ -11,3 +11,6 @@ output/.*_resolved.yaml
 
 __pycache__/
 *.pyc
+
+# rendered result videos - regenerate with the case scripts in cases/
+output/*.mp4
