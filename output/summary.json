@@ -79,7 +79,7 @@
     },
     "unique_track_ids": 50,
     "avg_detections_per_frame": 11.89,
-    "avg_ms_per_frame": 1372.7,
+    "avg_ms_per_frame": 2538.1,
     "notes": "counts the in-focus lanes; blurred foreground lane excluded by ROI"
   },
   {
