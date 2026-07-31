@@ -1,8 +1,14 @@
-# Conveyor Vision
+# factory-vision-poc
 
 Two computer-vision proofs of concept on factory line footage, both built on
 [YOLOE](https://docs.ultralytics.com/models/yoloe/) (open-vocabulary, YOLO11
 backbone), [supervision](https://github.com/roboflow/supervision) and OpenCV 5.
+
+**Four cases, one repository.** A fill-volume inspection on a bottling line, and
+zero-shot object counting on three different conveyors. Both are proofs of
+concept: they run end to end on real footage and every figure below is measured,
+but each is calibrated to its own clip rather than trained to generalise. The
+scope and limits of each are stated in `docs/`.
 
 ---
 
@@ -40,8 +46,8 @@ against the nominal capacity configured for the SKU — a video cannot observe a
 bottle's size. This is a **calibrated single-station inspection**, not a general
 model: it is tied to one camera position, one bottle and one product colour,
 which is the normal arrangement for filling-line vision. `docs/liquid-level.md`
-shows, with a measured test, what happens when the framing shifts, and lists every constant
-that would need recalibrating.
+shows, with a measured test, what happens when the framing shifts, and lists
+every constant that would need recalibrating.
 
 ---
 
