@@ -424,6 +424,7 @@ def run_case(**overrides) -> dict:
     from types import SimpleNamespace
 
     args = SimpleNamespace(video=str(VIDEO), out_name="07_bottle_filling__liquid.mp4",
+                           summary_name="liquid_level_summary.json",
                            capacity_ml=1500.0, detect=False, max_frames=0)
     for key, value in overrides.items():
         setattr(args, key, value)
@@ -628,7 +629,8 @@ def run(args) -> dict:
                  "which no camera can observe"),
         "series": series,
     }
-    (OUT_DIR / "liquid_level_summary.json").write_text(json.dumps(summary, indent=2))
+    summary_name = getattr(args, "summary_name", "liquid_level_summary.json")
+    (OUT_DIR / summary_name).write_text(json.dumps(summary, indent=2))
     print(f"DONE {out_path.name}  frames={idx} "
           f"final_fill={summary['final_fill_volume_frac']*100:.1f}% "
           f"~{summary['final_estimated_ml']:.0f} mL of {args.capacity_ml:.0f} mL nominal")
