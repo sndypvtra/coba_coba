@@ -211,12 +211,17 @@ the camera moved and runs the pipeline over it unchanged:
 python src/perturbation_test.py --sweep
 ```
 
-A re-mount of a few tens of pixels costs a few percent — an 8 % zoom with a
-60/30 px shift reads **965 mL** against a correct **1,001 mL**, 3.6 % out. The
-error grows with the move, and the point worth taking is not its size but its
-silence: every one of these is reported through the same confident panel, with
-no flag saying the calibration no longer holds. Every constant that would need
-recalibrating is listed in [`docs/liquid-level.md`](docs/liquid-level.md).
+The failure is a cliff, not a slope. A 20 % zoom costs **7 %**, and a 60/30 px
+shift costs **3.6 %** — but a 120/60 px shift reads **143 mL** against a correct
+**1,001 mL**, and 220/110 px reads **23 mL**. Translation is what breaks it, not
+scale: the geometry constants are absolute coordinates, so a shift walks the
+bottle out of the measuring window while a zoom leaves it roughly where they
+expect it.
+
+The size of the error is not the point, though. Every one of those readings is
+reported through the same confident panel with no flag saying the calibration no
+longer holds. Full table and the eleven installation-specific constants:
+[`docs/liquid-level.md`](docs/liquid-level.md).
 
 ---
 

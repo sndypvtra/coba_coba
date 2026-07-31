@@ -13,6 +13,14 @@ inline filler, clear bottles, amber product. Output:
 `output/07_bottle_filling__liquid.mp4` (gitignored — regenerate by running the
 case script), series in `output/liquid_level_summary.json`.
 
+**On the numbers in this document.** The headline result — **1,001 mL / 66.7%** —
+is measured on the 1920×1080 rendition `scripts/fetch_assets.sh` downloads, so it
+reproduces from a clean clone. The intermediate figures in the development
+history below were measured on a higher-bitrate local copy of the same footage
+that Pexels does not actually serve; they read ~0.4 points higher (1,006 mL where
+this reads 1,001). The sequence they describe is unaffected, but only the
+headline figure is reproducible.
+
 ## How it measures
 
 **Segmentation is by saturation, not hue.** Calibrated from pixel statistics
@@ -110,8 +118,8 @@ should not be full". Right — and the old datum ("the fullest level this clip
 reached") guaranteed 100% on the last frame by construction. The threads sit at
 **y=585** and the liquid stops at **y~700**, so ~115 px of bottle is still empty.
 Capacity now runs base → thread line, and the clip ends at **64.7% by volume /
-74.4% by height**. After the silhouette ROI landed (below) the figure
-settled at **67.1% / ~1,006 mL of 1,500 mL**.
+74.4% by height**. After the silhouette ROI landed (below) the figure settled —
+**66.7% / ~1,001 mL of 1,500 mL** on the reproducible rendition, 74.4% by height.
 
 Two geometry errors surfaced with it. The ROI's right edge was at x=900 while the
 body reaches **x~1010**, clipping ~110 px of bore. And the unfilled neck was
@@ -170,17 +178,43 @@ the capacity you configure for the SKU.
 ## Scope: this is a calibrated station, not a general model
 
 It will **not** transfer to another clip unchanged, even at the same angle on the
-same bottle. Tested rather than assumed — the same scene re-rendered with an 8%
-zoom and a 60/30 px shift, the sort of difference a re-mounted camera produces:
+same bottle. How far it tolerates a moved camera is measured, not asserted —
+`src/perturbation_test.py` re-renders the clip with the framing changed and runs
+the pipeline over it unchanged:
 
-| | Volume | Fill |
-|---|---|---|
-| Calibrated clip | 1,006 mL | 67.1% |
-| Same scene, framing shifted | **239 mL** | **15.9%** |
+    python src/perturbation_test.py --sweep
 
-Four times out, and reported through the same confident panel with no error flag.
-That silence is the real hazard: nothing in the output says the calibration no
-longer matches the scene.
+| Framing | Volume | Fill | Error |
+|---|---:|---:|---:|
+| calibrated | 1,001 mL | 66.7% | — |
+| shift (+40, +20) | 1,026 mL | 68.4% | +2.6% |
+| zoom ×1.08, shift (+60, +30) | 965 mL | 64.3% | −3.6% |
+| zoom ×1.20, no shift | 928 mL | 61.9% | −7.3% |
+| shift (+120, +60) | **143 mL** | 9.5% | **−85.7%** |
+| shift (+220, +110) | **23 mL** | 1.6% | **−97.7%** |
+
+Two things fall out of this that a single test would have missed.
+
+**Translation is what kills it, not scale.** A 20% zoom costs 7%, while a 120 px
+shift costs 86%. The geometry constants are absolute coordinates, so a shift
+walks the bottle out of the measuring window, whereas a zoom about the frame
+centre leaves it roughly where the constants expect. Re-mounting a camera at the
+right *position* matters far more than matching the lens.
+
+**The failure is a cliff, not a slope.** Up to ~60 px the reading is out by a few
+percent, which is the range where a tolerance could be stated. Past ~120 px it
+collapses to a seventh of the true value, and then to a fortieth. There is no
+gentle middle to detect it in.
+
+And every row above is reported through the same confident panel with no error
+flag. That silence is the real hazard: nothing in the output says the calibration
+no longer matches the scene.
+
+An earlier version of this document put the 8%-zoom case at **239 mL / 15.9%**,
+four times out. That figure predates the silhouette ROI and the changes to how
+the bore is learned; re-measured, the same perturbation now costs 3.6%. It is
+recorded here because a limits section that quietly drops a number it can no
+longer reproduce is worth less than one that says which way it moved.
 
 Eleven constants are tied to this installation:
 
