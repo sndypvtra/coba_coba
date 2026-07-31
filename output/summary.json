@@ -123,7 +123,7 @@
     },
     "unique_track_ids": 24,
     "avg_detections_per_frame": 8.95,
-    "avg_ms_per_frame": 1412.1,
+    "avg_ms_per_frame": 2268.3,
     "notes": "static pallet stack on the left is excluded by ROI"
   }
 ]
