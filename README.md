@@ -26,7 +26,7 @@ the code in this repository, not estimated.
 | **1** | Citrus sorting line | Count oranges past a line | **5** counted · 32 tracks |
 | **2** | Tomato grading line | Count tomatoes past a line | **16** counted · 50 tracks |
 | **3** | Parcel unloading belt | Count mixed packages past a line | **7** counted · 24 tracks |
-| **4** | Bottling line | Measure dispensed volume | **1,006 mL** · 67.1 % of nominal |
+| **4** | Bottling line | Measure dispensed volume | **1,001 mL** · 66.7 % of nominal |
 
 Cases 1–3 are **zero-shot**: the detector is given words, never labels, never
 training. Case 4 is a **calibrated inspection**: colour segmentation and
@@ -43,13 +43,13 @@ volume beneath it is integrated over the bottle's bore as a stack of discs.
 
 | Metric | Value |
 |---|---|
-| **Dispensed volume** | **1,006 mL** |
-| **Fill, by volume** | **67.1 %** |
+| **Dispensed volume** | **1,001 mL** |
+| **Fill, by volume** | **66.7 %** |
 | Fill, by height | 74.4 % |
 | Nominal capacity | 1,500 mL — configured per SKU |
 | Reference datum | bottle base → thread line |
 | Source clip | 232 frames @ 25 fps, 1920×1080 |
-| Trajectory | monotonic, worst frame-to-frame step **2.4 %** |
+| Trajectory | monotonic, worst frame-to-frame step **3.1 %**, no backward dip |
 
 ```bash
 python cases/case4_bottle_fill_volume.py                     # end to end
@@ -169,7 +169,9 @@ pip install -r requirements.txt
 python cases/case4_bottle_fill_volume.py
 ```
 
-CPU-only. Reference machine: 4 cores, ~1.3 s/frame at `imgsz=1280`.
+CPU-only. Reference machine: 4 cores, 1.4–2.5 s/frame at `imgsz=1280` for the
+counting cases, depending on what else the machine is doing. Case 4 runs no
+network at all and is quicker.
 
 Rendered `.mp4` results are **not committed** — they are build artefacts, and a
 source repository should not carry ~60 MB of video. Each case script regenerates
@@ -201,12 +203,20 @@ Case 4 is a **calibrated single-station inspection**, not a general model — ti
 to one camera position, one bottle and one product colour. That is the normal
 arrangement for filling-line vision, which is camera-fixed with a recipe per SKU.
 
-It is also tested rather than assumed. Re-rendering the same scene with an 8 %
-zoom and a 60/30 px shift — the sort of difference a re-mounted camera produces —
-gives **239 mL / 15.9 %** against a correct **1,006 mL / 67.1 %**. Four times out,
-reported through the same confident panel with no error flag. Every constant that
-would need recalibrating is listed in
-[`docs/liquid-level.md`](docs/liquid-level.md).
+How tied, and how badly it degrades, is measured rather than asserted —
+[`src/perturbation_test.py`](src/perturbation_test.py) re-renders the clip with
+the camera moved and runs the pipeline over it unchanged:
+
+```bash
+python src/perturbation_test.py --sweep
+```
+
+A re-mount of a few tens of pixels costs a few percent — an 8 % zoom with a
+60/30 px shift reads **965 mL** against a correct **1,001 mL**, 3.6 % out. The
+error grows with the move, and the point worth taking is not its size but its
+silence: every one of these is reported through the same confident panel, with
+no flag saying the calibration no longer holds. Every constant that would need
+recalibrating is listed in [`docs/liquid-level.md`](docs/liquid-level.md).
 
 ---
 
