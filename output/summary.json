@@ -38,7 +38,7 @@
     },
     "unique_track_ids": 32,
     "avg_detections_per_frame": 7.72,
-    "avg_ms_per_frame": 1272.8,
+    "avg_ms_per_frame": 2336.4,
     "notes": ""
   },
   {
@@ -79,7 +79,7 @@
     },
     "unique_track_ids": 50,
     "avg_detections_per_frame": 11.89,
-    "avg_ms_per_frame": 2538.1,
+    "avg_ms_per_frame": 2138.5,
     "notes": "counts the in-focus lanes; blurred foreground lane excluded by ROI"
   },
   {
@@ -123,7 +123,7 @@
     },
     "unique_track_ids": 24,
     "avg_detections_per_frame": 8.95,
-    "avg_ms_per_frame": 2268.3,
+    "avg_ms_per_frame": 2183.0,
     "notes": "static pallet stack on the left is excluded by ROI"
   }
 ]

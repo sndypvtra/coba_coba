@@ -15,7 +15,7 @@ from ultralytics import YOLOE
 
 warnings.filterwarnings("ignore")
 
-ROOT = Path(__file__).resolve().parent.parent
+from factory_vision.paths import ROOT, VIDEO_DIR, WEIGHTS_DIR
 
 CANDIDATES = {
     "01_oranges_production_line.mp4": [
@@ -70,7 +70,7 @@ def probe(model: YOLOE, video: Path, prompt_sets, conf: float, imgsz: int, n_fra
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--weights", default=str(ROOT / "weights" / "yoloe-11m-seg.pt"))
+    ap.add_argument("--weights", default=str(WEIGHTS_DIR / "yoloe-11m-seg.pt"))
     ap.add_argument("--conf", type=float, default=0.05)
     ap.add_argument("--imgsz", type=int, default=640)
     ap.add_argument("--frames", type=int, default=4)
@@ -78,7 +78,7 @@ def main():
 
     model = YOLOE(args.weights)
     for name, prompt_sets in CANDIDATES.items():
-        video = ROOT / "videos" / name
+        video = VIDEO_DIR / name
         if video.exists():
             probe(model, video, prompt_sets, args.conf, args.imgsz, args.frames)
         else:

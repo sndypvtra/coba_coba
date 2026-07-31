@@ -22,11 +22,11 @@ from pathlib import Path
 
 import cv2
 
-ROOT = Path(__file__).resolve().parent.parent
+from factory_vision.paths import ROOT, VIDEO_DIR, WEIGHTS_DIR
 if __name__ == "__main__" and str(ROOT) not in __import__("sys").path:
     __import__("sys").path.insert(0, str(ROOT))
 
-from src import liquid_level as L  # noqa: E402
+from factory_vision import filling as L  # noqa: E402
 
 
 def perturb_clip(src: Path, dst: Path, zoom: float, dx: int, dy: int) -> None:

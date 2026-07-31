@@ -9,7 +9,7 @@ Run:  python cases/case1_oranges_counting.py
 
 from _common import ROOT, banner, report  # noqa: F401  (sets sys.path)
 
-from src.conveyor_count import CLIPS, run_case
+from factory_vision.counting import CLIPS, run_case
 
 CLIP = "01_oranges_production_line.mp4"
 

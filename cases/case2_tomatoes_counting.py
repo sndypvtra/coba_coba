@@ -11,7 +11,7 @@ Run:  python cases/case2_tomatoes_counting.py
 
 from _common import ROOT, banner, report  # noqa: F401
 
-from src.conveyor_count import CLIPS, run_case
+from factory_vision.counting import CLIPS, run_case
 
 CLIP = "02_tomatoes_conveyor.mp4"
 

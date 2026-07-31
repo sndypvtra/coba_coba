@@ -19,7 +19,8 @@ done
 
 echo "== source clips (Pexels, free for commercial use) =="
 # Every pipeline here is calibrated in pixels - counting lines and ROIs in
-# src/conveyor_count.py, the bottle geometry in src/liquid_level.py - so the
+# factory_vision/counting/clips.py, the bottle geometry in factory_vision/filling/
+# calibration.py - so the
 # rendition matters, not just the clip. All four are calibrated on 1920x1080.
 #
 # The /download/ endpoint hands back the *largest* rendition, which is the right

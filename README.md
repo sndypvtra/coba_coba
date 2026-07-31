@@ -164,9 +164,21 @@ More, including the counting rules and threshold-tuning results:
 
 ```bash
 pip install torch==2.9.1 torchvision==0.24.1 --index-url https://download.pytorch.org/whl/cpu
-pip install -r requirements.txt
+pip install -e .                   # or: pip install -r requirements.txt
 ./scripts/fetch_assets.sh          # model weights + source clips
 python cases/case4_bottle_fill_volume.py
+```
+
+Run from the repository root. Ultralytics will fetch any missing model weight on
+demand, but two of them land relative to the working directory rather than the
+repo — the MobileCLIP text encoder (~600 MB) and the tracker's ReID weights — so
+`fetch_assets.sh` puts everything where the code expects it.
+
+Each pipeline is also importable on its own:
+
+```python
+from factory_vision.counting import run_case
+from factory_vision.filling import run_case as measure_fill
 ```
 
 CPU-only. Reference machine: 4 cores, 1.4–2.5 s/frame at `imgsz=1280` for the
@@ -204,11 +216,11 @@ to one camera position, one bottle and one product colour. That is the normal
 arrangement for filling-line vision, which is camera-fixed with a recipe per SKU.
 
 How tied, and how badly it degrades, is measured rather than asserted —
-[`src/perturbation_test.py`](src/perturbation_test.py) re-renders the clip with
+[`factory_vision/tools/perturbation_test.py`](factory_vision/tools/perturbation_test.py) re-renders the clip with
 the camera moved and runs the pipeline over it unchanged:
 
 ```bash
-python src/perturbation_test.py --sweep
+python -m factory_vision.tools.perturbation_test --sweep
 ```
 
 The failure is a cliff, not a slope. A 20 % zoom costs **7 %**, and a 60/30 px
@@ -228,17 +240,27 @@ longer holds. Full table and the eleven installation-specific constants:
 ## Layout
 
 ```
+factory_vision/              the library
+  paths.py                   repository paths, resolved once
+  counting/                  cases 1-3 — zero-shot line counting
+    clips.py                 per-clip config: prompts, line, belt motion
+    geometry.py              counting line, ROI, size gating
+    tracking.py              tracker config resolution
+    overlay.py               palette and live HUD
+    pipeline.py              detect -> track -> count -> render
+    trackers/*.yaml          trackers retuned for zero-shot score ranges
+  filling/                   case 4 — fill-volume inspection
+    calibration.py           every constant tied to this station
+    segmentation.py          product mask and bottle silhouette
+    profile.py               bore, surface, isotonic fit, volume
+    panel.py                 readout panel and overlay
+    pipeline.py              three passes over the clip
+  tools/
+    probe_prompts.py         prompt/confidence calibration sweep
+    tune_thresholds.py       detection-latency measurement
+    perturbation_test.py     what a moved camera costs case 4
 cases/                       one runnable entry point per case
-  case1_oranges_counting.py
-  case2_tomatoes_counting.py
-  case3_packages_counting.py
-  case4_bottle_fill_volume.py
-src/
-  liquid_level.py            fill-volume inspection
-  conveyor_count.py          zero-shot line counting
-  probe_prompts.py           prompt/confidence calibration sweep
-  tune_thresholds.py         detection-latency measurement
-  trackers/*.yaml            trackers retuned for zero-shot score ranges
+  case1_oranges_counting.py  … through case4_bottle_fill_volume.py
 docs/
   liquid-level.md            fill-volume: method, every bug found, limits
   conveyor-counting.md       counting: method, tuning results, failure modes

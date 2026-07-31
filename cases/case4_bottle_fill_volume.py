@@ -17,7 +17,7 @@ import argparse
 
 from _common import ROOT, banner, report  # noqa: F401
 
-import src.liquid_level as L
+import factory_vision.filling as L
 
 
 def main() -> None:

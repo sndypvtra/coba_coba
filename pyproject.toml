@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "factory-vision-poc"
+version = "0.1.0"
+description = "Computer vision for production lines: zero-shot conveyor counting and fill-volume inspection"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "ultralytics==8.4.106",
+    "supervision==0.29.1",
+    "opencv-python==5.0.0.93",
+    "lap",
+    "PyYAML==6.0.1",
+]
+
+[project.urls]
+Source = "https://github.com/sndypvtra/coba_coba"
+
+# torch/torchvision are deliberately not listed: the CPU wheels come from a
+# separate index and pinning them here would fight whatever the user installed.
+#   pip install torch==2.9.1 torchvision==0.24.1 --index-url https://download.pytorch.org/whl/cpu
+
+[tool.setuptools.packages.find]
+include = ["factory_vision*"]
+
+[tool.setuptools.package-data]
+"factory_vision.counting" = ["trackers/*.yaml"]

@@ -15,7 +15,7 @@ tomatoes) and one parcel belt.
 
 ## How each clip is configured
 
-Every clip is one `ClipConfig` in `../src/conveyor_count.py`. Belt direction is
+Every clip is one `ClipConfig` in `../factory_vision/counting/clips.py`. Belt direction is
 measured from tracked-object displacement, not eyeballed. All three belts run
 left, so all three lines sit near-vertical — but each is tilted to be square to
 its own belt rather than to the frame.
@@ -28,7 +28,7 @@ its own belt rather than to the frame.
 
 ### Threshold tuning is clip-specific, and often not the answer
 
-`../src/tune_thresholds.py` measures **entry lag**: how far into the frame an object
+`../factory_vision/tools/tune_thresholds.py` measures **entry lag**: how far into the frame an object
 travels before the pipeline locks onto it. 0.00 means caught at the edge, 0.30
 means it was already 30% across. Lowering `conf` and opening the tracker gates
 helps one clip a lot and the other two barely at all:
@@ -124,7 +124,7 @@ Four things that were not obvious and are worth keeping:
 1. **TrackTrack's defaults reject zero-shot detections.** Stock thresholds are
    `track_high_thresh: 0.6` / `new_track_thresh: 0.7`, but open-vocabulary YOLOE
    scores on this footage run ~0.10–0.65. With defaults almost no track is ever
-   created. `../src/trackers/tracktrack_zeroshot.yaml` moves the gates down to
+   created. `../factory_vision/counting/trackers/tracktrack_zeroshot.yaml` moves the gates down to
    0.22 / 0.28 and documents each change against its stock value.
 2. **ReID `model: auto` crashes on YOLOE `*-seg` checkpoints.** The native path
    (`get_obj_feats`) permutes a 4-D feature map, but the segmentation head

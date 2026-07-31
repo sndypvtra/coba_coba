@@ -35,11 +35,12 @@ from ultralytics import YOLOE
 
 warnings.filterwarnings("ignore")
 
-ROOT = Path(__file__).resolve().parent.parent
+from factory_vision.paths import ROOT, VIDEO_DIR, WEIGHTS_DIR
 import sys
 
 sys.path.insert(0, str(ROOT))
-from src.conveyor_count import CLIPS, filter_detections  # noqa: E402
+from factory_vision.counting import CLIPS
+from factory_vision.counting.geometry import filter_detections  # noqa: E402
 
 import supervision as sv  # noqa: E402
 
@@ -56,10 +57,10 @@ def entry_axis(motion: tuple[float, float]) -> tuple[int, bool]:
 
 
 def run(cfg, conf, tracker_path, imgsz, min_age, max_frames):
-    model = YOLOE(str(ROOT / "weights" / "yoloe-11l-seg.pt"))
+    model = YOLOE(str(WEIGHTS_DIR / "yoloe-11l-seg.pt"))
     model.set_classes(cfg.prompts, model.get_text_pe(cfg.prompts))
 
-    cap = cv2.VideoCapture(str(ROOT / "videos" / cfg.filename))
+    cap = cv2.VideoCapture(str(VIDEO_DIR / cfg.filename))
     w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     axis, from_high = entry_axis(cfg.motion)
@@ -129,7 +130,7 @@ def main():
     ap.add_argument("--scratch", default="/tmp")
     args = ap.parse_args()
 
-    base = ROOT / "src" / "trackers" / "tracktrack_zeroshot.yaml"
+    base = ROOT / "factory_vision" / "counting" / "trackers" / "tracktrack_zeroshot.yaml"
     scratch = Path(args.scratch)
     wanted = args.clips.split(",")
 

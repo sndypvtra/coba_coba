@@ -4,9 +4,9 @@ Overview and results in the [repository README](../README.md).
 
 Measures how much liquid a filling machine puts into a bottle, from video alone.
 
-    python src/liquid_level.py --capacity-ml 1500
-    python src/liquid_level.py --video clip.mp4 --out-name result.mp4
-    python src/liquid_level.py --detect          # overlay live YOLOE segmentation
+    python -m factory_vision.filling.pipeline --capacity-ml 1500
+    python -m factory_vision.filling.pipeline --video clip.mp4 --out-name result.mp4
+    python -m factory_vision.filling.pipeline --detect          # overlay live YOLOE segmentation
 
 Source: [Pexels 8720278](https://www.pexels.com/video/empty-bottles-in-a-filling-machine-8720278/),
 inline filler, clear bottles, amber product. Output:
@@ -179,10 +179,10 @@ the capacity you configure for the SKU.
 
 It will **not** transfer to another clip unchanged, even at the same angle on the
 same bottle. How far it tolerates a moved camera is measured, not asserted —
-`src/perturbation_test.py` re-renders the clip with the framing changed and runs
+`factory_vision/tools/perturbation_test.py` re-renders the clip with the framing changed and runs
 the pipeline over it unchanged:
 
-    python src/perturbation_test.py --sweep
+    python -m factory_vision.tools.perturbation_test --sweep
 
 | Framing | Volume | Fill | Error |
 |---|---:|---:|---:|
