@@ -56,12 +56,34 @@ def perturb_clip(src: Path, dst: Path, zoom: float, dx: int, dy: int) -> None:
     print(f"  wrote {dst.name}: {n} frames, zoom x{zoom:.2f}, shift ({dx:+d}, {dy:+d})")
 
 
+"""A camera move small enough to be plausible, up to one nobody would miss."""
+SWEEP = [
+    (1.00, 40, 20),
+    (1.08, 60, 30),
+    (1.00, 120, 60),
+    (1.20, 0, 0),
+    (1.00, 220, 110),
+]
+
+
+def measure(zoom: float, dx: int, dy: int, capacity_ml: float) -> dict:
+    tag = f"z{zoom:.2f}_dx{dx}_dy{dy}".replace(".", "")
+    shifted = L.OUT_DIR / f"07_bottle_filling_line__{tag}.mp4"
+    perturb_clip(Path(L.VIDEO), shifted, zoom, dx, dy)
+    return L.run_case(video=str(shifted),
+                      out_name=f"07_bottle_filling__liquid_{tag}.mp4",
+                      summary_name=f"liquid_level_summary_{tag}.json",
+                      capacity_ml=capacity_ml)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--zoom", type=float, default=1.08)
     ap.add_argument("--dx", type=int, default=60)
     ap.add_argument("--dy", type=int, default=30)
     ap.add_argument("--capacity-ml", type=float, default=1500.0)
+    ap.add_argument("--sweep", action="store_true",
+                    help="run the whole sensitivity sweep instead of one setting")
     args = ap.parse_args()
 
     print("=" * 74)
@@ -73,29 +95,26 @@ def main() -> None:
         raise SystemExit("run cases/case4_bottle_fill_volume.py first - "
                          f"{baseline_path} is the baseline this compares against")
     baseline = json.loads(baseline_path.read_text())
-
-    shifted = L.OUT_DIR / "07_bottle_filling_line__shifted.mp4"
-    print("\nperturbing the source clip")
-    perturb_clip(Path(L.VIDEO), shifted, args.zoom, args.dx, args.dy)
-
-    print("\nrunning the unchanged pipeline over it")
-    got = L.run_case(video=str(shifted),
-                     out_name="07_bottle_filling__liquid_shifted.mp4",
-                     summary_name="liquid_level_summary_shifted.json",
-                     capacity_ml=args.capacity_ml)
-
     b_ml, b_frac = baseline["final_estimated_ml"], baseline["final_fill_volume_frac"]
-    g_ml, g_frac = got["final_estimated_ml"], got["final_fill_volume_frac"]
+
+    settings = SWEEP if args.sweep else [(args.zoom, args.dx, args.dy)]
+    rows = []
+    for zoom, dx, dy in settings:
+        print(f"\n>>> zoom x{zoom:.2f}, shift ({dx:+d}, {dy:+d})")
+        got = measure(zoom, dx, dy, args.capacity_ml)
+        rows.append((zoom, dx, dy, got["final_estimated_ml"],
+                     got["final_fill_volume_frac"]))
 
     print("\n" + "-" * 74)
-    print(f"  {'':<34}{'Volume':>12}{'Fill':>10}")
-    print(f"  {'Calibrated clip':<34}{b_ml:>9,.0f} mL{b_frac*100:>9.1f}%")
-    print(f"  {'Same scene, framing shifted':<34}{g_ml:>9,.0f} mL{g_frac*100:>9.1f}%")
+    print(f"  {'Framing':<32}{'Volume':>12}{'Fill':>10}{'Error':>10}")
+    print(f"  {'calibrated':<32}{b_ml:>9,.0f} mL{b_frac*100:>9.1f}%{'-':>10}")
+    for zoom, dx, dy, ml, frac in rows:
+        desc = f"zoom x{zoom:.2f}, shift ({dx:+d}, {dy:+d})"
+        err = (ml - b_ml) / b_ml * 100 if b_ml else 0.0
+        print(f"  {desc:<32}{ml:>9,.0f} mL{frac*100:>9.1f}%{err:>9.1f}%")
     print("-" * 74)
-    ratio = b_ml / g_ml if g_ml else float("inf")
-    print(f"  off by {ratio:.1f}x, reported through the same panel with no error flag.")
-    print("  Nothing in the output signals that the calibration no longer holds -")
-    print("  that silence is the hazard, not the error itself.")
+    print("  Every row is reported through the same confident panel, with no error")
+    print("  flag on any of them. That silence is the hazard, not the error itself.")
 
 
 if __name__ == "__main__":

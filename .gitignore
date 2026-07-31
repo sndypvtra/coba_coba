@@ -14,3 +14,7 @@ __pycache__/
 
 # rendered result videos - regenerate with the case scripts in cases/
 output/*.mp4
+
+# per-variant series from src/perturbation_test.py; the baseline
+# output/liquid_level_summary.json is committed, these are regenerable
+output/liquid_level_summary_*.json
