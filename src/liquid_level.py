@@ -416,6 +416,20 @@ def bottle_profile(observed: np.ndarray) -> np.ndarray:
     return sm
 
 
+def run_case(**overrides) -> dict:
+    """Run the fill-volume inspection and return its summary.
+
+    Entry point for `cases/case4_bottle_fill_volume.py`.
+    """
+    from types import SimpleNamespace
+
+    args = SimpleNamespace(video=str(VIDEO), out_name="07_bottle_filling__liquid.mp4",
+                           capacity_ml=1500.0, detect=False, max_frames=0)
+    for key, value in overrides.items():
+        setattr(args, key, value)
+    return run(args)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--video", default=str(VIDEO),
@@ -426,8 +440,10 @@ def main():
     ap.add_argument("--detect", action="store_true",
                     help="also run YOLOE and overlay its bottle segmentation")
     ap.add_argument("--max-frames", type=int, default=0)
-    args = ap.parse_args()
+    return run(ap.parse_args())
 
+
+def run(args) -> dict:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     src_video = Path(args.video)
     info = sv.VideoInfo.from_video_path(str(src_video))

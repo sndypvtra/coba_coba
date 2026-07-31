@@ -546,6 +546,28 @@ def process(cfg: ClipConfig, args) -> dict:
     return summary
 
 
+def run_case(filename: str, **overrides) -> dict:
+    """Run one clip end to end and return its summary.
+
+    The per-case scripts in `cases/` call this. They stay thin on purpose: the
+    three counting cases differ only in their ClipConfig, so duplicating the
+    pipeline into each script would mean three copies of the same tracker,
+    counting and rendering code drifting apart on the next fix.
+    """
+    from types import SimpleNamespace
+
+    args = SimpleNamespace(weights="yoloe-11l-seg.pt", tracker="tracktrack",
+                           imgsz=1280, max_frames=0, stride=1)
+    for key, value in overrides.items():
+        setattr(args, key, value)
+    try:
+        cfg = next(c for c in CLIPS if c.filename == filename)
+    except StopIteration:
+        raise SystemExit(f"no clip named {filename}")
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    return process(cfg, args)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--weights", default="yoloe-11l-seg.pt")

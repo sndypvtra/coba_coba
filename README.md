@@ -37,8 +37,9 @@ Result video: **[`output/07_bottle_filling__liquid.mp4`](output/07_bottle_fillin
 · method and limits in **[`docs/liquid-level.md`](docs/liquid-level.md)**
 
 ```bash
-python src/liquid_level.py --capacity-ml 1500
-python src/liquid_level.py --video path/to/clip.mp4 --out-name result.mp4
+python cases/case4_bottle_fill_volume.py                    # this case, end to end
+python cases/case4_bottle_fill_volume.py --capacity-ml 1000 # another SKU
+python src/liquid_level.py --video clip.mp4 --out-name result.mp4
 ```
 
 What is **measured** is the fill fraction. The millilitre figure is that fraction
@@ -69,8 +70,10 @@ Full numbers in [`output/summary.json`](output/summary.json) · method, tuning
 results and failure modes in **[`docs/conveyor-counting.md`](docs/conveyor-counting.md)**
 
 ```bash
-python src/conveyor_count.py                        # all three clips
-python src/conveyor_count.py --only 02_tomatoes_conveyor.mp4
+python cases/case1_oranges_counting.py     # citrus line
+python cases/case2_tomatoes_counting.py    # tomato line
+python cases/case3_packages_counting.py    # parcel belt
+python src/conveyor_count.py               # all three in one pass
 ```
 
 ---
@@ -95,9 +98,30 @@ pip install -r requirements.txt
 Runs CPU-only; the reference machine was 4 cores, about 1.3 s/frame for the
 counting pipeline at `imgsz=1280`.
 
+## Running the four cases
+
+Each case has its own entry-point script in `cases/`, runnable on its own:
+
+```bash
+python cases/case1_oranges_counting.py       # zero-shot counting, citrus line
+python cases/case2_tomatoes_counting.py      # zero-shot counting, tomato line
+python cases/case3_packages_counting.py      # zero-shot counting, parcel belt
+python cases/case4_bottle_fill_volume.py     # fill-volume inspection
+```
+
+Each prints the case's scene, source and configuration, runs it end to end, and
+reports its own result. They are thin by design — the three counting cases differ
+only in their `ClipConfig`, so the tracking, counting and rendering code lives
+once in `src/` rather than being copied into each script and drifting apart on
+the next fix.
+
 ## Layout
 
 ```
+cases/case1_oranges_counting.py        case 1 entry point
+cases/case2_tomatoes_counting.py       case 2 entry point
+cases/case3_packages_counting.py       case 3 entry point
+cases/case4_bottle_fill_volume.py      case 4 entry point
 src/liquid_level.py                    fill-volume inspection
 src/conveyor_count.py                  zero-shot line counting
 src/probe_prompts.py                   prompt/confidence calibration sweep
