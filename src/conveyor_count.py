@@ -546,6 +546,30 @@ def process(cfg: ClipConfig, args) -> dict:
     return summary
 
 
+def merge_summary(summary: dict, path: Path | None = None) -> None:
+    """Fold one clip's summary into output/summary.json, keeping the others.
+
+    Each case script runs a single clip, so it must not overwrite the shared
+    file with a one-element list - the entry is replaced in place and the
+    remaining clips are left as they were. Entries are held in CLIPS order so
+    the file reads the same however the cases were run.
+    """
+    path = path or (OUTPUT_DIR / "summary.json")
+    existing: list[dict] = []
+    if path.exists():
+        try:
+            loaded = json.loads(path.read_text())
+            if isinstance(loaded, list):
+                existing = [e for e in loaded if isinstance(e, dict)]
+        except json.JSONDecodeError:
+            existing = []  # unreadable file is not worth losing this run over
+
+    merged = [e for e in existing if e.get("video") != summary["video"]] + [summary]
+    order = {c.filename: i for i, c in enumerate(CLIPS)}
+    merged.sort(key=lambda e: order.get(e.get("video"), len(order)))
+    path.write_text(json.dumps(merged, indent=2))
+
+
 def run_case(filename: str, **overrides) -> dict:
     """Run one clip end to end and return its summary.
 
@@ -565,7 +589,9 @@ def run_case(filename: str, **overrides) -> dict:
     except StopIteration:
         raise SystemExit(f"no clip named {filename}")
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    return process(cfg, args)
+    summary = process(cfg, args)
+    merge_summary(summary, Path(getattr(args, "summary", OUTPUT_DIR / "summary.json")))
+    return summary
 
 
 def main():

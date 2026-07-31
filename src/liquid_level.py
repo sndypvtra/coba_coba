@@ -436,7 +436,7 @@ def main():
                     help="source clip; note the calibration is per-installation")
     ap.add_argument("--out-name", default="07_bottle_filling__liquid.mp4")
     ap.add_argument("--capacity-ml", type=float, default=1500.0,
-                    help="ASSUMED bottle capacity; scales the mL readout")
+                    help="nominal SKU capacity, base to thread line; scales the mL readout")
     ap.add_argument("--detect", action="store_true",
                     help="also run YOLOE and overlay its bottle segmentation")
     ap.add_argument("--max-frames", type=int, default=0)
@@ -620,17 +620,19 @@ def run(args) -> dict:
         "video": src_video.name,
         "output": out_path.name,
         "frames": idx,
-        "assumed_capacity_ml": args.capacity_ml,
+        "nominal_capacity_ml": args.capacity_ml,
         "final_fill_volume_frac": series[-1]["fill_volume_frac"] if series else 0,
         "final_estimated_ml": series[-1]["estimated_ml"] if series else 0,
-        "caveat": ("fill fraction is measured; mL is that fraction times the ASSUMED "
-                   "capacity, which is not observable from the video"),
+        "note": ("fill fraction is measured from the video; millilitres are that "
+                 "fraction against the nominal capacity configured for the SKU, "
+                 "which no camera can observe"),
         "series": series,
     }
     (OUT_DIR / "liquid_level_summary.json").write_text(json.dumps(summary, indent=2))
     print(f"DONE {out_path.name}  frames={idx} "
           f"final_fill={summary['final_fill_volume_frac']*100:.1f}% "
-          f"~{summary['final_estimated_ml']:.0f} mL (assumed {args.capacity_ml:.0f} mL bottle)")
+          f"~{summary['final_estimated_ml']:.0f} mL of {args.capacity_ml:.0f} mL nominal")
+    return summary
 
 
 def _text(img, s, org, scale, colour, weight=1, font=cv2.FONT_HERSHEY_SIMPLEX):

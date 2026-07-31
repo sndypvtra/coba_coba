@@ -8,6 +8,7 @@ ultralytics==8.4.106      # ships YOLOE + TrackTrack (CVPR 2025)
 supervision==0.29.1       # annotators, LineZone counting, VideoSink
 opencv-python==5.0.0.93   # OpenCV 5
 lap                       # linear assignment used by the trackers
+PyYAML==6.0.1             # tracker configs are read directly, not only via ultralytics
 
 # pulled in automatically by ultralytics on first `get_text_pe` call:
 #   clip (git+https://github.com/ultralytics/CLIP.git), ftfy, regex

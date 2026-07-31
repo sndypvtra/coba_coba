@@ -227,7 +227,7 @@ capacity it was dividing by was only the sliver of bottle wetted so far.
 |---|---|
 | fill fraction by volume | **measured** |
 | fill fraction by height | **measured** |
-| millilitres | **assumed capacity x measured fraction** |
+| millilitres | **nominal capacity x measured fraction** |
 
 `--capacity-ml` is not observable from the video. The fill *fraction* is real;
 millilitres are that fraction scaled by whatever capacity you supply. Pass the
