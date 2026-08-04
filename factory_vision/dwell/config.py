@@ -34,6 +34,16 @@ class ExclusionZone:
     polygon: list[tuple[int, int]]
     min_overlap: float = 0.70
     mode: str = "exclude"
+    # Optional detection threshold for this region alone. A service point in a
+    # dark corner can sit far below the threshold that is right for the rest of
+    # the room, and a global drop would buy those frames at the cost of false
+    # positives everywhere else. Narrow region, narrow exception.
+    conf: float | None = None
+    # A staff track may be held across this many frames of missed detection.
+    # Used only where the person has been confirmed present through the gap and
+    # does not move; held frames are counted separately from detected ones in
+    # the summary so the interpolation is never passed off as observation.
+    hold_frames: int = 0
 
 
 @dataclass
@@ -84,8 +94,10 @@ CLIPS = [
                          (420, 252), (250, 246), (165, 196), (50, 110)],
             ),
             ExclusionZone(
-                name="service area",
-                reason="behind the counter - staff, not customers",
+                name="barista counter",
+                reason="behind the counter - timed as service, not as a visit",
+                mode="staff",
+                hold_frames=6,
                 # The lower edge follows the counter's top edge, measured at
                 # (1080,150) - (1500,195) - (1650,200). Staff stand beyond it and
                 # fall wholly inside; a customer at the till has only their head
@@ -98,14 +110,11 @@ CLIPS = [
         notes=("assembled from 150 consecutive frames of CAFE scene 5 "
                "(every 6th frame of a 29.97 fps recording -> 4.995 fps, 30.0 s)"),
     ),
-    # Scenes 1 and 17 carry no exclusion zones, and that is a finding rather than
-    # an omission. Both were inspected the same way scene 5 was - frames pulled at
-    # full resolution and the detector run over them to see where it fires - and
-    # neither room has a mirror or a customer-facing counter in view. Scene 1 does
-    # produce a low-confidence detection (0.37-0.43) on a backlit merchandise
-    # shelf, but that is a false positive on goods, not a member of staff, and it
-    # is left to the track-age gate rather than papered over with a zone. Copying
-    # scene 5's polygons here would have masked live parts of both rooms.
+    # Scene 1 has no mirror, so it carries no exclude zone - only a service one.
+    # It does also produce a low-confidence detection (0.37-0.43) on a backlit
+    # merchandise shelf at x~540, y~155. That is a false positive on goods rather
+    # than a person, and it is left to the track-age gate rather than papered over
+    # with another zone.
     DwellConfig(
         filename="cafe_scene1_30s.mp4",
         prompts=["person"],
@@ -114,33 +123,32 @@ CLIPS = [
         source="https://dk-kim.github.io/CAFE/",
         conf=0.25,
         min_track_age=5,
-        notes=("assembled from 150 consecutive frames of CAFE scene 1; "
-               "no mirror and no counter in view, so no exclusion zones"),
-    ),
-    DwellConfig(
-        filename="cafe_scene17_30s.mp4",
-        prompts=["person"],
-        label="person",
-        scene="Cafe interior, elevated fixed camera - CAFE dataset scene 17",
-        source="https://dk-kim.github.io/CAFE/",
-        conf=0.25,
-        min_track_age=5,
         exclusion_zones=[
             ExclusionZone(
-                name="service point",
-                reason="server works this spot - timed as service, not as a visit",
+                name="barista station",
+                reason="counter under the menu boards - timed as service, not a visit",
                 mode="staff",
-                # There is no counter in this room; the service point is where the
-                # server stands, and she is remarkably still. Sampled every 10th
-                # frame across the clip her box moves less than 5 px: x1 1722-1726,
-                # y1 427-435, x2 pinned to the frame edge, y2 872-873, at
-                # confidence 0.93-0.94 throughout. The polygon is that footprint
-                # with a margin. It sits beyond the end of the communal table, so
-                # a seated customer cannot fall inside it.
-                polygon=[(1690, 390), (1920, 390), (1920, 930), (1690, 930)],
+                # The barista works the far end of the counter, deep in the room
+                # under the illuminated menu boards. Scanning every detection in
+                # the left half of the frame down to conf 0.05 puts her at
+                # x 742-870, y 225-345; the polygon is that footprint with a
+                # margin. The nearest customer detection starts below y=440, so
+                # the zone cannot swallow one.
+                #
+                # Not the person at the top left of the frame, who leans on a
+                # wall-facing bar ledge - she is a customer and is counted as one.
+                polygon=[(715, 195), (905, 195), (905, 380), (715, 380)],
+                # Detection here is far worse than in the rest of the room: the
+                # counter is deep in the scene, backlit by the menu boards, and
+                # equipment on the counter top keeps cutting her in half. She
+                # appears in roughly half the sampled frames at the room
+                # threshold, at confidences spanning 0.05-0.71. Both numbers
+                # below come from that measurement rather than from taste.
+                conf=0.10,
+                hold_frames=12,
             ),
         ],
-        notes=("assembled from 150 consecutive frames of CAFE scene 17; "
-               "no mirror and no counter, but one standing service point"),
+        notes=("assembled from 150 consecutive frames of CAFE scene 1; "
+               "one barista station under the menu boards, no mirror"),
     ),
 ]

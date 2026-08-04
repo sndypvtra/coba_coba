@@ -18,8 +18,30 @@
   "occupancy_max": 10,
   "dwell_mean_seconds": 20.6,
   "dwell_max_seconds": 30.03,
-  "staff": [],
-  "staff_service_seconds": 0,
+  "staff": [
+    {
+      "track_id": 9,
+      "service_seconds": 1.8,
+      "frames_total": 9,
+      "frames_detected": 9,
+      "frames_held": 0
+    },
+    {
+      "track_id": 10,
+      "service_seconds": 1.0,
+      "frames_total": 5,
+      "frames_detected": 5,
+      "frames_held": 0
+    },
+    {
+      "track_id": 15,
+      "service_seconds": 21.42,
+      "frames_total": 107,
+      "frames_detected": 93,
+      "frames_held": 14
+    }
+  ],
+  "staff_service_seconds": 24.22,
   "filtering": {
     "detections_before_filters": 2016,
     "duplicate_boxes_removed": 76,
@@ -31,31 +53,31 @@
         "min_overlap": 0.7
       },
       {
-        "name": "service area",
-        "mode": "exclude",
-        "reason": "behind the counter - staff, not customers",
+        "name": "barista counter",
+        "mode": "staff",
+        "reason": "behind the counter - timed as service, not as a visit",
         "min_overlap": 0.7
       }
     ],
     "tracks_relinked": 3,
     "relink_detail": [
       {
-        "from": 13,
-        "into": 12,
+        "from": 16,
+        "into": 14,
         "gap_seconds": 1.2,
         "moved_frac": 0.047,
         "appearance": 0.762
       },
       {
-        "from": 16,
-        "into": 12,
+        "from": 19,
+        "into": 14,
         "gap_seconds": 2.8,
         "moved_frac": 0.056,
         "appearance": 0.75
       },
       {
-        "from": 23,
-        "into": 16,
+        "from": 28,
+        "into": 19,
         "gap_seconds": 1.2,
         "moved_frac": 0.057,
         "appearance": 0.976
@@ -67,7 +89,7 @@
     "worst_continuity": 0.457,
     "note": "continuity = frames actually seen / first-to-last span. Below 1.0 the track was lost and re-acquired; re-linking joins the obvious cases but cannot join every one."
   },
-  "avg_ms_per_frame": 1911.4,
+  "avg_ms_per_frame": 1902.4,
   "occupancy_series": [
     8,
     8,
@@ -294,7 +316,7 @@
       "continuity": 1.0
     },
     {
-      "track_id": 11,
+      "track_id": 13,
       "first_frame": 12,
       "last_frame": 43,
       "frames_seen": 16,
@@ -303,7 +325,7 @@
       "continuity": 0.5
     },
     {
-      "track_id": 12,
+      "track_id": 14,
       "first_frame": 13,
       "last_frame": 136,
       "frames_seen": 108,
@@ -312,7 +334,7 @@
       "continuity": 0.871
     },
     {
-      "track_id": 20,
+      "track_id": 23,
       "first_frame": 52,
       "last_frame": 79,
       "frames_seen": 20,
@@ -321,7 +343,7 @@
       "continuity": 0.714
     },
     {
-      "track_id": 29,
+      "track_id": 34,
       "first_frame": 114,
       "last_frame": 150,
       "frames_seen": 37,

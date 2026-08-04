@@ -300,7 +300,7 @@ def draw_zones(vis, zones, scale):
             text_scale=0.5 * scale, text_thickness=max(1, int(1.4 * scale)),
             text_padding=int(8 * scale), display_in_zone_count=False)
         vis = ann.annotate(scene=vis,
-                           label=("SERVICE POINT" if staff else f"EXCLUDED - {z.name}"))
+                           label=(z.name.upper() if staff else f"EXCLUDED - {z.name}"))
     return vis
 
 
@@ -350,29 +350,37 @@ def compose(vis, occupancy, visitors, idx, total, fps, dwell, live_ids,
         bar = int(min(frames / max(total, 1), 1.0) * (PANEL_W - 2 * m - 176))
         cv2.rectangle(canvas, (m + 176, yy - 11), (m + 176 + bar, yy - 3), colour, -1)
 
-    # service section - only drawn for rooms that have a service point
+    # barista block - only drawn for rooms that have a service point
     if any(z.mode == "staff" for z in zones):
-        y = h - 300
+        y = h - 320
         cv2.line(canvas, (m, y), (PANEL_W - m, y), RULE, 1)
-        _text(canvas, "SERVICE POINT", (m, y + 26), 0.44, MUTED)
-        if staff_live or staff_dwell:
-            shown = sorted(((staff_dwell[i], i) for i in
-                            (staff_live or set(staff_dwell))), reverse=True)[:3]
-            for row, (frames, tid) in enumerate(shown):
-                yy = y + 58 + row * 32
-                cv2.rectangle(canvas, (m, yy - 13), (m + 13, yy), STAFF_COLOUR, -1)
-                _text(canvas, f"STAFF #{tid}", (m + 26, yy), 0.50, STAFF_COLOUR)
-                _text(canvas, f"{frames / fps:5.1f}s", (m + 176, yy), 0.50, INK)
-            _text(canvas, "time attending the service point",
-                  (m, y + 58 + len(shown) * 32 + 8), 0.38, DIM)
-        else:
-            _text(canvas, "unattended", (m, y + 58), 0.50, DIM)
+        _text(canvas, "BARISTA / SERVICE ROI", (m, y + 26), 0.44, MUTED)
+        known = sorted(set(staff_dwell))
+        _text(canvas, f"{len(known)}", (m, y + 76), 1.5, STAFF_COLOUR, 3)
+        _text(canvas, "BARISTA" + ("S" if len(known) != 1 else ""),
+              (m + 2, y + 96), 0.38, MUTED)
+        _text(canvas, f"{len(staff_live)} in roi now", (m + 120, y + 76), 0.46, INK)
+        for row, tid in enumerate(known[:3]):
+            yy = y + 128 + row * 30
+            on = tid in staff_live
+            cv2.rectangle(canvas, (m, yy - 13), (m + 13, yy),
+                          STAFF_COLOUR if on else (70, 90, 110), -1)
+            _text(canvas, f"BARISTA #{tid}", (m + 26, yy), 0.46,
+                  STAFF_COLOUR if on else DIM)
+            _text(canvas, f"{staff_dwell[tid] / fps:5.1f}s", (m + 200, yy), 0.46, INK)
+            bar = int(min(staff_dwell[tid] / max(total, 1), 1.0) * (PANEL_W - 2 * m - 290))
+            cv2.rectangle(canvas, (m + 290, yy - 11), (m + 290 + bar, yy - 3),
+                          STAFF_COLOUR, -1)
+        _text(canvas, "time inside the service ROI",
+              (m, y + 128 + max(len(known[:3]), 1) * 30 + 6), 0.38, DIM)
+        if not known:
+            _text(canvas, "unattended", (m, y + 130), 0.46, DIM)
 
-    y = h - 150
+    y = h - 132
     cv2.line(canvas, (m, y), (PANEL_W - m, y), RULE, 1)
-    _text(canvas, "ZONES", (m, y + 24), 0.44, MUTED)
+    _text(canvas, "ZONES", (m, y + 22), 0.42, MUTED)
     for i, z in enumerate(zones):
-        yy = y + 50 + i * 24
+        yy = y + 46 + i * 22
         col = STAFF_COLOUR if z.mode == "staff" else ZONE
         cv2.rectangle(canvas, (m, yy - 11), (m + 13, yy), col, -1)
         _text(canvas, f"{z.name}", (m + 26, yy), 0.42, INK)
@@ -405,6 +413,8 @@ def process(cfg: DwellConfig, args) -> dict:
     cust_tracker, tracker_name = build_tracker(tracker_cfg, fps)
     staff_tracker, _ = build_tracker(tracker_cfg, fps)
     masks = zone_masks(cfg.exclusion_zones, w, h)
+    zone_conf = [z.conf for z in cfg.exclusion_zones]
+    floor_conf = min([cfg.conf] + [c for c in zone_conf if c is not None])
 
     frames_data: list[dict] = []
     tracks: dict[int, dict] = {}
@@ -429,13 +439,22 @@ def process(cfg: DwellConfig, args) -> dict:
             break
         idx += 1
         t0 = time.time()
-        result = model.predict(frame, conf=cfg.conf, iou=0.5, imgsz=args.imgsz,
+        # One inference at the lowest threshold any region asks for, then the room
+        # threshold is re-applied everywhere except inside a zone that sets its
+        # own. A second pass over the ROI would cost another forward pass per
+        # frame for the same result.
+        result = model.predict(frame, conf=floor_conf, iou=0.5, imgsz=args.imgsz,
                                agnostic_nms=True, verbose=False)[0]
         det = sv.Detections.from_ultralytics(result)
         if len(det):
             area = ((det.xyxy[:, 2] - det.xyxy[:, 0])
                     * (det.xyxy[:, 3] - det.xyxy[:, 1])) / float(w * h)
             det = det[(area <= cfg.max_box_area_frac) & (area >= cfg.min_box_area_frac)]
+        if len(det) and floor_conf < cfg.conf:
+            hits = zone_hits(det, cfg.exclusion_zones, masks, w, h)
+            thr = np.array([cfg.conf if hi < 0 or zone_conf[hi] is None
+                            else zone_conf[hi] for hi in hits])
+            det = det[det.confidence >= thr]
         raw_dets += len(det)
         before = len(det)
         det = suppress_contained(det, cfg.dedup_containment)
@@ -497,6 +516,27 @@ def process(cfg: DwellConfig, args) -> dict:
     locked = {r for r, t in merged.items() if t["frames"] >= cfg.min_track_age}
     staff_locked = {i for i, t in staff_tracks.items() if t["frames"] >= cfg.min_track_age}
 
+    # ---- hold staff across short detection gaps ----------------------------
+    hold = max([z.hold_frames for z in cfg.exclusion_zones] or [0])
+    held_total = 0
+    if hold:
+        seen_at = defaultdict(dict)
+        for i, row in enumerate(frames_data):
+            for tid, box in row["staff"]:
+                seen_at[tid][i] = box
+        for tid in staff_locked:
+            fr = sorted(seen_at[tid])
+            for a, b in zip(fr, fr[1:]):
+                gap = b - a - 1
+                if 0 < gap <= hold:
+                    for k in range(a + 1, b):
+                        frames_data[k]["staff"].append((tid, seen_at[tid][a]))
+                        frames_data[k].setdefault("held", set()).add(tid)
+                        held_total += 1
+        if held_total:
+            print(f"    held staff across {held_total} frames of missed detection "
+                  f"(max gap {hold} frames)")
+
     # ---- pass 2: render from the recorded tracks ---------------------------
     out_path = OUTPUT_DIR / cfg.filename.replace(".mp4", "__dwell.mp4")
     out_info = sv.VideoInfo(width=w + PANEL_W, height=h, fps=info.fps,
@@ -541,7 +581,7 @@ def process(cfg: DwellConfig, args) -> dict:
                 x1, y1, x2, y2 = [int(v) for v in b]
                 cv2.rectangle(vis, (x1, y1), (x2, y2), STAFF_COLOUR,
                               max(2, int(3 * scale)))
-                _tag(vis, f"STAFF #{tid}   {staff_dwell[tid] / fps:.1f}s",
+                _tag(vis, f"BARISTA #{tid}   {staff_dwell[tid] / fps:.1f}s",
                      x1, y1, STAFF_COLOUR, scale)
 
             visitors_so_far = sum(1 for a in locked if merged[a]["first"] <= i + 1)
@@ -559,8 +599,15 @@ def process(cfg: DwellConfig, args) -> dict:
                "span_seconds": round((merged[r]["last"] - merged[r]["first"] + 1) / fps, 2),
                "continuity": round(dwell[r] / max(merged[r]["last"] - merged[r]["first"] + 1, 1), 3)}
               for r in sorted(locked)]
-    staff = [{"track_id": t, "service_seconds": round(staff_dwell[t] / fps, 2),
-              "frames_seen": staff_dwell[t]} for t in sorted(staff_locked)]
+    held_per_track = defaultdict(int)
+    for row in frames_data:
+        for tid in row.get("held", ()):
+            held_per_track[tid] += 1
+    staff = [{"track_id": t,
+              "service_seconds": round(staff_dwell[t] / fps, 2),
+              "frames_total": staff_dwell[t],
+              "frames_detected": staff_dwell[t] - held_per_track[t],
+              "frames_held": held_per_track[t]} for t in sorted(staff_locked)]
     fragmented = [p for p in people if p["continuity"] < 0.8]
     dwells = [p["dwell_seconds"] for p in people]
 
