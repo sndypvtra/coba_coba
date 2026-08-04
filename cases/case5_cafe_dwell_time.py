@@ -51,7 +51,9 @@ def run_one(cfg, number: int) -> None:
         ("Dwell, max", f"{summary['dwell_max_seconds']} s"),
         ("Clip duration", f"{summary['duration_seconds']} s"),
         ("Duplicate boxes removed", f["duplicate_boxes_removed"]),
-        ("Excluded by zone", f["excluded_by_zone"] or "none"),
+        ("Broken tracks re-linked", f["tracks_relinked"]),
+        ("Staff service time", f"{summary['staff_service_seconds']} s"
+                               if summary["staff"] else "no service point"),
         ("Tracks with gaps", f"{q['tracks_with_gaps']} of {summary['visitors_total']}"),
         ("Speed", f"{summary['avg_ms_per_frame']:.0f} ms/frame"),
     ])

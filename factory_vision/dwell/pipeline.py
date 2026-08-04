@@ -152,73 +152,172 @@ def zone_masks(zones: list[ExclusionZone], w: int, h: int) -> list[np.ndarray]:
     return out
 
 
-def apply_exclusions(det: sv.Detections, zones, masks, w: int, h: int):
-    """Remove detections that lie mostly inside an exclusion zone."""
+def zone_hits(det: sv.Detections, zones, masks, w: int, h: int) -> np.ndarray:
+    """Index of the first zone each detection falls inside, or -1."""
+    hit = np.full(len(det), -1, dtype=int)
+    for i, box in enumerate(det.xyxy):
+        x1, y1, x2, y2 = [int(v) for v in box]
+        x1, y1 = max(x1, 0), max(y1, 0)
+        x2, y2 = min(x2, w), min(y2, h)
+        if x2 <= x1 or y2 <= y1:
+            continue
+        area = float((x2 - x1) * (y2 - y1))
+        for zi, (z, m) in enumerate(zip(zones, masks)):
+            if float(m[y1:y2, x1:x2].sum()) / area >= z.min_overlap:
+                hit[i] = zi
+                break
+    return hit
+
+
+def apply_zones(det: sv.Detections, zones, masks, w: int, h: int):
+    """Split detections by zone: kept customers, kept staff, and dropped.
+
+    Staff are kept rather than discarded. A server is not a visit, but they are
+    also not noise - how long they spend at the service point is the one thing a
+    manager wants measured about them, and dropping the detection throws it away.
+    """
     if not len(det) or not zones:
-        return det, {}
-    dropped: dict[str, int] = {}
-    keep = np.ones(len(det), dtype=bool)
-    for zi, (z, m) in enumerate(zip(zones, masks)):
-        for i, box in enumerate(det.xyxy):
-            if not keep[i]:
-                continue
-            x1, y1, x2, y2 = [int(v) for v in box]
-            x1, y1 = max(x1, 0), max(y1, 0)
-            x2, y2 = min(x2, w), min(y2, h)
-            if x2 <= x1 or y2 <= y1:
-                continue
-            inside = float(m[y1:y2, x1:x2].sum()) / float((x2 - x1) * (y2 - y1))
-            if inside >= z.min_overlap:
-                keep[i] = False
-                dropped[z.name] = dropped.get(z.name, 0) + 1
-    return det[keep], dropped
+        return det, sv.Detections.empty(), {}
+    hit = zone_hits(det, zones, masks, w, h)
+    counted: dict[str, int] = {}
+    for zi, z in enumerate(zones):
+        n = int((hit == zi).sum())
+        if n:
+            counted[z.name] = n
+    staff_mask = np.zeros(len(det), dtype=bool)
+    drop_mask = np.zeros(len(det), dtype=bool)
+    for zi, z in enumerate(zones):
+        sel = hit == zi
+        if z.mode == "staff":
+            staff_mask |= sel
+        else:
+            drop_mask |= sel
+    return det[~(staff_mask | drop_mask)], det[staff_mask], counted
 
 
 # -------------------------------------------------------------------- render
 
 
-def draw_zones(vis, zones, scale):
-    """Mark the excluded regions, so the viewer can see what was left out.
+def _tag(vis, text, x1, y1, colour, scale):
+    """Filled label above a box, clamped so it never runs off the top."""
+    fs = 0.5 * max(scale, 0.75)
+    (tw, th), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, fs, 2)
+    pad = int(7 * scale)
+    y = max(y1, th + 2 * pad)
+    x = min(x1, vis.shape[1] - tw - 2 * pad)
+    cv2.rectangle(vis, (x, y - th - 2 * pad), (x + tw + 2 * pad, y), colour, -1)
+    _text(vis, text, (x + pad, y - pad), fs, (14, 14, 14), 2)
 
-    Kept deliberately quiet: a dim wash and a thin outline. These regions are
-    context, not the subject, and at full strength they pulled the eye away from
-    the tracked customers - which are what the frame is about.
+
+
+PANEL_W = 470
+STAFF_COLOUR = (60, 190, 255)      # amber - deliberately outside the track palette
+ZONE_STAFF = (60, 190, 255)
+
+
+def track_appearance(frame, box) -> np.ndarray:
+    """Hue/saturation histogram of a box interior, used to re-link broken tracks."""
+    x1, y1, x2, y2 = [int(v) for v in box]
+    x1, y1 = max(x1, 0), max(y1, 0)
+    x2, y2 = min(x2, frame.shape[1]), min(y2, frame.shape[0])
+    if x2 - x1 < 4 or y2 - y1 < 4:
+        return np.zeros((16, 16), np.float32)
+    hsv = cv2.cvtColor(frame[y1:y2, x1:x2], cv2.COLOR_BGR2HSV)
+    hist = cv2.calcHist([hsv], [0, 1], None, [16, 16], [0, 180, 0, 256])
+    return cv2.normalize(hist, hist).astype(np.float32)
+
+
+def merge_broken_tracks(tracks, fps, diag, max_gap_s=3.0,
+                        max_move_frac=0.12, min_similarity=0.45):
+    """Re-link a track that died to the one that replaced it.
+
+    At 4.995 fps - the CAFE frames are every 6th of a 29.97 fps recording - a
+    walking person crosses far more pixels between frames than a tracker's motion
+    model expects, so a customer who is briefly occluded comes back as a new ID.
+    Measured on scene 17 before this ran: seven tracks were born after frame 10,
+    and the pattern was unmistakable (#2 died f116 / #27 born f122, #6 died f126 /
+    #28 born f128).
+
+    Two tracks are joined when the later one starts within `max_gap_s` of the
+    earlier one ending, begins near where the earlier one stopped, and carries a
+    similar colour histogram. All three must hold: time alone would merge
+    strangers who swapped seats, and appearance alone would merge two customers
+    in the same colour shirt.
+    """
+    ids = sorted(tracks)
+    parent = {i: i for i in ids}
+
+    def find(a):
+        while parent[a] != a:
+            parent[a] = parent[parent[a]]
+            a = parent[a]
+        return a
+
+    max_gap = max_gap_s * fps
+    merges = []
+    for a in ids:
+        for b in ids:
+            if a == b:
+                continue
+            ta, tb = tracks[a], tracks[b]
+            gap = tb["first"] - ta["last"]
+            if not (0 < gap <= max_gap):
+                continue
+            ca = ta["last_centre"]
+            cb = tb["first_centre"]
+            move = float(np.hypot(ca[0] - cb[0], ca[1] - cb[1])) / diag
+            if move > max_move_frac:
+                continue
+            sim = float(cv2.compareHist(ta["hist"], tb["hist"], cv2.HISTCMP_CORREL))
+            if sim < min_similarity:
+                continue
+            ra, rb = find(a), find(b)
+            if ra != rb:
+                parent[rb] = ra
+                merges.append((b, a, round(gap / fps, 2), round(move, 3), round(sim, 3)))
+    return {i: find(i) for i in ids}, merges
+
+
+def draw_zones(vis, zones, scale):
+    """Draw each zone with supervision, in the colour of what it means.
+
+    Excluded regions are dimmed - they are context. The service point is not
+    dimmed: the person inside it is still being measured, just under a different
+    heading, and hiding them would contradict the label.
     """
     for z in zones:
         pts = np.array(z.polygon, np.int32)
-        overlay = vis.copy()
-        cv2.fillPoly(overlay, [pts], (26, 26, 26))
-        cv2.addWeighted(overlay, 0.55, vis, 0.45, 0, vis)
-        cv2.polylines(vis, [pts], True, ZONE, max(1, int(1.4 * scale)))
-        x = int(pts[:, 0].min()) + int(14 * scale)
-        y = int(pts[:, 1].max()) - int(12 * scale)
-        _text(vis, f"EXCLUDED - {z.name.upper()}", (x, y), 0.46 * scale, ZONE, 1)
+        staff = z.mode == "staff"
+        colour = sv.Color.from_bgr_tuple(ZONE_STAFF if staff else ZONE)
+        if not staff:
+            overlay = vis.copy()
+            cv2.fillPoly(overlay, [pts], (26, 26, 26))
+            cv2.addWeighted(overlay, 0.55, vis, 0.45, 0, vis)
+        zone = sv.PolygonZone(polygon=pts)
+        ann = sv.PolygonZoneAnnotator(
+            zone=zone, color=colour, thickness=max(2, int(2.2 * scale)),
+            text_color=sv.Color.from_bgr_tuple((14, 14, 14)),
+            text_scale=0.5 * scale, text_thickness=max(1, int(1.4 * scale)),
+            text_padding=int(8 * scale), display_in_zone_count=False)
+        vis = ann.annotate(scene=vis,
+                           label=("SERVICE POINT" if staff else f"EXCLUDED - {z.name}"))
     return vis
 
 
-PANEL_W = 460
-
-
 def compose(vis, occupancy, visitors, idx, total, fps, dwell, live_ids,
-            excluded_now, series, zones, tracker_name):
-    """Video on the right, readout on its own strip on the left.
-
-    The panel used to sit on top of the frame, where it covered the mirror - one
-    of the two regions the viewer most needs to see, since the whole point is
-    that nothing is being counted there. Giving the readout its own strip means
-    no part of the scene is ever hidden by the thing describing it.
-    """
+            staff_dwell, staff_live, zone_counts, series, zones, tracker_name,
+            merged_n):
+    """Video on the right, readout on its own strip on the left."""
     h, w = vis.shape[:2]
     canvas = np.full((h, w + PANEL_W, 3), 16, np.uint8)
     canvas[:, PANEL_W:] = vis
     cv2.line(canvas, (PANEL_W - 1, 0), (PANEL_W - 1, h), (44, 44, 44), 1)
 
-    m = 30                      # left margin
+    m = 30
     _text(canvas, "CUSTOMER OCCUPANCY", (m, 52), 0.72, INK, 2)
     _text(canvas, "& DWELL TIME", (m, 82), 0.72, INK, 2)
     _text(canvas, "Cafe interior - fixed camera", (m, 108), 0.44, MUTED)
     cv2.line(canvas, (m, 128), (PANEL_W - m, 128), RULE, 1)
-
     _text(canvas, f"ELAPSED  {_clock(idx / fps)}", (m, 158), 0.48, MUTED)
     _text(canvas, f"FRAME  {idx}/{total}", (m, 182), 0.48, MUTED)
 
@@ -227,7 +326,7 @@ def compose(vis, occupancy, visitors, idx, total, fps, dwell, live_ids,
     _text(canvas, f"{visitors}", (m + 240, 268), 2.6, INK, 4)
     _text(canvas, "VISITORS TOTAL", (m + 242, 296), 0.44, MUTED)
 
-    gx, gy, gw, gh = m, 330, PANEL_W - 2 * m, 86
+    gx, gy, gw, gh = m, 330, PANEL_W - 2 * m, 80
     cv2.rectangle(canvas, (gx, gy), (gx + gw, gy + gh), (30, 30, 30), -1)
     _text(canvas, "OCCUPANCY OVER TIME", (gx, gy - 10), 0.40, DIM)
     if len(series) > 1:
@@ -238,31 +337,50 @@ def compose(vis, occupancy, visitors, idx, total, fps, dwell, live_ids,
         cv2.circle(canvas, pts[-1], 4, ACCENT, -1)
     _text(canvas, f"max {max(series) if series else 0}", (gx + gw - 58, gy + 16), 0.40, DIM)
 
-    _text(canvas, "LONGEST IN VIEW", (m, 456), 0.44, MUTED)
-    cv2.line(canvas, (m, 468), (PANEL_W - m, 468), RULE, 1)
-    live = sorted(((dwell[i], i) for i in live_ids), reverse=True)[:9]
+    y = 448
+    _text(canvas, "LONGEST IN VIEW", (m, y), 0.44, MUTED)
+    cv2.line(canvas, (m, y + 12), (PANEL_W - m, y + 12), RULE, 1)
+    live = sorted(((dwell[i], i) for i in live_ids), reverse=True)[:7]
     for row, (frames, tid) in enumerate(live):
-        y = 500 + row * 34
+        yy = y + 44 + row * 32
         colour = PALETTE.by_idx(int(tid)).as_bgr()
-        cv2.rectangle(canvas, (m, y - 13), (m + 13, y), colour, -1)
-        _text(canvas, f"#{tid}", (m + 26, y), 0.50, INK)
-        _text(canvas, f"{frames / fps:5.1f}s", (m + 92, y), 0.50, INK)
+        cv2.rectangle(canvas, (m, yy - 13), (m + 13, yy), colour, -1)
+        _text(canvas, f"#{tid}", (m + 26, yy), 0.50, INK)
+        _text(canvas, f"{frames / fps:5.1f}s", (m + 92, yy), 0.50, INK)
         bar = int(min(frames / max(total, 1), 1.0) * (PANEL_W - 2 * m - 176))
-        cv2.rectangle(canvas, (m + 176, y - 11), (m + 176 + bar, y - 3), colour, -1)
+        cv2.rectangle(canvas, (m + 176, yy - 11), (m + 176 + bar, yy - 3), colour, -1)
 
-    y = h - 168
+    # service section - only drawn for rooms that have a service point
+    if any(z.mode == "staff" for z in zones):
+        y = h - 300
+        cv2.line(canvas, (m, y), (PANEL_W - m, y), RULE, 1)
+        _text(canvas, "SERVICE POINT", (m, y + 26), 0.44, MUTED)
+        if staff_live or staff_dwell:
+            shown = sorted(((staff_dwell[i], i) for i in
+                            (staff_live or set(staff_dwell))), reverse=True)[:3]
+            for row, (frames, tid) in enumerate(shown):
+                yy = y + 58 + row * 32
+                cv2.rectangle(canvas, (m, yy - 13), (m + 13, yy), STAFF_COLOUR, -1)
+                _text(canvas, f"STAFF #{tid}", (m + 26, yy), 0.50, STAFF_COLOUR)
+                _text(canvas, f"{frames / fps:5.1f}s", (m + 176, yy), 0.50, INK)
+            _text(canvas, "time attending the service point",
+                  (m, y + 58 + len(shown) * 32 + 8), 0.38, DIM)
+        else:
+            _text(canvas, "unattended", (m, y + 58), 0.50, DIM)
+
+    y = h - 150
     cv2.line(canvas, (m, y), (PANEL_W - m, y), RULE, 1)
-    _text(canvas, "NOT COUNTED", (m, y + 26), 0.44, MUTED)
+    _text(canvas, "ZONES", (m, y + 24), 0.44, MUTED)
     for i, z in enumerate(zones):
-        yy = y + 52 + i * 26
-        cv2.rectangle(canvas, (m, yy - 11), (m + 13, yy), ZONE, -1)
-        n = excluded_now.get(z.name, 0)
-        _text(canvas, f"{z.name}", (m + 26, yy), 0.44, INK)
-        _text(canvas, f"{n} this frame", (m + 210, yy), 0.44, DIM)
-    _text(canvas, f"YOLOE-11L-seg zero-shot  |  {tracker_name}",
-          (m, h - 44), 0.40, DIM)
+        yy = y + 50 + i * 24
+        col = STAFF_COLOUR if z.mode == "staff" else ZONE
+        cv2.rectangle(canvas, (m, yy - 11), (m + 13, yy), col, -1)
+        _text(canvas, f"{z.name}", (m + 26, yy), 0.42, INK)
+        _text(canvas, f"{zone_counts.get(z.name, 0)} now", (m + 250, yy), 0.42, DIM)
+    _text(canvas, f"YOLOE-11L-seg zero-shot  |  {tracker_name}  |  {merged_n} tracks re-linked",
+          (m, h - 40), 0.38, DIM)
     _text(canvas, "occupancy measured; visitor total depends on tracking",
-          (m, h - 22), 0.38, DIM)
+          (m, h - 20), 0.36, DIM)
     return canvas
 
 
@@ -272,194 +390,220 @@ def compose(vis, occupancy, visitors, idx, total, fps, dwell, live_ids,
 def process(cfg: DwellConfig, args) -> dict:
     src = VIDEO_DIR / cfg.filename
     if not src.exists():
-        raise SystemExit(f"missing {src} - see docs/dwell-time.md for how it is built")
+        raise SystemExit(f"missing {src} - see docs for how the clip is built")
     info = sv.VideoInfo.from_video_path(str(src))
     w, h, fps = info.width, info.height, info.fps
     scale = w / 1920.0
+    diag = float(np.hypot(w, h))
 
     tracker_cfg = resolve_tracker_cfg(args.tracker, cfg.tracker_overrides, "dw")
     model = YOLOE(str(WEIGHTS_DIR / args.weights))
     model.set_classes(cfg.prompts, model.get_text_pe(cfg.prompts))
-    tracker, tracker_name = build_tracker(tracker_cfg, fps)
+    # Customers and staff get their own tracker. Sharing one would let a server
+    # standing still for the whole clip compete for identity with customers
+    # walking past a metre away.
+    cust_tracker, tracker_name = build_tracker(tracker_cfg, fps)
+    staff_tracker, _ = build_tracker(tracker_cfg, fps)
     masks = zone_masks(cfg.exclusion_zones, w, h)
 
-    # Colour by TRACK, not by class. Everything here is one class ("person"), so
-    # the default class lookup paints every box the same colour and the identity
-    # the whole measurement rests on becomes invisible in the output.
-    box_ann = sv.RoundBoxAnnotator(color=PALETTE, thickness=max(2, int(3 * scale)),
-                                   color_lookup=sv.ColorLookup.TRACK)
-    trace_ann = sv.TraceAnnotator(color=PALETTE, thickness=max(2, int(2 * scale)),
-                                  trace_length=15, position=sv.Position.BOTTOM_CENTER,
-                                  color_lookup=sv.ColorLookup.TRACK)
-
-    dwell: dict[int, int] = defaultdict(int)
-    first_seen: dict[int, int] = {}
-    last_seen: dict[int, int] = {}
-    locked: set[int] = set()
-    series: list[int] = []
-    excluded_total: dict[str, int] = {}
-    raw_dets = 0
-    dup_dropped = 0
+    frames_data: list[dict] = []
+    tracks: dict[int, dict] = {}
+    staff_tracks: dict[int, dict] = {}
+    zone_counts_series: list[dict] = []
+    raw_dets = dup_dropped = 0
     times: list[float] = []
 
-    out_path = OUTPUT_DIR / cfg.filename.replace(".mp4", "__dwell.mp4")
-    out_info = sv.VideoInfo(width=w + PANEL_W, height=h, fps=info.fps,
-                            total_frames=info.total_frames)
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    cap = cv2.VideoCapture(str(src))
     print(f"\n>>> {cfg.filename}  {w}x{h} @ {fps:.3f}fps  {info.total_frames} frames "
           f"({info.total_frames / fps:.1f}s)")
     print(f"    prompts={cfg.prompts} conf={cfg.conf} tracker={args.tracker} "
           f"min_track_age={cfg.min_track_age} dedup={cfg.dedup_containment}")
     for z in cfg.exclusion_zones:
-        print(f"    zone '{z.name}': {z.reason} (>= {z.min_overlap:.0%} of box)")
+        print(f"    zone '{z.name}' [{z.mode}]: {z.reason}")
 
+    # ---- pass 1: detect, filter, track, describe ---------------------------
+    cap = cv2.VideoCapture(str(src))
+    idx = 0
+    while True:
+        ok, frame = cap.read()
+        if not ok or (args.max_frames and idx >= args.max_frames):
+            break
+        idx += 1
+        t0 = time.time()
+        result = model.predict(frame, conf=cfg.conf, iou=0.5, imgsz=args.imgsz,
+                               agnostic_nms=True, verbose=False)[0]
+        det = sv.Detections.from_ultralytics(result)
+        if len(det):
+            area = ((det.xyxy[:, 2] - det.xyxy[:, 0])
+                    * (det.xyxy[:, 3] - det.xyxy[:, 1])) / float(w * h)
+            det = det[(area <= cfg.max_box_area_frac) & (area >= cfg.min_box_area_frac)]
+        raw_dets += len(det)
+        before = len(det)
+        det = suppress_contained(det, cfg.dedup_containment)
+        dup_dropped += before - len(det)
+
+        cust, staff, counts = apply_zones(det, cfg.exclusion_zones, masks, w, h)
+        zone_counts_series.append(counts)
+        times.append((time.time() - t0) * 1000)
+
+        row = {"customers": [], "staff": []}
+        for group, tracker, store, key in (
+                (cust, cust_tracker, tracks, "customers"),
+                (staff, staff_tracker, staff_tracks, "staff")):
+            if not len(group):
+                tracker.update(_DetView(np.zeros((0, 4), np.float32),
+                                        np.zeros(0, np.float32),
+                                        np.zeros(0, np.float32)), frame)
+                continue
+            out = tracker.update(_DetView(group.xyxy.astype(np.float32),
+                                          group.confidence.astype(np.float32),
+                                          group.class_id.astype(np.float32)), frame)
+            for r in np.asarray(out):
+                box, tid = r[:4], int(r[4])
+                row[key].append((tid, box.tolist()))
+                t = store.setdefault(tid, {"first": idx, "frames": 0,
+                                           "hist": np.zeros((16, 16), np.float32),
+                                           "n_hist": 0})
+                t["last"] = idx
+                t["frames"] += 1
+                t["last_centre"] = ((box[0] + box[2]) / 2, (box[1] + box[3]) / 2)
+                if "first_centre" not in t:
+                    t["first_centre"] = t["last_centre"]
+                if t["n_hist"] < 12:
+                    t["hist"] += track_appearance(frame, box)
+                    t["n_hist"] += 1
+        frames_data.append(row)
+    cap.release()
+    for store in (tracks, staff_tracks):
+        for t in store.values():
+            if t["n_hist"]:
+                t["hist"] /= t["n_hist"]
+
+    # ---- re-link tracks broken by occlusion --------------------------------
+    alias, merges = merge_broken_tracks(tracks, fps, diag)
+    if merges:
+        print(f"    re-linked {len(merges)} broken tracks:")
+        for b, a, gap, move, sim in merges:
+            print(f"      #{b} -> #{a}   gap {gap}s  moved {move * 100:.1f}% of frame  "
+                  f"appearance {sim:.2f}")
+
+    merged: dict[int, dict] = {}
+    for tid, t in tracks.items():
+        root = alias[tid]
+        m = merged.setdefault(root, {"first": t["first"], "last": t["last"], "frames": 0})
+        m["first"] = min(m["first"], t["first"])
+        m["last"] = max(m["last"], t["last"])
+        m["frames"] += t["frames"]
+
+    locked = {r for r, t in merged.items() if t["frames"] >= cfg.min_track_age}
+    staff_locked = {i for i, t in staff_tracks.items() if t["frames"] >= cfg.min_track_age}
+
+    # ---- pass 2: render from the recorded tracks ---------------------------
+    out_path = OUTPUT_DIR / cfg.filename.replace(".mp4", "__dwell.mp4")
+    out_info = sv.VideoInfo(width=w + PANEL_W, height=h, fps=info.fps,
+                            total_frames=info.total_frames)
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    box_ann = sv.RoundBoxAnnotator(color=PALETTE, thickness=max(2, int(3 * scale)),
+                                   color_lookup=sv.ColorLookup.TRACK)
+    dwell = defaultdict(int)
+    staff_dwell = defaultdict(int)
+    series: list[int] = []
+    cap = cv2.VideoCapture(str(src))
     with sv.VideoSink(str(out_path), out_info, codec="mp4v") as sink:
-        idx = 0
-        while True:
+        for i, row in enumerate(frames_data):
             ok, frame = cap.read()
-            if not ok or (args.max_frames and idx >= args.max_frames):
+            if not ok:
                 break
-            idx += 1
-
-            t0 = time.time()
-            result = model.predict(frame, conf=cfg.conf, iou=0.5, imgsz=args.imgsz,
-                                   agnostic_nms=True, verbose=False)[0]
-
-            det = sv.Detections.from_ultralytics(result)
-            if len(det):
-                area = ((det.xyxy[:, 2] - det.xyxy[:, 0])
-                        * (det.xyxy[:, 3] - det.xyxy[:, 1])) / float(w * h)
-                det = det[(area <= cfg.max_box_area_frac) & (area >= cfg.min_box_area_frac)]
-            raw_dets += len(det)
-
-            # Both filters run before the tracker sees anything. A duplicate box
-            # that reaches the tracker becomes its own ID and its own "visitor";
-            # a mirror reflection that reaches it consumes an ID too.
-            before = len(det)
-            det = suppress_contained(det, cfg.dedup_containment)
-            dup_dropped += before - len(det)
-
-            det, dropped_now = apply_exclusions(det, cfg.exclusion_zones, masks, w, h)
-            for k, v in dropped_now.items():
-                excluded_total[k] = excluded_total.get(k, 0) + v
-
-            tracks = tracker.update(
-                _DetView(det.xyxy.astype(np.float32),
-                         det.confidence.astype(np.float32),
-                         det.class_id.astype(np.float32)), frame)
-            times.append((time.time() - t0) * 1000)
-
-            if len(tracks):
-                tracks = np.asarray(tracks)
-                det = sv.Detections(
-                    xyxy=tracks[:, :4].astype(np.float32),
-                    confidence=tracks[:, 5].astype(np.float32),
-                    class_id=tracks[:, 6].astype(int),
-                    tracker_id=tracks[:, 4].astype(int),
-                )
-            else:
-                det = sv.Detections.empty()
-
-            if len(det) and det.tracker_id is not None:
-                for tid in det.tracker_id:
-                    tid = int(tid)
-                    dwell[tid] += 1
-                    first_seen.setdefault(tid, idx)
-                    last_seen[tid] = idx
-                    if dwell[tid] >= cfg.min_track_age:
-                        locked.add(tid)
-                det = det[np.array([int(t) in locked for t in det.tracker_id])]
-
-            occupancy = len(det)
-            series.append(occupancy)
+            cust = [(alias[t], b) for t, b in row["customers"] if alias[t] in locked]
+            stf = [(t, b) for t, b in row["staff"] if t in staff_locked]
+            seen = set()
+            live = []
+            for tid, b in cust:                      # a merge can leave two boxes
+                if tid in seen:                      # on one identity in a frame
+                    continue
+                seen.add(tid)
+                live.append((tid, b))
+                dwell[tid] += 1
+            for tid, _ in stf:
+                staff_dwell[tid] += 1
+            series.append(len(live))
 
             vis = draw_zones(frame.copy(), cfg.exclusion_zones, max(scale, 0.8))
-            vis = trace_ann.annotate(vis, det)
-            vis = box_ann.annotate(vis, det)
-            if len(det) and det.tracker_id is not None:
-                for box, tid in zip(det.xyxy, det.tracker_id):
-                    tid = int(tid)
-                    x1, y1 = int(box[0]), int(box[1])
-                    tag = f"#{tid}   {dwell[tid] / fps:.1f}s"
-                    fs = 0.5 * max(scale, 0.75)
-                    (tw, th), _ = cv2.getTextSize(tag, cv2.FONT_HERSHEY_SIMPLEX, fs, 2)
-                    pad = int(7 * scale)
-                    y_tag = max(y1, th + 2 * pad)
-                    colour = PALETTE.by_idx(tid).as_bgr()
-                    cv2.rectangle(vis, (x1, y_tag - th - 2 * pad),
-                                  (x1 + tw + 2 * pad, y_tag), colour, -1)
-                    _text(vis, tag, (x1 + pad, y_tag - pad), fs, (14, 14, 14), 2)
+            if live:
+                d = sv.Detections(xyxy=np.array([b for _, b in live], np.float32),
+                                  tracker_id=np.array([t for t, _ in live], int),
+                                  class_id=np.zeros(len(live), int))
+                vis = box_ann.annotate(vis, d)
+            for tid, b in live:
+                x1, y1 = int(b[0]), int(b[1])
+                _tag(vis, f"#{tid}   {dwell[tid] / fps:.1f}s",
+                     x1, y1, PALETTE.by_idx(tid).as_bgr(), scale)
+            for tid, b in stf:
+                x1, y1, x2, y2 = [int(v) for v in b]
+                cv2.rectangle(vis, (x1, y1), (x2, y2), STAFF_COLOUR,
+                              max(2, int(3 * scale)))
+                _tag(vis, f"STAFF #{tid}   {staff_dwell[tid] / fps:.1f}s",
+                     x1, y1, STAFF_COLOUR, scale)
 
-            live_ids = (set(int(t) for t in det.tracker_id)
-                        if (len(det) and det.tracker_id is not None) else set())
-            sink.write_frame(compose(vis, occupancy, len(locked), idx,
-                                     info.total_frames, fps, dwell, live_ids,
-                                     dropped_now, series, cfg.exclusion_zones,
-                                     tracker_name))
-
+            visitors_so_far = sum(1 for a in locked if merged[a]["first"] <= i + 1)
+            sink.write_frame(compose(
+                vis, len(live), visitors_so_far,
+                i + 1, info.total_frames, fps, dwell, {t for t, _ in live},
+                staff_dwell, {t for t, _ in stf},
+                zone_counts_series[i] if i < len(zone_counts_series) else {},
+                series, cfg.exclusion_zones, tracker_name, len(merges)))
     cap.release()
 
-    people = []
-    for tid in sorted(locked):
-        span = last_seen[tid] - first_seen[tid] + 1
-        people.append({
-            "track_id": tid,
-            "first_frame": first_seen[tid],
-            "last_frame": last_seen[tid],
-            "frames_seen": dwell[tid],
-            "dwell_seconds": round(dwell[tid] / fps, 2),
-            "span_seconds": round(span / fps, 2),
-            "continuity": round(dwell[tid] / span, 3),
-        })
+    people = [{"track_id": r, "first_frame": merged[r]["first"],
+               "last_frame": merged[r]["last"], "frames_seen": dwell[r],
+               "dwell_seconds": round(dwell[r] / fps, 2),
+               "span_seconds": round((merged[r]["last"] - merged[r]["first"] + 1) / fps, 2),
+               "continuity": round(dwell[r] / max(merged[r]["last"] - merged[r]["first"] + 1, 1), 3)}
+              for r in sorted(locked)]
+    staff = [{"track_id": t, "service_seconds": round(staff_dwell[t] / fps, 2),
+              "frames_seen": staff_dwell[t]} for t in sorted(staff_locked)]
     fragmented = [p for p in people if p["continuity"] < 0.8]
     dwells = [p["dwell_seconds"] for p in people]
 
     summary = {
-        "video": cfg.filename,
-        "scene": cfg.scene,
-        "source": cfg.source,
-        "output": out_path.name,
-        "resolution": f"{w}x{h}",
-        "fps": round(fps, 3),
-        "frames": idx,
-        "duration_seconds": round(idx / fps, 1),
-        "model": args.weights.replace(".pt", ""),
-        "prompts": cfg.prompts,
-        "conf": cfg.conf,
-        "tracker": "TrackTrack (CVPR 2025) + ReID + GMC",
+        "video": cfg.filename, "scene": cfg.scene, "source": cfg.source,
+        "output": out_path.name, "resolution": f"{w}x{h}", "fps": round(fps, 3),
+        "frames": len(frames_data), "duration_seconds": round(len(frames_data) / fps, 1),
+        "model": args.weights.replace(".pt", ""), "prompts": cfg.prompts,
+        "conf": cfg.conf, "tracker": "TrackTrack (CVPR 2025) + ReID + GMC",
         "visitors_total": len(locked),
         "occupancy_mean": round(float(np.mean(series)), 2) if series else 0,
         "occupancy_max": int(np.max(series)) if series else 0,
         "dwell_mean_seconds": round(float(np.mean(dwells)), 2) if dwells else 0,
         "dwell_max_seconds": round(float(np.max(dwells)), 2) if dwells else 0,
+        "staff": staff,
+        "staff_service_seconds": round(sum(s["service_seconds"] for s in staff), 2),
         "filtering": {
             "detections_before_filters": raw_dets,
             "duplicate_boxes_removed": dup_dropped,
-            "excluded_by_zone": excluded_total,
-            "zones": [{"name": z.name, "reason": z.reason,
+            "zones": [{"name": z.name, "mode": z.mode, "reason": z.reason,
                        "min_overlap": z.min_overlap} for z in cfg.exclusion_zones],
+            "tracks_relinked": len(merges),
+            "relink_detail": [{"from": b, "into": a, "gap_seconds": g,
+                               "moved_frac": mv, "appearance": s}
+                              for b, a, g, mv, s in merges],
         },
         "quality": {
             "tracks_with_gaps": len(fragmented),
             "worst_continuity": round(min((p["continuity"] for p in people), default=1.0), 3),
             "note": ("continuity = frames actually seen / first-to-last span. "
-                     "Below 1.0 the track was lost and re-acquired; every such gap "
-                     "is a dwell time that may belong to a person already counted."),
+                     "Below 1.0 the track was lost and re-acquired; re-linking "
+                     "joins the obvious cases but cannot join every one."),
         },
         "avg_ms_per_frame": round(float(np.mean(times)), 1) if times else 0,
-        "occupancy_series": series,
-        "people": people,
-        "notes": cfg.notes,
+        "occupancy_series": series, "people": people, "notes": cfg.notes,
     }
     summary_name = cfg.filename.replace(".mp4", "__dwell.json")
     (OUTPUT_DIR / summary_name).write_text(json.dumps(summary, indent=2))
-    print(f"    filtered: {dup_dropped} duplicate boxes, "
-          f"{sum(excluded_total.values())} zone hits {excluded_total}")
+    print(f"    filtered: {dup_dropped} duplicate boxes; re-linked {len(merges)} tracks")
     print(f"    DONE {out_path.name}  visitors={len(locked)} "
           f"occupancy mean={summary['occupancy_mean']} max={summary['occupancy_max']} "
           f"dwell mean={summary['dwell_mean_seconds']}s max={summary['dwell_max_seconds']}s "
-          f"{np.mean(times):.0f}ms/f")
+          f"staff={summary['staff_service_seconds']}s  {np.mean(times):.0f}ms/f")
     return summary
 
 
