@@ -14,16 +14,15 @@ up by one. So this module reports the fragmentation signals alongside the answer
 rather than presenting the dwell times as clean facts - see `quality` in the
 returned summary.
 
-Two things are deliberately not counted, because neither is a customer visit:
-
-  reflections   a wall mirror shows people who are already counted in the room
-  staff         anyone working behind the counter
-
-Both are handled by frame regions rather than by appearance. Nothing in a
-person's pixels says "reflection" or "employee"; what says it is where they are
-in a fixed camera's frame, and that is knowable once per installation.
+Where a room needs it, two things are excluded because neither is a customer
+visit: a wall mirror shows people already counted in the room, and staff work
+behind the counter. Both are handled by frame regions rather than by appearance
+- nothing in a person's pixels says "reflection" or "employee"; what says it is
+where they are in a fixed camera's frame. That makes the zones per-installation,
+and a room without a mirror or a counter in view correctly has none.
 
 Run:  python cases/case5_cafe_dwell_time.py
+      python cases/case5_cafe_dwell_time.py --all
 """
 
 from __future__ import annotations
@@ -453,7 +452,8 @@ def process(cfg: DwellConfig, args) -> dict:
         "people": people,
         "notes": cfg.notes,
     }
-    (OUTPUT_DIR / "dwell_summary.json").write_text(json.dumps(summary, indent=2))
+    summary_name = cfg.filename.replace(".mp4", "__dwell.json")
+    (OUTPUT_DIR / summary_name).write_text(json.dumps(summary, indent=2))
     print(f"    filtered: {dup_dropped} duplicate boxes, "
           f"{sum(excluded_total.values())} zone hits {excluded_total}")
     print(f"    DONE {out_path.name}  visitors={len(locked)} "

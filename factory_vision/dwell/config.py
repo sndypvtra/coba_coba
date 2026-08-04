@@ -89,4 +89,34 @@ CLIPS = [
         notes=("assembled from 150 consecutive frames of CAFE scene 5 "
                "(every 6th frame of a 29.97 fps recording -> 4.995 fps, 30.0 s)"),
     ),
+    # Scenes 1 and 17 carry no exclusion zones, and that is a finding rather than
+    # an omission. Both were inspected the same way scene 5 was - frames pulled at
+    # full resolution and the detector run over them to see where it fires - and
+    # neither room has a mirror or a customer-facing counter in view. Scene 1 does
+    # produce a low-confidence detection (0.37-0.43) on a backlit merchandise
+    # shelf, but that is a false positive on goods, not a member of staff, and it
+    # is left to the track-age gate rather than papered over with a zone. Copying
+    # scene 5's polygons here would have masked live parts of both rooms.
+    DwellConfig(
+        filename="cafe_scene1_30s.mp4",
+        prompts=["person"],
+        label="person",
+        scene="Cafe interior, elevated fixed camera - CAFE dataset scene 1",
+        source="https://dk-kim.github.io/CAFE/",
+        conf=0.25,
+        min_track_age=5,
+        notes=("assembled from 150 consecutive frames of CAFE scene 1; "
+               "no mirror and no counter in view, so no exclusion zones"),
+    ),
+    DwellConfig(
+        filename="cafe_scene17_30s.mp4",
+        prompts=["person"],
+        label="person",
+        scene="Cafe interior, elevated fixed camera - CAFE dataset scene 17",
+        source="https://dk-kim.github.io/CAFE/",
+        conf=0.25,
+        min_track_age=5,
+        notes=("assembled from 150 consecutive frames of CAFE scene 17; "
+               "no mirror and no counter in view, so no exclusion zones"),
+    ),
 ]
