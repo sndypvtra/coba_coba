@@ -68,6 +68,11 @@ class DwellConfig:
     dedup_containment: float = 0.75
     max_box_area_frac: float = 0.35
     min_box_area_frac: float = 0.0008
+    # A staff track must last this long to count as service. Measured on scene 5:
+    # the real server holds 107 frames, while two customers who happened to stand
+    # at the counter early in the clip produced 9- and 5-frame tracks and were
+    # reported as staff. A server attends a station; a customer passes one.
+    min_staff_frames: int = 15
     exclusion_zones: list[ExclusionZone] = field(default_factory=list)
     tracker_overrides: dict = field(default_factory=dict)
     notes: str = ""
@@ -94,7 +99,7 @@ CLIPS = [
                          (420, 252), (250, 246), (165, 196), (50, 110)],
             ),
             ExclusionZone(
-                name="barista counter",
+                name="server counter",
                 reason="behind the counter - timed as service, not as a visit",
                 mode="staff",
                 hold_frames=6,
@@ -125,10 +130,10 @@ CLIPS = [
         min_track_age=5,
         exclusion_zones=[
             ExclusionZone(
-                name="barista station",
+                name="server station",
                 reason="counter under the menu boards - timed as service, not a visit",
                 mode="staff",
-                # The barista works the far end of the counter, deep in the room
+                # The server works the far end of the counter, deep in the room
                 # under the illuminated menu boards. Scanning every detection in
                 # the left half of the frame down to conf 0.05 puts her at
                 # x 742-870, y 225-345; the polygon is that footprint with a
@@ -137,7 +142,12 @@ CLIPS = [
                 #
                 # Not the person at the top left of the frame, who leans on a
                 # wall-facing bar ledge - she is a customer and is counted as one.
-                polygon=[(715, 195), (905, 195), (905, 380), (715, 380)],
+                # Traced from the counter itself rather than boxed off: the top
+                # edge follows the underside of the illuminated shelf, the bottom
+                # edge follows the counter top, which falls away to the right
+                # from y=336 at x=700 to y=356 at x=916.
+                polygon=[(700, 200), (860, 203), (912, 212), (916, 356),
+                         (858, 350), (762, 343), (700, 336)],
                 # Detection here is far worse than in the rest of the room: the
                 # counter is deep in the scene, backlit by the menu boards, and
                 # equipment on the counter top keeps cutting her in half. She
@@ -149,6 +159,6 @@ CLIPS = [
             ),
         ],
         notes=("assembled from 150 consecutive frames of CAFE scene 1; "
-               "one barista station under the menu boards, no mirror"),
+               "one server station under the menu boards, no mirror"),
     ),
 ]

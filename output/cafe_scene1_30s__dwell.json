@@ -33,7 +33,7 @@
     "duplicate_boxes_removed": 80,
     "zones": [
       {
-        "name": "barista station",
+        "name": "server station",
         "mode": "staff",
         "reason": "counter under the menu boards - timed as service, not a visit",
         "min_overlap": 0.7
@@ -47,7 +47,7 @@
     "worst_continuity": 0.152,
     "note": "continuity = frames actually seen / first-to-last span. Below 1.0 the track was lost and re-acquired; re-linking joins the obvious cases but cannot join every one."
   },
-  "avg_ms_per_frame": 1960.3,
+  "avg_ms_per_frame": 1889.3,
   "occupancy_series": [
     10,
     10,
@@ -310,5 +310,5 @@
       "continuity": 0.614
     }
   ],
-  "notes": "assembled from 150 consecutive frames of CAFE scene 1; one barista station under the menu boards, no mirror"
+  "notes": "assembled from 150 consecutive frames of CAFE scene 1; one server station under the menu boards, no mirror"
 }

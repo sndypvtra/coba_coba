@@ -20,20 +20,6 @@
   "dwell_max_seconds": 30.03,
   "staff": [
     {
-      "track_id": 9,
-      "service_seconds": 1.8,
-      "frames_total": 9,
-      "frames_detected": 9,
-      "frames_held": 0
-    },
-    {
-      "track_id": 10,
-      "service_seconds": 1.0,
-      "frames_total": 5,
-      "frames_detected": 5,
-      "frames_held": 0
-    },
-    {
       "track_id": 15,
       "service_seconds": 21.42,
       "frames_total": 107,
@@ -41,7 +27,7 @@
       "frames_held": 14
     }
   ],
-  "staff_service_seconds": 24.22,
+  "staff_service_seconds": 21.42,
   "filtering": {
     "detections_before_filters": 2016,
     "duplicate_boxes_removed": 76,
@@ -53,7 +39,7 @@
         "min_overlap": 0.7
       },
       {
-        "name": "barista counter",
+        "name": "server counter",
         "mode": "staff",
         "reason": "behind the counter - timed as service, not as a visit",
         "min_overlap": 0.7
@@ -89,7 +75,7 @@
     "worst_continuity": 0.457,
     "note": "continuity = frames actually seen / first-to-last span. Below 1.0 the track was lost and re-acquired; re-linking joins the obvious cases but cannot join every one."
   },
-  "avg_ms_per_frame": 1902.4,
+  "avg_ms_per_frame": 1901.5,
   "occupancy_series": [
     8,
     8,

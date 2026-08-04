@@ -211,8 +211,8 @@ def _tag(vis, text, x1, y1, colour, scale):
 
 
 PANEL_W = 470
-STAFF_COLOUR = (60, 190, 255)      # amber - deliberately outside the track palette
-ZONE_STAFF = (60, 190, 255)
+SERVER_COLOUR = (60, 190, 255)      # amber - deliberately outside the track palette
+ZONE_SERVER = (60, 190, 255)
 
 
 def track_appearance(frame, box) -> np.ndarray:
@@ -288,7 +288,7 @@ def draw_zones(vis, zones, scale):
     for z in zones:
         pts = np.array(z.polygon, np.int32)
         staff = z.mode == "staff"
-        colour = sv.Color.from_bgr_tuple(ZONE_STAFF if staff else ZONE)
+        colour = sv.Color.from_bgr_tuple(ZONE_SERVER if staff else ZONE)
         if not staff:
             overlay = vis.copy()
             cv2.fillPoly(overlay, [pts], (26, 26, 26))
@@ -350,27 +350,27 @@ def compose(vis, occupancy, visitors, idx, total, fps, dwell, live_ids,
         bar = int(min(frames / max(total, 1), 1.0) * (PANEL_W - 2 * m - 176))
         cv2.rectangle(canvas, (m + 176, yy - 11), (m + 176 + bar, yy - 3), colour, -1)
 
-    # barista block - only drawn for rooms that have a service point
+    # server block - only drawn for rooms that have a service point
     if any(z.mode == "staff" for z in zones):
         y = h - 320
         cv2.line(canvas, (m, y), (PANEL_W - m, y), RULE, 1)
-        _text(canvas, "BARISTA / SERVICE ROI", (m, y + 26), 0.44, MUTED)
+        _text(canvas, "SERVER / SERVICE ROI", (m, y + 26), 0.44, MUTED)
         known = sorted(set(staff_dwell))
-        _text(canvas, f"{len(known)}", (m, y + 76), 1.5, STAFF_COLOUR, 3)
-        _text(canvas, "BARISTA" + ("S" if len(known) != 1 else ""),
+        _text(canvas, f"{len(known)}", (m, y + 76), 1.5, SERVER_COLOUR, 3)
+        _text(canvas, "SERVER" + ("S" if len(known) != 1 else ""),
               (m + 2, y + 96), 0.38, MUTED)
         _text(canvas, f"{len(staff_live)} in roi now", (m + 120, y + 76), 0.46, INK)
         for row, tid in enumerate(known[:3]):
             yy = y + 128 + row * 30
             on = tid in staff_live
             cv2.rectangle(canvas, (m, yy - 13), (m + 13, yy),
-                          STAFF_COLOUR if on else (70, 90, 110), -1)
-            _text(canvas, f"BARISTA #{tid}", (m + 26, yy), 0.46,
-                  STAFF_COLOUR if on else DIM)
+                          SERVER_COLOUR if on else (70, 90, 110), -1)
+            _text(canvas, f"SERVER #{tid}", (m + 26, yy), 0.46,
+                  SERVER_COLOUR if on else DIM)
             _text(canvas, f"{staff_dwell[tid] / fps:5.1f}s", (m + 200, yy), 0.46, INK)
             bar = int(min(staff_dwell[tid] / max(total, 1), 1.0) * (PANEL_W - 2 * m - 290))
             cv2.rectangle(canvas, (m + 290, yy - 11), (m + 290 + bar, yy - 3),
-                          STAFF_COLOUR, -1)
+                          SERVER_COLOUR, -1)
         _text(canvas, "time inside the service ROI",
               (m, y + 128 + max(len(known[:3]), 1) * 30 + 6), 0.38, DIM)
         if not known:
@@ -381,7 +381,7 @@ def compose(vis, occupancy, visitors, idx, total, fps, dwell, live_ids,
     _text(canvas, "ZONES", (m, y + 22), 0.42, MUTED)
     for i, z in enumerate(zones):
         yy = y + 46 + i * 22
-        col = STAFF_COLOUR if z.mode == "staff" else ZONE
+        col = SERVER_COLOUR if z.mode == "staff" else ZONE
         cv2.rectangle(canvas, (m, yy - 11), (m + 13, yy), col, -1)
         _text(canvas, f"{z.name}", (m + 26, yy), 0.42, INK)
         _text(canvas, f"{zone_counts.get(z.name, 0)} now", (m + 250, yy), 0.42, DIM)
@@ -514,7 +514,8 @@ def process(cfg: DwellConfig, args) -> dict:
         m["frames"] += t["frames"]
 
     locked = {r for r, t in merged.items() if t["frames"] >= cfg.min_track_age}
-    staff_locked = {i for i, t in staff_tracks.items() if t["frames"] >= cfg.min_track_age}
+    staff_locked = {i for i, t in staff_tracks.items()
+                    if t["frames"] >= max(cfg.min_track_age, cfg.min_staff_frames)}
 
     # ---- hold staff across short detection gaps ----------------------------
     hold = max([z.hold_frames for z in cfg.exclusion_zones] or [0])
@@ -579,10 +580,10 @@ def process(cfg: DwellConfig, args) -> dict:
                      x1, y1, PALETTE.by_idx(tid).as_bgr(), scale)
             for tid, b in stf:
                 x1, y1, x2, y2 = [int(v) for v in b]
-                cv2.rectangle(vis, (x1, y1), (x2, y2), STAFF_COLOUR,
+                cv2.rectangle(vis, (x1, y1), (x2, y2), SERVER_COLOUR,
                               max(2, int(3 * scale)))
-                _tag(vis, f"BARISTA #{tid}   {staff_dwell[tid] / fps:.1f}s",
-                     x1, y1, STAFF_COLOUR, scale)
+                _tag(vis, f"SERVER #{tid}   {staff_dwell[tid] / fps:.1f}s",
+                     x1, y1, SERVER_COLOUR, scale)
 
             visitors_so_far = sum(1 for a in locked if merged[a]["first"] <= i + 1)
             sink.write_frame(compose(
