@@ -14,20 +14,21 @@
   "conf": 0.25,
   "tracker": "TrackTrack (CVPR 2025) + ReID + GMC",
   "visitors_total": 12,
-  "occupancy_mean": 8.23,
+  "occupancy_mean": 8.47,
   "occupancy_max": 10,
-  "dwell_mean_seconds": 20.6,
+  "dwell_mean_seconds": 21.19,
   "dwell_max_seconds": 30.03,
   "staff": [
     {
-      "track_id": 15,
-      "service_seconds": 21.42,
-      "frames_total": 107,
-      "frames_detected": 93,
-      "frames_held": 14
+      "track_id": 24,
+      "service_seconds": 16.02,
+      "frames_total": 80,
+      "frames_detected": 74,
+      "frames_held": 6,
+      "zone_share": 1.0
     }
   ],
-  "staff_service_seconds": 21.42,
+  "staff_service_seconds": 16.02,
   "filtering": {
     "detections_before_filters": 2016,
     "duplicate_boxes_removed": 76,
@@ -45,25 +46,32 @@
         "min_overlap": 0.7
       }
     ],
-    "tracks_relinked": 3,
+    "tracks_relinked": 4,
     "relink_detail": [
       {
-        "from": 16,
-        "into": 14,
+        "from": 13,
+        "into": 4,
         "gap_seconds": 1.2,
-        "moved_frac": 0.047,
-        "appearance": 0.762
+        "moved_frac": 0.046,
+        "appearance": 0.502
       },
       {
-        "from": 19,
-        "into": 14,
+        "from": 15,
+        "into": 4,
         "gap_seconds": 2.8,
-        "moved_frac": 0.056,
-        "appearance": 0.75
+        "moved_frac": 0.057,
+        "appearance": 0.531
       },
       {
-        "from": 28,
-        "into": 19,
+        "from": 15,
+        "into": 7,
+        "gap_seconds": 2.0,
+        "moved_frac": 0.03,
+        "appearance": 0.818
+      },
+      {
+        "from": 23,
+        "into": 15,
         "gap_seconds": 1.2,
         "moved_frac": 0.057,
         "appearance": 0.976
@@ -71,63 +79,63 @@
     ]
   },
   "quality": {
-    "tracks_with_gaps": 3,
-    "worst_continuity": 0.457,
+    "tracks_with_gaps": 1,
+    "worst_continuity": 0.75,
     "note": "continuity = frames actually seen / first-to-last span. Below 1.0 the track was lost and re-acquired; re-linking joins the obvious cases but cannot join every one."
   },
-  "avg_ms_per_frame": 1426.4,
+  "avg_ms_per_frame": 1942.8,
   "occupancy_series": [
-    8,
-    8,
-    8,
-    8,
-    8,
-    8,
-    8,
-    8,
-    8,
-    8,
-    8,
+    9,
+    9,
+    9,
+    9,
+    9,
+    9,
+    9,
+    9,
+    9,
+    9,
     9,
     10,
     10,
     10,
     10,
+    10,
+    10,
+    9,
+    10,
+    9,
+    8,
+    8,
+    10,
+    8,
     9,
     8,
     9,
+    9,
+    7,
     8,
     7,
-    7,
-    8,
-    7,
-    9,
     8,
     9,
-    9,
-    7,
-    7,
-    6,
-    8,
-    8,
-    7,
-    9,
-    9,
-    8,
-    8,
     8,
     9,
     9,
     9,
     9,
+    9,
+    10,
+    10,
+    10,
+    10,
+    8,
+    8,
     8,
     8,
     8,
     8,
     8,
     7,
-    7,
-    6,
     8,
     8,
     8,
@@ -241,23 +249,23 @@
     {
       "track_id": 2,
       "first_frame": 1,
-      "last_frame": 70,
-      "frames_seen": 32,
-      "dwell_seconds": 6.41,
-      "span_seconds": 14.01,
-      "continuity": 0.457
+      "last_frame": 43,
+      "frames_seen": 40,
+      "dwell_seconds": 8.01,
+      "span_seconds": 8.61,
+      "continuity": 0.93
     },
     {
       "track_id": 3,
       "first_frame": 1,
       "last_frame": 150,
-      "frames_seen": 141,
-      "dwell_seconds": 28.23,
+      "frames_seen": 142,
+      "dwell_seconds": 28.43,
       "span_seconds": 30.03,
-      "continuity": 0.94
+      "continuity": 0.947
     },
     {
-      "track_id": 4,
+      "track_id": 5,
       "first_frame": 1,
       "last_frame": 150,
       "frames_seen": 150,
@@ -266,7 +274,7 @@
       "continuity": 1.0
     },
     {
-      "track_id": 5,
+      "track_id": 6,
       "first_frame": 1,
       "last_frame": 149,
       "frames_seen": 142,
@@ -275,7 +283,16 @@
       "continuity": 0.953
     },
     {
-      "track_id": 6,
+      "track_id": 7,
+      "first_frame": 1,
+      "last_frame": 136,
+      "frames_seen": 121,
+      "dwell_seconds": 24.22,
+      "span_seconds": 27.23,
+      "continuity": 0.89
+    },
+    {
+      "track_id": 8,
       "first_frame": 1,
       "last_frame": 150,
       "frames_seen": 148,
@@ -284,7 +301,7 @@
       "continuity": 0.987
     },
     {
-      "track_id": 7,
+      "track_id": 9,
       "first_frame": 1,
       "last_frame": 150,
       "frames_seen": 150,
@@ -293,7 +310,7 @@
       "continuity": 1.0
     },
     {
-      "track_id": 8,
+      "track_id": 10,
       "first_frame": 1,
       "last_frame": 150,
       "frames_seen": 150,
@@ -302,34 +319,25 @@
       "continuity": 1.0
     },
     {
-      "track_id": 13,
+      "track_id": 12,
       "first_frame": 12,
       "last_frame": 43,
-      "frames_seen": 16,
-      "dwell_seconds": 3.2,
+      "frames_seen": 28,
+      "dwell_seconds": 5.61,
       "span_seconds": 6.41,
-      "continuity": 0.5
+      "continuity": 0.875
     },
     {
-      "track_id": 14,
-      "first_frame": 13,
-      "last_frame": 136,
-      "frames_seen": 108,
-      "dwell_seconds": 21.62,
-      "span_seconds": 24.82,
-      "continuity": 0.871
-    },
-    {
-      "track_id": 23,
+      "track_id": 19,
       "first_frame": 52,
       "last_frame": 79,
-      "frames_seen": 20,
-      "dwell_seconds": 4.0,
+      "frames_seen": 21,
+      "dwell_seconds": 4.2,
       "span_seconds": 5.61,
-      "continuity": 0.714
+      "continuity": 0.75
     },
     {
-      "track_id": 34,
+      "track_id": 30,
       "first_frame": 114,
       "last_frame": 150,
       "frames_seen": 37,

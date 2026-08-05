@@ -20,11 +20,12 @@
   "dwell_max_seconds": 30.03,
   "staff": [
     {
-      "track_id": 50,
+      "track_id": 46,
       "service_seconds": 14.21,
       "frames_total": 71,
       "frames_detected": 38,
-      "frames_held": 33
+      "frames_held": 33,
+      "zone_share": 1.0
     }
   ],
   "staff_service_seconds": 14.21,
@@ -47,7 +48,7 @@
     "worst_continuity": 0.152,
     "note": "continuity = frames actually seen / first-to-last span. Below 1.0 the track was lost and re-acquired; re-linking joins the obvious cases but cannot join every one."
   },
-  "avg_ms_per_frame": 1518.5,
+  "avg_ms_per_frame": 2070.2,
   "occupancy_series": [
     10,
     10,
@@ -202,6 +203,42 @@
   ],
   "people": [
     {
+      "track_id": 34,
+      "first_frame": 1,
+      "last_frame": 150,
+      "frames_seen": 150,
+      "dwell_seconds": 30.03,
+      "span_seconds": 30.03,
+      "continuity": 1.0
+    },
+    {
+      "track_id": 35,
+      "first_frame": 1,
+      "last_frame": 150,
+      "frames_seen": 113,
+      "dwell_seconds": 22.62,
+      "span_seconds": 30.03,
+      "continuity": 0.753
+    },
+    {
+      "track_id": 36,
+      "first_frame": 1,
+      "last_frame": 150,
+      "frames_seen": 150,
+      "dwell_seconds": 30.03,
+      "span_seconds": 30.03,
+      "continuity": 1.0
+    },
+    {
+      "track_id": 37,
+      "first_frame": 1,
+      "last_frame": 150,
+      "frames_seen": 150,
+      "dwell_seconds": 30.03,
+      "span_seconds": 30.03,
+      "continuity": 1.0
+    },
+    {
       "track_id": 38,
       "first_frame": 1,
       "last_frame": 150,
@@ -214,10 +251,10 @@
       "track_id": 39,
       "first_frame": 1,
       "last_frame": 150,
-      "frames_seen": 113,
-      "dwell_seconds": 22.62,
+      "frames_seen": 149,
+      "dwell_seconds": 29.83,
       "span_seconds": 30.03,
-      "continuity": 0.753
+      "continuity": 0.993
     },
     {
       "track_id": 40,
@@ -232,10 +269,10 @@
       "track_id": 41,
       "first_frame": 1,
       "last_frame": 150,
-      "frames_seen": 150,
-      "dwell_seconds": 30.03,
+      "frames_seen": 133,
+      "dwell_seconds": 26.63,
       "span_seconds": 30.03,
-      "continuity": 1.0
+      "continuity": 0.887
     },
     {
       "track_id": 42,
@@ -250,15 +287,6 @@
       "track_id": 43,
       "first_frame": 1,
       "last_frame": 150,
-      "frames_seen": 149,
-      "dwell_seconds": 29.83,
-      "span_seconds": 30.03,
-      "continuity": 0.993
-    },
-    {
-      "track_id": 44,
-      "first_frame": 1,
-      "last_frame": 150,
       "frames_seen": 150,
       "dwell_seconds": 30.03,
       "span_seconds": 30.03,
@@ -266,33 +294,6 @@
     },
     {
       "track_id": 45,
-      "first_frame": 1,
-      "last_frame": 150,
-      "frames_seen": 133,
-      "dwell_seconds": 26.63,
-      "span_seconds": 30.03,
-      "continuity": 0.887
-    },
-    {
-      "track_id": 46,
-      "first_frame": 1,
-      "last_frame": 150,
-      "frames_seen": 150,
-      "dwell_seconds": 30.03,
-      "span_seconds": 30.03,
-      "continuity": 1.0
-    },
-    {
-      "track_id": 47,
-      "first_frame": 1,
-      "last_frame": 150,
-      "frames_seen": 150,
-      "dwell_seconds": 30.03,
-      "span_seconds": 30.03,
-      "continuity": 1.0
-    },
-    {
-      "track_id": 49,
       "first_frame": 9,
       "last_frame": 41,
       "frames_seen": 5,
@@ -301,7 +302,7 @@
       "continuity": 0.152
     },
     {
-      "track_id": 52,
+      "track_id": 48,
       "first_frame": 107,
       "last_frame": 150,
       "frames_seen": 27,

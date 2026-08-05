@@ -169,30 +169,53 @@ def zone_hits(det: sv.Detections, zones, masks, w: int, h: int) -> np.ndarray:
     return hit
 
 
-def apply_zones(det: sv.Detections, zones, masks, w: int, h: int):
-    """Split detections by zone: kept customers, kept staff, and dropped.
+def drop_excluded(det: sv.Detections, zones, masks, w: int, h: int):
+    """Remove detections inside an "exclude" zone; keep everything else.
 
-    Staff are kept rather than discarded. A server is not a visit, but they are
-    also not noise - how long they spend at the service point is the one thing a
-    manager wants measured about them, and dropping the detection throws it away.
+    Service regions deliberately do not filter here. Deciding staff-or-customer
+    from a single frame's geometry is what let a server slip into the visitor
+    count the moment her box reached past the counter edge, so that decision is
+    deferred to `classify_roles` once each person has a full track behind them.
+    Only mirrors and the like are dropped now, because a reflection must never
+    reach the tracker at all.
+
+    Returns the surviving detections plus a per-zone occupancy count for the
+    readout panel.
     """
-    if not len(det) or not zones:
-        return det, sv.Detections.empty(), {}
-    hit = zone_hits(det, zones, masks, w, h)
     counted: dict[str, int] = {}
+    if not len(det) or not zones:
+        return det, counted
+    hit = zone_hits(det, zones, masks, w, h)
     for zi, z in enumerate(zones):
         n = int((hit == zi).sum())
         if n:
             counted[z.name] = n
-    staff_mask = np.zeros(len(det), dtype=bool)
-    drop_mask = np.zeros(len(det), dtype=bool)
+    drop = np.zeros(len(det), dtype=bool)
     for zi, z in enumerate(zones):
-        sel = hit == zi
-        if z.mode == "staff":
-            staff_mask |= sel
+        if z.mode != "staff":
+            drop |= hit == zi
+    return det[~drop], counted
+
+
+def classify_roles(merged, cfg, min_fraction=0.6):
+    """Decide staff or customer once per person, from where the track lived.
+
+    A role is a property of a person, not of a frame. The test is the share of a
+    track's frames whose centre sat inside a service polygon: a server working a
+    station spends nearly all of theirs there, while a customer who steps up to
+    order spends only the ordering part of a longer track. Pairing the share with
+    a minimum duration keeps a brief visit to the counter from reading as staff.
+    """
+    staff, customers = set(), set()
+    for root, t in merged.items():
+        if t["frames"] < cfg.min_track_age:
+            continue
+        share = t["in_zone"] / max(t["frames"], 1)
+        if share >= min_fraction and t["frames"] >= cfg.min_staff_frames:
+            staff.add(root)
         else:
-            drop_mask |= sel
-    return det[~(staff_mask | drop_mask)], det[staff_mask], counted
+            customers.add(root)
+    return customers, staff
 
 
 # -------------------------------------------------------------------- render
@@ -406,18 +429,21 @@ def process(cfg: DwellConfig, args) -> dict:
     tracker_cfg = resolve_tracker_cfg(args.tracker, cfg.tracker_overrides, "dw")
     model = YOLOE(str(WEIGHTS_DIR / args.weights))
     model.set_classes(cfg.prompts, model.get_text_pe(cfg.prompts))
-    # Customers and staff get their own tracker. Sharing one would let a server
-    # standing still for the whole clip compete for identity with customers
-    # walking past a metre away.
-    cust_tracker, tracker_name = build_tracker(tracker_cfg, fps)
-    staff_tracker, _ = build_tracker(tracker_cfg, fps)
+    # One tracker for everyone in the room. Splitting customers and staff into
+    # separate trackers looked tidy but decided the role per *frame*, from how
+    # much of a box fell inside the service polygon - so a server who leaned
+    # forward, or whose box reached past the counter edge, was handed to the
+    # customer tracker on that frame and acquired a visitor identity. Measured on
+    # scene 1: she registered as staff in only 71 of 150 frames and her leftovers
+    # surfaced as customer tracks #49 and #52. Role is a property of a person,
+    # not of a frame, so it is decided once per track after tracking.
+    tracker, tracker_name = build_tracker(tracker_cfg, fps)
     masks = zone_masks(cfg.exclusion_zones, w, h)
     zone_conf = [z.conf for z in cfg.exclusion_zones]
     floor_conf = min([cfg.conf] + [c for c in zone_conf if c is not None])
 
     frames_data: list[dict] = []
     tracks: dict[int, dict] = {}
-    staff_tracks: dict[int, dict] = {}
     zone_counts_series: list[dict] = []
     raw_dets = dup_dropped = 0
     times: list[float] = []
@@ -459,42 +485,52 @@ def process(cfg: DwellConfig, args) -> dict:
         det = suppress_contained(det, cfg.dedup_containment)
         dup_dropped += before - len(det)
 
-        cust, staff, counts = apply_zones(det, cfg.exclusion_zones, masks, w, h)
+        # Excluded regions still drop out before tracking - a mirror reflection
+        # must never reach the tracker. Service regions do not: those detections
+        # stay in, and are only labelled later.
+        det, counts = drop_excluded(det, cfg.exclusion_zones, masks, w, h)
         zone_counts_series.append(counts)
         times.append((time.time() - t0) * 1000)
 
-        row = {"customers": [], "staff": []}
-        for group, tracker, store, key in (
-                (cust, cust_tracker, tracks, "customers"),
-                (staff, staff_tracker, staff_tracks, "staff")):
-            if not len(group):
-                tracker.update(_DetView(np.zeros((0, 4), np.float32),
-                                        np.zeros(0, np.float32),
-                                        np.zeros(0, np.float32)), frame)
-                continue
-            out = tracker.update(_DetView(group.xyxy.astype(np.float32),
-                                          group.confidence.astype(np.float32),
-                                          group.class_id.astype(np.float32)), frame)
-            for r in np.asarray(out):
-                box, tid = r[:4], int(r[4])
-                row[key].append((tid, box.tolist()))
-                t = store.setdefault(tid, {"first": idx, "frames": 0,
-                                           "hist": np.zeros((16, 16), np.float32),
-                                           "n_hist": 0})
-                t["last"] = idx
-                t["frames"] += 1
-                t["last_centre"] = ((box[0] + box[2]) / 2, (box[1] + box[3]) / 2)
-                if "first_centre" not in t:
-                    t["first_centre"] = t["last_centre"]
-                if t["n_hist"] < 12:
-                    t["hist"] += track_appearance(frame, box)
-                    t["n_hist"] += 1
+        row = {"people": []}
+        if len(det):
+            out = tracker.update(_DetView(det.xyxy.astype(np.float32),
+                                          det.confidence.astype(np.float32),
+                                          det.class_id.astype(np.float32)), frame)
+        else:
+            out = tracker.update(_DetView(np.zeros((0, 4), np.float32),
+                                          np.zeros(0, np.float32),
+                                          np.zeros(0, np.float32)), frame)
+        for r in np.asarray(out):
+            box, tid = r[:4], int(r[4])
+            row["people"].append((tid, box.tolist()))
+            t = tracks.setdefault(tid, {"first": idx, "frames": 0, "in_zone": 0,
+                                        "hist": np.zeros((16, 16), np.float32),
+                                        "n_hist": 0})
+            t["last"] = idx
+            t["frames"] += 1
+            # Membership for the role vote uses the box centre rather than its
+            # area. A person working behind a counter keeps their centre inside
+            # the service polygon even when the box spills past the counter edge;
+            # an area test loses them exactly when they lean in to serve.
+            cx = int((box[0] + box[2]) / 2)
+            cy = int((box[1] + box[3]) / 2)
+            if 0 <= cx < w and 0 <= cy < h:
+                for zi, z in enumerate(cfg.exclusion_zones):
+                    if z.mode == "staff" and masks[zi][cy, cx]:
+                        t["in_zone"] += 1
+                        break
+            t["last_centre"] = ((box[0] + box[2]) / 2, (box[1] + box[3]) / 2)
+            if "first_centre" not in t:
+                t["first_centre"] = t["last_centre"]
+            if t["n_hist"] < 12:
+                t["hist"] += track_appearance(frame, box)
+                t["n_hist"] += 1
         frames_data.append(row)
     cap.release()
-    for store in (tracks, staff_tracks):
-        for t in store.values():
-            if t["n_hist"]:
-                t["hist"] /= t["n_hist"]
+    for t in tracks.values():
+        if t["n_hist"]:
+            t["hist"] /= t["n_hist"]
 
     # ---- re-link tracks broken by occlusion --------------------------------
     alias, merges = merge_broken_tracks(tracks, fps, diag)
@@ -507,35 +543,48 @@ def process(cfg: DwellConfig, args) -> dict:
     merged: dict[int, dict] = {}
     for tid, t in tracks.items():
         root = alias[tid]
-        m = merged.setdefault(root, {"first": t["first"], "last": t["last"], "frames": 0})
+        m = merged.setdefault(root, {"first": t["first"], "last": t["last"],
+                                     "frames": 0, "in_zone": 0})
         m["first"] = min(m["first"], t["first"])
         m["last"] = max(m["last"], t["last"])
         m["frames"] += t["frames"]
+        m["in_zone"] += t["in_zone"]
 
-    locked = {r for r, t in merged.items() if t["frames"] >= cfg.min_track_age}
-    staff_locked = {i for i, t in staff_tracks.items()
-                    if t["frames"] >= max(cfg.min_track_age, cfg.min_staff_frames)}
+    # ---- decide staff or customer, once per person -------------------------
+    inzone = [(t["in_zone"] / max(t["frames"], 1), r, t) for r, t in merged.items()
+              if t["in_zone"]]
+    if inzone:
+        print("    time inside a service zone, by track:")
+        for share, r, t in sorted(inzone, reverse=True):
+            print(f"      #{r:<3d} {t['in_zone']:3d}/{t['frames']:3d} frames  {share:5.0%}")
+    locked, staff_locked = classify_roles(merged, cfg)
+    if staff_locked:
+        for r in sorted(staff_locked):
+            t = merged[r]
+            print(f"    #{r} classified as service: {t['in_zone']}/{t['frames']} "
+                  f"frames inside the service zone "
+                  f"({t['in_zone'] / max(t['frames'], 1):.0%})")
 
     # ---- hold staff across short detection gaps ----------------------------
     hold = max([z.hold_frames for z in cfg.exclusion_zones] or [0])
     held_total = 0
-    if hold:
+    if hold and staff_locked:
         seen_at = defaultdict(dict)
         for i, row in enumerate(frames_data):
-            for tid, box in row["staff"]:
-                seen_at[tid][i] = box
+            for tid, box in row["people"]:
+                seen_at[alias[tid]][i] = box
         for tid in staff_locked:
             fr = sorted(seen_at[tid])
             for a, b in zip(fr, fr[1:]):
                 gap = b - a - 1
                 if 0 < gap <= hold:
                     for k in range(a + 1, b):
-                        frames_data[k]["staff"].append((tid, seen_at[tid][a]))
+                        frames_data[k]["people"].append((tid, seen_at[tid][a]))
                         frames_data[k].setdefault("held", set()).add(tid)
                         held_total += 1
         if held_total:
-            print(f"    held staff across {held_total} frames of missed detection "
-                  f"(max gap {hold} frames)")
+            print(f"    held service tracks across {held_total} frames of missed "
+                  f"detection (max gap {hold} frames)")
 
     # ---- pass 2: render from the recorded tracks ---------------------------
     out_path = OUTPUT_DIR / cfg.filename.replace(".mp4", "__dwell.mp4")
@@ -553,18 +602,23 @@ def process(cfg: DwellConfig, args) -> dict:
             ok, frame = cap.read()
             if not ok:
                 break
-            cust = [(alias[t], b) for t, b in row["customers"] if alias[t] in locked]
-            stf = [(t, b) for t, b in row["staff"] if t in staff_locked]
-            seen = set()
-            live = []
-            for tid, b in cust:                      # a merge can leave two boxes
-                if tid in seen:                      # on one identity in a frame
-                    continue
-                seen.add(tid)
-                live.append((tid, b))
-                dwell[tid] += 1
-            for tid, _ in stf:
-                staff_dwell[tid] += 1
+            # One track list, split by the role each identity was assigned.
+            seen_c, seen_s = set(), set()
+            live, stf = [], []
+            for t, b in row["people"]:
+                root = alias.get(t, t)
+                if root in staff_locked:
+                    if root in seen_s:               # a merge can leave two boxes
+                        continue                     # on one identity in a frame
+                    seen_s.add(root)
+                    stf.append((root, b))
+                    staff_dwell[root] += 1
+                elif root in locked:
+                    if root in seen_c:
+                        continue
+                    seen_c.add(root)
+                    live.append((root, b))
+                    dwell[root] += 1
             series.append(len(live))
 
             vis = draw_zones(frame.copy(), cfg.exclusion_zones, max(scale, 0.8))
@@ -607,7 +661,9 @@ def process(cfg: DwellConfig, args) -> dict:
               "service_seconds": round(staff_dwell[t] / fps, 2),
               "frames_total": staff_dwell[t],
               "frames_detected": staff_dwell[t] - held_per_track[t],
-              "frames_held": held_per_track[t]} for t in sorted(staff_locked)]
+              "frames_held": held_per_track[t],
+              "zone_share": round(merged[t]["in_zone"] / max(merged[t]["frames"], 1), 3)}
+             for t in sorted(staff_locked)]
     fragmented = [p for p in people if p["continuity"] < 0.8]
     dwells = [p["dwell_seconds"] for p in people]
 
