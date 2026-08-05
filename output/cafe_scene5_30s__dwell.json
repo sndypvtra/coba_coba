@@ -39,7 +39,7 @@
         "min_overlap": 0.7
       },
       {
-        "name": "server counter",
+        "name": "area pelayan",
         "mode": "staff",
         "reason": "behind the counter - timed as service, not as a visit",
         "min_overlap": 0.7
@@ -75,7 +75,7 @@
     "worst_continuity": 0.457,
     "note": "continuity = frames actually seen / first-to-last span. Below 1.0 the track was lost and re-acquired; re-linking joins the obvious cases but cannot join every one."
   },
-  "avg_ms_per_frame": 1901.5,
+  "avg_ms_per_frame": 1426.4,
   "occupancy_series": [
     8,
     8,

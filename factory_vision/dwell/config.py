@@ -99,7 +99,7 @@ CLIPS = [
                          (420, 252), (250, 246), (165, 196), (50, 110)],
             ),
             ExclusionZone(
-                name="server counter",
+                name="area pelayan",
                 reason="behind the counter - timed as service, not as a visit",
                 mode="staff",
                 hold_frames=6,
@@ -130,7 +130,7 @@ CLIPS = [
         min_track_age=5,
         exclusion_zones=[
             ExclusionZone(
-                name="server station",
+                name="area pelayan",
                 reason="counter under the menu boards - timed as service, not a visit",
                 mode="staff",
                 # The server works the far end of the counter, deep in the room

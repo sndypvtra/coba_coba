@@ -354,18 +354,17 @@ def compose(vis, occupancy, visitors, idx, total, fps, dwell, live_ids,
     if any(z.mode == "staff" for z in zones):
         y = h - 320
         cv2.line(canvas, (m, y), (PANEL_W - m, y), RULE, 1)
-        _text(canvas, "SERVER / SERVICE ROI", (m, y + 26), 0.44, MUTED)
+        _text(canvas, "PELAYAN / SERVICE ROI", (m, y + 26), 0.44, MUTED)
         known = sorted(set(staff_dwell))
         _text(canvas, f"{len(known)}", (m, y + 76), 1.5, SERVER_COLOUR, 3)
-        _text(canvas, "SERVER" + ("S" if len(known) != 1 else ""),
-              (m + 2, y + 96), 0.38, MUTED)
+        _text(canvas, "PELAYAN", (m + 2, y + 96), 0.38, MUTED)
         _text(canvas, f"{len(staff_live)} in roi now", (m + 120, y + 76), 0.46, INK)
         for row, tid in enumerate(known[:3]):
             yy = y + 128 + row * 30
             on = tid in staff_live
             cv2.rectangle(canvas, (m, yy - 13), (m + 13, yy),
                           SERVER_COLOUR if on else (70, 90, 110), -1)
-            _text(canvas, f"SERVER #{tid}", (m + 26, yy), 0.46,
+            _text(canvas, f"PELAYAN #{tid}", (m + 26, yy), 0.46,
                   SERVER_COLOUR if on else DIM)
             _text(canvas, f"{staff_dwell[tid] / fps:5.1f}s", (m + 200, yy), 0.46, INK)
             bar = int(min(staff_dwell[tid] / max(total, 1), 1.0) * (PANEL_W - 2 * m - 290))
@@ -582,7 +581,7 @@ def process(cfg: DwellConfig, args) -> dict:
                 x1, y1, x2, y2 = [int(v) for v in b]
                 cv2.rectangle(vis, (x1, y1), (x2, y2), SERVER_COLOUR,
                               max(2, int(3 * scale)))
-                _tag(vis, f"SERVER #{tid}   {staff_dwell[tid] / fps:.1f}s",
+                _tag(vis, f"PELAYAN #{tid}   {staff_dwell[tid] / fps:.1f}s",
                      x1, y1, SERVER_COLOUR, scale)
 
             visitors_so_far = sum(1 for a in locked if merged[a]["first"] <= i + 1)
