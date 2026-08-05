@@ -2,9 +2,12 @@
 
 Three numbers come out of this:
 
-  occupancy   how many customers are in the frame right now
-  visitors    how many distinct customers have been seen so far
-  dwell       for each customer, how long they have been in view
+  occupancy   how many people are in the room right now - customers *and* staff,
+              because a server standing at the counter is a person present
+  visitors    how many distinct customers have been seen so far - staff excluded,
+              because a shift is not a visit
+  dwell       for each customer, how long they have been in view; staff time is
+              reported separately as service
 
 The first is a detection problem and is the easy one. The other two are tracking
 problems, and they are only as good as the identity assignment: if a seated
@@ -346,10 +349,12 @@ def compose(vis, occupancy, visitors, idx, total, fps, dwell, live_ids,
 
     _text(canvas, f"{occupancy}", (m, 268), 2.6, ACCENT, 4)
     _text(canvas, "IN ROOM NOW", (m + 2, 296), 0.44, MUTED)
+    _text(canvas, "customers + staff", (m + 2, 314), 0.34, DIM)
     _text(canvas, f"{visitors}", (m + 240, 268), 2.6, INK, 4)
     _text(canvas, "VISITORS TOTAL", (m + 242, 296), 0.44, MUTED)
+    _text(canvas, "customers only", (m + 242, 314), 0.34, DIM)
 
-    gx, gy, gw, gh = m, 330, PANEL_W - 2 * m, 80
+    gx, gy, gw, gh = m, 344, PANEL_W - 2 * m, 74
     cv2.rectangle(canvas, (gx, gy), (gx + gw, gy + gh), (30, 30, 30), -1)
     _text(canvas, "OCCUPANCY OVER TIME", (gx, gy - 10), 0.40, DIM)
     if len(series) > 1:
@@ -619,7 +624,11 @@ def process(cfg: DwellConfig, args) -> dict:
                     seen_c.add(root)
                     live.append((root, b))
                     dwell[root] += 1
-            series.append(len(live))
+            # Occupancy is how many people are in the room, so it counts staff
+            # too - a server standing at the counter is a person present. The
+            # visitor total is a different question and stays customers-only:
+            # staff are not visits.
+            series.append(len(live) + len(stf))
 
             vis = draw_zones(frame.copy(), cfg.exclusion_zones, max(scale, 0.8))
             if live:
@@ -640,7 +649,7 @@ def process(cfg: DwellConfig, args) -> dict:
 
             visitors_so_far = sum(1 for a in locked if merged[a]["first"] <= i + 1)
             sink.write_frame(compose(
-                vis, len(live), visitors_so_far,
+                vis, len(live) + len(stf), visitors_so_far,
                 i + 1, info.total_frames, fps, dwell, {t for t, _ in live},
                 staff_dwell, {t for t, _ in stf},
                 zone_counts_series[i] if i < len(zone_counts_series) else {},
@@ -674,6 +683,7 @@ def process(cfg: DwellConfig, args) -> dict:
         "model": args.weights.replace(".pt", ""), "prompts": cfg.prompts,
         "conf": cfg.conf, "tracker": "TrackTrack (CVPR 2025) + ReID + GMC",
         "visitors_total": len(locked),
+        "occupancy_includes_staff": True,
         "occupancy_mean": round(float(np.mean(series)), 2) if series else 0,
         "occupancy_max": int(np.max(series)) if series else 0,
         "dwell_mean_seconds": round(float(np.mean(dwells)), 2) if dwells else 0,
