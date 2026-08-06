@@ -1,9 +1,9 @@
 <h1 align="center">factory-vision-poc</h1>
 
 <p align="center">
-  <b>Computer vision for production lines</b><br>
-  Fill-volume inspection on a bottling line, and object counting on conveyors
-  driven entirely by text prompts.
+  <b>Turning a fixed camera into a number an operator can act on</b><br>
+  Conveyor counting from text prompts, fill-volume inspection, cafe occupancy
+  and dwell time, and multi-camera 3D localisation on a warehouse floor.
 </p>
 
 <p align="center">
@@ -18,7 +18,7 @@
 
 ## What this is
 
-Four cases on real factory footage. Every figure below was measured by running
+Six cases on fixed-camera footage. Every figure below was measured by running
 the code in this repository, not estimated.
 
 |  | Case | Task | Headline result |
@@ -27,9 +27,11 @@ the code in this repository, not estimated.
 | **2** | Tomato grading line | Count tomatoes past a line | **16** counted · 50 tracks |
 | **3** | Parcel unloading belt | Count mixed packages past a line | **7** counted · 24 tracks |
 | **4** | Bottling line | Measure dispensed volume | **1,001 mL** · 66.7 % of nominal |
+| **5** | Cafe, two rooms | Occupancy and per-person dwell time | **12** visitors each · mean dwell **21.2 s** / **24.6 s** |
+| **6** | Warehouse, four cameras | Locate people in 3D on one floor plan | median error **0.329 m** vs the dataset's own 3D truth |
 
-Cases 1–3 are **zero-shot**: the detector is given words, never labels, never
-training. Case 4 is a **calibrated inspection**: colour segmentation and
+Cases 1–3, 5 and 6 are **zero-shot**: the detector is given words, never labels,
+never training. Case 4 is a **calibrated inspection**: colour segmentation and
 geometry, tuned to one station.
 
 ---
@@ -140,6 +142,89 @@ More, including the counting rules and threshold-tuning results:
 
 </details>
 
+---
+
+## Case 5 — Cafe occupancy and dwell time
+
+<p>
+  <img src="output/preview_cafe_scene5_30s__frame134.jpg" alt="Cafe occupancy and dwell time" width="49%">
+  <img src="output/preview_cafe_scene1_30s__frame16.jpg" alt="Cafe occupancy and dwell time, second room" width="49%">
+</p>
+
+The prompt is one word — `person` — and the question is different from the
+conveyor cases. There is no line and no travel direction. What is reported is
+**occupancy** (how many are in the room now), **visitors** (how many distinct
+people have appeared) and **dwell time** per person.
+
+| | Scene 5 | Scene 1 |
+|---|:--:|:--:|
+| Distinct visitors | **12** | **12** |
+| Occupancy, mean / max | 9.00 / 10 | 10.32 / 12 |
+| Dwell, mean | **21.19 s** | **24.64 s** |
+| Server time in the service zone | 16.02 s | 14.21 s |
+| Tracks that were lost and re-acquired | 1 of 12 | 3 of 12 |
+
+```bash
+python cases/case5_cafe_dwell_time.py --all
+```
+
+<details>
+<summary><b>Three decisions that changed the answer</b></summary>
+
+<br>
+
+**Occupancy counts staff; the visitor total does not.** A server standing at the
+counter is a person in the room, so she belongs in "how many are here now". A
+shift is not a visit, so she does not belong in "how many customers came". The
+two figures are deliberately different and the summary says which is which.
+
+**A role belongs to a person, not to a frame.** Deciding staff-vs-customer from
+per-frame geometry made a server flip identity the moment she leaned over the
+counter. Deciding it once per track, from the share of frames spent inside the
+service zone, separates **100 %** from **46 %**. A minimum of 15 frames is
+required as well — two customers who paused at the till produced 9- and 5-frame
+"staff" tracks before that gate existed.
+
+**Duplicate boxes are separable by containment, not by IoU.** Two boxes on one
+seated customer span IoU 0.076–0.485, while genuinely adjacent customers span
+0.000–0.425 — the ranges overlap almost entirely, so no NMS threshold splits
+them. Intersection over the *smaller* box does, cleanly.
+
+Mirrors are excluded by region, not by appearance: nothing in a reflection's
+pixels says "reflection", and what does say it is where it is in a fixed
+camera's frame. Each room therefore carries its own zones in
+[`factory_vision/dwell/config.py`](factory_vision/dwell/config.py).
+
+</details>
+
+---
+
+## Case 6 — Warehouse: 3D localisation across four cameras
+
+<img src="output/preview_warehouse_014.jpg" alt="Multi-camera 3D localisation and eagle view" width="100%">
+
+Four fixed cameras, one warehouse floor. Each person is placed **in metres**,
+given one identity across all four views, and plotted on the building's own
+top-down plan.
+
+| Metric | Value |
+|---|---|
+| **Localisation error vs the dataset's 3D truth** | **0.329 m median**, 0.457 m p95 |
+| Distinct people | 4 — three people plus a humanoid robot no prompt separates |
+| Measured height, median | 1.86 m |
+| Cross-camera agreement | 0.26 m |
+| Views per person, mean | 2.2 of 4 |
+| Global IDs per real person | **1.0** — no identity switches in 30 s |
+| Clip | 4 × 30 s, 1920×1080, 10 fps, 1,200 inferences |
+
+```bash
+python scripts/fetch_warehouse_scene.py     # once, ~520 MB
+python cases/case6_warehouse_spatial.py
+```
+
+Full method, the prompt-list measurement and the limits:
+**[`docs/warehouse-spatial.md`](docs/warehouse-spatial.md)**
+
 <details>
 <summary><b>Counting rules</b></summary>
 
@@ -164,9 +249,12 @@ More, including the counting rules and threshold-tuning results:
 
 ```bash
 pip install torch==2.9.1 torchvision==0.24.1 --index-url https://download.pytorch.org/whl/cpu
-pip install -e .                   # or: pip install -r requirements.txt
-./scripts/fetch_assets.sh          # model weights + source clips
+pip install -e .                    # or: pip install -r requirements.txt
+./scripts/fetch_assets.sh           # model weights + clips for cases 1-5
 python cases/case4_bottle_fill_volume.py
+
+python scripts/fetch_warehouse_scene.py   # case 6 only, ~520 MB from HuggingFace
+python cases/case6_warehouse_spatial.py
 ```
 
 Run from the repository root. Ultralytics will fetch any missing model weight on
@@ -179,6 +267,8 @@ Each pipeline is also importable on its own:
 ```python
 from factory_vision.counting import run_case
 from factory_vision.filling import run_case as measure_fill
+from factory_vision.dwell import run_case as measure_dwell
+from factory_vision.spatial import run_case as locate_in_3d
 ```
 
 CPU-only. Reference machine: 4 cores, 1.4–2.5 s/frame at `imgsz=1280` for the
@@ -202,12 +292,18 @@ Worth being precise about, because it is where vision demos usually overclaim:
 |---|---|
 | Fill fraction (volume, height) | **measured** |
 | Line crossings, track counts | **measured** |
+| Occupancy, dwell time, service time | **measured** |
+| Floor position, person height (case 6) | **measured**, and checked against the dataset's 3D truth |
 | Millilitres | measured fraction × **configured** nominal capacity |
 | Bottle geometry, ROI, product colour | **configured** per station |
+| Mirror and service zones (case 5) | **configured** per room |
+| Person footprint, floor zones (case 6) | **configured** per site |
 
 A video cannot observe how large a bottle is. Give `--capacity-ml` the real SKU
 capacity and the millilitre figure means something; leave the default and it is
-illustrative.
+illustrative. In the same spirit, case 6 measures a person's *height* from the
+camera geometry but takes their *footprint* as a constant, because a silhouette
+does not carry it.
 
 ## Scope
 
@@ -242,6 +338,7 @@ longer holds. Full table and the eleven installation-specific constants:
 ```
 factory_vision/              the library
   paths.py                   repository paths, resolved once
+  detect.py                  detection/tracking pieces shared by several cases
   counting/                  cases 1-3 — zero-shot line counting
     clips.py                 per-clip config: prompts, line, belt motion
     geometry.py              counting line, ROI, size gating
@@ -255,23 +352,47 @@ factory_vision/              the library
     profile.py               bore, surface, isotonic fit, volume
     panel.py                 readout panel and overlay
     pipeline.py              three passes over the clip
+  dwell/                     case 5 — occupancy and dwell time
+    config.py                per-room zones: mirrors, service points
+    pipeline.py              detect -> track -> role -> dwell -> render
+  spatial/                   case 6 — multi-camera 3D localisation
+    config.py                the scene: cameras, floor zones, clip window
+    calibration.py           camera matrix, homography, closed-form height
+    bev.py                   the eagle view's world <-> map transform
+    lift.py                  2D box -> a place and a height in metres
+    fuse.py                  one global identity per person, across cameras
+    analytics.py             zones, speed, proximity, ground-truth validation
+    render.py                3D wireframes, eagle view, readout panel
+    pipeline.py              four views per frame, fused and drawn
   tools/
     probe_prompts.py         prompt/confidence calibration sweep
     tune_thresholds.py       detection-latency measurement
     perturbation_test.py     what a moved camera costs case 4
 cases/                       one runnable entry point per case
-  case1_oranges_counting.py  … through case4_bottle_fill_volume.py
+  case1_oranges_counting.py  … through case6_warehouse_spatial.py
 docs/
   liquid-level.md            fill-volume: method, every bug found, limits
   conveyor-counting.md       counting: method, tuning results, failure modes
-scripts/fetch_assets.sh      model weights + source clips
+  warehouse-spatial.md       3D localisation: geometry, fusion, what it costs
+scripts/
+  fetch_assets.sh            model weights + conveyor/bottle/cafe clips
+  fetch_warehouse_scene.py   the warehouse scene and its four 30 s clips
 output/                      previews and JSON series (videos gitignored)
 ```
 
 ## Sources
 
-Footage from [Pexels](https://www.pexels.com), free for commercial use —
+Cases 1–4, footage from [Pexels](https://www.pexels.com), free for commercial
+use —
 [bottle filling](https://www.pexels.com/video/empty-bottles-in-a-filling-machine-8720278/) ·
 [oranges](https://www.pexels.com/video/fruit-on-production-line-10576687/) ·
 [tomatoes](https://www.pexels.com/video/tomatoes-on-a-moving-conveyor-belt-8675102/) ·
 [parcels](https://www.pexels.com/video/unloading-packages-on-a-conveyor-belt-5370836/)
+
+Case 5, the [CAFE dataset](https://dk-kim.github.io/CAFE/) — two 30-second
+excerpts, scenes 1 and 5.
+
+Case 6, [NVIDIA PhysicalAI-SmartSpaces](https://huggingface.co/datasets/nvidia/PhysicalAI-SmartSpaces),
+CC BY 4.0 — `MTMC_Tracking_2025/train/Warehouse_014`, four of its twelve
+cameras, 30 seconds each. Synthetic (rendered in Omniverse), which is why the
+calibration and the 3D ground truth are exact.

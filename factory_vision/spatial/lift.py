@@ -1,0 +1,116 @@
+"""Turning a 2D box into a 3D object standing on the floor.
+
+The detector returns a rectangle. What the analytics need is a position in the
+building and a height in metres. The bridge is one assumption - *the bottom edge
+of the box is where the object meets the floor* - plus the calibration, and
+neither of those is a guess about appearance.
+
+From there:
+
+  floor position   back-project the bottom-centre of the box through the
+                   ground-plane homography
+  height           the closed-form solve in `Camera.height_at`, from the top
+                   edge of the same box
+  footprint        a constant, because a silhouette does not carry it
+  precision        the world size of one image pixel at that floor point -
+                   which is what makes a distant, grazing-angle observation
+                   count for less than a near, steep-angle one when several
+                   cameras disagree
+
+The assumption fails in exactly two ways, and both are detectable rather than
+silent: a box clipped by the bottom or side of the frame has no visible feet, so
+the floor point is wrong; a box clipped by the top has no visible head, so the
+height is wrong. Each is rejected on its own terms instead of being averaged in.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+import numpy as np
+
+from factory_vision.spatial.calibration import Camera
+
+EDGE_MARGIN = 3          # px; a box within this of a frame edge counts as clipped
+
+
+@dataclass
+class Observation:
+    """One camera's view of one object at one instant, lifted to the floor."""
+
+    camera: str
+    track_id: int
+    label: str
+    conf: float
+    box2d: tuple[float, float, float, float]
+    x: float = float("nan")
+    y: float = float("nan")
+    height: float = float("nan")
+    precision_m: float = float("nan")   # world metres per image pixel here
+    height_clipped: bool = False
+    reject: str = ""
+
+    @property
+    def ok(self) -> bool:
+        return not self.reject
+
+    @property
+    def weight(self) -> float:
+        """How much this observation should count when cameras are averaged.
+
+        Inverse of the local ground-plane scale: a pixel of error near the
+        camera is a couple of centimetres on the floor, and the same pixel near
+        the horizon is most of a metre. Confidence is folded in as a mild factor
+        - it says how sure the detector is that this is an object, not how sure
+        it is about where it is.
+        """
+        if not np.isfinite(self.precision_m) or self.precision_m <= 0:
+            return 0.0
+        return float(self.conf ** 0.5 / self.precision_m)
+
+
+def ground_precision(cam: Camera, u: float, v: float) -> float:
+    """Metres on the floor spanned by one pixel at (u, v). Bigger is worse."""
+    x0, y0 = cam.ground(u, v)
+    x1, y1 = cam.ground(u, v + 1.0)
+    x2, y2 = cam.ground(u + 1.0, v)
+    if not all(np.isfinite([x0, y0, x1, y1, x2, y2])):
+        return float("nan")
+    return float(max(np.hypot(x1 - x0, y1 - y0), np.hypot(x2 - x0, y2 - y0)))
+
+
+def lift(cam: Camera, box: np.ndarray, conf: float, label: str, track_id: int,
+         valid_bounds: tuple[float, float, float, float],
+         height_bounds: tuple[float, float]) -> Observation:
+    x1, y1, x2, y2 = [float(v) for v in box]
+    obs = Observation(cam.sensor_id, track_id, label, float(conf), (x1, y1, x2, y2))
+
+    if x1 <= EDGE_MARGIN or x2 >= cam.width - EDGE_MARGIN or y2 >= cam.height - EDGE_MARGIN:
+        obs.reject = "feet outside frame"
+        return obs
+
+    fx, fy = (x1 + x2) / 2.0, y2
+    gx, gy = cam.ground(fx, fy)
+    if not np.isfinite([gx, gy]).all():
+        obs.reject = "ray parallel to floor"
+        return obs
+
+    bx0, by0, bx1, by1 = valid_bounds
+    if not (bx0 <= gx <= bx1 and by0 <= gy <= by1):
+        obs.reject = "off the floor"
+        return obs
+
+    obs.x, obs.y = gx, gy
+    obs.precision_m = ground_precision(cam, fx, fy)
+
+    h = cam.height_at(gx, gy, y1)
+    lo, hi = height_bounds
+    if y1 <= EDGE_MARGIN:
+        # Head cut off by the top of the frame. The floor point is still good,
+        # so the observation is kept and only the height is marked unusable.
+        obs.height_clipped = True
+    elif not np.isfinite(h) or not (lo <= h <= hi):
+        obs.height_clipped = True
+    else:
+        obs.height = h
+    return obs

@@ -4,10 +4,11 @@
 
 **Fixed-Camera Metrics** — repo slug `fixed-camera-metrics`
 
-The five cases share one idea: an ordinary fixed camera, and a number an operator
+The six cases share one idea: ordinary fixed cameras, and a number an operator
 can act on. Throughput on a belt, millilitres in a bottle, people in a room and
-how long they stayed. `factory-vision-poc` no longer fits now that case 5 is a
-cafe rather than a production line.
+how long they stayed, and where everyone is standing on a warehouse floor.
+`factory-vision-poc` no longer fits now that case 5 is a cafe and case 6 is a
+four-camera warehouse.
 
 Alternatives, if a different emphasis is wanted:
 
@@ -21,7 +22,7 @@ Alternatives, if a different emphasis is wanted:
 
 ## LinkedIn post
 
-**Five computer-vision proofs of concept, all on CPU, four of them with no
+**Six computer-vision proofs of concept, all on CPU, five of them with no
 training data at all.**
 
 I built these to answer one question: how much operational insight can you get
@@ -41,7 +42,14 @@ step 3.1%.
 Two cafes: 12 visitors each, mean dwell 21.2 s and 24.6 s over 30-second clips.
 Staff are measured separately as service time rather than counted as visits.
 
-**Three findings I did not expect:**
+**Warehouse: four cameras, one floor, people in 3D.** Each 2D box is lifted onto
+the floor plane through the camera's homography, its height solved in closed
+form from the camera matrix, and the four views fused into one identity per
+person. Median position error **0.329 m** against the dataset's own 3D ground
+truth, recall 0.976, and **one global identity per real person** across 30
+seconds — no switches. Measured height lands within 0.03–0.10 m of the truth.
+
+**Four findings I did not expect:**
 
 *The prompt list defines what exists.* A black holdall sat on a parcel belt
 undetected for several runs. Against `cardboard box`, `parcel` and `plastic bag`
@@ -60,6 +68,19 @@ per-frame geometry made a server flip identity the moment she leaned over the
 counter. Deciding it once per track, from the share of frames spent inside the
 service zone, separates 100% from 46%.
 
+*An unnamed object is not missed — it is absorbed.* The sharper version of the
+first finding. The warehouse contains two humanoid robots. Under a `person`-only
+prompt list they are detected 91% of the time, and every one of those detections
+is labelled **person** and walks into the headcount. Not a missing box: a
+correct-looking box in the wrong class, with nothing flagging it. Naming fixes
+one of them (`humanoid robot` separates the bird-legged AgilityDigit in 31 of 38
+detections) and cannot fix the other — a human-shaped, human-sized humanoid is
+separated in 1 of 43, and none of the twelve prompt lists I measured does better
+than 5 of 45. Geometry does not save it either: it stands 1.62–1.68 m against
+people at 1.77–2.05 m, a 0.09 m margin under a ±0.27 m single-frame height
+error. So the headcount is exactly one too high, all the time, and the write-up
+says so.
+
 **And the limit, stated rather than hidden.** The fill-volume case is calibrated
 to one camera position. Re-rendering the same scene with a 120 px shift gives
 143 mL against a correct 1,001 mL — an 86% error, reported through the same
@@ -67,8 +88,9 @@ confident panel with no error flag. Translation breaks it; a 20% zoom costs only
 7%. That silence is the real hazard in vision demos, so the repo measures it
 instead of asserting robustness.
 
-Stack: YOLOE-11L-seg (ultralytics 8.4.106) · TrackTrack · supervision 0.29.1 ·
-OpenCV 5 · CPU only.
+Stack: YOLOE-11L-seg (ultralytics 8.4.106) · TrackTrack (CVPR 2025) ·
+supervision 0.29.1 · OpenCV 5 · ground-plane homography and camera matrices for
+the 3D case · CPU only.
 
 Code, method write-ups and every number above: <repo link>
 
@@ -76,9 +98,10 @@ Code, method write-ups and every number above: <repo link>
 
 ## Short version (if the long post is too much)
 
-Five computer-vision PoCs on CPU — conveyor counting, bottle fill-volume
-inspection, and cafe occupancy with dwell time. Four of the five use zero-shot
-detection: the model is given words, never labels, never training data.
+Six computer-vision PoCs on CPU — conveyor counting, bottle fill-volume
+inspection, cafe occupancy with dwell time, and four warehouse cameras fused
+into one floor plan with people located to a median 0.329 m. Five of the six use
+zero-shot detection: the model is given words, never labels, never training data.
 
 The most useful thing I learned is uncomfortable. An object nobody names is not
 missed — it is invisible, and nothing in the output flags it. A black holdall on
