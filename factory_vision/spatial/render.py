@@ -78,9 +78,14 @@ class Layout:
         return np.vstack([band, panel_img])
 
 
-def colour_for(gid: int, label: str) -> tuple[int, int, int]:
-    if label != "person":
-        return ROBOT
+# One letter per class, so a glance at a tag says what it is.
+TAG = {"person": "P", "humanoid": "H", "vehicle": "V"}
+KIND_COLOUR = {"humanoid": (200, 170, 90), "vehicle": (80, 200, 250)}
+
+
+def colour_for(gid: int, kind: str) -> tuple[int, int, int]:
+    if kind in KIND_COLOUR:
+        return KIND_COLOUR[kind]
     return PALETTE[(gid - 1) % len(PALETTE)]
 
 
@@ -141,11 +146,23 @@ def draw_box3d(tile, cam: Camera, x, y, h, w, l, yaw, colour, sx, sy,
     return pts
 
 
+def _footprint(cfg, kind: str, observed_width: float):
+    """Footprint to draw: the measured width where there is one, else the class.
+
+    Only the width is observable from a silhouette - a person seen side-on and
+    a person seen face-on give the same rectangle - so the depth stays at the
+    class constant and the box is drawn as wide as the object actually is.
+    """
+    fw, fl = cfg.spec(kind)["footprint"]
+    if np.isfinite(observed_width):
+        fw = float(np.clip(observed_width, 0.35 * fw, 2.0 * fw))
+    return fw, fl
+
+
 def camera_tile(frame, cam: Camera, view_label: str, tracks_here, cfg, lay: Layout):
-    """One camera panel. `tracks_here` is (gid, label, x, y, h, yaw, observed)."""
+    """One camera panel. `tracks_here` is (gid, kind, x, y, h, yaw, observed, w)."""
     tile = _fit(frame, lay.tile_w, lay.tile_h)
     sx, sy = lay.tile_w / cam.width, lay.tile_h / cam.height
-    fw, fl = cfg.footprint_m
     # Twelve tiles are each two-thirds the size of four, so the labels shed the
     # height reading and keep only the identity - a number nobody can read is
     # worse than no number.
@@ -153,14 +170,16 @@ def camera_tile(frame, cam: Camera, view_label: str, tracks_here, cfg, lay: Layo
     bar = 20 if small else 24
 
     seen = 0
-    for gid, label, x, y, h, yaw, observed in sorted(tracks_here, key=lambda t: t[6]):
-        colour = colour_for(gid, label)
-        tag = f"{'P' if label == 'person' else 'R'}{gid}"
+    for gid, kind, x, y, h, yaw, observed, wid in sorted(tracks_here, key=lambda t: t[6]):
+        colour = colour_for(gid, kind)
+        fw, fl = _footprint(cfg, kind, wid)
+        tag = f"{TAG[kind]}{gid}"
         if observed:
             seen += 1
             if np.isfinite(h) and not small:
                 tag += f"  {h:.2f}m"
-        draw_box3d(tile, cam, x, y, h if np.isfinite(h) else 1.75, fw, fl, yaw,
+        fallback = 1.75 if kind != "vehicle" else 0.25
+        draw_box3d(tile, cam, x, y, h if np.isfinite(h) else fallback, fw, fl, yaw,
                    colour, sx, sy, tag, observed)
 
     cv2.rectangle(tile, (0, 0), (lay.tile_w - 1, lay.tile_h - 1), (55, 55, 58), 1)
@@ -299,7 +318,6 @@ class HeatMap:
 
 def eagle_frame(base, gm: GroundMap, cfg, live, trails, heat: "HeatMap | None" = None):
     view = base.copy()
-    fw, fl = cfg.footprint_m
 
     if heat is not None:
         heat.blend(view)
@@ -312,21 +330,23 @@ def eagle_frame(base, gm: GroundMap, cfg, live, trails, heat: "HeatMap | None" =
         cv2.polylines(view, [poly], False, (12, 12, 12), 4, cv2.LINE_AA)
         cv2.polylines(view, [poly], False, colour, 2, cv2.LINE_AA)
 
-    for gid, label, x, y, h, yaw, seen_s, n_cam in live:
-        colour = colour_for(gid, label)
+    for gid, kind, x, y, h, yaw, seen_s, n_cam, wid in live:
+        colour = colour_for(gid, kind)
+        fw, fl = _footprint(cfg, kind, wid)
         c, s = np.cos(yaw), np.sin(yaw)
         base_pts = np.array([[-fw / 2, -fl / 2], [fw / 2, -fl / 2],
                              [fw / 2, fl / 2], [-fw / 2, fl / 2]])
         rot = base_pts @ np.array([[c, s], [-s, c]]) + [x, y]
         poly = np.array([gm.pt(px, py) for px, py in rot], np.int32)
         px, py = gm.pt(x, y)
-        cv2.circle(view, (px, py), 15, (10, 10, 10), -1, cv2.LINE_AA)
-        cv2.circle(view, (px, py), 15, colour, 2, cv2.LINE_AA)
+        r = 15 if kind != "vehicle" else 11
+        cv2.circle(view, (px, py), r, (10, 10, 10), -1, cv2.LINE_AA)
+        cv2.circle(view, (px, py), r, colour, 2, cv2.LINE_AA)
         cv2.fillPoly(view, [poly], colour)
         cv2.polylines(view, [poly], True, (20, 20, 20), 1, cv2.LINE_AA)
         tip = gm.pt(x + 0.95 * c, y + 0.95 * s)
         cv2.arrowedLine(view, (px, py), tip, colour, 2, cv2.LINE_AA, tipLength=0.4)
-        tag = f"{'P' if label == 'person' else 'R'}{gid}"
+        tag = f"{TAG[kind]}{gid}"
         text(view, tag, (px + 17, py - 12), 0.52, (8, 8, 8), 4)
         text(view, tag, (px + 17, py - 12), 0.52, colour, 1)
         # A ring for every extra camera that agrees this object is here.

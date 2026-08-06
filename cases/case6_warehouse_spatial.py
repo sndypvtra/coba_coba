@@ -51,8 +51,10 @@ def main() -> None:
     print(f"  {len(cfg.views)} camera views")
     for v in cfg.views:
         print(f"  view {v.side:>5} r{v.row + 1}c{v.col + 1}   {v.sensor_id}")
-    print(f"  fuse radius {cfg.fuse_radius_m} m   footprint {cfg.footprint_m} m   "
-          f"height gate {cfg.height_bounds_m} m")
+    print(f"  fuse radius {cfg.fuse_radius_m} m")
+    for kind, spec in cfg.classes.items():
+        print(f"  class {kind:9s} prompt '{spec['prompt']}'  height {spec['height']} m"
+              f"  footprint {spec['footprint']} m")
     print()
 
     summary = run_case(cfg.name, max_frames=args.max_frames, progress=args.progress)

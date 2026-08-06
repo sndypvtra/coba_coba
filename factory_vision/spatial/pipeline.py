@@ -73,7 +73,7 @@ def process(cfg: SceneConfig, args) -> dict:
     cams = load_cameras(sdir / "calibration.json")
     lay = rd.Layout(cfg)
     gmap = GroundMap.load(sdir / "map.png", sdir / "calibration.json",
-                          cfg.floor_bounds_m, size=lay.eagle)
+                          cfg.floor_bounds_m, size=lay.eagle, flip=cfg.plan_flipped)
     gt_path = sdir / "ground_truth.json"
     gt = json.loads(gt_path.read_text()) if (gt_path.exists() and not args.no_gt) else None
 
@@ -146,12 +146,12 @@ def process(cfg: SceneConfig, args) -> dict:
                     DetView(np.zeros((0, 4), np.float32), np.zeros(0, np.float32),
                             np.zeros(0, np.float32)), frame)
 
+            kinds = cfg.kinds
             for r in np.asarray(out):
                 box, tid, conf, cls = r[:4], int(r[4]), float(r[5]), int(r[6])
-                label = cfg.prompts[cls] if cls < len(cfg.prompts) else "person"
-                label = "person" if label == cfg.person_prompt else "robot"
-                o = lift(cams[sid], box, conf, label, tid,
-                         cfg.valid_bounds_m, cfg.height_bounds_m)
+                kind = kinds[cls] if cls < len(kinds) else kinds[0]
+                o = lift(cams[sid], box, conf, kind, tid,
+                         cfg.valid_bounds_m, cfg.spec(kind)["height"])
                 if o.ok:
                     obs_all.append(o)
                 else:
@@ -174,7 +174,8 @@ def process(cfg: SceneConfig, args) -> dict:
             # to come out right.
             if c.gid in confirmed:
                 drawable.append((c.gid, t.label, c.x, c.y, t.height, t.yaw,
-                                 (t.frames[-1] - t.frames[0] + 1) / fps, len(c.members)))
+                                 (t.frames[-1] - t.frames[0] + 1) / fps,
+                                 len(c.members), t.width))
             # Validation is offline and uses the whole of each identity's life,
             # including the frames before it reached the age gate.
             est_rows.append((c.gid, c.x, c.y, t.label))
@@ -219,7 +220,7 @@ def process(cfg: SceneConfig, args) -> dict:
         for v in cfg.views:
             cam = cams[v.sensor_id]
             here = []
-            for gid, label, x, y, h, yaw, seen_s, ncam in drawable:
+            for gid, label, x, y, h, yaw, seen_s, ncam, wid in drawable:
                 observed = v.sensor_id in observed_by.get(gid, ())
                 # A view that detected the object always draws it. The frustum
                 # test only decides whether to *add* a box to a view that did
@@ -227,7 +228,7 @@ def process(cfg: SceneConfig, args) -> dict:
                 # projects off the top, would go undrawn in the very camera
                 # that found it.
                 if observed or (cam.looks_at(x, y, 0.0) and cam.looks_at(x, y, 1.6)):
-                    here.append((gid, label, x, y, h, yaw, observed))
+                    here.append((gid, label, x, y, h, yaw, observed, wid))
             tiles[(v.side, v.row, v.col)] = rd.camera_tile(
                 frames[v.sensor_id], cam, v.sensor_id, here, cfg, lay)
 
@@ -265,7 +266,7 @@ def process(cfg: SceneConfig, args) -> dict:
             "n_views": len(cfg.views),
         }
         live_rows = []
-        for gid, label, x, y, h, yaw, seen_s, ncam in sorted(drawable):
+        for gid, label, x, y, h, yaw, seen_s, ncam, wid in sorted(drawable):
             if gid not in confirmed:
                 continue
             live_rows.append({
@@ -367,6 +368,29 @@ def process(cfg: SceneConfig, args) -> dict:
         "proximity": an.proximity(per_frame_conf, fps),
         "people": [r.as_dict() for r in sorted(people, key=lambda r: r.gid)],
         "robots": [r.as_dict() for r in sorted(robots, key=lambda r: r.gid)],
+        # Everything an interactive floor plan needs to replay this clip without
+        # the video: the outlines, the camera positions and one row per identity
+        # per sampled frame. Positions are rounded to the centimetre, which is
+        # three times finer than the measured error and keeps the file small.
+        "replay": {
+            "fps": round(fps, 3),
+            "frames": total,
+            "floor_bounds_m": list(cfg.floor_bounds_m),
+            "zones": [{"name": z.name, "kind": z.kind, "polygon_m": z.polygon_m}
+                      for z in cfg.zones if z.polygon_m],
+            "cameras": [{"id": v.sensor_id,
+                         "x": round(float(cams[v.sensor_id].centre[0]), 2),
+                         "y": round(float(cams[v.sensor_id].centre[1]), 2)}
+                        for v in cfg.views],
+            "tracks": [
+                {"id": g, "kind": t.label,
+                 "height_m": round(t.height, 2) if np.isfinite(t.height) else None,
+                 "t0": t.frames[0],
+                 "xy": [[round(x, 2), round(y, 2)] for x, y in zip(t.xs, t.ys)],
+                 "f": t.frames}
+                for g, t in sorted(confirmed.items())
+            ],
+        },
         "occupancy_series": [h for h, _ in series],
         "walking_series": [w for _, w in series],
         "avg_ms_per_frame": round(float(np.mean(times)), 1) if times else None,

@@ -30,11 +30,19 @@ class GroundMap:
     crop: tuple[int, int]      # source pixel of the crop's top-left corner
     zoom: float = 1.0          # applied on top of the crop
     pad: tuple[int, int] = (0, 0)   # centring offset when squared off
+    # The dataset presents this floor rotated half a turn in its own banner, and
+    # that is the picture anyone comparing against the published material has in
+    # their head. Matching it costs nothing - the world coordinates are
+    # untouched, only which way up the plan is drawn - and reading a plan upside
+    # down is exactly the kind of confusion that gets a correct position
+    # reported as a bug.
+    flip: bool = False
 
     @classmethod
     def load(cls, map_path: Path, calibration_path: Path,
              bounds_m: tuple[float, float, float, float],
-             margin_m: float = 0.7, size: int | None = None) -> "GroundMap":
+             margin_m: float = 0.7, size: int | None = None,
+             flip: bool = False) -> "GroundMap":
         cal = json.loads(Path(calibration_path).read_text())
         sensor = cal["sensors"][0]
         scale = float(sensor["scaleFactor"])
@@ -67,7 +75,9 @@ class GroundMap:
             pad = ((size - cw) // 2, (size - ch) // 2)
             canvas[pad[1]:pad[1] + ch, pad[0]:pad[0] + cw] = crop
             crop = canvas
-        return cls(crop, scale, tx, ty, (px0, py0), zoom, pad)
+        if flip:
+            crop = cv2.rotate(crop, cv2.ROTATE_180)
+        return cls(crop, scale, tx, ty, (px0, py0), zoom, pad, flip)
 
     # ---------------------------------------------------------------- maps
 
@@ -75,6 +85,9 @@ class GroundMap:
         """World metres -> pixel in `image`. Accepts scalars or arrays."""
         u = ((np.asarray(x, float) + self.tx) * self.scale - self.crop[0]) * self.zoom + self.pad[0]
         v = ((np.asarray(y, float) + self.ty) * self.scale - self.crop[1]) * self.zoom + self.pad[1]
+        if self.flip:
+            h, w = self.image.shape[:2]
+            u, v = (w - 1) - u, (h - 1) - v
         return u, v
 
     def pt(self, x, y) -> tuple[int, int]:

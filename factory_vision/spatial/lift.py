@@ -53,6 +53,7 @@ class Observation:
     y: float = float("nan")
     height: float = float("nan")
     precision_m: float = float("nan")   # world metres per image pixel here
+    width_m: float = float("nan")     # footprint width read off the box
     height_clipped: bool = False
     side_clipped: bool = False
     reject: str = ""
@@ -89,6 +90,14 @@ def ground_precision(cam: Camera, u: float, v: float) -> float:
 def lift(cam: Camera, box: np.ndarray, conf: float, label: str, track_id: int,
          valid_bounds: tuple[float, float, float, float],
          height_bounds: tuple[float, float]) -> Observation:
+    """`height_bounds` is the plausible stature of *this class*, not of people.
+
+    A pallet transporter stands 0.20 m and a person 1.9 m. Sharing one range
+    across both classes means every correct transporter detection is thrown away
+    for being too short, and every phantom "robot" on a shelf is kept for being
+    tall enough - which is exactly what happened before the classes were given
+    their own dimensions.
+    """
     x1, y1, x2, y2 = [float(v) for v in box]
     obs = Observation(cam.sensor_id, track_id, label, float(conf), (x1, y1, x2, y2))
 
@@ -120,6 +129,17 @@ def lift(cam: Camera, box: np.ndarray, conf: float, label: str, track_id: int,
     obs.precision_m = ground_precision(cam, fx, fy) * (
         SIDE_CLIP_PENALTY if obs.side_clipped else 1.0)
 
+    # Footprint width, read rather than assumed. The box's pixel width at the
+    # floor point maps to a world width through the same ground-plane scale that
+    # gives the position, so the drawn box can hug the person instead of being a
+    # constant-size cuboid that visibly misses them. A side-clipped box has lost
+    # part of its width and does not get a say.
+    if not obs.side_clipped and np.isfinite(obs.precision_m):
+        wx0, _ = cam.ground(x1, y2)
+        wx1, wy1 = cam.ground(x2, y2)
+        if np.isfinite([wx0, wx1]).all():
+            obs.width_m = float(np.hypot(wx1 - wx0, wy1 - cam.ground(x1, y2)[1]))
+
     h = cam.height_at(gx, gy, y1)
     lo, hi = height_bounds
     if y1 <= EDGE_MARGIN:
@@ -127,7 +147,12 @@ def lift(cam: Camera, box: np.ndarray, conf: float, label: str, track_id: int,
         # so the observation is kept and only the height is marked unusable.
         obs.height_clipped = True
     elif not np.isfinite(h) or not (lo <= h <= hi):
-        obs.height_clipped = True
+        # The top edge is visible, so this height is what the box actually says -
+        # and it says the box is not standing on an object of this class. That is
+        # a rejection, not a missing measurement: it is what stops a "transport
+        # robot" box drawn around a whole shelving bay from becoming a machine.
+        obs.reject = "height implausible for class"
+        return obs
     else:
         obs.height = h
     return obs

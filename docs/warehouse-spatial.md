@@ -97,8 +97,16 @@ better than 5 of 45, and the ones that try (`robot mannequin`) cost four real
 people and nine extra spurious boxes. A human-shaped, human-sized robot is not
 separable by a phrase.
 
-Nor by geometry, which was the obvious next idea. This pipeline *measures*
-height, so a stature gate looked promising until the true heights were checked:
+Height, though, is exactly what separates the *wheeled* machines, and giving
+each class its own plausible stature is what halved the position error. A pallet
+transporter stands 0.20 m and a person 1.9 m; sharing one range across both
+classes threw away every correct transporter detection for being too short and
+kept every phantom "robot" drawn around a shelving bay for being tall enough.
+With per-class ranges, 2,325 boxes were rejected for claiming a stature their
+class cannot have, and the median localisation error fell from **0.311 m to
+0.180 m**.
+
+It does not separate the humanoids, which was the obvious next hope:
 
 | Class | True height |
 |---|---|
@@ -291,10 +299,10 @@ they survive a change of camera.
 
 | | |
 |---|---|
-| **Localisation error, median** | **0.311 m** |
-| Localisation error, mean / p95 | 0.285 m / 0.449 m |
-| Recall | **0.9833** (885 of 900 person-boxes matched inside a 1 m gate) |
-| Precision | 0.7424 |
+| **Localisation error, median** | **0.180 m** |
+| Localisation error, p95 | 0.519 m |
+| Recall | **0.9822** inside a 1 m gate |
+| Precision | 0.7367 |
 | Global IDs per real person | **1.0** — no identity switches in 30 s |
 | Headcount error per frame | **+0.95 mean** |
 

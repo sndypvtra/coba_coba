@@ -37,6 +37,7 @@ class Cluster:
     x: float
     y: float
     height: float
+    width: float
     label: str
     conf: float
     members: list[Observation] = field(default_factory=list)
@@ -68,6 +69,7 @@ class GlobalTrack:
     xs: list[float] = field(default_factory=list)
     ys: list[float] = field(default_factory=list)
     heights: list[float] = field(default_factory=list)
+    widths: list[float] = field(default_factory=list)
     cameras: list[int] = field(default_factory=list)   # how many saw it, per frame
     spreads: list[float] = field(default_factory=list)
     yaw: float = 0.0
@@ -80,6 +82,15 @@ class GlobalTrack:
     @property
     def height(self) -> float:
         return float(np.median(self.heights)) if self.heights else float("nan")
+
+    @property
+    def width(self) -> float:
+        """Footprint width, the median of every view that measured it.
+
+        A single view's reading swings with pose - arms out, a box carried at
+        the hip - so the median over a whole track across several cameras is the
+        stable one, the same argument that makes the height estimate good."""
+        return float(np.median(self.widths)) if self.widths else float("nan")
 
     @property
     def position(self) -> tuple[float, float]:
@@ -133,7 +144,7 @@ def cluster_frame(obs: list[Observation], radius: float) -> list[Cluster]:
             if d < best_d:
                 best, best_d = c, d
         if best is None:
-            clusters.append(Cluster(o.x, o.y, o.height, o.label, o.conf, [o]))
+            clusters.append(Cluster(o.x, o.y, o.height, o.width_m, o.label, o.conf, [o]))
         else:
             best.members.append(o)
             _recompute(best)
@@ -152,6 +163,8 @@ def _recompute(c: Cluster) -> None:
     c.y = float((ys * w).sum() / w.sum())
     hs = [o.height for o in c.members if np.isfinite(o.height)]
     c.height = float(np.median(hs)) if hs else float("nan")
+    ws = [o.width_m for o in c.members if np.isfinite(o.width_m)]
+    c.width = float(np.median(ws)) if ws else float("nan")
     c.conf = float(max(o.conf for o in c.members))
     c.label = Counter(o.label for o in c.members).most_common(1)[0][0]
 
@@ -219,6 +232,8 @@ class Fuser:
         t.spreads.append(c.spread_m)
         if np.isfinite(c.height):
             t.heights.append(c.height)
+        if np.isfinite(c.width):
+            t.widths.append(c.width)
         t.label_votes[c.label] += 1
         for k in c.keys:
             t.key_votes[k] += 1

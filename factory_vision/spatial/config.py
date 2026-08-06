@@ -73,28 +73,24 @@ class SceneConfig:
     window_frames: int = 900
     stride: int = 3
 
-    # Zero-shot prompt list. `person_prompt` is the class the analytics are
-    # about; `robot_prompt` exists because this warehouse contains two humanoid
-    # robots that a person-only prompt list has nowhere to put, and an object
-    # with nowhere to put it does not go undetected - it gets detected as the
-    # nearest class that *is* on the list. Naming the robots is what keeps them
-    # out of the headcount.
-    person_prompt: str = "person"
-    robot_prompt: str = "humanoid robot"
-    prompts: list[str] = field(default_factory=lambda: ["person", "humanoid robot"])
+    # Zero-shot prompt list, one prompt per class. Naming the machines is what
+    # keeps them out of the headcount: an object with nowhere to put it does not
+    # go undetected, it gets detected as the nearest class that *is* on the list.
+    classes: dict = field(default_factory=lambda: dict(CLASSES))
     conf: float = 0.15
 
     dedup_containment: float = 0.80
 
-    # Standing footprint used for the 3D box. Height is *measured* per detection
-    # from the camera geometry; width and length are not observable from a
-    # single silhouette at this distance, so they are constants and are labelled
-    # as such in the output. The dataset's own person boxes average
-    # 0.60 x 0.46 m, which is where these came from.
-    footprint_m: tuple[float, float] = (0.60, 0.46)
-    # A lifted height outside this range means the box bottom was not the
-    # person's feet - occlusion by a pallet, or a box clipped at the frame edge.
-    height_bounds_m: tuple[float, float] = (1.20, 2.30)
+    @property
+    def prompts(self) -> list[str]:
+        return [c["prompt"] for c in self.classes.values()]
+
+    @property
+    def kinds(self) -> list[str]:
+        return list(self.classes)
+
+    def spec(self, kind: str) -> dict:
+        return self.classes[kind]
 
     # Two cameras seeing the same person put them within this distance of each
     # other. There is a lot of room here: over this window the three people
@@ -126,6 +122,9 @@ class SceneConfig:
     # the odd box to the far side of the building.
     valid_bounds_m: tuple[float, float, float, float] = (-10.6, -20.6, 10.6, 0.6)
 
+    # Draw the floor plan the way the dataset's own banner draws it.
+    plan_flipped: bool = True
+
     zones: list[Zone] = field(default_factory=list)
     tracker_overrides: dict = field(default_factory=dict)
     notes: str = ""
@@ -152,6 +151,21 @@ class SceneConfig:
     @property
     def n_frames(self) -> int:
         return self.window_frames // self.stride
+
+
+# One entry per class: what to call it, how tall it can plausibly be, and what
+# footprint to draw. The height range is a real filter, not decoration - a
+# pallet transporter stands 0.20 m and a person 1.9 m, so a detection lifted to
+# the wrong range is a detection on the wrong thing and is dropped. Footprints
+# and height ranges are the dataset's own object dimensions, widened a little.
+CLASSES = {
+    "person":   {"prompt": "person",          "height": (1.20, 2.30),
+                 "footprint": (0.60, 0.46), "machine": False},
+    "humanoid": {"prompt": "humanoid robot",  "height": (1.20, 2.30),
+                 "footprint": (0.60, 0.46), "machine": True},
+    "vehicle":  {"prompt": "transport robot", "height": (0.10, 0.80),
+                 "footprint": (1.43, 0.65), "machine": True},
+}
 
 
 def _rect(x0, y0, x1, y1):
