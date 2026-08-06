@@ -90,6 +90,11 @@ def process(cfg: SceneConfig, args) -> dict:
     for v in cfg.views:
         trackers[v.sensor_id], tracker_name = build_tracker(tracker_cfg, fps)
 
+    class_conf = [cfg.spec(k).get("conf", cfg.conf) for k in cfg.kinds]
+    floor_conf = min(class_conf)
+    min_views = {k: cfg.spec(k).get("min_views", cfg.min_corroborating_views)
+                 for k in cfg.kinds}
+
     fuser = Fuser(cfg.fuse_radius_m, cfg.max_age_frames)
     view_ids = [v.sensor_id for v in cfg.views]
     eagle_bg, gm = rd.eagle_base(gmap, cfg, cams, view_ids)
@@ -130,9 +135,23 @@ def process(cfg: SceneConfig, args) -> dict:
                 continue
             frames[sid] = frame
 
-            result = model.predict(frame, conf=cfg.conf, iou=0.5, imgsz=args.imgsz,
-                                   agnostic_nms=True, verbose=False)[0]
+            # One inference at the lowest threshold any class asks for, then
+            # each class's own threshold re-applied. A pallet load scores
+            # 0.15-0.20 where a person scores 0.9, so a single threshold either
+            # loses the loads or floods the frame with person-shaped noise.
+            # NMS runs per class, not across classes. A person standing in
+            # front of a pallet load overlaps it heavily, and class-agnostic NMS
+            # makes them compete: one of the two boxes is suppressed and which
+            # one depends on a confidence race between a 0.9 person and a 0.2
+            # load. That race is what fragmented the person identities when the
+            # goods class was added.
+            result = model.predict(frame, conf=floor_conf, iou=0.5, imgsz=args.imgsz,
+                                   agnostic_nms=False, verbose=False)[0]
             det = sv.Detections.from_ultralytics(result)
+            if len(det):
+                keep = det.confidence >= np.array(
+                    [class_conf[int(c)] for c in det.class_id])
+                det = det[keep]
             raw_dets += len(det)
             before = len(det)
             det = suppress_contained(det, cfg.dedup_containment)
@@ -153,7 +172,8 @@ def process(cfg: SceneConfig, args) -> dict:
                 box, tid, conf, cls = r[:4], int(r[4]), float(r[5]), int(r[6])
                 kind = kinds[cls] if cls < len(kinds) else kinds[0]
                 o = lift(cams[sid], box, conf, kind, tid,
-                         cfg.valid_bounds_m, cfg.spec(kind)["height"])
+                         cfg.valid_bounds_m, cfg.spec(kind)["height"],
+                         cfg.spec(kind).get("height_reject", True))
                 if o.ok:
                     obs_all.append(o)
                 else:
@@ -163,7 +183,7 @@ def process(cfg: SceneConfig, args) -> dict:
         times.append((time.time() - t0) * 1000)
 
         # --------------------------------------------------------- bookkeeping
-        confirmed = fuser.confirmed(cfg.min_track_age, cfg.min_corroborating_views)
+        confirmed = fuser.confirmed(cfg.min_track_age, min_views)
         drawable, est_rows = [], []
         for c in clusters:
             t = fuser.tracks[c.gid]
@@ -302,7 +322,7 @@ def process(cfg: SceneConfig, args) -> dict:
         c.release()
 
     # ------------------------------------------------------------- summary
-    confirmed = fuser.confirmed(cfg.min_track_age, cfg.min_corroborating_views)
+    confirmed = fuser.confirmed(cfg.min_track_age, min_views)
     single_view = [g for g, t in fuser.confirmed(cfg.min_track_age).items()
                    if g not in confirmed]
     reports = [an.describe(t, cfg) for t in confirmed.values()]

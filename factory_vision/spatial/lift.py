@@ -89,7 +89,8 @@ def ground_precision(cam: Camera, u: float, v: float) -> float:
 
 def lift(cam: Camera, box: np.ndarray, conf: float, label: str, track_id: int,
          valid_bounds: tuple[float, float, float, float],
-         height_bounds: tuple[float, float]) -> Observation:
+         height_bounds: tuple[float, float],
+         height_reject: bool = True) -> Observation:
     """`height_bounds` is the plausible stature of *this class*, not of people.
 
     A pallet transporter stands 0.20 m and a person 1.9 m. Sharing one range
@@ -147,12 +148,20 @@ def lift(cam: Camera, box: np.ndarray, conf: float, label: str, track_id: int,
         # so the observation is kept and only the height is marked unusable.
         obs.height_clipped = True
     elif not np.isfinite(h) or not (lo <= h <= hi):
-        # The top edge is visible, so this height is what the box actually says -
-        # and it says the box is not standing on an object of this class. That is
-        # a rejection, not a missing measurement: it is what stops a "transport
-        # robot" box drawn around a whole shelving bay from becoming a machine.
-        obs.reject = "height implausible for class"
-        return obs
+        # The top edge is visible, so this height is what the box actually says.
+        # For a machine or a load that means the box is drawn around the wrong
+        # object and the detection goes - it is what stops a "transport robot"
+        # box spanning a whole shelving bay from becoming a machine.
+        #
+        # For a person it means nothing of the sort. A worker bent over a pallet
+        # measures a metre and is still standing on their own feet, so the floor
+        # point is as good as ever and only the height is unusable. Rejecting on
+        # it dropped every crouching person near a camera - visibly, in tiles
+        # where someone in plain view carried no box at all.
+        if height_reject:
+            obs.reject = "height implausible for class"
+            return obs
+        obs.height_clipped = True
     else:
         obs.height = h
     return obs

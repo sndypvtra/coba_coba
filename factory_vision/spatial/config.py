@@ -158,18 +158,42 @@ class SceneConfig:
 # pallet transporter stands 0.20 m and a person 1.9 m, so a detection lifted to
 # the wrong range is a detection on the wrong thing and is dropped. Footprints
 # and height ranges are the dataset's own object dimensions, widened a little.
+# `height_reject` says whether a stature outside the range disqualifies the
+# detection or merely leaves the height unknown. For a person it must not:
+# whatever their posture the box bottom is still their feet, so the *position*
+# stands even when a bent-over worker measures 1.0 m. Rejecting on it dropped
+# every crouching person near the camera. For a machine or a load an impossible
+# stature means the box is drawn round the wrong thing, and it is a rejection.
+#
+# `conf` and `min_views` are per class because the classes are not equally easy.
+# A pallet load sits low, is half-occluded by whatever is stacked on it, and
+# scores 0.15-0.20 where a person scores 0.9; it is also seen by fewer cameras,
+# so demanding two views loses the very loads that move.
 CLASSES = {
+    # The 1.20 m floor is a measured trade, not an oversight. A worker bent over
+    # a pallet close to a camera measures about a metre and is thrown away by it
+    # - visibly, in tiles where someone in plain view carries no box. Both ways
+    # of admitting them cost more than they return, over the same 60 frames:
+    #
+    #   floor 1.20 m, reject   4 people   1.00 global IDs per real person
+    #   floor 0.95 m, reject   5 people   1.33
+    #   no height rejection    6 people   2.33
+    #
+    # A box that measures a metre is usually not a crouching worker; it is a
+    # person-shaped box drawn round stacked goods, and letting those in breaks
+    # the identity of everyone else. The crouching worker stays a known miss.
     "person":   {"prompt": "person",          "height": (1.20, 2.30),
-                 "footprint": (0.60, 0.46), "machine": False, "goods": False},
+                 "footprint": (0.60, 0.46), "machine": False, "goods": False,
+                 "height_reject": True, "conf": 0.15, "min_views": 2},
     "humanoid": {"prompt": "humanoid robot",  "height": (1.20, 2.30),
-                 "footprint": (0.60, 0.46), "machine": True,  "goods": False},
+                 "footprint": (0.60, 0.46), "machine": True,  "goods": False,
+                 "height_reject": True,  "conf": 0.15, "min_views": 2},
     "vehicle":  {"prompt": "transport robot", "height": (0.10, 0.80),
-                 "footprint": (1.43, 0.65), "machine": True,  "goods": False},
-    # Goods. A pallet load is what the bays hold and what the machines move
-    # between them, so it needs a class of its own before any transfer can be
-    # counted. Height spans a bare pallet to a shoulder-high stack.
-    "pallet":   {"prompt": "cardboard box",   "height": (0.15, 1.80),
-                 "footprint": (1.20, 0.80), "machine": False, "goods": True},
+                 "footprint": (1.43, 0.65), "machine": True,  "goods": False,
+                 "height_reject": True,  "conf": 0.15, "min_views": 2},
+    "pallet":   {"prompt": "cardboard box",   "height": (0.15, 1.90),
+                 "footprint": (1.20, 0.80), "machine": False, "goods": True,
+                 "height_reject": True,  "conf": 0.10, "min_views": 1},
 }
 
 

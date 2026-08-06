@@ -239,7 +239,7 @@ class Fuser:
             t.key_votes[k] += 1
         t.last_seen = frame
 
-    def confirmed(self, min_age: int, min_views: int = 1) -> dict[int, GlobalTrack]:
+    def confirmed(self, min_age: int, min_views=1) -> dict[int, GlobalTrack]:
         """Identities old enough, and corroborated by enough cameras, to report.
 
         The second gate is what a multi-camera install buys over four separate
@@ -250,6 +250,8 @@ class Fuser:
         second view at *some point* in an identity's life, rather than in every
         frame, keeps people who walk briefly into a single-camera corner.
         """
+        def need(t):
+            return min_views.get(t.label, 1) if isinstance(min_views, dict) else min_views
         return {g: t for g, t in self.tracks.items()
                 if len(t.frames) >= min_age
-                and (max(t.cameras) if t.cameras else 0) >= min_views}
+                and (max(t.cameras) if t.cameras else 0) >= need(t)}
