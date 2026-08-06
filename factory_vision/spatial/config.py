@@ -160,11 +160,16 @@ class SceneConfig:
 # and height ranges are the dataset's own object dimensions, widened a little.
 CLASSES = {
     "person":   {"prompt": "person",          "height": (1.20, 2.30),
-                 "footprint": (0.60, 0.46), "machine": False},
+                 "footprint": (0.60, 0.46), "machine": False, "goods": False},
     "humanoid": {"prompt": "humanoid robot",  "height": (1.20, 2.30),
-                 "footprint": (0.60, 0.46), "machine": True},
+                 "footprint": (0.60, 0.46), "machine": True,  "goods": False},
     "vehicle":  {"prompt": "transport robot", "height": (0.10, 0.80),
-                 "footprint": (1.43, 0.65), "machine": True},
+                 "footprint": (1.43, 0.65), "machine": True,  "goods": False},
+    # Goods. A pallet load is what the bays hold and what the machines move
+    # between them, so it needs a class of its own before any transfer can be
+    # counted. Height spans a bare pallet to a shoulder-high stack.
+    "pallet":   {"prompt": "cardboard box",   "height": (0.15, 1.80),
+                 "footprint": (1.20, 0.80), "machine": False, "goods": True},
 }
 
 
@@ -207,17 +212,30 @@ WAREHOUSE_014_FULL = SceneConfig(
     licence="CC BY 4.0",
     views=list(BANNER_TILES),
     zones=[
-        Zone("Racking bay", "area", _rect(-9.63, -19.65, 9.63, -11.0),
-             "shelving and goods storage at the north end"),
-        Zone("Staging area", "area", _rect(-5.20, -10.32, 8.03, -2.06),
-             "the black-bordered block where pallets are dropped"),
-        Zone("Perimeter walkway", "area", [], "the rest of the marked floor"),
-        # The three lanes are the blue rectangles painted inside the staging
-        # block, read off map.png by isolating pixels where blue leads red by
-        # more than 25 levels and taking the bounding box of each contour.
-        Zone("Pallet lane 1", "restricted", _rect(-4.01, -9.17, -1.82, -2.98), ""),
-        Zone("Pallet lane 2", "restricted", _rect(0.21, -9.13, 2.42, -2.91), ""),
-        Zone("Pallet lane 3", "restricted", _rect(4.54, -8.85, 6.41, -3.24), ""),
+        # Re-measured from the floor itself, not from the map. The bay outlines
+        # and the painted bay numbers were located in Camera_02 and
+        # back-projected through its calibration, then checked by projecting
+        # them into the other three views. The earlier outlines came from
+        # reading map.png under a y-mirrored transform and sat half a warehouse
+        # away from the paint.
+        Zone("Staging area", "area", _rect(-5.19, -17.98, 8.02, -9.73),
+             "the black-bordered block holding bays 1-3"),
+        # People work *around* the bays as much as inside them, so the ring of
+        # floor immediately outside the block gets its own name. Without it every
+        # metre of that ring is filed under "racking", which reads as people
+        # spending three quarters of the shift at the shelves when they are
+        # actually standing at the bays.
+        Zone("Staging aisle", "area", _rect(-7.70, -20.50, 10.50, -7.20),
+             "the working ring immediately around the staging block"),
+        Zone("Racking and shelving", "area", [], "the rest of the marked floor"),
+        # The three painted bays. Numbering runs 1 at high x to 3 at low x, which
+        # is the order the floor markings themselves use.
+        Zone("Bay 1", "restricted", _rect(4.54, -16.80, 6.41, -11.19),
+             "painted bay 1, marker at (5.50, -10.68)"),
+        Zone("Bay 2", "restricted", _rect(0.21, -17.13, 2.42, -10.91),
+             "painted bay 2, marker at (1.45, -10.34)"),
+        Zone("Bay 3", "restricted", _rect(-4.01, -17.07, -1.83, -10.87),
+             "painted bay 3, marker at (-2.83, -10.25)"),
     ],
     notes=("30 s from frame 1950 (t=65 s), the busiest window of the 300 s "
            "recording by person travel distance; every banner tile"),

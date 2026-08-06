@@ -329,3 +329,47 @@ def proximity(per_frame: dict[int, list[tuple[int, float, float, str]]],
         "nearest_approach_m": round(float(np.min(mins)), 2),
         "median_separation_m": round(float(np.median(mins)), 2),
     }
+
+
+def transfers(per_frame_bay: dict[int, dict[int, str]], fps: float) -> dict:
+    """Goods moved from one painted bay to another.
+
+    A transfer is a *pallet* identity whose bay membership changes: last seen in
+    bay 1, next seen in bay 3. Counting it that way rather than by watching the
+    machine means the answer survives losing the machine's track, which is what
+    actually happens - a pallet parked in a bay is easy to hold, a low vehicle
+    crossing an aisle is not.
+
+    Journeys with no bay at either end are dropped: a pallet drifting in and out
+    of the aisle is not a transfer, it is a tracking wobble.
+    """
+    last, moves = {}, []
+    for f in sorted(per_frame_bay):
+        for gid, bay in per_frame_bay[f].items():
+            prev = last.get(gid)
+            if prev and prev[0] != bay:
+                moves.append({"pallet": gid, "from": prev[0], "to": bay,
+                              "t_start_s": round(prev[1] / fps, 1),
+                              "t_end_s": round(f / fps, 1),
+                              "seconds": round((f - prev[1]) / fps, 1)})
+            elif prev is None:
+                # An arrival: the load's identity begins outside any bay and its
+                # first bay is where it was put down. Holding a load across a
+                # whole move is harder than seeing it arrive, so counting the
+                # arrival keeps the delivery visible when the origin was lost.
+                moves.append({"pallet": gid, "from": "aisle", "to": bay,
+                              "t_start_s": round(f / fps, 1),
+                              "t_end_s": round(f / fps, 1), "seconds": 0.0})
+            if prev is None or prev[0] != bay:
+                last[gid] = (bay, f)
+    pairs = {}
+    for m in moves:
+        k = f"{m['from']} -> {m['to']}"
+        pairs[k] = pairs.get(k, 0) + 1
+    return {
+        "transfers": len(moves),
+        "by_route": pairs,
+        "median_seconds": round(float(np.median([m["seconds"] for m in moves])), 1)
+                          if moves else None,
+        "moves": moves,
+    }

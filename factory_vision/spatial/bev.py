@@ -28,6 +28,7 @@ class GroundMap:
     tx: float
     ty: float
     crop: tuple[int, int]      # source pixel of the crop's top-left corner
+    src_h: int = 0             # height of the source map, in its own pixels
     zoom: float = 1.0          # applied on top of the crop
     pad: tuple[int, int] = (0, 0)   # centring offset when squared off
     # The dataset presents this floor rotated half a turn in its own banner, and
@@ -52,11 +53,19 @@ class GroundMap:
         img = cv2.imread(str(map_path))
         if img is None:
             raise FileNotFoundError(map_path)
+        src_h = img.shape[0]
+        # The map's rows run the *opposite* way to the world's y axis: row 0 is
+        # the far end of the building, and y grows towards row 0. Reading it the
+        # other way round mirrors every plotted position about the middle of the
+        # floor, which is a bug that hides well - mirrored points still land
+        # inside the building and still look plausible. It was caught by
+        # projecting the map's own painted bay outlines into a camera and seeing
+        # them miss the bays by half a warehouse.
         x0, y0, x1, y1 = bounds_m
         px0 = int(round((x0 - margin_m + tx) * scale))
-        py0 = int(round((y0 - margin_m + ty) * scale))
         px1 = int(round((x1 + margin_m + tx) * scale))
-        py1 = int(round((y1 + margin_m + ty) * scale))
+        py0 = int(round(src_h - 1 - (y1 + margin_m + ty) * scale))
+        py1 = int(round(src_h - 1 - (y0 - margin_m + ty) * scale))
         px0, py0 = max(px0, 0), max(py0, 0)
         px1, py1 = min(px1, img.shape[1]), min(py1, img.shape[0])
         crop = img[py0:py1, px0:px1].copy()
@@ -77,14 +86,16 @@ class GroundMap:
             crop = canvas
         if flip:
             crop = cv2.rotate(crop, cv2.ROTATE_180)
-        return cls(crop, scale, tx, ty, (px0, py0), zoom, pad, flip)
+        return cls(crop, scale, tx, ty, (px0, py0), src_h, zoom, pad, flip)
 
     # ---------------------------------------------------------------- maps
 
     def to_px(self, x, y):
         """World metres -> pixel in `image`. Accepts scalars or arrays."""
-        u = ((np.asarray(x, float) + self.tx) * self.scale - self.crop[0]) * self.zoom + self.pad[0]
-        v = ((np.asarray(y, float) + self.ty) * self.scale - self.crop[1]) * self.zoom + self.pad[1]
+        su = (np.asarray(x, float) + self.tx) * self.scale
+        sv = self.src_h - 1 - (np.asarray(y, float) + self.ty) * self.scale
+        u = (su - self.crop[0]) * self.zoom + self.pad[0]
+        v = (sv - self.crop[1]) * self.zoom + self.pad[1]
         if self.flip:
             h, w = self.image.shape[:2]
             u, v = (w - 1) - u, (h - 1) - v

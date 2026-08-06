@@ -79,8 +79,9 @@ class Layout:
 
 
 # One letter per class, so a glance at a tag says what it is.
-TAG = {"person": "P", "humanoid": "H", "vehicle": "V"}
-KIND_COLOUR = {"humanoid": (200, 170, 90), "vehicle": (80, 200, 250)}
+TAG = {"person": "P", "humanoid": "H", "vehicle": "V", "pallet": "L"}
+KIND_COLOUR = {"humanoid": (200, 170, 90), "vehicle": (80, 200, 250),
+               "pallet": (120, 205, 235)}
 
 
 def colour_for(gid: int, kind: str) -> tuple[int, int, int]:
@@ -178,7 +179,7 @@ def camera_tile(frame, cam: Camera, view_label: str, tracks_here, cfg, lay: Layo
             seen += 1
             if np.isfinite(h) and not small:
                 tag += f"  {h:.2f}m"
-        fallback = 1.75 if kind != "vehicle" else 0.25
+        fallback = {"vehicle": 0.25, "pallet": 0.8}.get(kind, 1.75)
         draw_box3d(tile, cam, x, y, h if np.isfinite(h) else fallback, fw, fl, yaw,
                    colour, sx, sy, tag, observed)
 
@@ -253,7 +254,12 @@ def eagle_base(gmap: GroundMap, cfg, cams: dict[str, Camera], view_ids: list[str
             continue
         poly = gm.poly(z.polygon_m)
         if z.kind == "restricted":
-            cv2.polylines(base, [poly], True, WARN, 1, cv2.LINE_AA)
+            cv2.polylines(base, [poly], True, WARN, 2, cv2.LINE_AA)
+            # The bays carry the number painted on the floor, so a transfer
+            # reported as "Bay 1 -> Bay 3" can be checked against the video.
+            org = (int(poly[:, 0].mean()) - 14, int(poly[:, 1].mean()))
+            text(base, z.name.split()[-1], org, 0.95, (10, 10, 10), 5)
+            text(base, z.name.split()[-1], org, 0.95, WARN, 2)
         else:
             cv2.polylines(base, [poly], True, (150, 235, 150), 2, cv2.LINE_AA)
             org = tuple(poly.min(0) + [5, 17])
@@ -339,7 +345,7 @@ def eagle_frame(base, gm: GroundMap, cfg, live, trails, heat: "HeatMap | None" =
         rot = base_pts @ np.array([[c, s], [-s, c]]) + [x, y]
         poly = np.array([gm.pt(px, py) for px, py in rot], np.int32)
         px, py = gm.pt(x, y)
-        r = 15 if kind != "vehicle" else 11
+        r = {"vehicle": 11, "pallet": 9}.get(kind, 15)
         cv2.circle(view, (px, py), r, (10, 10, 10), -1, cv2.LINE_AA)
         cv2.circle(view, (px, py), r, colour, 2, cv2.LINE_AA)
         cv2.fillPoly(view, [poly], colour)

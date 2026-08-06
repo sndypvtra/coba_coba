@@ -109,6 +109,8 @@ def process(cfg: SceneConfig, args) -> dict:
     near_open: set[tuple[int, int]] = set()
     near_events = 0
     near_frames = 0
+    bay_frames: dict[int, dict[int, str]] = {}
+    bay_load: dict[str, float] = {}
     per_frame_est: dict[int, list] = {}
     zone_seconds: dict[str, float] = {}
     lane_seconds: dict[str, float] = {}
@@ -179,6 +181,13 @@ def process(cfg: SceneConfig, args) -> dict:
             # Validation is offline and uses the whole of each identity's life,
             # including the frames before it reached the age gate.
             est_rows.append((c.gid, c.x, c.y, t.label))
+            if c.gid in confirmed and cfg.spec(t.label).get("goods"):
+                # Which painted bay this pallet is sitting in, if any. Bay
+                # membership over time is what a transfer is made of.
+                bay = next(iter(an.restricted_hits(c.x, c.y, cfg.zones)), None)
+                if bay:
+                    bay_frames.setdefault(idx, {})[c.gid] = bay
+                    bay_load[bay] = bay_load.get(bay, 0.0) + 1.0 / fps
             if c.gid in confirmed and t.label == "person":
                 z = an.area_zone(c.x, c.y, cfg.zones)
                 zone_seconds[z] = zone_seconds.get(z, 0.0) + 1.0 / fps
@@ -298,7 +307,8 @@ def process(cfg: SceneConfig, args) -> dict:
                    if g not in confirmed]
     reports = [an.describe(t, cfg) for t in confirmed.values()]
     people = [r for r in reports if r.label == "person"]
-    robots = [r for r in reports if r.label != "person"]
+    goods = [r for r in reports if cfg.spec(r.label).get("goods")]
+    robots = [r for r in reports if r.label != "person" and r not in goods]
 
     # Validation and the proximity figure are offline measurements, so they use
     # the set of identities that ended up confirmed rather than the set that had
@@ -366,8 +376,14 @@ def process(cfg: SceneConfig, args) -> dict:
                                                            key=lambda kv: -kv[1])},
         "restricted_lane_seconds": {k: round(v, 1) for k, v in lane_seconds.items()},
         "proximity": an.proximity(per_frame_conf, fps),
+        "goods": {**an.transfers(bay_frames, fps),
+                  "pallet_seconds_by_bay": {k: round(v, 1)
+                                            for k, v in sorted(bay_load.items())},
+                  "pallets_tracked": sum(1 for t in confirmed.values()
+                                         if cfg.spec(t.label).get("goods"))},
         "people": [r.as_dict() for r in sorted(people, key=lambda r: r.gid)],
         "robots": [r.as_dict() for r in sorted(robots, key=lambda r: r.gid)],
+        "pallets": [r.as_dict() for r in sorted(goods, key=lambda r: r.gid)],
         # Everything an interactive floor plan needs to replay this clip without
         # the video: the outlines, the camera positions and one row per identity
         # per sampled frame. Positions are rounded to the centimetre, which is
