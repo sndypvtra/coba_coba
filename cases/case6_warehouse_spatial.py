@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Case 6 - Warehouse: 3D localisation of people across four cameras, on one map.
+"""Case 6 - Warehouse: 3D localisation of people across many cameras, on one map.
 
 The other five cases each answer a question inside a single frame. This one
 answers a question about a *building*: where is everyone, how many are there
@@ -10,9 +10,9 @@ That needs three things a single camera cannot give:
   a position in metres     - from the ground-plane homography, not from depth
                              regression. A person standing on a known floor has
                              one unknown left, and calibration supplies it.
-  one identity per person  - four cameras produce four track IDs for the same
-                             person, and adding them up counts a warehouse of
-                             three as a warehouse of twelve.
+  one identity per person  - twelve cameras produce twelve track IDs for the
+                             same person, and adding them up counts a warehouse
+                             of three as a warehouse of thirty.
   a shared frame           - the dataset's own top-down render of the building,
                              tied to world coordinates by a scale and an offset,
                              so a marker on it is where the person is standing.
@@ -25,8 +25,9 @@ puts them in the headcount.
 Everything is validated. The dataset ships the true 3D position of every object;
 the pipeline never reads it, and the summary reports how far off it was.
 
-Run:  python scripts/fetch_warehouse_scene.py      # once, ~520 MB
+Run:  python scripts/fetch_warehouse_scene.py      # once, ~1.6 GB
       python cases/case6_warehouse_spatial.py
+      python cases/case6_warehouse_spatial.py --scene warehouse_014   # 4 views
 """
 
 import argparse
@@ -47,8 +48,9 @@ def main() -> None:
     cfg = next(s for s in SCENES if s.name == args.scene)
     banner(6, "Warehouse 3D localisation and eagle view", cfg.scene, cfg.source)
     print(f"  prompts: {cfg.prompts}   conf={cfg.conf}")
+    print(f"  {len(cfg.views)} camera views")
     for v in cfg.views:
-        print(f"  view {v.slot:<13} {v.sensor_id:<10} {v.provenance}")
+        print(f"  view {v.side:>5} r{v.row + 1}c{v.col + 1}   {v.sensor_id}")
     print(f"  fuse radius {cfg.fuse_radius_m} m   footprint {cfg.footprint_m} m   "
           f"height gate {cfg.height_bounds_m} m")
     print()
@@ -70,7 +72,8 @@ def main() -> None:
         ("Single-view identities dropped", fu["identities_dropped_as_single_view"]),
         ("Duplicate boxes removed", f["duplicate_boxes_removed"]),
         ("Clip duration", f"{summary['clip']['duration_seconds']} s"),
-        ("Speed", f"{summary['avg_ms_per_frame']:.0f} ms/frame (4 views)"),
+        ("Speed", f"{summary['avg_ms_per_frame']:.0f} ms/frame "
+                  f"({len(cfg.views)} views)"),
     ]
     if val:
         lines += [

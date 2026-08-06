@@ -1,4 +1,4 @@
-"""Drawing: four camera views, one floor, and the numbers underneath.
+"""Drawing: the camera views, one floor, and the numbers underneath.
 
 The layout follows the dataset's own banner - camera tiles down the left, camera
 tiles down the right, the top-down view in the middle - because that arrangement
@@ -21,9 +21,10 @@ import numpy as np
 from factory_vision.spatial.calibration import BOX_EDGES, Camera, box3d_corners
 from factory_vision.spatial.bev import GroundMap
 
-TILE_W, TILE_H = 640, 360
-EAGLE = 720
+EAGLE = 810           # the top-down view is square and sets the mosaic height
+MAX_ROWS = 6          # live-track rows the panel has room for
 PANEL_H = 340
+
 
 BG = (18, 18, 20)
 INK = (238, 238, 238)
@@ -32,11 +33,49 @@ DIM = (96, 96, 96)
 RULE = (62, 62, 66)
 WARN = (70, 120, 250)
 ROBOT = (200, 170, 90)
+CAMERA = (170, 200, 235)
 
 # Distinct at small size and on a grey floor; index by global id.
 PALETTE = [(120, 220, 90), (240, 160, 60), (90, 150, 255), (200, 120, 240),
            (80, 220, 230), (240, 110, 160), (150, 240, 160), (110, 190, 255),
            (230, 210, 100), (170, 130, 250), (100, 200, 180), (240, 130, 110)]
+
+
+
+class Layout:
+    """Tile and mosaic geometry, derived from how many cameras there are.
+
+    The banner arrangement - a block of tiles, the floor plan, another block of
+    tiles - is kept as rows and columns rather than as pixel constants, so four
+    cameras and twelve produce the same design at different tile sizes. Tile
+    height follows from the eagle view being square and as tall as the tile
+    block, which is what keeps the plan legible when there are twelve tiles
+    competing with it.
+    """
+
+    def __init__(self, cfg):
+        self.rows_l, self.cols_l = cfg.grid("left")
+        self.rows_r, self.cols_r = cfg.grid("right")
+        rows = max(self.rows_l, self.rows_r, 1)
+        self.tile_h = int(round(EAGLE / rows / 2) * 2)
+        self.tile_w = int(round(self.tile_h * 16 / 9 / 2) * 2)
+        self.band_h = self.tile_h * rows
+        self.eagle = self.band_h
+        self.width = self.tile_w * (self.cols_l + self.cols_r) + self.eagle
+        self.height = self.band_h + PANEL_H
+
+    def block(self, tiles: dict, side: str, rows: int, cols: int):
+        blank = np.full((self.tile_h, self.tile_w, 3), BG, np.uint8)
+        return np.vstack([
+            np.hstack([tiles.get((side, r, c), blank) for c in range(cols)])
+            for r in range(rows)
+        ]) if rows and cols else np.zeros((self.band_h, 0, 3), np.uint8)
+
+    def mosaic(self, tiles: dict, eagle, panel_img):
+        band = np.hstack([self.block(tiles, "left", self.rows_l, self.cols_l),
+                          eagle,
+                          self.block(tiles, "right", self.rows_r, self.cols_r)])
+        return np.vstack([band, panel_img])
 
 
 def colour_for(gid: int, label: str) -> tuple[int, int, int]:
@@ -102,11 +141,16 @@ def draw_box3d(tile, cam: Camera, x, y, h, w, l, yaw, colour, sx, sy,
     return pts
 
 
-def camera_tile(frame, cam: Camera, view_label: str, tracks_here, cfg):
+def camera_tile(frame, cam: Camera, view_label: str, tracks_here, cfg, lay: Layout):
     """One camera panel. `tracks_here` is (gid, label, x, y, h, yaw, observed)."""
-    tile = _fit(frame, TILE_W, TILE_H)
-    sx, sy = TILE_W / cam.width, TILE_H / cam.height
+    tile = _fit(frame, lay.tile_w, lay.tile_h)
+    sx, sy = lay.tile_w / cam.width, lay.tile_h / cam.height
     fw, fl = cfg.footprint_m
+    # Twelve tiles are each two-thirds the size of four, so the labels shed the
+    # height reading and keep only the identity - a number nobody can read is
+    # worse than no number.
+    small = lay.tile_w < 560
+    bar = 20 if small else 24
 
     seen = 0
     for gid, label, x, y, h, yaw, observed in sorted(tracks_here, key=lambda t: t[6]):
@@ -114,18 +158,20 @@ def camera_tile(frame, cam: Camera, view_label: str, tracks_here, cfg):
         tag = f"{'P' if label == 'person' else 'R'}{gid}"
         if observed:
             seen += 1
-            if np.isfinite(h):
+            if np.isfinite(h) and not small:
                 tag += f"  {h:.2f}m"
         draw_box3d(tile, cam, x, y, h if np.isfinite(h) else 1.75, fw, fl, yaw,
                    colour, sx, sy, tag, observed)
 
-    cv2.rectangle(tile, (0, 0), (TILE_W - 1, TILE_H - 1), (55, 55, 58), 1)
-    cv2.rectangle(tile, (0, 0), (TILE_W, 24), (0, 0, 0), -1)
-    text(tile, view_label, (8, 17), 0.46, INK, 1)
+    cv2.rectangle(tile, (0, 0), (lay.tile_w - 1, lay.tile_h - 1), (55, 55, 58), 1)
+    cv2.rectangle(tile, (0, 0), (lay.tile_w, bar), (0, 0, 0), -1)
+    text(tile, view_label, (7, bar - 6), 0.40 if small else 0.46, INK, 1)
     inferred = len(tracks_here) - seen
-    tag = f"{seen} detected" + (f"  +{inferred} fused in" if inferred else "")
-    (tw, _), _ = cv2.getTextSize(tag, cv2.FONT_HERSHEY_SIMPLEX, 0.40, 1)
-    text(tile, tag, (TILE_W - tw - 8, 17), 0.40, MUTED, 1)
+    tag = f"{seen} det" if small else f"{seen} detected"
+    if inferred:
+        tag += f" +{inferred}" if small else f"  +{inferred} fused in"
+    (tw, _), _ = cv2.getTextSize(tag, cv2.FONT_HERSHEY_SIMPLEX, 0.36, 1)
+    text(tile, tag, (lay.tile_w - tw - 7, bar - 6), 0.36, MUTED, 1)
     return tile
 
 
@@ -165,19 +211,23 @@ def eagle_base(gmap: GroundMap, cfg, cams: dict[str, Camera], view_ids: list[str
     gm = gmap
     base = gm.image.copy()
 
-    # Shade the floor by how many of the four cameras cover it. Overlap is what
-    # makes fusion possible, so where it is thin is worth seeing.
+    # Shade the floor by how many cameras cover it, normalised so the darkest
+    # and lightest ends mean the same thing whether there are four views or
+    # twelve. Overlap is what makes fusion possible, so where it is thin is
+    # worth seeing. Per-camera outlines are drawn only while they still read as
+    # separate shapes - twelve of them is a scribble, not information.
     masks = [coverage_mask(cams[sid], gm) for sid in view_ids]
-    count = np.sum(masks, axis=0)
+    count = np.sum(masks, axis=0).astype(np.float32)
     tint = np.zeros_like(base, np.float32)
-    tint[..., 1] = np.clip(count, 0, 4) * 5.0
+    tint[..., 1] = np.clip(count / max(len(masks), 1), 0, 1) * 22.0
     base = np.clip(base.astype(np.float32) + tint, 0, 255).astype(np.uint8)
-    lines = base.copy()
-    for i, m in enumerate(masks):
-        cnts, _ = cv2.findContours(m.astype(np.uint8), cv2.RETR_EXTERNAL,
-                                   cv2.CHAIN_APPROX_SIMPLE)
-        cv2.drawContours(lines, cnts, -1, PALETTE[i % len(PALETTE)], 1, cv2.LINE_AA)
-    cv2.addWeighted(lines, 0.40, base, 0.60, 0, base)
+    if len(masks) <= 6:
+        lines = base.copy()
+        for i, m in enumerate(masks):
+            cnts, _ = cv2.findContours(m.astype(np.uint8), cv2.RETR_EXTERNAL,
+                                       cv2.CHAIN_APPROX_SIMPLE)
+            cv2.drawContours(lines, cnts, -1, PALETTE[i % len(PALETTE)], 1, cv2.LINE_AA)
+        cv2.addWeighted(lines, 0.40, base, 0.60, 0, base)
 
     for z in cfg.zones:
         if not z.polygon_m:
@@ -191,12 +241,15 @@ def eagle_base(gmap: GroundMap, cfg, cams: dict[str, Camera], view_ids: list[str
             text(base, z.name.upper(), org, 0.40, (10, 20, 10), 3)
             text(base, z.name.upper(), org, 0.40, (170, 250, 170), 1)
 
-    for i, sid in enumerate(view_ids):
-        cam = cams[sid]
-        p = gm.pt(cam.centre[0], cam.centre[1])
-        cv2.drawMarker(base, p, PALETTE[i % len(PALETTE)], cv2.MARKER_TRIANGLE_UP, 11, 2)
+    # Camera markers get one neutral colour rather than one each: the palette is
+    # already spoken for by identities, and a camera wearing a person's colour
+    # invites exactly the wrong reading.
+    for sid in view_ids:
+        p = gm.pt(cams[sid].centre[0], cams[sid].centre[1])
+        cv2.drawMarker(base, p, CAMERA, cv2.MARKER_TRIANGLE_UP, 11, 2)
         short = sid.replace("Camera_", "C") if "_" in sid else "C00"
-        text(base, short, (p[0] + 8, p[1] + 4), 0.36, PALETTE[i % len(PALETTE)], 1)
+        text(base, short, (p[0] + 8, p[1] + 4), 0.34, (10, 10, 10), 3)
+        text(base, short, (p[0] + 8, p[1] + 4), 0.34, CAMERA, 1)
     return base, gm
 
 
@@ -230,16 +283,17 @@ def eagle_frame(base, gm: GroundMap, cfg, live, trails, frame_idx, fps):
         for k in range(1, n_cam):
             cv2.circle(view, (px, py), 9 + 4 * k, colour, 1, cv2.LINE_AA)
 
-    cv2.rectangle(view, (0, 0), (EAGLE, 26), (0, 0, 0), -1)
+    side = view.shape[0]
+    cv2.rectangle(view, (0, 0), (side, 26), (0, 0, 0), -1)
     text(view, "EAGLE VIEW  -  world coordinates, metres", (8, 18), 0.48, INK, 1)
     # Scale bar: two metres, measured on the map rather than assumed.
     two_m = int(round(2.0 * gm.px_per_m))
-    y0 = EAGLE - 18
+    y0 = side - 18
     cv2.line(view, (14, y0), (14 + two_m, y0), INK, 2)
     cv2.line(view, (14, y0 - 4), (14, y0 + 4), INK, 2)
     cv2.line(view, (14 + two_m, y0 - 4), (14 + two_m, y0 + 4), INK, 2)
     text(view, "2 m", (14 + two_m + 6, y0 + 4), 0.40, INK, 1)
-    cv2.rectangle(view, (0, 0), (EAGLE - 1, EAGLE - 1), (55, 55, 58), 1)
+    cv2.rectangle(view, (0, 0), (side - 1, side - 1), (55, 55, 58), 1)
     return view
 
 
@@ -269,24 +323,30 @@ def panel(width, cfg, stats, series, live_rows, elapsed, total_s, total_frames,
     text(c, f"{elapsed:5.1f} s / {total_s:.0f} s", (18, 106), 0.46, INK, 1)
     cv2.line(c, (300, 16), (300, PANEL_H - 34), RULE, 1)
 
-    # ---- headline figures
-    figs = [("PEOPLE NOW", f"{stats['people_now']}", "fused across 4 views"),
+    # ---- headline figures, spread across whatever width the mosaic has
+    figs = [("PEOPLE NOW", f"{stats['people_now']}",
+             f"fused across {stats['n_views']} views"),
             ("HUMANOID ROBOTS", f"{stats['robots_now']}", "named, not counted as people"),
             ("DISTINCT PEOPLE", f"{stats['distinct_people']}", "global identities so far"),
             ("FLOOR WALKED", f"{stats['distance_m']:.0f} m", "smoothed world tracks"),
             ("NEAREST PERSON-ROBOT", stats["gap"], "closest approach this frame")]
-    x = 328
-    for title, value, note in figs:
+    x0, x1 = 328, width - 18
+    step = min(300, (x1 - x0) // len(figs))
+    for i, (title, value, note) in enumerate(figs):
+        x = x0 + i * step
         text(c, title, (x, 34), 0.38, MUTED, 1)
         col = WARN if title.startswith("NEAREST") and stats["gap_warn"] else INK
         text(c, value, (x, 76), 0.92, col, 2)
         text(c, note, (x, 98), 0.34, DIM, 1)
-        x += 232
 
-    cv2.line(c, (300, 122), (width - 18, 122), RULE, 1)
+    cv2.line(c, (300, 122), (x1, 122), RULE, 1)
 
-    # ---- occupancy series
-    gx, gy, gw, gh = 344, 152, 480, 108
+    # ---- lower row: three blocks sharing the content width
+    content = x1 - x0
+    gx, gy, gh = 344, 152, 108
+    gw = max(360, int(content * 0.34))
+    zx = gx + gw + 84
+    tx = min(zx + max(420, int(content * 0.26)), x1 - 470)
     cv2.rectangle(c, (gx, gy), (gx + gw, gy + gh), (30, 30, 34), -1)
     text(c, "PEOPLE ON THE FLOOR", (gx, gy - 8), 0.38, MUTED, 1)
     if series:
@@ -306,21 +366,19 @@ def panel(width, cfg, stats, series, live_rows, elapsed, total_s, total_frames,
     text(c, f"{total_s:.0f} s", (gx + gw - 24, gy + gh + 14), 0.34, DIM, 1)
 
     # ---- zone dwell
-    zx = 892
     text(c, "PERSON-SECONDS BY AREA", (zx, 144), 0.38, MUTED, 1)
     _bars(c, zx, 166, 150, stats["zone_rows"], stats["zone_total"])
     text(c, "PERSON-SECONDS IN MARKED PALLET LANES", (zx, 236), 0.38, MUTED, 1)
     _bars(c, zx, 258, 150, stats["lane_rows"], stats["zone_total"], WARN)
 
     # ---- live table
-    tx = 1420
     cv2.line(c, (tx - 40, 136), (tx - 40, PANEL_H - 34), RULE, 1)
     text(c, "LIVE TRACKS", (tx, 144), 0.38, MUTED, 1)
     cols = [0, 60, 150, 250, 330, 420]
     for i, hname in enumerate(["ID", "HEIGHT", "SPEED", "VIEWS", "IN VIEW", "AREA"]):
         text(c, hname, (tx + cols[i], 166), 0.34, DIM, 1)
     cv2.line(c, (tx, 172), (width - 18, 172), RULE, 1)
-    for r, row in enumerate(live_rows[:5]):
+    for r, row in enumerate(live_rows[:MAX_ROWS]):
         yy = 190 + r * 21
         colour = colour_for(row["gid"], row["label"])
         text(c, row["tag"], (tx + cols[0], yy), 0.42, colour, 1)
@@ -329,8 +387,9 @@ def panel(width, cfg, stats, series, live_rows, elapsed, total_s, total_frames,
         text(c, row["views"], (tx + cols[3], yy), 0.40, INK, 1)
         text(c, row["seen"], (tx + cols[4], yy), 0.40, INK, 1)
         text(c, row["zone"], (tx + cols[5], yy), 0.38, MUTED, 1)
-    if len(live_rows) > 5:
-        text(c, f"+{len(live_rows) - 5} more", (tx + cols[0], 190 + 5 * 21), 0.36, DIM, 1)
+    if len(live_rows) > MAX_ROWS:
+        text(c, f"+{len(live_rows) - MAX_ROWS} more",
+             (tx + cols[0], 190 + MAX_ROWS * 21), 0.36, DIM, 1)
 
     foot = (f"YOLOE-11L-seg zero-shot  |  {tracker_name} per camera  |  "
             f"ground-plane homography + camera matrix  |  identities fused in world metres")
@@ -339,10 +398,3 @@ def panel(width, cfg, stats, series, live_rows, elapsed, total_s, total_frames,
     (sw, _), _ = cv2.getTextSize(src, cv2.FONT_HERSHEY_SIMPLEX, 0.36, 1)
     text(c, src, (width - sw - 18, PANEL_H - 12), 0.36, DIM, 1)
     return c
-
-
-def mosaic(tiles: dict[str, np.ndarray], eagle: np.ndarray, panel_img: np.ndarray):
-    left = np.vstack([tiles["left-top"], tiles["left-bottom"]])
-    right = np.vstack([tiles["right-top"], tiles["right-bottom"]])
-    band = np.hstack([left, eagle, right])
-    return np.vstack([band, panel_img])

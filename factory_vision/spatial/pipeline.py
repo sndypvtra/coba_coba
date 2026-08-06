@@ -1,17 +1,17 @@
-"""Case 6 - four fixed cameras, one warehouse floor, people located in 3D.
+"""Case 6 - many fixed cameras, one warehouse floor, people located in 3D.
 
 The chain, end to end:
 
-  1. YOLOE detects from words alone - "person", "humanoid robot" - in each of
-     four 1920x1080 views. No training, no labels, no fine-tuning.
+  1. YOLOE detects from words alone - "person", "humanoid robot" - in each
+     1920x1080 view. No training, no labels, no fine-tuning.
   2. Each view runs its own tracker, so a person keeps an identity within that
      camera.
   3. Every box is lifted onto the floor plane through the camera's homography,
      and its height is solved in closed form from the camera matrix. A rectangle
      becomes a position in metres and a stature in metres.
   4. Those positions are fused across cameras into one global identity per
-     person - the step that turns four headcounts into one.
-  5. The result is drawn back into all four views as a 3D box, plotted on the
+     person - the step that turns a dozen headcounts into one.
+  5. The result is drawn back into every view as a 3D box, plotted on the
      dataset's own top-down render of the building, and reduced to statistics.
 
 What makes this measurable rather than merely presentable is that the dataset
@@ -51,7 +51,7 @@ TRAIL_S = 6.0
 
 
 def scene_dir(cfg: SceneConfig):
-    return VIDEO_DIR / cfg.name
+    return VIDEO_DIR / cfg.asset_dir
 
 
 def _open_clips(cfg: SceneConfig):
@@ -71,8 +71,9 @@ def _open_clips(cfg: SceneConfig):
 def process(cfg: SceneConfig, args) -> dict:
     sdir = scene_dir(cfg)
     cams = load_cameras(sdir / "calibration.json")
+    lay = rd.Layout(cfg)
     gmap = GroundMap.load(sdir / "map.png", sdir / "calibration.json",
-                          cfg.floor_bounds_m, size=rd.EAGLE)
+                          cfg.floor_bounds_m, size=lay.eagle)
     gt_path = sdir / "ground_truth.json"
     gt = json.loads(gt_path.read_text()) if (gt_path.exists() and not args.no_gt) else None
 
@@ -91,13 +92,11 @@ def process(cfg: SceneConfig, args) -> dict:
 
     fuser = Fuser(cfg.fuse_radius_m, cfg.max_age_frames)
     view_ids = [v.sensor_id for v in cfg.views]
-    slot_of = {v.sensor_id: v.slot for v in cfg.views}
     eagle_bg, gm = rd.eagle_base(gmap, cfg, cams, view_ids)
 
     out_path = OUTPUT_DIR / f"{cfg.name}__spatial.mp4"
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    width = rd.TILE_W * 2 + rd.EAGLE
-    height = rd.TILE_H * 2 + rd.PANEL_H
+    width, height = lay.width, lay.height
     writer = cv2.VideoWriter(str(out_path), cv2.VideoWriter_fourcc(*"mp4v"),
                              fps, (width, height))
 
@@ -199,9 +198,9 @@ def process(cfg: SceneConfig, args) -> dict:
                 # that found it.
                 if observed or (cam.looks_at(x, y, 0.0) and cam.looks_at(x, y, 1.6)):
                     here.append((gid, label, x, y, h, yaw, observed))
-            tiles[v.slot] = rd.camera_tile(frames[v.sensor_id], cam,
-                                           f"{v.sensor_id}   {v.provenance}",
-                                           here, cfg)
+            label = v.sensor_id if lay.tile_w < 560 else f"{v.sensor_id}   {v.provenance}"
+            tiles[(v.side, v.row, v.col)] = rd.camera_tile(
+                frames[v.sensor_id], cam, label, here, cfg, lay)
 
         eagle = rd.eagle_frame(eagle_bg, gm, cfg, drawable, trails, idx, fps)
 
@@ -226,6 +225,7 @@ def process(cfg: SceneConfig, args) -> dict:
             "lane_rows": [(z.name, lane_seconds.get(z.name, 0.0))
                           for z in cfg.zones if z.kind == "restricted"],
             "zone_total": zone_total,
+            "n_views": len(cfg.views),
         }
         live_rows = []
         for gid, label, x, y, h, yaw, seen_s, ncam in sorted(drawable):
@@ -242,7 +242,7 @@ def process(cfg: SceneConfig, args) -> dict:
             })
         panel_img = rd.panel(width, cfg, stats, series, live_rows,
                              idx / fps, total / fps, total, tracker_name)
-        writer.write(rd.mosaic(tiles, eagle, panel_img))
+        writer.write(lay.mosaic(tiles, eagle, panel_img))
 
         if args.progress and idx % 25 == 0:
             print(f"    frame {idx:3d}/{total}  people={people_now} "
@@ -279,7 +279,8 @@ def process(cfg: SceneConfig, args) -> dict:
         "description": cfg.scene,
         "source": cfg.source,
         "licence": cfg.licence,
-        "cameras": [{"sensor": v.sensor_id, "slot": v.slot,
+        "cameras": [{"sensor": v.sensor_id, "side": v.side,
+                     "row": v.row, "col": v.col,
                      "banner_tile": v.provenance} for v in cfg.views],
         "clip": {
             "start_frame": cfg.start_frame,

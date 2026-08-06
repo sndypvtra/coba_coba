@@ -6,20 +6,22 @@ token needed.
 
     https://huggingface.co/datasets/nvidia/PhysicalAI-SmartSpaces
 
-Four of Warehouse_014's twelve cameras are downloaded (about 520 MB in total),
-each cut down to the 30-second window the case uses and subsampled to the
-pipeline's frame rate. The full downloads are deleted afterwards unless --keep
-is given, leaving four small clips in videos/ and the scene's calibration, map
-and ground truth in videos/warehouse_014/.
+Warehouse_014's cameras are downloaded (about 130 MB each), cut down to the
+30-second window the case uses and subsampled to the pipeline's frame rate. The
+full downloads are deleted afterwards unless --keep is given, leaving small
+clips in videos/ and the scene's calibration, map and ground truth in
+videos/warehouse_014/.
 
-    python scripts/fetch_warehouse_scene.py
+    python scripts/fetch_warehouse_scene.py                    # all 12, ~1.6 GB
+    python scripts/fetch_warehouse_scene.py --scene warehouse_014   # 4, ~520 MB
 
-Which four cameras, and why those: the dataset's banner image (demo.gif at the
-repository root) is a 12-tile montage of this scene around its top-down view.
-The four here are the tiles requested for this case - left block top-left and
-bottom-left, right block top-left and bottom-right - identified by matching each
-tile against the first frame of all twelve videos (best match 0.86-0.96,
-next-best never above 0.44).
+Which cameras are which: the dataset's banner image (demo.gif at the repository
+root) is a 12-tile montage of this scene around its top-down view, and the
+config keeps each camera at its banner position. The tile-to-camera mapping was
+measured, not guessed - each tile was matched against the first frame of all
+twelve videos, resolving at 0.87-0.96 against a next-best of at most 0.44.
+Downloads are skipped for clips that already exist, so fetching the four-camera
+subset first and the full set afterwards costs only the eight new videos.
 """
 
 from __future__ import annotations
@@ -76,7 +78,7 @@ def main() -> None:
     args = ap.parse_args()
 
     cfg = next(s for s in SCENES if s.name == args.scene)
-    sdir = VIDEO_DIR / cfg.name
+    sdir = VIDEO_DIR / cfg.asset_dir
     raw = sdir / "raw"
 
     print(f"scene metadata -> {sdir}")
