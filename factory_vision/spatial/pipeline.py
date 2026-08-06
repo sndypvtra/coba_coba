@@ -101,7 +101,14 @@ def process(cfg: SceneConfig, args) -> dict:
                              fps, (width, height))
 
     trails: dict[int, deque] = {}
-    series: list[int] = []
+    series: list[tuple[int, int]] = []      # (headcount, of them walking)
+    heat = rd.HeatMap(gm)
+    lane_open: set[int] = set()
+    lane_entries = 0
+    lane_by_person: dict[int, float] = {}
+    near_open: set[tuple[int, int]] = set()
+    near_events = 0
+    near_frames = 0
     per_frame_est: dict[int, list] = {}
     zone_seconds: dict[str, float] = {}
     lane_seconds: dict[str, float] = {}
@@ -174,14 +181,37 @@ def process(cfg: SceneConfig, args) -> dict:
             if c.gid in confirmed and t.label == "person":
                 z = an.area_zone(c.x, c.y, cfg.zones)
                 zone_seconds[z] = zone_seconds.get(z, 0.0) + 1.0 / fps
-                for lane in an.restricted_hits(c.x, c.y, cfg.zones):
+                hits = an.restricted_hits(c.x, c.y, cfg.zones)
+                for lane in hits:
                     lane_seconds[lane] = lane_seconds.get(lane, 0.0) + 1.0 / fps
+                if hits:
+                    lane_by_person[c.gid] = lane_by_person.get(c.gid, 0.0) + 1.0 / fps
+                # An entry is a crossing of the boundary, not a frame spent
+                # inside it: one person working in a lane for ten seconds is one
+                # event, and ten people stepping through it is ten.
+                if hits and c.gid not in lane_open:
+                    lane_entries += 1
+                if hits:
+                    lane_open.add(c.gid)
+                else:
+                    lane_open.discard(c.gid)
                 trails.setdefault(c.gid, deque(maxlen=trail_len)).append((c.x, c.y))
+                heat.add(c.x, c.y)
         per_frame_est[idx] = est_rows
 
         people_now = sum(1 for g, lab, *_ in drawable if lab == "person" and g in confirmed)
         robots_now = sum(1 for g, lab, *_ in drawable if lab != "person" and g in confirmed)
-        series.append(people_now)
+
+        # near misses, live: a person inside the threshold of a machine
+        ppl_xy = [(g, x, y) for g, lab, x, y, *_ in drawable if lab == "person"]
+        bot_xy = [(g, x, y) for g, lab, x, y, *_ in drawable if lab != "person"]
+        near_now = {(pg, bg) for pg, px, py in ppl_xy for bg, bx, by in bot_xy
+                    if np.hypot(px - bx, py - by) < an.NEAR_MISS_M}
+        near_events += len(near_now - near_open)
+        near_frames += 1 if near_now else 0
+        near_open = near_now
+        gap_val = min((float(np.hypot(px - bx, py - by))
+                       for _, px, py in ppl_xy for _, bx, by in bot_xy), default=None)
 
         # --------------------------------------------------------- rendering
         observed_by = {c.gid: set(c.cameras) for c in clusters}
@@ -198,33 +228,40 @@ def process(cfg: SceneConfig, args) -> dict:
                 # that found it.
                 if observed or (cam.looks_at(x, y, 0.0) and cam.looks_at(x, y, 1.6)):
                     here.append((gid, label, x, y, h, yaw, observed))
-            label = v.sensor_id if lay.tile_w < 560 else f"{v.sensor_id}   {v.provenance}"
             tiles[(v.side, v.row, v.col)] = rd.camera_tile(
-                frames[v.sensor_id], cam, label, here, cfg, lay)
+                frames[v.sensor_id], cam, v.sensor_id, here, cfg, lay)
 
-        eagle = rd.eagle_frame(eagle_bg, gm, cfg, drawable, trails, idx, fps)
+        eagle = rd.eagle_frame(eagle_bg, gm, cfg, drawable, trails, heat)
 
         motions = {g: an.motion(t, fps) for g, t in confirmed.items()}
-        walked = sum(m[0] for g, m in motions.items()
-                     if confirmed[g].label == "person")
-        gap_txt, gap_warn = "-", False
-        pp = [(x, y) for g, lab, x, y, *_ in drawable if lab == "person"]
-        bb = [(x, y) for g, lab, x, y, *_ in drawable if lab != "person"]
-        if pp and bb:
-            gval = min(float(np.hypot(a[0] - b[0], a[1] - b[1])) for a in pp for b in bb)
-            gap_txt, gap_warn = f"{gval:.1f} m", gval < 1.5
+        people_ids = [g for g, t in confirmed.items() if t.label == "person"]
+        walked = sum(motions[g][0] for g in people_ids)
+        moving_now = sum(1 for g, lab, *_ in drawable
+                         if lab == "person" and g in confirmed
+                         and an.current_speed(confirmed[g], fps) > an.MOVING_MS)
+        series.append((people_now, moving_now))
+        # Person-time, not clip-time: two people for ten seconds is twenty
+        # person-seconds, and the travel rate a manager compares against a
+        # benchmark is per person per hour.
+        person_seconds = max(sum(len(confirmed[g].frames) for g in people_ids) / fps, 1e-6)
+        moving_pct = 100.0 * float(np.mean([motions[g][3] for g in people_ids])) \
+            if people_ids else 0.0
         zone_total = max(sum(zone_seconds.values()), 1e-6)
         stats = {
             "people_now": people_now,
+            "people_peak": max(h for h, _ in series),
             "robots_now": robots_now,
-            "distinct_people": sum(1 for t in confirmed.values() if t.label == "person"),
-            "distance_m": walked,
-            "gap": gap_txt,
-            "gap_warn": gap_warn,
-            "zone_rows": sorted(zone_seconds.items(), key=lambda kv: -kv[1])[:3],
+            "moving_pct": moving_pct,
+            "travel_rate": walked / person_seconds * 3600.0,
+            "lane_entries": lane_entries,
+            "lane_seconds": sum(lane_seconds.values()),
+            "near_miss_events": near_events,
+            "near_miss_m": an.NEAR_MISS_M,
+            "gap": f"{gap_val:.1f} m" if gap_val is not None else "-",
+            "zone_rows": [(k, 100.0 * v / zone_total)
+                          for k, v in sorted(zone_seconds.items(), key=lambda kv: -kv[1])[:3]],
             "lane_rows": [(z.name, lane_seconds.get(z.name, 0.0))
                           for z in cfg.zones if z.kind == "restricted"],
-            "zone_total": zone_total,
             "n_views": len(cfg.views),
         }
         live_rows = []
@@ -234,10 +271,12 @@ def process(cfg: SceneConfig, args) -> dict:
             live_rows.append({
                 "gid": gid, "label": label,
                 "tag": f"{'P' if label == 'person' else 'R'}{gid}",
-                "height": f"{h:.2f} m" if np.isfinite(h) else "-",
-                "speed": f"{motions[gid][1]:.2f} m/s",
-                "views": str(ncam),
-                "seen": f"{seen_s:.1f} s",
+                "seen": f"{seen_s:.0f} s",
+                "walked": f"{motions[gid][0]:.1f} m",
+                "moving": f"{100 * motions[gid][3]:.0f}%",
+                "lane": (f"{lane_by_person[gid]:.0f}s"
+                         if lane_by_person.get(gid, 0.0) >= 0.5 else "-"),
+                "in_lane": bool(an.restricted_hits(x, y, cfg.zones)),
                 "zone": an.area_zone(x, y, cfg.zones),
             })
         panel_img = rd.panel(width, cfg, stats, series, live_rows,
@@ -294,14 +333,18 @@ def process(cfg: SceneConfig, args) -> dict:
         "conf": cfg.conf,
         "distinct_people": len(people),
         "distinct_robots": len(robots),
-        "occupancy_mean": round(float(np.mean(series)), 2) if series else 0.0,
-        "occupancy_max": int(max(series)) if series else 0,
+        "occupancy_mean": round(float(np.mean([h for h, _ in series])), 2) if series else 0.0,
+        "occupancy_max": int(max(h for h, _ in series)) if series else 0,
         "floor_walked_m": round(sum(r.path_m for r in people), 1),
         "walking_speed_mean_ms": round(float(np.mean([r.speed_mean for r in people])), 2)
                                  if people else None,
         "person_height_median_m": round(float(np.median([r.height_m for r in people
                                                          if np.isfinite(r.height_m)])), 2)
                                   if people else None,
+        # The block an operations manager reads. Everything below it is the
+        # engineering evidence for these five lines.
+        "operations": _operations(people, zone_seconds, lane_seconds,
+                                  lane_entries, series, fps),
         "fusion": {
             "observations_merged": fuser.merges,
             "cross_camera_agreement_m": _agreement(reports),
@@ -324,7 +367,8 @@ def process(cfg: SceneConfig, args) -> dict:
         "proximity": an.proximity(per_frame_conf, fps),
         "people": [r.as_dict() for r in sorted(people, key=lambda r: r.gid)],
         "robots": [r.as_dict() for r in sorted(robots, key=lambda r: r.gid)],
-        "occupancy_series": series,
+        "occupancy_series": [h for h, _ in series],
+        "walking_series": [w for _, w in series],
         "avg_ms_per_frame": round(float(np.mean(times)), 1) if times else None,
         "output": out_path.name,
     }
@@ -335,6 +379,47 @@ def process(cfg: SceneConfig, args) -> dict:
 
     (OUTPUT_DIR / f"{cfg.name}__spatial.json").write_text(json.dumps(summary, indent=2))
     return summary
+
+
+def _operations(people, zone_seconds, lane_seconds, lane_entries, series, fps) -> dict:
+    """The five lines a shift supervisor would actually be shown.
+
+    Rates are per *person*-hour rather than per clip, because 30 seconds of
+    footage is not a shift and the only honest way to state a travel figure is
+    the rate it implies. Everything is derived from the same world tracks the
+    validation block is measured against.
+    """
+    person_seconds = sum(r.frames for r in people) / fps
+    walked = sum(r.path_m for r in people)
+    total_zone = max(sum(zone_seconds.values()), 1e-6)
+    return {
+        "headcount_mean": round(float(np.mean([h for h, _ in series])), 2) if series else 0.0,
+        "headcount_peak": int(max((h for h, _ in series), default=0)),
+        "person_seconds_observed": round(person_seconds, 1),
+        "walking_share_pct": round(100.0 * float(np.mean([r.moving_share for r in people])), 1)
+                             if people else None,
+        "travel_m_per_person_hour": round(walked / max(person_seconds, 1e-6) * 3600.0, 0),
+        "travel_m_per_person": round(walked / max(len(people), 1), 1),
+        "time_by_area_pct": {k: round(100.0 * v / total_zone, 1)
+                             for k, v in sorted(zone_seconds.items(), key=lambda kv: -kv[1])},
+        "pallet_lane_entries": lane_entries,
+        "pallet_lane_seconds": round(sum(lane_seconds.values()), 1),
+        "pallet_lane_share_pct": round(100.0 * sum(lane_seconds.values()) / total_zone, 1),
+        "pallet_lane_entries_per_person_hour": round(
+            lane_entries / max(person_seconds, 1e-6) * 3600.0, 0),
+        # What the rate implies over a shift. This is the form the figure has to
+        # take before anyone acts on it - "10 m walked" is not a finding, "8 km a
+        # shift" is - but it is an extrapolation from 30 seconds and is labelled
+        # as one rather than presented as an observation.
+        "implied_per_8h_shift": {
+            "walk_km_per_person": round(walked / max(person_seconds, 1e-6) * 3600.0 * 8 / 1000.0, 1),
+            "pallet_lane_entries_per_person": round(
+                lane_entries / max(person_seconds, 1e-6) * 3600.0 * 8, 0),
+            "caveat": "linear extrapolation of a 30 s sample, not an observation",
+        },
+        "note": ("rates are per person-hour; walking means a straight-line world "
+                 f"speed above {an.MOVING_MS} m/s over a 0.6 s window"),
+    }
 
 
 def _agreement(reports) -> float | None:

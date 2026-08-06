@@ -28,7 +28,7 @@ the code in this repository, not estimated.
 | **3** | Parcel unloading belt | Count mixed packages past a line | **7** counted · 24 tracks |
 | **4** | Bottling line | Measure dispensed volume | **1,001 mL** · 66.7 % of nominal |
 | **5** | Cafe, two rooms | Occupancy and per-person dwell time | **12** visitors each · mean dwell **21.2 s** / **24.6 s** |
-| **6** | Warehouse, four cameras | Locate people in 3D on one floor plan | median error **0.329 m** vs the dataset's own 3D truth |
+| **6** | Warehouse, four cameras | Locate people in 3D, one floor plan, operational KPIs | median error **0.311 m** vs the dataset's own 3D truth |
 
 Cases 1–3, 5 and 6 are **zero-shot**: the detector is given words, never labels,
 never training. Case 4 is a **calibrated inspection**: colour segmentation and
@@ -204,17 +204,30 @@ camera's frame. Each room therefore carries its own zones in
 <img src="output/preview_warehouse_014.jpg" alt="Multi-camera 3D localisation and eagle view" width="100%">
 
 Four fixed cameras, one warehouse floor. Each person is placed **in metres**,
-given one identity across all four views, and plotted on the building's own
-top-down plan.
+given one identity across all four views, plotted on the building's own top-down
+plan with a cumulative traffic heat map, and reduced to the figures a shift
+supervisor can act on — labour spent walking, restricted-lane crossings, and
+near misses with moving machines.
 
-| Metric | Value |
+**What it reports** — the operational block first, the engineering evidence
+behind it second:
+
+| Operations | Value |
 |---|---|
-| **Localisation error vs the dataset's 3D truth** | **0.329 m median**, 0.457 m p95 |
-| Distinct people | 4 — three people plus a humanoid robot no prompt separates |
-| Measured height, median | 1.86 m |
-| Cross-camera agreement | 0.26 m |
-| Views per person, mean | 2.2 of 4 |
+| Headcount, mean / peak | 3.87 / 4 |
+| Time spent walking | **44.7 %** of person-time |
+| Travel rate | **1,263 m** per person-hour — ≈ 10.1 km per 8 h shift |
+| Time by area | racking 52.1 % · staging 37.7 % · walkway 10.2 % |
+| Pallet-lane entries | **8** crossings, 13.3 s inside |
+| Near misses under 1.5 m | **18 events**, closest **0.40 m** |
+
+| Measurement quality | Value |
+|---|---|
+| **Localisation error vs the dataset's 3D truth** | **0.311 m median**, 0.449 m p95 |
+| Recall / precision | 0.983 / 0.742 |
 | Global IDs per real person | **1.0** — no identity switches in 30 s |
+| Measured height per identity | within 0.03–0.08 m of the truth |
+| Views per person, mean | 2.71 of 4 |
 | Clip | 4 × 30 s, 1920×1080, 10 fps, 1,200 inferences |
 
 ```bash

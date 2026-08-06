@@ -253,16 +253,64 @@ def eagle_base(gmap: GroundMap, cfg, cams: dict[str, Camera], view_ids: list[str
     return base, gm
 
 
-def eagle_frame(base, gm: GroundMap, cfg, live, trails, frame_idx, fps):
+class HeatMap:
+    """Where people have actually been, accumulated over the clip.
+
+    The single most useful thing a top-down view can show an operations manager
+    that a live marker cannot: traffic concentrates, and the concentration is
+    what a slotting or layout change moves. Each confirmed person adds a small
+    blob at their floor position every frame, so the total is person-seconds per
+    square metre rather than a count of visits.
+    """
+
+    def __init__(self, gm: GroundMap, radius_m: float = 0.55):
+        self.gm = gm
+        h, w = gm.image.shape[:2]
+        self.acc = np.zeros((h, w), np.float32)
+        self.r = max(3, int(round(radius_m * gm.px_per_m)))
+        k = self.r * 2 + 1
+        g = cv2.getGaussianKernel(k, k / 3.0)
+        self.blob = (g @ g.T).astype(np.float32)
+        self.blob /= self.blob.max()
+
+    def add(self, x: float, y: float) -> None:
+        u, v = self.gm.pt(x, y)
+        h, w = self.acc.shape
+        x0, y0 = u - self.r, v - self.r
+        x1, y1 = x0 + self.blob.shape[1], y0 + self.blob.shape[0]
+        sx0, sy0 = max(x0, 0), max(y0, 0)
+        sx1, sy1 = min(x1, w), min(y1, h)
+        if sx1 <= sx0 or sy1 <= sy0:
+            return
+        self.acc[sy0:sy1, sx0:sx1] += self.blob[sy0 - y0:sy1 - y0, sx0 - x0:sx1 - x0]
+
+    def blend(self, view: np.ndarray) -> None:
+        peak = float(self.acc.max())
+        if peak <= 0:
+            return
+        # Square root, not linear: one person standing still for the whole clip
+        # would otherwise be the only thing visible, and the question is where
+        # traffic runs, not where the single largest pile of seconds is.
+        norm = np.sqrt(np.clip(self.acc / peak, 0, 1))
+        alpha = (norm * 0.62)[..., None]
+        cm = cv2.applyColorMap((norm * 255).astype(np.uint8), cv2.COLORMAP_TURBO)
+        np.copyto(view, (view * (1 - alpha) + cm * alpha).astype(np.uint8))
+
+
+def eagle_frame(base, gm: GroundMap, cfg, live, trails, heat: "HeatMap | None" = None):
     view = base.copy()
     fw, fl = cfg.footprint_m
+
+    if heat is not None:
+        heat.blend(view)
 
     for gid, pts in trails.items():
         if len(pts) < 2:
             continue
         colour = colour_for(gid, "person")
         poly = np.array([gm.pt(x, y) for x, y in pts], np.int32)
-        cv2.polylines(view, [poly], False, colour, 1, cv2.LINE_AA)
+        cv2.polylines(view, [poly], False, (12, 12, 12), 4, cv2.LINE_AA)
+        cv2.polylines(view, [poly], False, colour, 2, cv2.LINE_AA)
 
     for gid, label, x, y, h, yaw, seen_s, n_cam in live:
         colour = colour_for(gid, label)
@@ -271,21 +319,24 @@ def eagle_frame(base, gm: GroundMap, cfg, live, trails, frame_idx, fps):
                              [fw / 2, fl / 2], [-fw / 2, fl / 2]])
         rot = base_pts @ np.array([[c, s], [-s, c]]) + [x, y]
         poly = np.array([gm.pt(px, py) for px, py in rot], np.int32)
+        px, py = gm.pt(x, y)
+        cv2.circle(view, (px, py), 15, (10, 10, 10), -1, cv2.LINE_AA)
+        cv2.circle(view, (px, py), 15, colour, 2, cv2.LINE_AA)
         cv2.fillPoly(view, [poly], colour)
         cv2.polylines(view, [poly], True, (20, 20, 20), 1, cv2.LINE_AA)
-        tip = gm.pt(x + 0.75 * c, y + 0.75 * s)
-        cv2.arrowedLine(view, gm.pt(x, y), tip, colour, 2, cv2.LINE_AA, tipLength=0.4)
+        tip = gm.pt(x + 0.95 * c, y + 0.95 * s)
+        cv2.arrowedLine(view, (px, py), tip, colour, 2, cv2.LINE_AA, tipLength=0.4)
         tag = f"{'P' if label == 'person' else 'R'}{gid}"
-        px, py = gm.pt(x, y)
-        text(view, tag, (px + 10, py - 9), 0.46, (8, 8, 8), 3)
-        text(view, tag, (px + 10, py - 9), 0.46, colour, 1)
+        text(view, tag, (px + 17, py - 12), 0.52, (8, 8, 8), 4)
+        text(view, tag, (px + 17, py - 12), 0.52, colour, 1)
         # A ring for every extra camera that agrees this object is here.
         for k in range(1, n_cam):
-            cv2.circle(view, (px, py), 9 + 4 * k, colour, 1, cv2.LINE_AA)
+            cv2.circle(view, (px, py), 15 + 5 * k, colour, 1, cv2.LINE_AA)
 
     side = view.shape[0]
     cv2.rectangle(view, (0, 0), (side, 26), (0, 0, 0), -1)
-    text(view, "EAGLE VIEW  -  world coordinates, metres", (8, 18), 0.48, INK, 1)
+    text(view, "FLOOR PLAN  -  live positions, trails and traffic density",
+         (8, 18), 0.48, INK, 1)
     # Scale bar: two metres, measured on the map rather than assumed.
     two_m = int(round(2.0 * gm.px_per_m))
     y0 = side - 18
@@ -300,92 +351,130 @@ def eagle_frame(base, gm: GroundMap, cfg, live, trails, frame_idx, fps):
 # ------------------------------------------------------------------- panel
 
 
-def _bars(canvas, x, y, w, rows, total, colour=(120, 200, 120)):
+def _bars(canvas, x, y, w, rows, colour=(120, 200, 120), unit="s", full=None):
+    """Horizontal bars with the value spelled out.
+
+    Percentages are scaled against 100 rather than against the largest row -
+    scaling a 47 % bar to sit almost level with a 53 % one is the sort of chart
+    that makes a small difference look like a big one.
+    """
+    top = full if full is not None else (max([v for _, v in rows] or [0]) or 1.0)
     for i, (name, value) in enumerate(rows):
-        yy = y + i * 20
+        yy = y + i * 21
         text(canvas, name, (x, yy), 0.40, MUTED, 1)
-        frac = value / total if total else 0.0
-        cv2.rectangle(canvas, (x + 168, yy - 9), (x + 168 + w, yy - 1), (44, 44, 48), -1)
-        cv2.rectangle(canvas, (x + 168, yy - 9),
-                      (x + 168 + int(w * min(frac, 1.0)), yy - 1), colour, -1)
-        text(canvas, f"{value:.0f}s", (x + 176 + w, yy), 0.40, INK, 1)
+        cv2.rectangle(canvas, (x + 190, yy - 10), (x + 190 + w, yy - 1), (44, 44, 48), -1)
+        cv2.rectangle(canvas, (x + 190, yy - 10),
+                      (x + 190 + int(w * min(value / top, 1.0)), yy - 1), colour, -1)
+        if unit == "%":
+            label = f"{value:.0f}%"
+        else:
+            label = f"{value:.1f}s" if value < 10 else f"{value:.0f}s"
+        text(canvas, label, (x + 198 + w, yy), 0.40, INK, 1)
+
+
+def _kpi(c, x, y, title, value, note, colour=INK):
+    text(c, title, (x, y), 0.38, MUTED, 1)
+    text(c, value, (x, y + 42), 0.92, colour, 2)
+    text(c, note, (x, y + 64), 0.34, DIM, 1)
 
 
 def panel(width, cfg, stats, series, live_rows, elapsed, total_s, total_frames,
           tracker_name):
+    """The operational readout.
+
+    The figures were chosen from what a warehouse actually manages rather than
+    from what the pipeline happens to compute. Three questions, in the order a
+    shift supervisor asks them: how many people are on the floor and how hard
+    are they travelling, is anyone in a place they should not be, and where is
+    the floor being used. Detector and tracker diagnostics belong in the JSON
+    summary, not on the wall.
+    """
     c = np.full((PANEL_H, width, 3), BG, np.uint8)
     cv2.line(c, (0, 0), (width, 0), RULE, 1)
 
-    # ---- masthead, its own column so nothing has to be squeezed past it
-    text(c, "MULTI-CAMERA", (18, 34), 0.66, INK, 2)
-    text(c, "SPATIAL ANALYTICS", (18, 60), 0.66, INK, 2)
+    # ---- masthead
+    text(c, "WAREHOUSE FLOOR", (18, 34), 0.66, INK, 2)
+    text(c, "OPERATIONS", (18, 60), 0.66, INK, 2)
     text(c, cfg.scene.split(" - ")[0], (18, 84), 0.42, MUTED, 1)
     text(c, f"{elapsed:5.1f} s / {total_s:.0f} s", (18, 106), 0.46, INK, 1)
+    text(c, f"{stats['n_views']} cameras, one floor", (18, 126), 0.36, DIM, 1)
     cv2.line(c, (300, 16), (300, PANEL_H - 34), RULE, 1)
 
-    # ---- headline figures, spread across whatever width the mosaic has
-    figs = [("PEOPLE NOW", f"{stats['people_now']}",
-             f"fused across {stats['n_views']} views"),
-            ("HUMANOID ROBOTS", f"{stats['robots_now']}", "named, not counted as people"),
-            ("DISTINCT PEOPLE", f"{stats['distinct_people']}", "global identities so far"),
-            ("FLOOR WALKED", f"{stats['distance_m']:.0f} m", "smoothed world tracks"),
-            ("NEAREST PERSON-ROBOT", stats["gap"], "closest approach this frame")]
+    # ---- headline KPIs
+    warn = stats["lane_entries"] > 0
+    near = stats["near_miss_events"] > 0
+    figs = [
+        ("PEOPLE ON FLOOR", f"{stats['people_now']}",
+         f"peak {stats['people_peak']} this clip", INK),
+        ("TIME SPENT WALKING", f"{stats['moving_pct']:.0f}%",
+         "of person-time, non-value-adding", INK),
+        ("TRAVEL RATE", f"{stats['travel_rate']:.0f} m/h",
+         "per person, at this pace", INK),
+        ("PALLET-LANE ENTRIES", f"{stats['lane_entries']}",
+         f"{stats['lane_seconds']:.0f}s inside marked lanes",
+         WARN if warn else INK),
+        ("NEAR MISSES", f"{stats['near_miss_events']}",
+         f"under {stats['near_miss_m']:.1f} m of a machine",
+         WARN if near else INK),
+    ]
     x0, x1 = 328, width - 18
     step = min(300, (x1 - x0) // len(figs))
-    for i, (title, value, note) in enumerate(figs):
-        x = x0 + i * step
-        text(c, title, (x, 34), 0.38, MUTED, 1)
-        col = WARN if title.startswith("NEAREST") and stats["gap_warn"] else INK
-        text(c, value, (x, 76), 0.92, col, 2)
-        text(c, note, (x, 98), 0.34, DIM, 1)
+    for i, (title, value, note, col) in enumerate(figs):
+        _kpi(c, x0 + i * step, 34, title, value, note, col)
 
     cv2.line(c, (300, 122), (x1, 122), RULE, 1)
 
-    # ---- lower row: three blocks sharing the content width
+    # ---- lower row
     content = x1 - x0
     gx, gy, gh = 344, 152, 108
     gw = max(360, int(content * 0.34))
     zx = gx + gw + 84
-    tx = min(zx + max(420, int(content * 0.26)), x1 - 470)
+    tx = min(zx + max(420, int(content * 0.26)), x1 - 500)
+
+    # occupancy, with how many of those were walking
     cv2.rectangle(c, (gx, gy), (gx + gw, gy + gh), (30, 30, 34), -1)
-    text(c, "PEOPLE ON THE FLOOR", (gx, gy - 8), 0.38, MUTED, 1)
+    text(c, "ON THE FLOOR  /  WALKING", (gx, gy - 8), 0.38, MUTED, 1)
     if series:
-        top = max(4, max(series) + 1)
+        head, walk = zip(*series)
+        top = max(4, max(head) + 1)
         for lvl in range(0, top + 1, max(1, top // 4)):
             yy = gy + gh - int(gh * lvl / top)
             cv2.line(c, (gx, yy), (gx + gw, yy), (44, 44, 48), 1)
             text(c, str(lvl), (gx - 16, yy + 4), 0.34, DIM, 1)
-        # The x axis is the whole clip, not the part seen so far, so the trace
-        # grows across the panel instead of being rescaled to fill it every frame.
         span = max(total_frames - 1, 1)
-        pts = [(gx + int(gw * i / span), gy + gh - int(gh * v / top))
-               for i, v in enumerate(series)]
-        cv2.polylines(c, [np.array(pts, np.int32)], False, (120, 220, 90), 2, cv2.LINE_AA)
+        for values, colour, thick in ((walk, (110, 190, 255), 1),
+                                      (head, (120, 220, 90), 2)):
+            pts = [(gx + int(gw * i / span), gy + gh - int(gh * v / top))
+                   for i, v in enumerate(values)]
+            cv2.polylines(c, [np.array(pts, np.int32)], False, colour, thick, cv2.LINE_AA)
         cv2.circle(c, pts[-1], 3, (120, 220, 90), -1)
-    text(c, f"0 s", (gx, gy + gh + 14), 0.34, DIM, 1)
+    text(c, "0 s", (gx, gy + gh + 14), 0.34, DIM, 1)
     text(c, f"{total_s:.0f} s", (gx + gw - 24, gy + gh + 14), 0.34, DIM, 1)
+    text(c, "headcount", (gx + gw - 176, gy - 8), 0.34, (120, 220, 90), 1)
+    text(c, "walking", (gx + gw - 74, gy - 8), 0.34, (110, 190, 255), 1)
 
-    # ---- zone dwell
-    text(c, "PERSON-SECONDS BY AREA", (zx, 144), 0.38, MUTED, 1)
-    _bars(c, zx, 166, 150, stats["zone_rows"], stats["zone_total"])
-    text(c, "PERSON-SECONDS IN MARKED PALLET LANES", (zx, 236), 0.38, MUTED, 1)
-    _bars(c, zx, 258, 150, stats["lane_rows"], stats["zone_total"], WARN)
+    # where the time goes
+    text(c, "WHERE THE TIME GOES", (zx, 144), 0.38, MUTED, 1)
+    _bars(c, zx, 166, 150, stats["zone_rows"], unit="%", full=100.0)
+    text(c, "TIME INSIDE MARKED PALLET LANES", (zx, 236), 0.38, MUTED, 1)
+    _bars(c, zx, 258, 150, stats["lane_rows"], WARN)
 
-    # ---- live table
+    # per-person table
     cv2.line(c, (tx - 40, 136), (tx - 40, PANEL_H - 34), RULE, 1)
-    text(c, "LIVE TRACKS", (tx, 144), 0.38, MUTED, 1)
-    cols = [0, 60, 150, 250, 330, 420]
-    for i, hname in enumerate(["ID", "HEIGHT", "SPEED", "VIEWS", "IN VIEW", "AREA"]):
+    text(c, "ON THE FLOOR NOW    P person / R machine", (tx, 144), 0.38, MUTED, 1)
+    cols = [0, 62, 152, 246, 330, 420]
+    for i, hname in enumerate(["ID", "ON FLOOR", "WALKED", "WALKING", "LANE", "AREA"]):
         text(c, hname, (tx + cols[i], 166), 0.34, DIM, 1)
     cv2.line(c, (tx, 172), (width - 18, 172), RULE, 1)
     for r, row in enumerate(live_rows[:MAX_ROWS]):
         yy = 190 + r * 21
         colour = colour_for(row["gid"], row["label"])
         text(c, row["tag"], (tx + cols[0], yy), 0.42, colour, 1)
-        text(c, row["height"], (tx + cols[1], yy), 0.40, INK, 1)
-        text(c, row["speed"], (tx + cols[2], yy), 0.40, INK, 1)
-        text(c, row["views"], (tx + cols[3], yy), 0.40, INK, 1)
-        text(c, row["seen"], (tx + cols[4], yy), 0.40, INK, 1)
+        text(c, row["seen"], (tx + cols[1], yy), 0.40, INK, 1)
+        text(c, row["walked"], (tx + cols[2], yy), 0.40, INK, 1)
+        text(c, row["moving"], (tx + cols[3], yy), 0.40, INK, 1)
+        text(c, row["lane"], (tx + cols[4], yy), 0.40,
+             WARN if row["lane"] != "-" else DIM, 1)
         text(c, row["zone"], (tx + cols[5], yy), 0.38, MUTED, 1)
     if len(live_rows) > MAX_ROWS:
         text(c, f"+{len(live_rows) - MAX_ROWS} more",

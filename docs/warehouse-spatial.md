@@ -142,10 +142,14 @@ a **known floor** has one unknown left, and the calibration supplies it.
   This is what makes a distant, grazing-angle observation count for less when
   cameras disagree.
 
-Two failure modes are detected instead of averaged in: a box clipped by the
-bottom or the sides of the frame has no visible feet, so the position is wrong
-and the observation is dropped; a box clipped at the top has no visible head, so
-only the height is discarded.
+Clipping is handled by *which* edge it happens at, and getting that wrong was a
+visible defect in the first version of this case: boxes touching any edge were
+dropped, so a person walking at the side of a view carried no box at all while
+the panel still counted them. Only the **bottom** edge destroys the measurement —
+there the feet are off-frame and the lowest pixel is not the floor contact, so
+the observation goes. A **side** clip keeps the feet and only pulls the box's
+horizontal centre inwards, so it is kept at a third of the weight. A **top** clip
+costs only the height.
 
 ### 3. Fusion — one identity per person
 
@@ -188,10 +192,52 @@ grid of image points is back-projected onto the floor and hulled.
   Kept deliberately: a box standing correctly on a person a camera did not detect
   is the clearest evidence the fusion is working, and labelling it differently
   means the picture never implies a detection that did not happen.
-- **Rings on the eagle view** — one extra ring per additional camera that agreed
-  the object is there.
+- **Rings on the plan** — one extra ring per additional camera that agreed the
+  object is there.
+- **Warm blobs on the plan** — cumulative traffic density, the heat map.
 - **Green tint on the floor** — how many of the four cameras cover that spot.
   Overlap is what makes fusion possible, so where it is thin is worth seeing.
+
+---
+
+## The operational readout
+
+The panel answers the three questions a shift supervisor asks, in that order.
+Detector and tracker diagnostics are not on it — they live in the JSON summary,
+because a number nobody can act on is clutter on a wall display.
+
+### 1. Is the labour being spent well?
+
+| | | Why it is the number |
+|---|---:|---|
+| Headcount, mean / peak | **3.87 / 4** | staffing actually present, not rostered |
+| Time spent walking | **44.7 %** of person-time | travel is the classic non-value-adding activity; halving it is what a slotting review is for |
+| Travel rate | **1,263 m** per person-hour | **≈ 10.1 km per person per 8 h shift** at this pace |
+| Time by area | racking **52.1 %** · staging **37.7 %** · walkway **10.2 %** | where the shift actually went |
+
+### 2. Is anyone where they should not be?
+
+| | | |
+|---|---:|---|
+| Pallet-lane entries | **8** | crossings of a marked drop lane, not frames inside one |
+| Time inside marked lanes | **13.3 s** (11.5 % of person-time) | lane 1 took 12.2 s of it, lane 2 none |
+| Near misses under 1.5 m | **18 events**, 6.0 s total | a person inside 1.5 m of a moving machine |
+| Closest approach | **0.40 m** | the worst single moment in the clip |
+
+Entries and events rather than seconds is the whole point of this block. "13
+seconds in a pallet lane" reads as nothing; "eight separate crossings in thirty
+seconds, one of them within 40 cm of a moving machine" is a toolbox-talk.
+
+### 3. Where is the floor being used?
+
+The heat map on the plan is the answer, and it is cumulative person-seconds per
+square metre rather than a count of visits. Two hot spots form inside the
+staging block within 30 seconds — that is where a layout change would pay.
+
+**Extrapolations are labelled as extrapolations.** A 30-second sample cannot
+observe a shift. The per-hour and per-shift figures are stated as *rates implied
+at this pace*, carry that caveat in the JSON, and are not presented as
+measurements.
 
 ---
 
@@ -199,11 +245,26 @@ grid of image points is back-projected onto the floor and hulled.
 
 | Figure | Rests on |
 |---|---|
-| Headcount, distinct people | detection **and** cross-camera identity |
+| Headcount | detection **and** cross-camera identity |
 | Position, height | geometry alone — the calibration and "the box bottom is the feet" |
-| Time by area, time in pallet lanes | position, plus zone outlines read off the floor paint |
-| Distance walked, speed | position **and** identity holding over time, **and** smoothing |
-| Nearest person-to-robot approach | position and class |
+| Time by area, lane entries | position, plus zone outlines read off the floor paint |
+| Distance walked, walking share | position **and** identity holding over time, **and** smoothing |
+| Near misses | position and class |
+
+Two of these deserve their measurement rule spelled out, because the answer
+moves with it.
+
+**Walking, live, is displacement over a 0.6 s window — not the sum of the steps
+inside it.** Summing steps accumulates position noise and reports a stationary
+person as walking; the first version of this panel did exactly that and drew a
+"walking" line identical to the headcount line, which is how the bug was found.
+Straight-line displacement of someone standing still stays near zero however
+noisy each sample is.
+
+**A lane entry is a boundary crossing, not a frame inside the lane.** One person
+working in a lane for ten seconds is one event; ten people stepping through it
+is ten. Only the second is a habit worth addressing, and only the event count
+tells them apart.
 
 Speed and distance need the smoothing, and the reason is arithmetic rather than
 taste. A floor position carries roughly 0.3 m of error; differencing samples
@@ -224,16 +285,16 @@ they survive a change of camera.
 
 ## Results
 
-30 seconds, four cameras, 1,200 inferences on CPU at 2.97 s per fused frame.
+30 seconds, four cameras, 1,200 inferences on CPU at about 3.5 s per fused frame.
 
 ### Against the dataset's own 3D ground truth
 
 | | |
 |---|---|
-| **Localisation error, median** | **0.329 m** |
-| Localisation error, mean / p95 | 0.293 m / 0.457 m |
-| Recall | **0.9756** (878 of 900 person-boxes matched inside a 1 m gate) |
-| Precision | 0.7403 |
+| **Localisation error, median** | **0.311 m** |
+| Localisation error, mean / p95 | 0.285 m / 0.449 m |
+| Recall | **0.9833** (885 of 900 person-boxes matched inside a 1 m gate) |
+| Precision | 0.7424 |
 | Global IDs per real person | **1.0** — no identity switches in 30 s |
 | Headcount error per frame | **+0.95 mean** |
 
@@ -255,11 +316,10 @@ of averaging removes.
 
 | | |
 |---|---|
-| Views contributing per person, mean | **2.2** of 4 |
-| Cross-camera agreement | **0.26 m** median spread within a fused group |
-| Observations merged away | 1,616 |
-| Identities dropped as single-view | 6 |
-| Associations recovered by track identity rather than distance | 12 |
+| Views contributing per person, mean | **2.71** of 4 |
+| Cross-camera agreement | **0.267 m** median spread within a fused group |
+| Observations merged away | 2,240 |
+| Identities dropped as single-view | 5 |
 
 Without fusion these four cameras would report their own headcounts and there
 would be no way to add them up. The agreement figure is the honest measure of
@@ -270,13 +330,11 @@ sides put them 0.26 m apart.
 
 | | |
 |---|---|
-| On the floor, mean / max | 3.78 / 4 |
+| On the floor, mean / max | 3.87 / 4 |
 | Measured height, median | **1.86 m** |
-| Floor walked | **45.1 m** in 30 s |
-| Walking speed, mean | 0.38 m/s |
-| Nearest person-to-robot approach | **0.59 m**, 1.4 s spent within 1.5 m |
-| Person-seconds by area | racking bay 60.5 · staging 41.6 · walkway 11.3 |
-| Person-seconds in marked pallet lanes | lane 1 **11.0** · lane 3 **13.0** · lane 2 0 |
+| Floor walked | **42.0 m** in 30 s across four people |
+| Walking speed, mean | 0.35 m/s |
+| Person-seconds in marked pallet lanes | lane 1 **12.2** · lane 3 **1.1** · lane 2 0 |
 
 ### Height, measured per identity
 
@@ -285,9 +343,9 @@ the 3D estimate a reader can check against their own intuition:
 
 | Identity | Measured | True | Error |
 |---|---:|---:|---:|
-| P4 | 1.865 m | 1.84 m | +0.03 |
-| P6 | 1.863 m | 1.82 m | +0.04 |
-| P7 | 2.132 m | 2.03 m | +0.10 |
+| P4 | 1.866 m | 1.84 m | +0.03 |
+| P7 | 1.863 m | 1.82 m | +0.04 |
+| P6 | 1.961 m | 2.03 m | -0.07 |
 | P2 *(the GR1T2 humanoid)* | 1.728 m | 1.65 m | +0.08 |
 
 A median over a whole track, across up to four views, lands within **0.03–0.10 m**

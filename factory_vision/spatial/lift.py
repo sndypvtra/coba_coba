@@ -17,10 +17,12 @@ From there:
                    count for less than a near, steep-angle one when several
                    cameras disagree
 
-The assumption fails in exactly two ways, and both are detectable rather than
-silent: a box clipped by the bottom or side of the frame has no visible feet, so
-the floor point is wrong; a box clipped by the top has no visible head, so the
-height is wrong. Each is rejected on its own terms instead of being averaged in.
+The assumption fails in three ways, and each is handled on its own terms rather
+than lumped together: a box clipped by the *bottom* of the frame has no visible
+feet, so the floor point is wrong and the observation goes; a box clipped by a
+*side* keeps its feet but has its horizontal centre pulled inwards, so it is
+kept at reduced weight; a box clipped by the *top* has no visible head, so only
+the height is discarded.
 """
 
 from __future__ import annotations
@@ -32,6 +34,10 @@ import numpy as np
 from factory_vision.spatial.calibration import Camera
 
 EDGE_MARGIN = 3          # px; a box within this of a frame edge counts as clipped
+# How much less a side-clipped observation is trusted. The bias is half the
+# missing width, so it grows with how much of the person is off-frame; a flat
+# factor is the conservative reading of an unknown amount.
+SIDE_CLIP_PENALTY = 3.0
 
 
 @dataclass
@@ -48,6 +54,7 @@ class Observation:
     height: float = float("nan")
     precision_m: float = float("nan")   # world metres per image pixel here
     height_clipped: bool = False
+    side_clipped: bool = False
     reject: str = ""
 
     @property
@@ -85,9 +92,18 @@ def lift(cam: Camera, box: np.ndarray, conf: float, label: str, track_id: int,
     x1, y1, x2, y2 = [float(v) for v in box]
     obs = Observation(cam.sensor_id, track_id, label, float(conf), (x1, y1, x2, y2))
 
-    if x1 <= EDGE_MARGIN or x2 >= cam.width - EDGE_MARGIN or y2 >= cam.height - EDGE_MARGIN:
-        obs.reject = "feet outside frame"
+    # Clipping at the bottom and clipping at the sides are not the same failure,
+    # and treating them as one threw away every person standing at the edge of a
+    # view - visibly, in tiles where a walking figure carried no box at all.
+    # Only the bottom edge destroys the measurement: there the feet are outside
+    # the frame and the lowest pixel is not the floor contact. A side clip keeps
+    # the feet and only shifts the box's horizontal centre inwards, which is a
+    # reason to trust the observation less rather than to discard it - and with
+    # several cameras on the same person the unclipped views outvote it.
+    if y2 >= cam.height - EDGE_MARGIN:
+        obs.reject = "feet below frame"
         return obs
+    obs.side_clipped = x1 <= EDGE_MARGIN or x2 >= cam.width - EDGE_MARGIN
 
     fx, fy = (x1 + x2) / 2.0, y2
     gx, gy = cam.ground(fx, fy)
@@ -101,7 +117,8 @@ def lift(cam: Camera, box: np.ndarray, conf: float, label: str, track_id: int,
         return obs
 
     obs.x, obs.y = gx, gy
-    obs.precision_m = ground_precision(cam, fx, fy)
+    obs.precision_m = ground_precision(cam, fx, fy) * (
+        SIDE_CLIP_PENALTY if obs.side_clipped else 1.0)
 
     h = cam.height_at(gx, gy, y1)
     lo, hi = height_bounds

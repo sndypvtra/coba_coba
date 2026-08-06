@@ -57,15 +57,31 @@ def main() -> None:
 
     summary = run_case(cfg.name, max_frames=args.max_frames, progress=args.progress)
     f, fu = summary["filtering"], summary["fusion"]
+    ops, prox = summary["operations"], summary["proximity"]
     val = summary.get("validation")
 
     lines = [
+        ("-- what the floor did --", ""),
+        ("Headcount, mean / peak",
+         f"{ops['headcount_mean']} / {ops['headcount_peak']}"),
+        ("Time spent walking", f"{ops['walking_share_pct']}% of person-time"),
+        ("Travel rate", f"{ops['travel_m_per_person_hour']:.0f} m per person-hour"),
+        ("  implied over an 8 h shift",
+         f"{ops['implied_per_8h_shift']['walk_km_per_person']} km per person"),
+        ("Time by area", "  ".join(f"{k} {v}%"
+                                   for k, v in ops["time_by_area_pct"].items())),
+        ("Pallet-lane entries",
+         f"{ops['pallet_lane_entries']} ({ops['pallet_lane_seconds']} s inside, "
+         f"{ops['pallet_lane_share_pct']}% of person-time)"),
+        ("Near misses under "
+         f"{prox.get('near_miss_threshold_m', 1.5)} m",
+         f"{prox.get('near_miss_events', 0)} events, "
+         f"{prox.get('near_miss_seconds', 0)} s, closest "
+         f"{prox.get('nearest_approach_m', '-')} m"),
+        ("-- how well it was measured --", ""),
         ("Distinct people", summary["distinct_people"]),
-        ("Distinct humanoid robots", summary["distinct_robots"]),
-        ("On the floor, mean / max", f"{summary['occupancy_mean']} / {summary['occupancy_max']}"),
+        ("Machine identities", summary["distinct_robots"]),
         ("Measured height, median", f"{summary['person_height_median_m']} m"),
-        ("Floor walked", f"{summary['floor_walked_m']} m"),
-        ("Walking speed, mean", f"{summary['walking_speed_mean_ms']} m/s"),
         ("Views per person, mean", fu["mean_views_per_person"]),
         ("Cross-camera agreement", f"{fu['cross_camera_agreement_m']} m"),
         ("Observations fused away", fu["observations_merged"]),

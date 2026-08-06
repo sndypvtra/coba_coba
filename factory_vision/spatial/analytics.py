@@ -30,6 +30,12 @@ from factory_vision.spatial.config import SceneConfig, Zone
 from factory_vision.spatial.fuse import GlobalTrack
 
 SMOOTH_S = 0.5
+# Above this the person is travelling rather than working at a station. 0.15 m/s
+# is well under a walking pace (~1.2 m/s) and well above the residual jitter of
+# a smoothed track, which sits around 0.05 m/s on a standing person here.
+MOVING_MS = 0.15
+# Person-to-vehicle separation below which a warehouse would log a near miss.
+NEAR_MISS_M = 1.5
 
 
 # ------------------------------------------------------------------- zones
@@ -101,6 +107,8 @@ class PersonReport:
     path_m: float
     speed_mean: float
     speed_max: float
+    moving_share: float
+    lane_entries: int
     cameras_mean: float
     cameras_max: int
     single_camera_share: float
@@ -118,39 +126,74 @@ class PersonReport:
         return d
 
 
-def motion(track: GlobalTrack, fps: float) -> tuple[float, float, float]:
-    """Path length, mean speed and 95th-percentile speed, all smoothed.
+def motion(track: GlobalTrack, fps: float) -> tuple[float, float, float, float]:
+    """Path length, mean speed, 95th-percentile speed, and share of time moving.
 
     Kept separate from `describe` because the live panel needs it on every
     identity on every frame, while the zone breakdown is only needed once at the
     end. Folding the two together made the render loop re-run a point-in-polygon
     test over every sample of every track's history, every frame.
+
+    The moving share is the operational one. In a warehouse, walking is the
+    classic non-value-adding activity: the same picker doing the same work with
+    less travel is the whole point of a slotting review, and "what fraction of
+    the shift was spent walking" is the number that starts that conversation.
     """
     window = max(1, int(round(SMOOTH_S * fps)))
     sx, sy = smooth_track(track.xs, track.ys, window)
     if len(sx) < 2:
-        return 0.0, 0.0, 0.0
+        return 0.0, 0.0, 0.0, 0.0
     step = np.linalg.norm(np.diff(np.stack([sx, sy], 1), axis=0), axis=1)
     dt = np.diff(np.asarray(track.frames, float)) / fps
     speeds = step / np.maximum(dt, 1e-6)
     # A 95th percentile rather than the maximum: one bad frame should not become
     # the headline "top speed".
     return (float(step.sum()), float(speeds.mean()),
-            float(np.percentile(speeds, 95)))
+            float(np.percentile(speeds, 95)),
+            float((speeds > MOVING_MS).mean()))
+
+
+def current_speed(track: GlobalTrack, fps: float, window_s: float = 0.6) -> float:
+    """How fast this person is going *now*, over a short trailing window.
+
+    Displacement across the window divided by its duration, not the sum of the
+    steps inside it. The difference matters: summing steps accumulates the
+    position noise and reports a stationary person as walking, while the
+    straight-line displacement of someone standing still stays near zero however
+    noisy each individual sample is.
+    """
+    n = len(track.xs)
+    if n < 2:
+        return 0.0
+    k = max(2, int(round(window_s * fps)))
+    xs, ys, fr = track.xs[-k:], track.ys[-k:], track.frames[-k:]
+    dt = (fr[-1] - fr[0]) / fps
+    if dt <= 0:
+        return 0.0
+    return float(np.hypot(xs[-1] - xs[0], ys[-1] - ys[0]) / dt)
 
 
 def describe(track: GlobalTrack, cfg: SceneConfig) -> PersonReport:
     fps = cfg.out_fps
-    path, smean, smax = motion(track, fps)
+    path, smean, smax, moving = motion(track, fps)
 
     per_sample = 1.0 / fps
     zone_s: dict[str, float] = {}
     restr_s: dict[str, float] = {}
+    # Entries, not just seconds. "24 seconds in a pallet lane" reads very
+    # differently depending on whether it was one long stay while working or
+    # eight separate walk-throughs, and only the second is a habit worth
+    # addressing.
+    entries, was_in = 0, False
     for x, y in zip(track.xs, track.ys):
         area = area_zone(x, y, cfg.zones)
         zone_s[area] = zone_s.get(area, 0.0) + per_sample
-        for name in restricted_hits(x, y, cfg.zones):
+        hits = restricted_hits(x, y, cfg.zones)
+        for name in hits:
             restr_s[name] = restr_s.get(name, 0.0) + per_sample
+        if hits and not was_in:
+            entries += 1
+        was_in = bool(hits)
 
     cams = np.asarray(track.cameras, float)
     multi = [s for s, c in zip(track.spreads, track.cameras) if c > 1]
@@ -165,6 +208,8 @@ def describe(track: GlobalTrack, cfg: SceneConfig) -> PersonReport:
         path_m=path,
         speed_mean=smean,
         speed_max=smax,
+        moving_share=moving,
+        lane_entries=entries,
         cameras_mean=float(cams.mean()),
         cameras_max=int(cams.max()),
         single_camera_share=float((cams == 1).mean()),
@@ -245,26 +290,42 @@ def validate(per_frame: dict[int, list[tuple[int, float, float, str]]],
 
 def proximity(per_frame: dict[int, list[tuple[int, float, float, str]]],
               fps: float) -> dict:
-    """Closest a person came to a humanoid robot, frame by frame.
+    """Person-to-machine separation, reported the way a safety officer counts it.
 
-    A warehouse's own reason to want this: the robots move, the people move, and
-    the interesting number is not where either was but how close they got.
+    Seconds of exposure alone understate the risk and overstate the drama: what
+    gets logged and investigated is an *event* - one approach inside the
+    threshold, from first breach to recovery. So both are reported, and the
+    events are counted per person-machine pair so that two people converging on
+    one robot is two events rather than one.
     """
-    mins, breaches = [], 0
+    mins, breach_frames = [], 0
+    events, open_pairs = 0, set()
     for frame, ests in sorted(per_frame.items()):
-        ppl = [(e[1], e[2]) for e in ests if e[3] == "person"]
-        bots = [(e[1], e[2]) for e in ests if e[3] != "person"]
+        ppl = [(e[0], e[1], e[2]) for e in ests if e[3] == "person"]
+        bots = [(e[0], e[1], e[2]) for e in ests if e[3] != "person"]
         if not ppl or not bots:
+            open_pairs.clear()
             continue
-        d = min(float(np.hypot(p[0] - b[0], p[1] - b[1])) for p in ppl for b in bots)
-        mins.append(d)
-        if d < 1.5:
-            breaches += 1
+        now = set()
+        best = None
+        for pid, px, py in ppl:
+            for bid, bx, by in bots:
+                d = float(np.hypot(px - bx, py - by))
+                best = d if best is None else min(best, d)
+                if d < NEAR_MISS_M:
+                    now.add((pid, bid))
+        mins.append(best)
+        if now:
+            breach_frames += 1
+        events += len(now - open_pairs)
+        open_pairs = now
     if not mins:
         return {"frames_with_both": 0}
     return {
         "frames_with_both": len(mins),
+        "near_miss_threshold_m": NEAR_MISS_M,
+        "near_miss_events": events,
+        "near_miss_seconds": round(breach_frames / fps, 1),
         "nearest_approach_m": round(float(np.min(mins)), 2),
         "median_separation_m": round(float(np.median(mins)), 2),
-        "seconds_within_1m5": round(breaches / fps, 1),
     }
