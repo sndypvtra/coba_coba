@@ -179,9 +179,15 @@ CLASSES = {
     #   floor 0.95 m, reject   5 people   1.33
     #   no height rejection    6 people   2.33
     #
-    # A box that measures a metre is usually not a crouching worker; it is a
-    # person-shaped box drawn round stacked goods, and letting those in breaks
-    # the identity of everyone else. The crouching worker stays a known miss.
+    # The extra identity at 0.95 m survives the cleanup downstream of it: over
+    # the 60 frames it was measured on, same-camera world-space deduplication
+    # merged nothing, so it is not a second box on a real person but a
+    # person-shaped object corroborated by two views. (That deduplication is not
+    # idle in general - over the full 300 frames it merges 94 observations.)
+    #
+    # What the crouching worker gets instead is a *dashed* box in the view that
+    # missed them, drawn from the identity another camera is holding: still
+    # tracked, still on the plan, and marked as inferred rather than detected.
     "person":   {"prompt": "person",          "height": (1.20, 2.30),
                  "footprint": (0.60, 0.46), "machine": False, "goods": False,
                  "height_reject": True, "conf": 0.15, "min_views": 2},

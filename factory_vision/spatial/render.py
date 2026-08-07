@@ -128,11 +128,13 @@ def draw_box3d(tile, cam: Camera, x, y, h, w, l, yaw, colour, sx, sy,
             thick = 2 if (a < 4 and b < 4) else 1
             cv2.line(tile, tuple(pts[a]), tuple(pts[b]), colour, thick, cv2.LINE_AA)
     else:
-        faint = tuple(int(0.45 * c + 0.55 * 30) for c in colour)
-        for a, b in ((0, 1), (1, 2), (2, 3), (3, 0)):
-            cv2.line(tile, tuple(pts[a]), tuple(pts[b]), faint, 1, cv2.LINE_AA)
-        for a, b in ((0, 4), (2, 6)):
-            cv2.line(tile, tuple(pts[a]), tuple(pts[b]), faint, 1, cv2.LINE_AA)
+        # Dashed, in the identity's own colour rather than a grey ghost. The
+        # first version drew these at 45% brightness and they were invisible,
+        # which read as "this camera has lost the person" when what it actually
+        # means is "another camera has them and this is where they are". Dashes
+        # carry the distinction without hiding the box.
+        for a, b in BOX_EDGES:
+            _dashed(tile, pts[a], pts[b], colour, 1 if a >= 4 or b >= 4 else 2)
 
     if label:
         scale = 0.40 if observed else 0.34
@@ -143,8 +145,26 @@ def draw_box3d(tile, cam: Camera, x, y, h, w, l, yaw, colour, sx, sy,
             cv2.rectangle(tile, (left, ly - th - 4), (left + tw + 8, ly + 2), colour, -1)
             text(tile, label, (left + 4, ly - 2), scale, (16, 16, 16), 1)
         else:
-            text(tile, label, (left + 4, ly - 2), scale, faint, 1)
+            cv2.rectangle(tile, (left, ly - th - 4), (left + tw + 8, ly + 2), (18, 18, 20), -1)
+            cv2.rectangle(tile, (left, ly - th - 4), (left + tw + 8, ly + 2), colour, 1)
+            text(tile, label, (left + 4, ly - 2), scale, colour, 1)
     return pts
+
+
+def _dashed(img, p0, p1, colour, thick=1, dash=6, gap=5):
+    """A dashed straight line, which OpenCV does not provide."""
+    p0, p1 = np.asarray(p0, float), np.asarray(p1, float)
+    length = float(np.hypot(*(p1 - p0)))
+    if length < 1:
+        return
+    step = (p1 - p0) / length
+    t = 0.0
+    while t < length:
+        a = p0 + step * t
+        b = p0 + step * min(t + dash, length)
+        cv2.line(img, tuple(a.astype(int)), tuple(b.astype(int)),
+                 colour, thick, cv2.LINE_AA)
+        t += dash + gap
 
 
 def _footprint(cfg, kind: str, observed_width: float):

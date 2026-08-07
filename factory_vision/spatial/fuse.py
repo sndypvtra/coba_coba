@@ -113,6 +113,35 @@ class GlobalTrack:
         return float(np.linalg.norm(np.diff(p, axis=0), axis=1).sum())
 
 
+def dedup_same_camera(obs: list[Observation], radius: float) -> tuple[list[Observation], int]:
+    """Drop a second box on the same object, from the same camera, in world space.
+
+    Image space cannot separate these: a worker bent over a pallet produces one
+    box on the torso and one on the whole body, overlapping at an IoU no
+    threshold can act on. The *floor* can. The two land about 0.3 m apart, while
+    the two nearest different people in this warehouse are 8.07 m apart, so a
+    sub-metre gate has three orders of magnitude of headroom and no way to merge
+    two real people.
+
+    Doing it here rather than in the cross-camera step is deliberate: that step
+    must never merge two observations from one camera, because in general a
+    camera can see two people in line with the lens. Same-camera merging is only
+    safe once the geometry says they are standing in the same square metre.
+    """
+    live = sorted((o for o in obs if o.ok), key=lambda o: -o.weight)
+    kept: list[Observation] = []
+    dropped = 0
+    for o in live:
+        twin = next((k for k in kept
+                     if k.camera == o.camera and k.label == o.label
+                     and np.hypot(k.x - o.x, k.y - o.y) < radius), None)
+        if twin is None:
+            kept.append(o)
+        else:
+            dropped += 1
+    return kept, dropped
+
+
 def cluster_frame(obs: list[Observation], radius: float) -> list[Cluster]:
     """Group same-instant observations that describe the same object.
 
@@ -172,8 +201,11 @@ def _recompute(c: Cluster) -> None:
 class Fuser:
     """Assigns and maintains global identities across frames."""
 
-    def __init__(self, fuse_radius: float, max_age: int, assoc_radius: float | None = None):
+    def __init__(self, fuse_radius: float, max_age: int, assoc_radius: float | None = None,
+                 same_camera_radius: float = 0.75):
         self.fuse_radius = fuse_radius
+        self.same_camera_radius = same_camera_radius
+        self.same_camera_dropped = 0
         self.assoc_radius = assoc_radius or fuse_radius * 2.0
         self.max_age = max_age
         self.tracks: dict[int, GlobalTrack] = {}
@@ -182,6 +214,8 @@ class Fuser:
         self.key_recoveries = 0  # associations that distance alone would have missed
 
     def update(self, frame: int, obs: list[Observation]) -> list[Cluster]:
+        obs, dropped = dedup_same_camera(obs, self.same_camera_radius)
+        self.same_camera_dropped += dropped
         clusters = cluster_frame(obs, self.fuse_radius)
         self.merges += sum(len(c.members) - 1 for c in clusters)
 

@@ -378,6 +378,7 @@ def process(cfg: SceneConfig, args) -> dict:
                                   lane_entries, series, fps),
         "fusion": {
             "observations_merged": fuser.merges,
+            "same_camera_duplicates_dropped": fuser.same_camera_dropped,
             "cross_camera_agreement_m": _agreement(reports),
             "mean_views_per_person": round(float(np.mean([r.cameras_mean for r in people])), 2)
                                      if people else None,
