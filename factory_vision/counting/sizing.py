@@ -236,9 +236,14 @@ def measure(mask: np.ndarray, depth: np.ndarray, K: Intrinsics, belt: BeltPlane,
     # depth accuracy. Leaving it uncorrected is not the neutral choice it looks
     # like - it puts a carton that prints 720 mm on its side into the wrong size
     # class, which is a business output, not a rounding error.
-    length, width, height = (float(length) * scale * footprint_scale[0],
-                             float(width) * scale * footprint_scale[1],
-                             float(height) * scale)
+    length, width = sorted((float(length) * scale * footprint_scale[0],
+                            float(width) * scale * footprint_scale[1]),
+                           reverse=True)
+    height = float(height) * scale
+    # Re-sorted because the two factors differ: on a nearly square footprint the
+    # larger correction can overtake the smaller side and print 47 x 49 in a
+    # column headed long x short. It renames the pair and changes neither the
+    # volume nor the size class, both of which are order-free.
 
     # Plausibility, against the belt rather than against a guess. A parcel
     # cannot be wider than the lane it rides in, and something measuring a

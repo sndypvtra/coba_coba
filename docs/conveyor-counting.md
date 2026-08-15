@@ -393,9 +393,9 @@ plus 7,373 ms on every fifth frame for depth.
 | | |
 |---|---|
 | Counted | **8**, reverse crossings 0 — matching the slit-scan exactly |
-| Tracks / parcels dimensioned | 26 / 21, of which **17** are measured on ≥15 frames |
+| Tracks / parcels dimensioned | 26 / 20, of which **16** are measured on ≥15 frames |
 | Detections rejected on geometry | 7,602 |
-| Total volume dimensioned | 626 L |
+| Total volume dimensioned | 1,027 L |
 | Belt-plane fit | 8.4 mm rms over 34,905 px |
 | Intrinsics | fx 1372, hFOV 69.9°, frame-to-frame spread 0.8%, square-pixel error 0.4% |
 
@@ -408,10 +408,33 @@ rest as provisional.
 
 Against the two cartons that print their own dimensions, `720 × 500 × 340 mm`:
 
-| Carton | Height | Footprint long | Footprint short |
-|---|:--:|:--:|:--:|
-| brown, over its whole pass | 366 mm (**+7.6%**) | 579 mm (−20%) | 288 mm (−42%) |
-| white, locked at the line | 341 mm (**+0.3%**) | 637 mm (−12%) | 338 mm (−32%) |
+| Carton | Height | Footprint long | Footprint short | Class |
+|---|:--:|:--:|:--:|:--:|
+| brown, locked | 366 mm (**+7.6%**) | 687 mm (−4.6%) | 460 mm (−8.0%) | **L** ✓ |
+| white, locked | 346 mm (**+1.8%**) | 663 mm (−7.9%) | 451 mm (−9.8%) | **L** ✓ |
+
+Those footprints are corrected. Before the correction they read 579 and 637 mm
+long — a systematic **−19%** — which put a 720 mm carton one side of the 600 mm
+M/L boundary and into the wrong size class. Describing that as "a lower bound"
+and leaving it, which is what an earlier version of this document did, is not
+the neutral choice it looks like: the class is a business output and decides how
+a parcel is handled.
+
+The correction is `footprint_scale`, measured on the same two cartons and
+applied to the two horizontal axes only:
+
+| | long | short |
+|---|:--:|:--:|
+| brown carton | 579 → ×1.244 | 288 → ×1.736 |
+| white carton | 637 → ×1.130 | 338 → ×1.479 |
+| **applied** | **×1.187** | **×1.608** |
+
+It is a **weaker** calibration than the height one and is reported as such.
+Fitting it on one carton and applying it to the other transfers to **±10%** on
+the long side and **±16%** on the short, against +0.15% for height — because how
+much of a parcel is hidden from a single camera depends on how it happens to be
+sitting, not on the depth model. A stated ±10% still beats a silent −19% when
+the number decides handling.
 
 Height is accurate to a few per cent and the footprint is not, which is exactly
 what the geometry predicts: the base sits on a plane fitted from 35,000 pixels
