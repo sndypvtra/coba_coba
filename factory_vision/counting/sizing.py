@@ -166,18 +166,28 @@ class ParcelSize:
     notes: list[str] = field(default_factory=list)
 
     @property
+    def longest_m(self) -> float:
+        return max(self.length_m, self.width_m, self.height_m)
+
+    @property
     def class_name(self) -> str:
-        """The size bucket a parcel hub would sort into, by longest side."""
-        longest = max(self.length_m, self.width_m, self.height_m)
-        if longest < 0.30:
+        """The size bucket a parcel hub sorts into, by longest side.
+
+        The boundaries are the ordinary 300 mm and 600 mm ones. They are only
+        meaningful because `footprint_scale` has already corrected the
+        single-camera footprint bias: without it a 720 mm carton measures 579 and
+        lands in M, one side of a boundary that decides how it is handled.
+        """
+        if self.longest_m < 0.30:
             return "S"
-        if longest < 0.60:
+        if self.longest_m < 0.60:
             return "M"
         return "L"
 
 
 def measure(mask: np.ndarray, depth: np.ndarray, K: Intrinsics, belt: BeltPlane,
-            scale: float = 1.0, min_points: int = 400) -> ParcelSize | None:
+            scale: float = 1.0, footprint_scale: tuple[float, float] = (1.0, 1.0),
+            min_points: int = 400) -> ParcelSize | None:
     """Measure one parcel from its mask.
 
     ``scale`` is the single number that turns this from a relative measurement
@@ -219,7 +229,15 @@ def measure(mask: np.ndarray, depth: np.ndarray, K: Intrinsics, belt: BeltPlane,
     # silently swaps the two sides for every parcel rotated past 45 degrees.
     length, width = max(a, b), min(a, b)
 
-    length, width, height = (float(length) * scale, float(width) * scale,
+    # `scale` fixes the depth model's global error and applies to all three axes.
+    # `footprint_scale` fixes something different and applies only to the two
+    # horizontal ones: a single camera sees the front of a parcel and not its
+    # back, so the footprint is short by an amount that has nothing to do with
+    # depth accuracy. Leaving it uncorrected is not the neutral choice it looks
+    # like - it puts a carton that prints 720 mm on its side into the wrong size
+    # class, which is a business output, not a rounding error.
+    length, width, height = (float(length) * scale * footprint_scale[0],
+                             float(width) * scale * footprint_scale[1],
                              float(height) * scale)
 
     # Plausibility, against the belt rather than against a guess. A parcel

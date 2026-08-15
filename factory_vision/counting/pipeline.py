@@ -270,7 +270,8 @@ def process(cfg: ClipConfig, args) -> dict:
                 keep = np.zeros(len(det), bool)
                 for i, mk in enumerate(masks):
                     size = (measure(mk.astype(np.uint8), last_depth,
-                                    depth_model.frame_K, belt, cfg.size_scale)
+                                    depth_model.frame_K, belt, cfg.size_scale,
+                                    cfg.footprint_scale)
                             if mk is not None else None)
                     keep[i] = on_belt(size, cfg.depth_corridor, cfg.belt_base_band)
                     frame_sizes.append(size)
@@ -488,6 +489,8 @@ def _dimension_summary(cfg, depth_model, belt, track_sizes, track_age,
         },
         "size_scale": round(cfg.size_scale, 4),
         "size_scale_note": cfg.size_scale_note,
+        "footprint_scale": list(cfg.footprint_scale),
+        "footprint_scale_note": cfg.footprint_scale_note,
         "depth_corridor_m": list(cfg.depth_corridor) if cfg.depth_corridor else None,
         "detections_outside_corridor": corridor_dropped,
         "parcels_measured": len(parcels),

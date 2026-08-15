@@ -76,6 +76,12 @@ class ClipConfig:
     # metric depth into absolute. See sizing.measure.
     size_scale: float = 1.0
     size_scale_note: str = ""
+    # Corrects the footprint's two horizontal axes only, as (long, short). A
+    # separate constant from size_scale because it fixes a different thing: not
+    # the depth model's accuracy, but the fact that one camera cannot see the
+    # back of a parcel.
+    footprint_scale: tuple[float, float] = (1.0, 1.0)
+    footprint_scale_note: str = ""
 
 
 # `motion` is the median per-frame displacement of *tracked objects* (not raw
@@ -249,6 +255,24 @@ CLIPS: list[ClipConfig] = [
         size_scale=340.0 / 277.4,
         size_scale_note=("one printed 720x500x340 mm carton (height 277.4 mm measured); "
                          "a second, unseen carton then reads 340.5 mm against 340"),
+        # The footprint needs its own correction, and it is a weaker one.
+        # Measured on the same two 720x500 cartons after size_scale:
+        #
+        #                       long        short
+        #   brown carton     579 -> x1.244  288 -> x1.736
+        #   white carton     637 -> x1.130  338 -> x1.479
+        #   applied          x1.187         x1.608
+        #
+        # Unlike the height calibration, which transferred between the two
+        # cartons to +0.15 %, this one transfers to only +-10 % on the long side
+        # and +-16 % on the short, because the amount of a parcel hidden from a
+        # single camera depends on how it happens to be sitting. That residual
+        # is real and is reported; what it replaces is a *systematic* -19 % and
+        # -37 %, which put a 720 mm carton in the M class. A stated +-10 % beats
+        # a silent -19 % when the number decides how a parcel is handled.
+        footprint_scale=(1.187, 1.608),
+        footprint_scale_note=("two 720x500x340 mm cartons; transfers between them "
+                              "to +-10% long, +-16% short"),
         extra_notes="static stack excluded in depth, not by an x-band",
     ),
 ]
