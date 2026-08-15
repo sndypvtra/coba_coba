@@ -98,7 +98,7 @@ they cross a line drawn with supervision.
 |:--:|---|---|:--:|:--:|
 | 1 | Citrus sorting line | `orange`, `round orange fruit` | 5 | 286 |
 | 2 | Tomato grading line | `tomato` | 16 | 212 |
-| 3 | Parcel unloading belt | `cardboard box`, `parcel`, `plastic bag`, `sports bag` | 7 | 511 |
+| 3 | Parcel unloading belt | `cardboard box`, `parcel`, `plastic bag`, `sports bag`, `styrofoam box` | 7 of 8 | 511 |
 
 ```bash
 python cases/case1_oranges_counting.py     # citrus line
@@ -139,6 +139,56 @@ belt, not from whatever happens to be visible in the frames you calibrate on.
 
 More, including the counting rules and threshold-tuning results:
 **[`docs/conveyor-counting.md`](docs/conveyor-counting.md)**
+
+</details>
+
+<details>
+<summary><b>Case 3 also measures each parcel</b> — distance, dimensions and volume from one camera</summary>
+
+<br>
+
+Counting a parcel is the easy half. The half a depot bills on is *how big it
+was*, and a fixed camera cannot answer that from pixels — the same carton covers
+four times the area at half the distance. [Depth Anything
+3](https://depth-anything-3.github.io) (ByteDance, Nov 2025) closes the gap.
+
+DA3 splits the problem across two checkpoints, and the pipeline uses both:
+`DA3METRIC-LARGE` returns *canonical* depth (metres ÷ focal length) and
+`DA3-LARGE` supplies the focal its camera decoder predicts. Multiplying them is
+DA3's own recipe — `metres = canonical × f / 300`. The useful consequence is
+that **distance inherits the focal's error but size does not**: a length is
+`pixels × Z / f` and `Z` already carries an `f`, so it cancels to
+`pixels × canonical / 300`.
+
+Sizes are measured against the **belt plane**, not the image axes — otherwise a
+carton at an angle reads wider than any of its sides. The plane is fitted once
+from a bare-belt depth map (a parcel always sits *on* the belt, so it is always
+nearer than the belt it hides; a high percentile across frames removes the
+traffic). Residual: **8.4 mm** over ~35,000 px.
+
+**One constant of calibration, validated on an object that did not set it.**
+Monocular metric depth is scale-accurate to ~20%, and geometry cannot fix an
+error that lives in the depth. Two cartons in this clip print
+`Ebat/Dimensions 720x500x340 mm` on the side:
+
+| | Frames | Measured height | After ×1.226 | True |
+|---|:--:|:--:|:--:|:--:|
+| White carton — sets the scale | 19 | 277.4 mm | — | 340 mm |
+| Brown carton — **never used to fit it** | 11 | 277.8 mm | **340.5 mm** | 340 mm |
+
+That says the scale *transfers between objects*. It does not say the depth is
+unbiased — both cartons are the same model at similar range. The honest
+per-frame error bar is the spread within one pass: **±11%**, which is why every
+size is a median over the parcel's whole crossing.
+
+**Depth also fixed something that had nothing to do with size.** The static
+stack of cartons at the back of the shot is the same colour, shape and pixel
+size as the traffic riding past it. No image threshold separates them, so the
+old config fenced them off with a hand-drawn `x > 0.34` band — which clipped
+real traffic at the same x and forced the confidence floor up to 0.15. In depth
+they are 1.4 m apart. With a **1.45–2.95 m corridor** doing that job the floor
+drops to **0.08**, which is what it takes to see the faint ones: the cream box
+crosses at conf 0.10, the dark parcel behind it at 0.12.
 
 </details>
 
@@ -270,6 +320,23 @@ python scripts/fetch_warehouse_scene.py   # case 6 only, ~520 MB from HuggingFac
 python cases/case6_warehouse_spatial.py
 ```
 
+Case 3 additionally needs Depth Anything 3, which has to be installed
+**without its dependency list** — its `pyproject` pins `numpy<2` and pulls
+`opencv-python`, `xformers` and `open3d`, which would downgrade numpy and
+OpenCV out from under the rest of the repo:
+
+```bash
+pip install --pre "omegaconf>=2.4.0.dev0"        # 2.3.1 needs antlr 4.9, which no longer builds
+pip install --no-deps addict einops plyfile trimesh
+git clone --depth 1 https://github.com/ByteDance-Seed/depth-anything-3
+pip install --no-deps -e depth-anything-3
+python cases/case3_packages_counting.py          # weights (~1.3 GB) fetch on first run
+```
+
+`factory_vision/counting/depth.py` stubs `moviepy` and `pycolmap` at import
+time; DA3's export package imports both at module scope for writers this
+pipeline never calls.
+
 Run from the repository root. Ultralytics will fetch any missing model weight on
 demand, but two of them land relative to the working directory rather than the
 repo — the MobileCLIP text encoder (~600 MB) and the tracker's ReID weights — so
@@ -355,9 +422,11 @@ factory_vision/              the library
   counting/                  cases 1-3 — zero-shot line counting
     clips.py                 per-clip config: prompts, line, belt motion
     geometry.py              counting line, ROI, size gating
+    depth.py                 Depth Anything 3 -> metres, and the camera
+    sizing.py                belt plane, parcel dimensions, depth corridor
     tracking.py              tracker config resolution
     overlay.py               palette and live HUD
-    pipeline.py              detect -> track -> count -> render
+    pipeline.py              detect -> track -> count -> measure -> render
     trackers/*.yaml          trackers retuned for zero-shot score ranges
   filling/                   case 4 — fill-volume inspection
     calibration.py           every constant tied to this station

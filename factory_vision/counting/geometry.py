@@ -12,28 +12,55 @@ from factory_vision.counting.clips import ClipConfig
 def build_counting_line(cfg: ClipConfig) -> tuple[sv.Point, sv.Point]:
     """Build a line square across the belt, oriented so travel counts as IN.
 
-    Two steps:
+    Three steps:
 
     1. *Perpendicular.* The line runs at 90 deg to ``motion``. A line parallel
        to the travel direction would barely be crossed at all, so orientation
        follows the belt rather than the frame axes.
-    2. *Inbound.* supervision counts IN when an object ends up on the side where
+    2. *Plumb, where the camera allows it.* What the line is supposed to be is
+       a plane cut across the belt, and that plane is vertical. Taking the
+       normal of the *image* motion instead is not the same thing: on this belt
+       the travel measures (-4.69, +0.27) px/frame, because the lane recedes as
+       it crosses the frame, and its normal comes out 3.3 deg off plumb - a tilt
+       that is perspective in the flow, not a property of the cut. A vertical
+       image line is the correct projection of that vertical plane whenever the
+       camera has no roll, and this one has none: the trailer's door post, the
+       longest plumb structure in view, measures -0.4 to 0.0 deg. So
+       ``line_plumb`` snaps the line upright, and clips whose camera *is* rolled
+       leave it off and keep the motion normal.
+    3. *Inbound.* supervision counts IN when an object ends up on the side where
        ``Vector.cross_product < 0`` (see ``LineZone._compute_anchor_sides``:
        ``triggers = cross_product(...) < 0`` feeds ``tracker_state``, and
        ``tracker_state`` True increments ``in_count``). Probing one step along
        ``motion`` tells us which endpoint order lands on that side, so every
        clip reports crossings as IN and never OUT.
+
+    ``line_span`` gives the endpoints in y directly, so the line can be drawn
+    the full working height of the lane instead of a segment in the middle of
+    it. Length does not change what a centre-anchored crossing test decides, but
+    a line that stops short of the belt reads as though objects passing above or
+    below it are outside the count, and it leaves no margin for a parcel that
+    rides higher than the ones the half-length was set from.
     """
     cx, cy = cfg.line_center
     mx, my = cfg.motion
     norm = float(np.hypot(mx, my)) or 1.0
     # unit normal to the direction of travel
     px, py = -my / norm, mx / norm
-    a = (cx + px * cfg.line_half_len, cy + py * cfg.line_half_len)
-    b = (cx - px * cfg.line_half_len, cy - py * cfg.line_half_len)
+    if cfg.line_plumb:
+        px, py = 0.0, 1.0
+    if cfg.line_span:
+        y0, y1 = cfg.line_span
+        half = (y1 - y0) / 2.0
+        cy = (y0 + y1) / 2.0
+        a = (cx + px * half, cy + py * half)
+        b = (cx - px * half, cy - py * half)
+    else:
+        a = (cx + px * cfg.line_half_len, cy + py * cfg.line_half_len)
+        b = (cx - px * cfg.line_half_len, cy - py * cfg.line_half_len)
 
     # probe a point just past the line, in the direction the belt is heading
-    probe = (cx + mx / norm * 40.0, cy + my / norm * 40.0)
+    probe = (cfg.line_center[0] + mx / norm * 40.0, cy + my / norm * 40.0)
 
     def cross(start, end, pt):
         return (end[0] - start[0]) * (pt[1] - start[1]) - (end[1] - start[1]) * (
@@ -43,6 +70,7 @@ def build_counting_line(cfg: ClipConfig) -> tuple[sv.Point, sv.Point]:
     if cross(a, b, probe) >= 0:  # would land on the OUT side -> flip
         a, b = b, a
     return sv.Point(int(a[0]), int(a[1])), sv.Point(int(b[0]), int(b[1]))
+
 
 def draw_roi(frame, cfg: ClipConfig, w: int, h: int):
     """Outline the counted region when it is narrower than the full frame."""

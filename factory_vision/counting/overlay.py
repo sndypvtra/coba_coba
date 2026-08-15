@@ -22,7 +22,8 @@ class Hud:
         self.model_name = model_name
         self.total_frames = total_frames
 
-    def draw(self, frame, frame_idx, counts, per_class, active, unique_ids, ms, locked=0):
+    def draw(self, frame, frame_idx, counts, per_class, active, unique_ids, ms,
+             locked=0, sizing=None):
         h, w = frame.shape[:2]
         s = w / 1920.0  # scale everything off a 1080p reference
         pad = int(22 * s)
@@ -34,6 +35,15 @@ class Hud:
             (f"model   : {self.model_name}  (zero-shot, text prompt)", 0.62, (235, 235, 235)),
             (f"prompts : {', '.join(self.cfg.prompts)}", 0.62, (150, 220, 255)),
             (f"tracker : {self.tracker_name}", 0.62, (235, 235, 235)),
+        ]
+        if sizing:
+            rows += [
+                (f"depth   : {sizing['model']}", 0.62, (255, 205, 120)),
+                (f"measured: {sizing['measured']} parcels   "
+                 f"{sizing['volume_l']:.0f} L on the belt   "
+                 f"nearest {sizing['nearest_m']:.2f} m", 0.62, (255, 205, 120)),
+            ]
+        rows += [
             (
                 f"per-class: " + ", ".join(f"{k}={v}" for k, v in per_class.items())
                 if per_class
@@ -59,7 +69,7 @@ class Hud:
             ),
         ]
 
-        box_w = int(900 * s)
+        box_w = int((1180 if sizing else 900) * s)
         box_h = pad * 2 + line_h * len(rows)
         overlay = frame.copy()
         cv2.rectangle(overlay, (pad, pad), (pad + box_w, pad + box_h), (18, 18, 18), -1)

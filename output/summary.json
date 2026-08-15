@@ -97,7 +97,7 @@
       "plastic bag",
       "sports bag"
     ],
-    "conf": 0.15,
+    "conf": 0.08,
     "imgsz": 1280,
     "tracker": "TrackTrack (CVPR 2025) + ReID + GMC",
     "count_total": 7,
@@ -105,25 +105,268 @@
     "count_reverse_crossings": 0,
     "line": [
       [
-        1193,
-        899
+        1180,
+        940
       ],
       [
-        1166,
-        380
+        1180,
+        330
       ]
     ],
     "motion_px_per_frame": [
-      -1.52,
-      0.08
+      -4.69,
+      0.27
     ],
     "min_track_age": 4,
     "per_class": {
       "package": 7
     },
-    "unique_track_ids": 24,
-    "avg_detections_per_frame": 8.95,
-    "avg_ms_per_frame": 2183.0,
-    "notes": "static pallet stack on the left is excluded by ROI"
+    "unique_track_ids": 12,
+    "avg_detections_per_frame": 5.15,
+    "avg_ms_per_frame": 1056.3,
+    "notes": "static stack excluded in depth, not by an x-band",
+    "dimensioning": {
+      "method": "Depth Anything 3 (DA3-LARGE intrinsics + DA3METRIC-LARGE depth)",
+      "process_res": 896,
+      "depth_every_n_frames": 5,
+      "depth_frames": 109,
+      "avg_depth_ms": 6255.8,
+      "intrinsics": {
+        "fx": 1372.3,
+        "fy": 1366.6,
+        "cx": 960.0,
+        "cy": 540.0,
+        "hfov_deg": 69.9,
+        "frame_to_frame_spread_pct": 0.8,
+        "square_pixel_error_pct": 0.42,
+        "note": "predicted, not calibrated; distance scales with it, size does not"
+      },
+      "belt_plane": {
+        "fit_rms_mm": 8.4,
+        "pixels": 34905,
+        "camera_height_above_belt_mm": 488
+      },
+      "size_scale": 1.2257,
+      "size_scale_note": "one printed 720x500x340 mm carton (height 277.4 mm measured); a second, unseen carton then reads 340.5 mm against 340",
+      "depth_corridor_m": [
+        1.45,
+        2.95
+      ],
+      "detections_outside_corridor": 7180,
+      "parcels_measured": 12,
+      "size_classes": {
+        "M": 8,
+        "L": 1,
+        "S": 3
+      },
+      "total_volume_l": 318.4,
+      "median_volume_l": 20.0,
+      "parcels": [
+        {
+          "track": 1,
+          "frames_measured": 47,
+          "distance_m": 2.193,
+          "distance_range_m": [
+            1.79,
+            2.4
+          ],
+          "length_mm": 580,
+          "width_mm": 290,
+          "height_mm": 360,
+          "longest_side_mm": 580,
+          "volume_l": 60.4,
+          "size_class": "M",
+          "mask_kept": 0.89,
+          "height_iqr_mm": 20
+        },
+        {
+          "track": 2,
+          "frames_measured": 5,
+          "distance_m": 2.22,
+          "distance_range_m": [
+            2.02,
+            2.4
+          ],
+          "length_mm": 259,
+          "width_mm": 749,
+          "height_mm": 186,
+          "longest_side_mm": 749,
+          "volume_l": 36.1,
+          "size_class": "L",
+          "mask_kept": 0.89,
+          "height_iqr_mm": 7
+        },
+        {
+          "track": 9,
+          "frames_measured": 70,
+          "distance_m": 2.428,
+          "distance_range_m": [
+            1.9,
+            2.91
+          ],
+          "length_mm": 312,
+          "width_mm": 225,
+          "height_mm": 135,
+          "longest_side_mm": 312,
+          "volume_l": 9.5,
+          "size_class": "M",
+          "mask_kept": 0.94,
+          "height_iqr_mm": 8
+        },
+        {
+          "track": 13,
+          "frames_measured": 36,
+          "distance_m": 2.259,
+          "distance_range_m": [
+            2.04,
+            2.39
+          ],
+          "length_mm": 431,
+          "width_mm": 347,
+          "height_mm": 154,
+          "longest_side_mm": 431,
+          "volume_l": 23.0,
+          "size_class": "M",
+          "mask_kept": 0.95,
+          "height_iqr_mm": 17
+        },
+        {
+          "track": 17,
+          "frames_measured": 18,
+          "distance_m": 2.3,
+          "distance_range_m": [
+            2.23,
+            2.36
+          ],
+          "length_mm": 440,
+          "width_mm": 407,
+          "height_mm": 122,
+          "longest_side_mm": 440,
+          "volume_l": 21.8,
+          "size_class": "M",
+          "mask_kept": 0.93,
+          "height_iqr_mm": 15
+        },
+        {
+          "track": 21,
+          "frames_measured": 32,
+          "distance_m": 2.414,
+          "distance_range_m": [
+            2.16,
+            2.57
+          ],
+          "length_mm": 167,
+          "width_mm": 194,
+          "height_mm": 99,
+          "longest_side_mm": 194,
+          "volume_l": 3.2,
+          "size_class": "S",
+          "mask_kept": 0.9,
+          "height_iqr_mm": 9
+        },
+        {
+          "track": 22,
+          "frames_measured": 53,
+          "distance_m": 2.387,
+          "distance_range_m": [
+            1.99,
+            2.71
+          ],
+          "length_mm": 285,
+          "width_mm": 256,
+          "height_mm": 102,
+          "longest_side_mm": 285,
+          "volume_l": 7.4,
+          "size_class": "S",
+          "mask_kept": 0.91,
+          "height_iqr_mm": 11
+        },
+        {
+          "track": 23,
+          "frames_measured": 65,
+          "distance_m": 2.254,
+          "distance_range_m": [
+            1.9,
+            2.92
+          ],
+          "length_mm": 251,
+          "width_mm": 237,
+          "height_mm": 254,
+          "longest_side_mm": 254,
+          "volume_l": 15.1,
+          "size_class": "S",
+          "mask_kept": 0.92,
+          "height_iqr_mm": 14
+        },
+        {
+          "track": 26,
+          "frames_measured": 69,
+          "distance_m": 2.136,
+          "distance_range_m": [
+            1.76,
+            2.81
+          ],
+          "length_mm": 591,
+          "width_mm": 341,
+          "height_mm": 337,
+          "longest_side_mm": 591,
+          "volume_l": 68.0,
+          "size_class": "M",
+          "mask_kept": 0.95,
+          "height_iqr_mm": 19
+        },
+        {
+          "track": 32,
+          "frames_measured": 47,
+          "distance_m": 2.632,
+          "distance_range_m": [
+            2.27,
+            2.91
+          ],
+          "length_mm": 564,
+          "width_mm": 257,
+          "height_mm": 279,
+          "longest_side_mm": 564,
+          "volume_l": 40.4,
+          "size_class": "M",
+          "mask_kept": 0.95,
+          "height_iqr_mm": 10
+        },
+        {
+          "track": 33,
+          "frames_measured": 48,
+          "distance_m": 2.391,
+          "distance_range_m": [
+            2.1,
+            2.76
+          ],
+          "length_mm": 426,
+          "width_mm": 194,
+          "height_mm": 220,
+          "longest_side_mm": 426,
+          "volume_l": 18.2,
+          "size_class": "M",
+          "mask_kept": 0.91,
+          "height_iqr_mm": 11
+        },
+        {
+          "track": 37,
+          "frames_measured": 11,
+          "distance_m": 2.863,
+          "distance_range_m": [
+            2.6,
+            2.91
+          ],
+          "length_mm": 426,
+          "width_mm": 321,
+          "height_mm": 112,
+          "longest_side_mm": 426,
+          "volume_l": 15.3,
+          "size_class": "M",
+          "mask_kept": 0.93,
+          "height_iqr_mm": 7
+        }
+      ]
+    }
   }
 ]

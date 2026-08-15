@@ -13,3 +13,27 @@ PyYAML==6.0.1             # tracker configs are read directly, not only via ultr
 # pulled in automatically by ultralytics on first `get_text_pe` call:
 #   clip (git+https://github.com/ultralytics/CLIP.git), ftfy, regex
 # and the MobileCLIP text encoder weights `mobileclip_blt.ts` (~572 MB)
+
+# ---------------------------------------------------------------------------
+# Case 3 only: metric depth from Depth Anything 3.
+#
+# Install it WITHOUT its dependency list. The upstream pyproject pins
+# `numpy<2` and pulls `opencv-python`, `xformers` and `open3d`, which between
+# them would downgrade numpy and OpenCV out from under everything else in this
+# repo. Only these four are actually needed on the inference path:
+#
+#   pip install --pre "omegaconf>=2.4.0.dev0"   # 2.3.1 needs antlr 4.9, which
+#                                               # no longer builds; the dev line
+#                                               # works with antlr 4.13
+#   pip install --no-deps addict einops plyfile trimesh
+#   git clone --depth 1 https://github.com/ByteDance-Seed/depth-anything-3
+#   pip install --no-deps -e depth-anything-3
+#
+# `factory_vision/counting/depth.py` stubs moviepy and pycolmap at import time:
+# DA3's export package imports both at module scope for its Gaussian-splat and
+# COLMAP writers, neither of which this pipeline calls, and neither of which
+# builds against a current setuptools.
+#
+# Weights are fetched from the Hub on first run (~1.3 GB for the two models):
+#   depth-anything/DA3-LARGE          camera intrinsics
+#   depth-anything/DA3METRIC-LARGE    canonical metric depth
