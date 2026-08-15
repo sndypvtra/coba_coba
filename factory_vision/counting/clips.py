@@ -64,9 +64,14 @@ class ClipConfig:
     # Bare stretches of belt used to fit the plane, as (x0, x1, y0, y1). Spread
     # across the view so the fit does not extrapolate.
     belt_patches: tuple = ()
-    # Keep only detections whose median depth falls in this corridor, in metres.
-    # This is what replaces the hand-drawn x-band; see sizing.depth_corridor.
+    # Keep only detections whose median depth falls in this corridor, in metres,
+    # AND whose base sits this far from the fitted belt plane. Both are needed;
+    # see sizing.on_belt for what each one catches that the other misses.
     depth_corridor: tuple[float, float] | None = None
+    belt_base_band: tuple[float, float] = (-0.10, 0.15)
+    # Freeze a parcel's measured size once its centre passes this x, so the
+    # number it is counted with is the one taken where it was best seen.
+    size_lock_x: int | None = None
     # One number, from one reference object of known size, that turns relative
     # metric depth into absolute. See sizing.measure.
     size_scale: float = 1.0
@@ -162,16 +167,37 @@ CLIPS: list[ClipConfig] = [
         # crossing before the belt stops. What it changes is whether the belt is
         # fully seen, which is a different question and the one a depot cares
         # about - every parcel now carries a box, an identity and a size.
-        conf=0.08,
+        conf=0.05,
         min_track_age=4,
+        # These are the numbers the geometric gates buy. A detection has to be
+        # standing on the belt plane, inside the belt's depth corridor, before
+        # the tracker ever sees it - so the tracker's own thresholds no longer
+        # have to double as a background filter and can be set for what they are
+        # actually for, which is holding an identity.
+        #
+        # It matters because the old spawn gate was the binding constraint and
+        # nothing else was: at the tail of the clip a container detected at 0.65
+        # confidence, sitting squarely on the belt, carried no box at all,
+        # because 0.20 is the threshold for *starting* a track and three of its
+        # neighbours scored 0.05-0.10. Lowering the confidence floor without
+        # lowering this one buys nothing.
         tracker_overrides={
-            "track_high_thresh": 0.16,
-            "track_low_thresh": 0.04,
-            "new_track_thresh": 0.20,
+            "track_high_thresh": 0.06,
+            "track_low_thresh": 0.02,
+            "new_track_thresh": 0.07,
             "min_track_len": 2,
         },
-        line_center=(1180, 640),
+        # At the left-hand end of the lane, where the belt is nearest the camera
+        # (2.20 m against 2.90 m at the far end) and one image pixel is 1.6 mm on
+        # the belt against 2.1 mm. Measuring a parcel where it is best resolved
+        # and counting it there is the same decision. Any further left and the
+        # trolley handle at x 230-330 starts cutting into the mask.
+        line_center=(350, 640),
         line_half_len=260,
+        # Freeze each parcel's size 170 px before the line - about 36 frames of
+        # travel - so what gets counted is a settled measurement rather than
+        # whatever the last frame happened to say.
+        size_lock_x=520,
         # The belt, measured by optical flow restricted to the belt surface and
         # to features that actually move: the previous (-1.52, 0.08) was taken
         # over the whole frame and was dragged towards zero by the stationary
@@ -179,9 +205,9 @@ CLIPS: list[ClipConfig] = [
         # 154 frames to cross this view, not 470.
         motion=(-4.69, 0.27),
         line_plumb=True,
-        # the full working height of the lane: below the belt surface to well
-        # above the tallest parcel that rides it
-        line_span=(330, 940),
+        # the full working height of the lane at x=350: below the belt's front
+        # edge (y 785) to well above the tallest parcel that rides it
+        line_span=(400, 1010),
         scene="Parcel unloading belt - mixed boxes, bags and parcels",
         source_url="https://www.pexels.com/video/unloading-packages-on-a-conveyor-belt-5370836/",
         max_box_area_frac=0.10,
@@ -189,12 +215,15 @@ CLIPS: list[ClipConfig] = [
         depth_every=5,
         belt_patches=((150, 380, 705, 745), (880, 1120, 690, 725),
                       (1180, 1450, 678, 715), (1500, 1850, 660, 695)),
-        # Measured off the bare-belt depth map, not guessed. The lane runs from
-        # 1.87 m where parcels leave frame to 2.90 m where they enter it, and
-        # parcels sit on the belt so they are always nearer than that. The
-        # nearest background the corridor has to reject is the static stack of
-        # cartons at 3.26 m. 2.95 sits in the 0.36 m gap between the two.
-        depth_corridor=(1.45, 2.95),
+        # The lane runs 1.87 m where parcels leave frame to 2.90 m where they
+        # enter it, but a parcel's *body* reads up to 0.3 m further back than the
+        # belt beneath it, so the far bound is the belt's 2.90 plus that - not
+        # the belt's own depth. A 2.95 bound rejected three real parcels at the
+        # far end, measured at 2.99, 3.00 and 3.11 m. The nearest background is
+        # the stack at 3.26 m, which leaves only 0.06 m of room, which is why
+        # belt_base_band exists as a second, independent test.
+        depth_corridor=(1.45, 3.20),
+        belt_base_band=(-0.10, 0.15),
         # Monocular metric depth is scale-accurate to about 20 % and no amount
         # of geometry fixes that, because the error is in the depth itself. One
         # reference object fixes it for the whole install - which is exactly how

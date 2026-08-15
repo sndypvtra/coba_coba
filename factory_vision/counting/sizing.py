@@ -213,8 +213,6 @@ def measure(mask: np.ndarray, depth: np.ndarray, K: Intrinsics, belt: BeltPlane,
     if kept < 0.55:
         notes.append("mask disagrees with depth")
         trusted = False
-    if abs(base) > 0.06:
-        notes.append("base off the belt")
     if height <= 0.02:
         notes.append("no height above belt")
         trusted = False
@@ -230,30 +228,34 @@ def measure(mask: np.ndarray, depth: np.ndarray, K: Intrinsics, belt: BeltPlane,
     )
 
 
-def depth_corridor(depth: np.ndarray, boxes: np.ndarray, near: float, far: float,
-                   masks=None) -> np.ndarray:
-    """Keep only detections standing inside the belt's depth corridor.
+def on_belt(size: "ParcelSize | None", corridor, base_band) -> bool:
+    """Is this detection a parcel riding the belt, or is it the furniture?
 
     The static wall of cartons at the back of this scene is the same colour, the
     same shape and the same size in pixels as the parcels riding past it, so no
-    threshold on the image can separate them - which is why the old configuration
-    had to fence them off with a hand-drawn x-band that also clipped real traffic
-    at the same x. In depth they are a metre and a half apart and the separation
-    is trivial. This is the filter that lets the confidence floor come down far
-    enough to catch the faint parcels without the background flooding in.
+    threshold on the image can separate them. Two geometric tests do, and both
+    are needed because each one alone lets something through:
+
+    *Depth corridor.* Belt traffic runs 1.9-2.9 m from the camera at the belt
+    surface, and a parcel's body reads up to 0.3 m further back than the patch of
+    belt beneath it, so the far bound has to sit at 3.2 m rather than at the
+    belt's own 2.9 - a 2.95 m bound rejected three real parcels at the far end of
+    the lane, measured at 2.99, 3.00 and 3.11 m. The nearest background is the
+    stack at 3.26 m, which leaves the bound only 0.06 m of room.
+
+    *Base on the belt plane.* That thin margin is why this second test exists. A
+    parcel rests on the belt, so its base sits within a few centimetres of the
+    fitted plane; the stack behind stands on the truck floor and reads 0.12 to
+    0.84 m off it. The two tests fail on different objects - the corridor catches
+    stack cartons whose base happens to land near the plane extended backwards,
+    the base test catches whatever the corridor's tight far bound lets through -
+    so a detection has to pass both.
+
+    Together they are what makes a 0.05 confidence floor safe: the background is
+    rejected on geometry before the tracker ever sees it.
     """
-    if len(boxes) == 0:
-        return np.zeros(0, bool)
-    keep = np.zeros(len(boxes), bool)
-    H, W = depth.shape
-    for i, (x1, y1, x2, y2) in enumerate(boxes):
-        if masks is not None and masks[i] is not None and masks[i].sum() > 40:
-            v, u, _ = masked_depth(depth, masks[i].astype(np.uint8))
-            z = depth[v, u] if len(v) else np.array([np.inf])
-        else:
-            x1i, y1i = max(int(x1), 0), max(int(y1), 0)
-            x2i, y2i = min(int(x2), W - 1), min(int(y2), H - 1)
-            patch = depth[y1i:y2i + 1, x1i:x2i + 1]
-            z = patch.ravel() if patch.size else np.array([np.inf])
-        keep[i] = near <= float(np.median(z)) <= far
-    return keep
+    if size is None:
+        return False
+    near, far = corridor
+    lo, hi = base_band
+    return (near <= size.distance_m <= far) and (lo <= size.base_offset_m <= hi)

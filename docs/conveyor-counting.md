@@ -214,26 +214,65 @@ fenced them off with a hand-drawn `x > 0.34` band — a band that also clipped
 real belt traffic at the same x, and which forced the confidence floor up to
 0.15 to stop the remaining stack detections from counting.
 
-In depth they are 1.4 m apart and the separation is trivial. With a depth
-corridor of 1.45–2.95 m doing that job, the floor drops to **0.08**, which is
-what it takes to see the faint ones: the last cream container scores 0.098 as
-`parcel`, the dark parcel behind it 0.12, the far-right carton 0.10.
+In depth they are separable, and it takes **two** geometric tests rather than
+one, because each alone lets something through:
 
-Dropping the floor does not change the count — the objects it recovers are at
-the tail of the clip and none of them completes a crossing before the belt
-stops. It changes whether the belt is *fully seen*, which is the different
-question, and it exposed the next one.
+| Test | Belt traffic | Nearest background | What it misses alone |
+|---|:--:|:--:|---|
+| **Depth corridor** 1.45–3.20 m | 1.9–3.1 m | stack at 3.26 m | stack cartons whose base lands near the belt plane extended back |
+| **Base on the belt plane** −0.10…+0.15 m | +0.01 to +0.07 m | +0.12 to +0.84 m | whatever the corridor's tight far bound lets through |
+
+The far bound is the subtle one. The belt surface runs out to 2.90 m, but a
+parcel's *body* reads up to 0.3 m further back than the patch of belt beneath
+it, so a corridor ending at the belt's own depth is too tight: 2.95 m rejected
+three real parcels at the far end of the lane, measured at **2.99, 3.00 and
+3.11 m**. Moving it to 3.20 leaves only 0.06 m to the stack, which is exactly
+why the base test exists as an independent second opinion.
+
+With both in place the background is rejected on **geometry, before the tracker
+ever sees it** — and that is what makes the rest of the thresholds sane.
+
+### The panel: rates, not model names
+
+The overlay used to list the model, the prompts, the tracker, the active track
+count and the counting rule. All true, none of it a decision — nobody staffs a
+shift differently because the tracker is TrackTrack. That belongs in
+`summary.json`, and it is there.
+
+What replaced it is the set a parcel operation runs on:
+
+| | |
+|---|---|
+| **Throughput** | parcels/h — the number a shift is staffed against |
+| **Volume rate** | m³/h — the number a trailer or a chute is sized against |
+| **Mean headway** | seconds between parcels — gaps are lost capacity |
+| **Size mix** | S/M/L — what the sortation downstream has to handle |
+| **Mean parcel / largest** | billing weight and the handling exception |
+| **On belt now** | live work-in-progress |
+| **Sizes locked** | how many carry a frozen measurement |
+
+Rates are extrapolated from a 17-second clip and the panel says so, with the
+observed count and the elapsed time printed directly beneath — an extrapolation
+shown without its sample size is how a demo turns into a promise nobody can
+keep.
+
+The panel's *height* is a constraint, not a taste: it sits over the exit end of
+the belt, which is where the counting line now is, so it is laid out in two
+columns and ends above the tallest parcel that passes underneath. A dashboard
+that hides the moment being counted is worse than no dashboard.
 
 ### A detection that clears every filter and still does not exist
 
-The cream container at the end of the clip clears the confidence floor (0.098 >
-0.08), clears the depth corridor (2.41 m), and clears the size gate. It still
-carried no box, no identity and no measurement, because this clip's
-`tracker_overrides` set `new_track_thresh: 0.20` — TrackTrack will not *start* a
-track from a 0.098 detection. Lowering the confidence floor without lowering the
-tracker's spawn gate buys nothing at all for anything under 0.20.
+The cream container at the end of the clip clears the confidence floor, clears
+the depth corridor at 2.41 m, and clears the size gate. It still carried no box,
+no identity and no measurement, because this clip's `tracker_overrides` set
+`new_track_thresh: 0.20` — TrackTrack will not *start* a track from a 0.098
+detection. **Lowering a confidence floor without lowering the tracker's spawn
+gate buys nothing at all under 0.20**, and the spawn gate was the binding
+constraint the whole time.
 
-The fix is the prompt, not the gate, and it is the holdall lesson a second time:
+Two fixes, and both were needed. First the prompt, which is the holdall lesson a
+second time:
 
 | Prompts | conf on that container | cost |
 |---|:--:|:--:|
@@ -247,6 +286,25 @@ The fix is the prompt, not the gate, and it is the holdall lesson a second time:
 a box that is already well clear of every gate at 0.580. Note also that two
 plausible synonyms move the score not at all — the useful phrase is not
 predictable from the description being accurate.
+
+Second, the gates themselves. Three more objects at the tail of the clip carried
+no box, and no prompt rescued them: the best available phrasing lifted the two
+dark items from 0.054 and 0.099 only as far as 0.159 and 0.126. Dark, low
+contrast objects on a dark belt are where open-vocabulary detection runs out,
+which this repo already documents for transparent objects.
+
+Since the two geometric tests reject the background before tracking, the
+tracker's thresholds no longer have to double as a background filter and can be
+set for what they are actually for — holding an identity:
+
+| | was | now |
+|---|:--:|:--:|
+| `conf` | 0.08 | **0.05** |
+| `track_high_thresh` | 0.16 | **0.06** |
+| `new_track_thresh` | 0.20 | **0.07** |
+
+This is the architectural point of the whole case: **filter on geometry, then
+let the tracker track.** A threshold doing two jobs does neither well.
 
 ### Ground truth for "every parcel detected"
 
@@ -278,6 +336,33 @@ So the count to hit is **7**, and the pipeline reports 7 with zero reverse
 crossings. An earlier version of this document read the slit-scan as eight
 crossings and treated the correct answer as a miss; that was wrong, and the fix
 it prompted was still worth keeping — see below.
+
+### Where the line goes, and why size is frozen before it
+
+The line sits at the **left-hand end of the lane**, where parcels leave frame —
+not in the middle. That is the point on this belt nearest the camera, and every
+number the pipeline produces is better there:
+
+| | at the exit (x=350) | at mid-lane (x=1180) | at the entry (x=1900) |
+|---|:--:|:--:|:--:|
+| Distance to camera | **2.20 m** | 2.45 m | 2.90 m |
+| One image pixel on the belt | **1.6 mm** | 1.8 mm | 2.1 mm |
+
+Any further left and the trolley handle at x 230–330 starts cutting into the
+mask, so x=350 is the last position where a parcel is both nearest and whole.
+
+Counting there also changes what gets counted. Every parcel already on the belt
+at frame 0 has time to complete a crossing, so the clip yields **8** instead of
+7 — the same traffic, measured further along its journey.
+
+**The size is frozen 170 px before the line.** A parcel measured right up to the
+frame edge keeps revising its own dimensions at the exact moment it is being
+clipped by the border and occluded by the trolley, which means the number moves
+while it is being counted. `size_lock_x` freezes the median at x=520 — about 36
+frames of travel before the line — where the parcel is nearest the camera, fully
+in view and best resolved. After that the label reads `LOCKED` and the value
+does not change again. What is counted and what is measured are then the same
+number, which is the only way the volume figures on the panel mean anything.
 
 ### The counting line: plumb, not normal-to-motion
 

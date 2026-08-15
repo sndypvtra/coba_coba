@@ -32,7 +32,7 @@ from factory_vision.counting.clips import CLIPS, ClipConfig
 from factory_vision.counting.geometry import (build_counting_line, draw_roi,
                                               filter_detections)
 from factory_vision.counting.overlay import PALETTE, Hud
-from factory_vision.counting.sizing import depth_corridor, measure
+from factory_vision.counting.sizing import measure, on_belt
 from factory_vision.counting.tracking import resolve_tracker_cfg
 from factory_vision.paths import OUTPUT_DIR, ROOT, VIDEO_DIR, WEIGHTS_DIR
 
@@ -62,6 +62,50 @@ def _consensus(sizes):
         mask_kept=med("mask_kept"), base_offset_m=med("base_offset_m"),
         trusted=True, notes=[f"median of {len(sizes)} frames"],
     )
+
+
+def _operations(frame_idx: int, fps: float, counted: int, crossing_frames,
+                counted_sizes, on_belt_now, locked_count: int) -> dict:
+    """The numbers a depot runs on, not the numbers the model produces.
+
+    A count on its own answers nothing an operator can act on. What a parcel
+    hub schedules against is rate - how many an hour, how many cubic metres an
+    hour, how far apart they arrive - and what it bills on is the size mix.
+    Everything here is derived from the same crossings and the same locked
+    measurements, so nothing needs a second pass.
+
+    Rates are extrapolations from a 17-second clip and are labelled as such
+    on the panel; the counts and volumes underneath them are observations.
+    """
+    elapsed_s = max(frame_idx / max(fps, 1e-6), 1e-6)
+    hours = elapsed_s / 3600.0
+    volume_l = sum(s.volume_l for s in counted_sizes)
+    mix = {"S": 0, "M": 0, "L": 0}
+    for s in counted_sizes:
+        mix[s.class_name] = mix.get(s.class_name, 0) + 1
+    gaps = [(b - a) / fps for a, b in zip(crossing_frames, crossing_frames[1:])]
+    return {
+        "counted": counted,
+        "elapsed_s": elapsed_s,
+        "per_hour": counted / hours if hours > 0 else 0.0,
+        "m3_per_hour": (volume_l / 1000.0) / hours if hours > 0 else 0.0,
+        "volume_l": volume_l,
+        "mean_volume_l": volume_l / counted if counted else 0.0,
+        "headway_s": float(np.mean(gaps)) if gaps else None,
+        "mix": mix,
+        "on_belt": len(on_belt_now),
+        "on_belt_l": sum(s.volume_l for s in on_belt_now),
+        "largest": max((s for s in counted_sizes),
+                       key=lambda s: s.volume_l, default=None),
+        "locked": locked_count,
+    }
+
+
+def _size_of(tid: int, locked: dict, running: dict):
+    """A track's size: the frozen one if it has been locked, else the running one."""
+    if tid in locked:
+        return locked[tid]
+    return _consensus(running.get(tid))
 
 
 def _prepare_depth(cfg: ClipConfig, src, w: int, h: int):
@@ -168,6 +212,9 @@ def process(cfg: ClipConfig, args) -> dict:
     # every measurement each track ever produced, so the reported size is a
     # median over a parcel's whole pass rather than one lucky frame
     track_sizes: dict[int, list] = {}
+    locked_sizes: dict[int, object] = {}   # frozen once the parcel nears the line
+    crossing_frames: list[int] = []        # when each count happened, for headway
+    counted_sizes: list = []               # the size each counted parcel carried
     if cfg.measure_size:
         depth_model, belt, last_depth = _prepare_depth(cfg, src, w, h)
 
@@ -203,22 +250,33 @@ def process(cfg: ClipConfig, args) -> dict:
             det = sv.Detections.from_ultralytics(result)
             det = filter_detections(det, cfg, w, h)
 
-            # Depth runs on every Nth frame; the corridor test uses the most
-            # recent map. At 4.7 px/frame a parcel drifts 23 px between runs,
-            # which a median over the whole mask absorbs - and the thing the
-            # corridor has to separate, the static stack at the back, does not
-            # move at all.
+            # Depth runs on every Nth frame; the gate uses the most recent map.
+            # At 4.7 px/frame a parcel drifts 23 px between runs, which a median
+            # over the whole mask absorbs - and the thing the gate has to reject,
+            # the static stack at the back, does not move at all.
             if depth_model is not None and (idx - 1) % cfg.depth_every == 0:
                 td = time.time()
                 last_depth = depth_model.depth(frame)
                 depth_ms.append((time.time() - td) * 1000)
 
-            if cfg.depth_corridor and last_depth is not None and len(det):
-                near, far = cfg.depth_corridor
-                masks = list(det.mask) if det.mask is not None else None
-                inside = depth_corridor(last_depth, det.xyxy, near, far, masks)
-                corridor_dropped += int((~inside).sum())
-                det = det[inside]
+            # One measurement per detection serves two purposes: it decides
+            # whether the thing is on the belt at all, and if it is, it is the
+            # size. Measuring first and gating on the result is what lets the
+            # confidence floor sit at 0.05 - the background is rejected on
+            # geometry, before the tracker is asked to hold an identity for it.
+            frame_sizes: list = []
+            if belt is not None and last_depth is not None and len(det):
+                masks = det.mask if det.mask is not None else [None] * len(det)
+                keep = np.zeros(len(det), bool)
+                for i, mk in enumerate(masks):
+                    size = (measure(mk.astype(np.uint8), last_depth,
+                                    depth_model.frame_K, belt, cfg.size_scale)
+                            if mk is not None else None)
+                    keep[i] = on_belt(size, cfg.depth_corridor, cfg.belt_base_band)
+                    frame_sizes.append(size)
+                corridor_dropped += int((~keep).sum())
+                frame_sizes = [s for s, k in zip(frame_sizes, keep) if k]
+                det = det[keep]
             total_dets += len(det)
 
             # every prompt alias is the same physical object type -> one label
@@ -250,21 +308,37 @@ def process(cfg: ClipConfig, args) -> dict:
             locked = tracked[locked_mask]
 
             crossed_in, _ = line.trigger(locked)
-            for flag_in, name in zip(crossed_in, locked.data.get("class_name", [])):
-                if flag_in:
-                    per_class[name] = per_class.get(name, 0) + 1
+            for j, flag_in in enumerate(crossed_in):
+                if not flag_in:
+                    continue
+                name = locked.data.get("class_name", [cfg.label] * len(locked))[j]
+                per_class[name] = per_class.get(name, 0) + 1
+                crossing_frames.append(idx)
+                if locked.tracker_id is not None:
+                    size = _size_of(int(locked.tracker_id[j]), locked_sizes, track_sizes)
+                    if size is not None:
+                        counted_sizes.append(size)
 
-            # Measure on the frames that have a fresh depth map. A parcel is
-            # measured many times over its pass and reported as the median,
-            # because a single frame can catch it half-occluded by the one in
-            # front and read short.
-            if (belt is not None and last_depth is not None and len(tracked)
-                    and (idx - 1) % cfg.depth_every == 0 and tracked.mask is not None):
-                for tid, mk in zip(tracked.tracker_id, tracked.mask):
-                    size = measure(mk.astype(np.uint8), last_depth,
-                                   depth_model.frame_K, belt, cfg.size_scale)
-                    if size is not None and size.trusted:
-                        track_sizes.setdefault(int(tid), []).append(size)
+            # Attach each measurement to the track that carries it, and stop
+            # once the parcel is close to the line. A parcel measured all the
+            # way to the edge of frame would keep revising its size while it is
+            # being clipped by the frame border and occluded by the trolley -
+            # the reading would move at exactly the moment it is counted. So the
+            # value is frozen `size_lock_x` pixels before the line, where the
+            # parcel is nearest the camera, fully in view, and best resolved.
+            if belt is not None and len(det) and det.tracker_id is not None and frame_sizes:
+                for tid, size, box in zip(det.tracker_id, frame_sizes, det.xyxy):
+                    if tid is None or size is None or not size.trusted:
+                        continue
+                    tid = int(tid)
+                    if tid in locked_sizes:
+                        continue
+                    track_sizes.setdefault(tid, []).append(size)
+                    centre_x = float(box[0] + box[2]) / 2.0
+                    past_lock = (cfg.size_lock_x is not None
+                                 and centre_x <= cfg.size_lock_x)
+                    if past_lock and len(track_sizes[tid]) >= 2:
+                        locked_sizes[tid] = _consensus(track_sizes[tid])
 
             annotated = draw_roi(frame.copy(), cfg, w, h)
             if len(tracked):
@@ -272,45 +346,36 @@ def process(cfg: ClipConfig, args) -> dict:
                     annotated = mask_ann.annotate(annotated, tracked)
                 annotated = trace_ann.annotate(annotated, tracked)
                 annotated = box_ann.annotate(annotated, tracked)
-                # a locked track carries [L] - it is armed and will count on cross
+                # The label says what stage the parcel is at, because that is
+                # what an operator watching this needs: still being measured,
+                # size frozen, or counted.
                 labels = []
-                for tid, name, conf, lock in zip(
-                    tracked.tracker_id, tracked.data["class_name"],
-                    tracked.confidence, locked_mask,
-                ):
-                    head = f"#{int(tid)}{'[L]' if lock else ''} {name} {conf:.2f}"
-                    size = _consensus(track_sizes.get(int(tid)))
-                    if size is not None:
-                        head += (f"  {size.distance_m:.2f}m  "
-                                 f"{size.length_m*100:.0f}x{size.width_m*100:.0f}"
-                                 f"x{size.height_m*100:.0f}cm [{size.class_name}]")
-                    labels.append(head)
+                for tid, conf in zip(tracked.tracker_id, tracked.confidence):
+                    tid = int(tid)
+                    size = _size_of(tid, locked_sizes, track_sizes)
+                    if size is None:
+                        labels.append(f"#{tid}  {conf:.2f}")
+                        continue
+                    dims = (f"{size.length_m*100:.0f}x{size.width_m*100:.0f}"
+                            f"x{size.height_m*100:.0f}cm")
+                    if tid in locked_sizes:
+                        labels.append(f"#{tid} LOCKED {dims} {size.volume_l:.0f}L "
+                                      f"[{size.class_name}] {size.distance_m:.2f}m")
+                    else:
+                        labels.append(f"#{tid} {dims} [{size.class_name}] "
+                                      f"{size.distance_m:.2f}m")
                 annotated = label_ann.annotate(annotated, tracked, labels)
 
             annotated = line_ann.annotate(annotated, line)
-            hud_sizing = None
+            live = []
             if belt is not None and len(tracked):
-                live = [_consensus(track_sizes.get(int(t))) for t in tracked.tracker_id]
-                live = [s for s in live if s is not None]
-                if live:
-                    hud_sizing = {
-                        "model": f"Depth Anything 3 metric @ {cfg.depth_process_res}px, "
-                                 f"every {cfg.depth_every}th frame",
-                        "measured": len(live),
-                        "volume_l": sum(s.volume_l for s in live),
-                        "nearest_m": min(s.distance_m for s in live),
-                    }
-            annotated = hud.draw(
-                annotated,
-                idx,
-                line.in_count,
-                per_class,
-                len(tracked),
-                len(unique_ids),
-                float(np.mean(times[-30:])),
-                len(locked),
-                hud_sizing,
-            )
+                live = [s for s in (_size_of(int(t), locked_sizes, track_sizes)
+                                    for t in tracked.tracker_id) if s is not None]
+            annotated = hud.draw(annotated, idx, line.in_count,
+                                 _operations(idx, info.fps, line.in_count,
+                                             crossing_frames, counted_sizes, live,
+                                             len(locked_sizes)),
+                                 float(np.mean(times[-30:])))
             sink.write_frame(annotated)
             frames_written += 1
 

@@ -191,27 +191,35 @@ size is a median over the parcel's whole crossing.
 stack of cartons at the back of the shot is the same colour, shape and pixel
 size as the traffic riding past it. No image threshold separates them, so the
 old config fenced them off with a hand-drawn `x > 0.34` band — which clipped
-real traffic at the same x and forced the confidence floor up to 0.15. In depth
-they are 1.4 m apart. With a **1.45–2.95 m corridor** doing that job the floor
-drops to **0.08**, which is what it takes to see the faint ones: the last cream
-container scores 0.098, the dark parcel behind it 0.12.
+real traffic at the same x and forced the confidence floor up to 0.15.
 
-That does not change the count — those objects are at the tail of the clip and
-none completes a crossing before the belt stops. It changes whether the belt is
-fully *seen*, and it exposed the next problem: that container cleared the
-confidence floor, the depth corridor and the size gate, and still carried no box
-at all, because `new_track_thresh: 0.20` means TrackTrack will not start a track
-from a 0.098 detection. Lowering a confidence floor without lowering the
-tracker's spawn gate buys nothing under 0.20. The fix was the prompt —
-`styrofoam box` takes the same object from 0.098 to **0.580** for +0.67
-det/frame — which is the black-holdall lesson arriving a second time.
+Two geometric tests replace it, and **both** are needed because each alone lets
+something through: a **depth corridor** (1.45–3.20 m) and a test that the
+parcel's **base sits on the fitted belt plane** (−0.10…+0.15 m, against +0.12 to
++0.84 m for the stack). The corridor's far bound is the subtle part — a parcel's
+body reads up to 0.3 m further back than the belt beneath it, so a 2.95 m bound
+rejected three real parcels measured at 2.99, 3.00 and 3.11 m.
 
-**A correction worth recording.** The slit-scan shows 8 parcels *reaching* the
-line and this was first read as 8 crossings, making the correct answer look like
-a miss. It records a parcel's leading edge arriving; the counting rule fires on
-the box centre. The eighth parcel's edge passes at frame 480, its centre stalls
-**44 px short**, and the belt decelerates from −5.03 to **−1.37 px/frame** as the
-unload ends. The count to hit is 7.
+That is the architectural point of the case. With the background rejected on
+geometry *before the tracker sees it*, the tracker's thresholds no longer have
+to double as a background filter: `conf` 0.15 → **0.05**, `new_track_thresh`
+0.20 → **0.07**. And the spawn gate turned out to be the binding constraint all
+along — one container detected at **0.65 confidence**, sitting squarely on the
+belt, carried no box at all, because 0.20 is the threshold for *starting* a
+track. Lowering a confidence floor without lowering the spawn gate buys nothing.
+
+**Where the line goes.** At the exit end of the lane, where the belt is nearest
+the camera — 2.20 m against 2.90 m at the entry, so one image pixel is 1.6 mm on
+the belt instead of 2.1 mm. Every parcel's size is then **frozen 170 px before
+the line**, so what gets counted and what got measured are the same number
+rather than whatever the last, half-clipped frame said.
+
+**A correction worth recording.** A slit-scan of the counting column shows how
+many parcels *reach* it, and this was first read as how many *cross* it. It
+records a leading edge arriving; the counting rule fires on the box centre. At
+the old mid-lane position that difference was one parcel, whose centre stalled
+44 px short as the belt decelerated from −5.03 to **−1.37 px/frame** at the end
+of the unload.
 
 </details>
 

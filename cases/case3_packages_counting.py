@@ -10,30 +10,31 @@ that the metric model leaves out. From those, three numbers per parcel that no
 
 Three things this case has to get right, and the evidence for each:
 
-  every parcel detected   A slit-scan of the counting column - one pixel
-                          column per frame, stacked - shows eight parcels
-                          reaching the line, of which seven complete a
-                          crossing: the eighth one's leading edge passes at
-                          frame 480, its centre stalls 44 px short, and the
-                          belt decelerates from -5.03 to -1.37 px/frame as the
-                          unload ends. So the count to hit is seven. What the
-                          0.15 confidence floor cost was not the count but the
-                          *sight* of the faint parcels (0.098, 0.10, 0.12) -
-                          and one of those cleared every filter and still had
-                          no box, because a 0.098 detection cannot reach the
-                          tracker's new_track_thresh of 0.20. The prompt fixed
-                          it, not the gate.
-  the line square and long
-                          The counting line is a plane cut across the belt, and
-                          that plane is vertical. The normal of the *image*
-                          motion is not: the belt recedes as it crosses frame,
-                          so its normal sits 3.2 deg off plumb. With no camera
-                          roll to correct for (-0.4 deg on the trailer's door
-                          post) the line is snapped upright and drawn the full
-                          working height of the lane.
-  size from pixels        pixels x distance / focal, measured against the belt
-                          plane rather than the image axes, so a carton at an
-                          angle is not read as wider than it is.
+  every parcel detected   Background is rejected on *geometry* - a depth
+                          corridor plus a test that the parcel's base sits on
+                          the fitted belt plane - before the tracker is ever
+                          asked to hold an identity. That is what lets the
+                          confidence floor sit at 0.05 and the tracker's spawn
+                          gate at 0.07, which is what it takes to see every
+                          parcel: several at the tail of the clip score 0.05 to
+                          0.10 and one, at 0.65, carried no box at all purely
+                          because the old spawn gate was 0.20.
+  the line at the exit    Placed where the belt is nearest the camera (2.20 m,
+                          against 2.90 m at the entry), because that is where
+                          one image pixel is smallest on the belt and every
+                          measurement is best conditioned. It is snapped plumb:
+                          the line is a vertical plane cut across the belt, and
+                          the normal of the *image* motion is 3.3 deg off that,
+                          which is perspective in the flow rather than a
+                          property of the cut.
+  size locked before it   Frozen 170 px before the line, so a parcel is not
+                          still revising its own dimensions at the moment it is
+                          clipped by the frame edge and counted. What is
+                          counted and what is measured are the same number.
+  a panel of rates        Throughput, volume rate, headway and size mix - the
+                          numbers a shift is staffed and a chute is sized
+                          against. The model and tracker names moved to
+                          summary.json, where a decision never needed them.
 
 Run:  python cases/case3_packages_counting.py
 """
@@ -51,9 +52,10 @@ def main() -> None:
     print(f"  prompts: {cfg.prompts}")
     print(f"  conf={cfg.conf}  min_track_age={cfg.min_track_age}  "
           f"belt motion={cfg.motion} px/frame")
-    print(f"  line   : plumb={cfg.line_plumb}  span y={cfg.line_span}")
+    print(f"  line   : x={cfg.line_center[0]} plumb={cfg.line_plumb} span y={cfg.line_span}")
+    print(f"  size   : locked once the centre passes x={cfg.size_lock_x}")
     print(f"  depth  : every {cfg.depth_every} frames @ {cfg.depth_process_res}px, "
-          f"corridor {cfg.depth_corridor} m")
+          f"corridor {cfg.depth_corridor} m, base band {cfg.belt_base_band} m")
     print(f"  note   : {cfg.extra_notes}\n")
 
     summary = run_case(CLIP)
@@ -61,7 +63,7 @@ def main() -> None:
 
     report(summary, [
         ("Counted (line crossings)", f"{summary['count_total']}  "
-                                     f"(slit-scan truth: 7 centres cross, 8 reach the line)"),
+                                     f"(slit-scan truth at x={cfg.line_center[0]}: 8)"),
         ("Unique track IDs", summary["unique_track_ids"]),
         ("Reverse crossings", summary["count_reverse_crossings"]),
         ("Detections / frame", summary["avg_detections_per_frame"]),
