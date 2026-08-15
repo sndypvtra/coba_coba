@@ -25,7 +25,7 @@ the code in this repository, not estimated.
 |:--:|---|---|---|
 | **1** | Citrus sorting line | Count oranges past a line | **5** counted · 32 tracks |
 | **2** | Tomato grading line | Count tomatoes past a line | **16** counted · 50 tracks |
-| **3** | Parcel unloading belt | Count mixed packages past a line | **7** counted · 24 tracks |
+| **3** | Parcel unloading belt | Count and dimension mixed packages | **8** counted · sized to ±5 % in height |
 | **4** | Bottling line | Measure dispensed volume | **1,001 mL** · 66.7 % of nominal |
 | **5** | Cafe, two rooms | Occupancy and per-person dwell time | **12** visitors each · mean dwell **21.2 s** / **24.6 s** |
 | **6** | Warehouse, four cameras | Locate people in 3D, one floor plan, operational KPIs | median error **0.311 m** vs the dataset's own 3D truth |
@@ -98,7 +98,7 @@ they cross a line drawn with supervision.
 |:--:|---|---|:--:|:--:|
 | 1 | Citrus sorting line | `orange`, `round orange fruit` | 5 | 286 |
 | 2 | Tomato grading line | `tomato` | 16 | 212 |
-| 3 | Parcel unloading belt | `cardboard box`, `parcel`, `plastic bag`, `sports bag`, `styrofoam box` | 7 of 7 | 511 |
+| 3 | Parcel unloading belt | `cardboard box`, `parcel`, `plastic bag`, `sports bag`, `styrofoam box` | 8 of 8 | 511 |
 
 ```bash
 python cases/case1_oranges_counting.py     # citrus line

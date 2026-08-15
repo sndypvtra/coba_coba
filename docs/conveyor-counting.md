@@ -387,25 +387,31 @@ half-length was set from.
 
 ### Measured result
 
-511 frames, 1920×1080, CPU-only. 1,250 ms/frame to detect and track, plus
-7,334 ms on every fifth frame for depth.
+511 frames, 1920×1080, CPU-only. 1,169 ms/frame to detect, track and measure,
+plus 7,373 ms on every fifth frame for depth.
 
 | | |
 |---|---|
-| Counted | **7**, reverse crossings 0 — matching the slit-scan exactly |
-| Tracks / parcels dimensioned | 14 / 13 |
-| Detections rejected by the depth corridor | 7,290 |
-| Total volume on the belt | 360 L |
+| Counted | **8**, reverse crossings 0 — matching the slit-scan exactly |
+| Tracks / parcels dimensioned | 26 / 21, of which **17** are measured on ≥15 frames |
+| Detections rejected on geometry | 7,602 |
+| Total volume dimensioned | 626 L |
 | Belt-plane fit | 8.4 mm rms over 34,905 px |
 | Intrinsics | fx 1372, hFOV 69.9°, frame-to-frame spread 0.8%, square-pixel error 0.4% |
+
+The gap between 21 dimensioned and 17 well-observed is worth naming rather than
+rounding away: four entries rest on 2–8 frames each, picked up as a parcel
+enters or leaves and dropped again. They are real objects, not phantoms — the
+geometric gates put them on the belt — but a size from two frames has no median
+to stand on. A production readout would report the ≥15-frame set and hold the
+rest as provisional.
 
 Against the two cartons that print their own dimensions, `720 × 500 × 340 mm`:
 
 | Carton | Height | Footprint long | Footprint short |
 |---|:--:|:--:|:--:|
-| brown, over its whole pass | 359 mm (**+5.6%**) | 592 mm (−18%) | 287 mm (−43%) |
-| white, over its whole pass | 337 mm (**−0.9%**) | 614 mm (−15%) | 364 mm (−27%) |
-| white, at the line (single frame) | 340 mm (**0.0%**) | 790 mm (+10%) | 390 mm (−22%) |
+| brown, over its whole pass | 366 mm (**+7.6%**) | 579 mm (−20%) | 288 mm (−42%) |
+| white, locked at the line | 341 mm (**+0.3%**) | 637 mm (−12%) | 338 mm (−32%) |
 
 Height is accurate to a few per cent and the footprint is not, which is exactly
 what the geometry predicts: the base sits on a plane fitted from 35,000 pixels
