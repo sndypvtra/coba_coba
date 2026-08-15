@@ -39,9 +39,19 @@ import numpy as np
 
 from factory_vision.counting.depth import Intrinsics, masked_depth
 
-# Longest side a single parcel on an unloading belt can plausibly have. Anything
-# past this is a mask that has swallowed its neighbour or a stretch of belt.
-MAX_PARCEL_M = 1.00
+# Longest side a single parcel can plausibly have on *this* belt - an
+# installation constant, set from the lane, not a universal truth. The largest
+# carton in this scene prints 720 mm on its side and the three real ones measure
+# 721, 723 and 726, so 850 leaves 17 % of headroom above anything observed.
+#
+# What it rejects is the failure this gate exists for: one mask spanning two
+# parcels standing shoulder to shoulder. That reads 991 mm long by 347 wide, a
+# 2.9:1 sliver no single carton on this belt has, while a real 720 x 500 carton
+# reads 1.4:1. The elongation is the tell, and the length bound catches it.
+MAX_PARCEL_M = 0.85
+# A mask reaching this close to a frame border belongs to an object that is only
+# partly in view, so its extent is unmeasurable rather than merely uncertain.
+EDGE_MARGIN = 4
 
 
 @dataclass
@@ -180,6 +190,15 @@ def measure(mask: np.ndarray, depth: np.ndarray, K: Intrinsics, belt: BeltPlane,
     v, u, kept = masked_depth(depth, mask)
     if len(v) < min_points:
         return None
+
+    # A parcel still crossing the frame border is only partly in the mask, and a
+    # minimum-area rectangle fitted to half an object does not come out half the
+    # size - it comes out wrong in a direction that is hard to predict. Such a
+    # parcel is tracked and counted as normal; only the measurement is withheld
+    # until the whole of it is in view.
+    H, W = depth.shape
+    clipped = bool(mask[:, :EDGE_MARGIN].any() or mask[:, W - EDGE_MARGIN:].any())
+
     P = K.unproject(u, v, depth[v, u])
 
     h = belt.height_of(P)
@@ -210,6 +229,9 @@ def measure(mask: np.ndarray, depth: np.ndarray, K: Intrinsics, belt: BeltPlane,
     # both produce a number that looks like a measurement unless it is checked.
     notes = []
     trusted = True
+    if clipped:
+        notes.append("clipped by the frame edge")
+        trusted = False
     if kept < 0.55:
         notes.append("mask disagrees with depth")
         trusted = False
