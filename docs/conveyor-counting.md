@@ -300,6 +300,38 @@ of the belt reads as though anything passing above or below it is outside the
 count, and it leaves no margin for a parcel riding higher than the ones the
 half-length was set from.
 
+### Measured result
+
+511 frames, 1920×1080, CPU-only. 1,250 ms/frame to detect and track, plus
+7,334 ms on every fifth frame for depth.
+
+| | |
+|---|---|
+| Counted | **7**, reverse crossings 0 — matching the slit-scan exactly |
+| Tracks / parcels dimensioned | 14 / 13 |
+| Detections rejected by the depth corridor | 7,290 |
+| Total volume on the belt | 360 L |
+| Belt-plane fit | 8.4 mm rms over 34,905 px |
+| Intrinsics | fx 1372, hFOV 69.9°, frame-to-frame spread 0.8%, square-pixel error 0.4% |
+
+Against the two cartons that print their own dimensions, `720 × 500 × 340 mm`:
+
+| Carton | Height | Footprint long | Footprint short |
+|---|:--:|:--:|:--:|
+| brown, over its whole pass | 359 mm (**+5.6%**) | 592 mm (−18%) | 287 mm (−43%) |
+| white, over its whole pass | 337 mm (**−0.9%**) | 614 mm (−15%) | 364 mm (−27%) |
+| white, at the line (single frame) | 340 mm (**0.0%**) | 790 mm (+10%) | 390 mm (−22%) |
+
+Height is accurate to a few per cent and the footprint is not, which is exactly
+what the geometry predicts: the base sits on a plane fitted from 35,000 pixels
+and the top edge is against open air, while the footprint's far side is behind
+the parcel where one camera cannot see it. The gap widens over a full pass
+because a parcel spends part of it partly occluded by its neighbours or clipped
+by the frame edge, and those errors are one-sided.
+
+**Read the height, treat the footprint as a lower bound.** A second camera
+across the lane is the fix; a better monocular model is not.
+
 ### What this does not measure
 
 A single camera sees the front of a parcel and not its back, so the footprint's

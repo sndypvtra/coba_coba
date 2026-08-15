@@ -95,7 +95,8 @@
       "cardboard box",
       "parcel",
       "plastic bag",
-      "sports bag"
+      "sports bag",
+      "styrofoam box"
     ],
     "conf": 0.08,
     "imgsz": 1280,
@@ -121,16 +122,16 @@
     "per_class": {
       "package": 7
     },
-    "unique_track_ids": 12,
-    "avg_detections_per_frame": 5.15,
-    "avg_ms_per_frame": 1056.3,
+    "unique_track_ids": 14,
+    "avg_detections_per_frame": 5.57,
+    "avg_ms_per_frame": 1249.5,
     "notes": "static stack excluded in depth, not by an x-band",
     "dimensioning": {
       "method": "Depth Anything 3 (DA3-LARGE intrinsics + DA3METRIC-LARGE depth)",
       "process_res": 896,
       "depth_every_n_frames": 5,
       "depth_frames": 109,
-      "avg_depth_ms": 6255.8,
+      "avg_depth_ms": 7334.1,
       "intrinsics": {
         "fx": 1372.3,
         "fy": 1366.6,
@@ -152,29 +153,29 @@
         1.45,
         2.95
       ],
-      "detections_outside_corridor": 7180,
-      "parcels_measured": 12,
+      "detections_outside_corridor": 7290,
+      "parcels_measured": 13,
       "size_classes": {
         "M": 8,
-        "L": 1,
+        "L": 2,
         "S": 3
       },
-      "total_volume_l": 318.4,
-      "median_volume_l": 20.0,
+      "total_volume_l": 360.0,
+      "median_volume_l": 22.3,
       "parcels": [
         {
           "track": 1,
-          "frames_measured": 47,
-          "distance_m": 2.193,
+          "frames_measured": 48,
+          "distance_m": 2.194,
           "distance_range_m": [
             1.79,
-            2.4
+            2.48
           ],
-          "length_mm": 580,
-          "width_mm": 290,
-          "height_mm": 360,
-          "longest_side_mm": 580,
-          "volume_l": 60.4,
+          "length_mm": 592,
+          "width_mm": 287,
+          "height_mm": 359,
+          "longest_side_mm": 592,
+          "volume_l": 61.0,
           "size_class": "M",
           "mask_kept": 0.89,
           "height_iqr_mm": 20
@@ -187,62 +188,62 @@
             2.02,
             2.4
           ],
-          "length_mm": 259,
-          "width_mm": 749,
+          "length_mm": 767,
+          "width_mm": 259,
           "height_mm": 186,
-          "longest_side_mm": 749,
-          "volume_l": 36.1,
+          "longest_side_mm": 767,
+          "volume_l": 36.9,
           "size_class": "L",
           "mask_kept": 0.89,
-          "height_iqr_mm": 7
+          "height_iqr_mm": 8
         },
         {
-          "track": 9,
+          "track": 4,
           "frames_measured": 70,
           "distance_m": 2.428,
           "distance_range_m": [
             1.9,
             2.91
           ],
-          "length_mm": 312,
-          "width_mm": 225,
+          "length_mm": 318,
+          "width_mm": 221,
           "height_mm": 135,
-          "longest_side_mm": 312,
+          "longest_side_mm": 318,
           "volume_l": 9.5,
           "size_class": "M",
           "mask_kept": 0.94,
           "height_iqr_mm": 8
         },
         {
-          "track": 13,
+          "track": 15,
           "frames_measured": 36,
           "distance_m": 2.259,
           "distance_range_m": [
             2.04,
             2.39
           ],
-          "length_mm": 431,
-          "width_mm": 347,
+          "length_mm": 464,
+          "width_mm": 329,
           "height_mm": 154,
-          "longest_side_mm": 431,
-          "volume_l": 23.0,
+          "longest_side_mm": 464,
+          "volume_l": 23.5,
           "size_class": "M",
           "mask_kept": 0.95,
           "height_iqr_mm": 17
         },
         {
-          "track": 17,
+          "track": 18,
           "frames_measured": 18,
           "distance_m": 2.3,
           "distance_range_m": [
             2.23,
             2.36
           ],
-          "length_mm": 440,
-          "width_mm": 407,
+          "length_mm": 457,
+          "width_mm": 401,
           "height_mm": 122,
-          "longest_side_mm": 440,
-          "volume_l": 21.8,
+          "longest_side_mm": 457,
+          "volume_l": 22.3,
           "size_class": "M",
           "mask_kept": 0.93,
           "height_iqr_mm": 15
@@ -255,65 +256,65 @@
             2.16,
             2.57
           ],
-          "length_mm": 167,
-          "width_mm": 194,
+          "length_mm": 203,
+          "width_mm": 167,
           "height_mm": 99,
-          "longest_side_mm": 194,
-          "volume_l": 3.2,
+          "longest_side_mm": 203,
+          "volume_l": 3.4,
           "size_class": "S",
           "mask_kept": 0.9,
           "height_iqr_mm": 9
         },
         {
           "track": 22,
-          "frames_measured": 53,
-          "distance_m": 2.387,
-          "distance_range_m": [
-            1.99,
-            2.71
-          ],
-          "length_mm": 285,
-          "width_mm": 256,
-          "height_mm": 102,
-          "longest_side_mm": 285,
-          "volume_l": 7.4,
-          "size_class": "S",
-          "mask_kept": 0.91,
-          "height_iqr_mm": 11
-        },
-        {
-          "track": 23,
           "frames_measured": 65,
           "distance_m": 2.254,
           "distance_range_m": [
             1.9,
             2.92
           ],
-          "length_mm": 251,
-          "width_mm": 237,
+          "length_mm": 276,
+          "width_mm": 224,
           "height_mm": 254,
-          "longest_side_mm": 254,
-          "volume_l": 15.1,
+          "longest_side_mm": 276,
+          "volume_l": 15.7,
           "size_class": "S",
           "mask_kept": 0.92,
           "height_iqr_mm": 14
         },
         {
+          "track": 23,
+          "frames_measured": 53,
+          "distance_m": 2.387,
+          "distance_range_m": [
+            1.99,
+            2.71
+          ],
+          "length_mm": 291,
+          "width_mm": 255,
+          "height_mm": 102,
+          "longest_side_mm": 291,
+          "volume_l": 7.6,
+          "size_class": "S",
+          "mask_kept": 0.91,
+          "height_iqr_mm": 11
+        },
+        {
           "track": 26,
-          "frames_measured": 69,
-          "distance_m": 2.136,
+          "frames_measured": 73,
+          "distance_m": 2.156,
           "distance_range_m": [
             1.76,
-            2.81
+            2.91
           ],
-          "length_mm": 591,
-          "width_mm": 341,
+          "length_mm": 614,
+          "width_mm": 364,
           "height_mm": 337,
-          "longest_side_mm": 591,
-          "volume_l": 68.0,
-          "size_class": "M",
+          "longest_side_mm": 614,
+          "volume_l": 75.4,
+          "size_class": "L",
           "mask_kept": 0.95,
-          "height_iqr_mm": 19
+          "height_iqr_mm": 20
         },
         {
           "track": 32,
@@ -333,38 +334,55 @@
           "height_iqr_mm": 10
         },
         {
-          "track": 33,
-          "frames_measured": 48,
-          "distance_m": 2.391,
+          "track": 34,
+          "frames_measured": 49,
+          "distance_m": 2.406,
           "distance_range_m": [
             2.1,
-            2.76
+            2.81
           ],
-          "length_mm": 426,
-          "width_mm": 194,
-          "height_mm": 220,
-          "longest_side_mm": 426,
-          "volume_l": 18.2,
+          "length_mm": 425,
+          "width_mm": 195,
+          "height_mm": 221,
+          "longest_side_mm": 425,
+          "volume_l": 18.3,
           "size_class": "M",
           "mask_kept": 0.91,
           "height_iqr_mm": 11
         },
         {
-          "track": 37,
-          "frames_measured": 11,
-          "distance_m": 2.863,
+          "track": 35,
+          "frames_measured": 38,
+          "distance_m": 2.744,
+          "distance_range_m": [
+            2.38,
+            2.94
+          ],
+          "length_mm": 462,
+          "width_mm": 276,
+          "height_mm": 240,
+          "longest_side_mm": 462,
+          "volume_l": 30.6,
+          "size_class": "M",
+          "mask_kept": 0.91,
+          "height_iqr_mm": 9
+        },
+        {
+          "track": 40,
+          "frames_measured": 15,
+          "distance_m": 2.73,
           "distance_range_m": [
             2.6,
             2.91
           ],
-          "length_mm": 426,
-          "width_mm": 321,
-          "height_mm": 112,
-          "longest_side_mm": 426,
-          "volume_l": 15.3,
+          "length_mm": 427,
+          "width_mm": 319,
+          "height_mm": 113,
+          "longest_side_mm": 427,
+          "volume_l": 15.4,
           "size_class": "M",
           "mask_kept": 0.93,
-          "height_iqr_mm": 7
+          "height_iqr_mm": 6
         }
       ]
     }

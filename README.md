@@ -147,6 +147,12 @@ More, including the counting rules and threshold-tuning results:
 
 <br>
 
+<img src="output/preview_parcel_dimensioning.jpg" alt="Parcel dimensioning result" width="100%">
+
+Every parcel on the belt carries its distance and its size; the static stack of
+cartons behind it carries nothing, because it is a metre and a half outside the
+depth corridor.
+
 Counting a parcel is the easy half. The half a depot bills on is *how big it
 was*, and a fixed camera cannot answer that from pixels — the same carton covers
 four times the area at half the distance. [Depth Anything
