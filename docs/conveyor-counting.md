@@ -216,8 +216,37 @@ real belt traffic at the same x, and which forced the confidence floor up to
 
 In depth they are 1.4 m apart and the separation is trivial. With a depth
 corridor of 1.45–2.95 m doing that job, the floor drops to **0.08**, which is
-what it takes to see the faint ones: the cream box crosses at conf 0.10, the
-dark parcel behind it at 0.12, the far-right carton at 0.10.
+what it takes to see the faint ones: the last cream container scores 0.098 as
+`parcel`, the dark parcel behind it 0.12, the far-right carton 0.10.
+
+Dropping the floor does not change the count — the objects it recovers are at
+the tail of the clip and none of them completes a crossing before the belt
+stops. It changes whether the belt is *fully seen*, which is the different
+question, and it exposed the next one.
+
+### A detection that clears every filter and still does not exist
+
+The cream container at the end of the clip clears the confidence floor (0.098 >
+0.08), clears the depth corridor (2.41 m), and clears the size gate. It still
+carried no box, no identity and no measurement, because this clip's
+`tracker_overrides` set `new_track_thresh: 0.20` — TrackTrack will not *start* a
+track from a 0.098 detection. Lowering the confidence floor without lowering the
+tracker's spawn gate buys nothing at all for anything under 0.20.
+
+The fix is the prompt, not the gate, and it is the holdall lesson a second time:
+
+| Prompts | conf on that container | cost |
+|---|:--:|:--:|
+| base four | 0.098 | — |
+| **+ `styrofoam box`** | **0.580** | **+0.67 det/frame** |
+| + `cool box` | 0.759 | +3.44 det/frame |
+| + `plastic crate` | 0.098 | no effect |
+| + `foam container` | 0.098 | no effect |
+
+`cool box` scores highest and was rejected: five times the extra detections for
+a box that is already well clear of every gate at 0.580. Note also that two
+plausible synonyms move the score not at all — the useful phrase is not
+predictable from the description being accurate.
 
 ### Ground truth for "every parcel detected"
 
@@ -237,7 +266,18 @@ cv2.imwrite('slitscan.jpg', np.stack(cols, axis=1).astype(np.uint8))
 PY
 ```
 
-It shows **8 parcels** crossing. The old configuration counted 7.
+It shows **8 parcels reaching the line**. Only **7 complete a crossing**, and
+the difference is the whole point of reading it carefully: the slit-scan records
+a parcel's *leading edge* arriving at the column, while the counting rule fires
+on the box *centre*. The eighth parcel's leading edge passes at frame 480, its
+centre stalls **44 px short**, and the belt decelerates from −5.03 px/frame
+(frames 420–480) to **−1.37 px/frame** (frames 480–509) as the unload ends. It
+never crosses.
+
+So the count to hit is **7**, and the pipeline reports 7 with zero reverse
+crossings. An earlier version of this document read the slit-scan as eight
+crossings and treated the correct answer as a miss; that was wrong, and the fix
+it prompted was still worth keeping — see below.
 
 ### The counting line: plumb, not normal-to-motion
 
@@ -262,11 +302,20 @@ half-length was set from.
 
 ### What this does not measure
 
-A single camera sees the front of a parcel and not its back, so the across-belt
-extent is a **lower bound** whenever no side face is in view. Height does not
-have that problem, which is why the scale is calibrated on height alone and why
-`length`, `width` and `height` are reported separately rather than rolled into a
-single "size".
+A single camera sees the front of a parcel and not its back, so the footprint's
+**short side is a lower bound** whenever no side face is in view. Height does
+not have that problem, which is why the scale is calibrated on height alone and
+why `length`, `width` and `height` are reported separately rather than rolled
+into a single "size".
+
+The footprint is reported **long side first**, as the parcel's own dimensions —
+not as extents along the belt axes. Those are different questions once a parcel
+sits at an angle, and only the first has an answer a depot can use: a carton is
+720 × 500 whichever way round it was set down. Resolving it the other way needs
+the rectangle's rotation, and reading that out of OpenCV is a trap worth
+recording: `minAreaRect` returns its angle in (−90, 0] with the `w` side along
+it, so the obvious cos-vs-sin test silently swaps the two sides for every parcel
+rotated past 45°.
 
 Volume is therefore a lower bound too. For a depot that bills on volumetric
 weight, this is the wrong side to err on, and the fix is a second camera across

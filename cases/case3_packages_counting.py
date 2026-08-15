@@ -12,11 +12,17 @@ Three things this case has to get right, and the evidence for each:
 
   every parcel detected   A slit-scan of the counting column - one pixel
                           column per frame, stacked - shows eight parcels
-                          crossing. That is ground truth nobody had to guess.
-                          The old 0.15 confidence floor found seven; it was set
-                          high to keep the static stack of cartons at the back
-                          of the shot out of the count, and it paid for that
-                          with the faint ones (0.10, 0.12).
+                          reaching the line, of which seven complete a
+                          crossing: the eighth one's leading edge passes at
+                          frame 480, its centre stalls 44 px short, and the
+                          belt decelerates from -5.03 to -1.37 px/frame as the
+                          unload ends. So the count to hit is seven. What the
+                          0.15 confidence floor cost was not the count but the
+                          *sight* of the faint parcels (0.098, 0.10, 0.12) -
+                          and one of those cleared every filter and still had
+                          no box, because a 0.098 detection cannot reach the
+                          tracker's new_track_thresh of 0.20. The prompt fixed
+                          it, not the gate.
   the line square and long
                           The counting line is a plane cut across the belt, and
                           that plane is vertical. The normal of the *image*
@@ -54,7 +60,8 @@ def main() -> None:
     dim = summary.get("dimensioning", {})
 
     report(summary, [
-        ("Counted (line crossings)", f"{summary['count_total']}  (slit-scan truth: 8)"),
+        ("Counted (line crossings)", f"{summary['count_total']}  "
+                                     f"(slit-scan truth: 7 centres cross, 8 reach the line)"),
         ("Unique track IDs", summary["unique_track_ids"]),
         ("Reverse crossings", summary["count_reverse_crossings"]),
         ("Detections / frame", summary["avg_detections_per_frame"]),
@@ -80,7 +87,7 @@ def main() -> None:
           f"   camera {b['camera_height_above_belt_mm']} mm above the belt")
     print(f"    size scale    x{dim['size_scale']:.4f}  - {dim['size_scale_note']}")
 
-    print("\n  PER PARCEL  (L = along belt, W = across, H = above belt)")
+    print("\n  PER PARCEL  (L/W = footprint long/short side, H = above the belt)")
     print(f"    {'trk':>4} {'dist m':>7} {'L mm':>6} {'W mm':>6} {'H mm':>6} "
           f"{'vol L':>7} {'cls':>4} {'frames':>7} {'H IQR':>6}")
     for p in dim["parcels"]:
@@ -90,7 +97,7 @@ def main() -> None:
 
     print("\n  WHAT THIS DOES NOT MEASURE")
     print("    A single camera sees the front of a parcel and not its back, so the")
-    print("    across-belt extent is a lower bound whenever no side face is in view.")
+    print("    footprint's short side is a lower bound whenever no side face is in view.")
     print("    Height does not have that problem - base on a fitted plane, top against")
     print("    open air - which is why the scale is calibrated on height alone.")
 

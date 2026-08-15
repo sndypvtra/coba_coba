@@ -19,14 +19,15 @@ resting on:
   1. fit the belt once - the camera never moves, so neither does the belt
   2. unproject the parcel's mask into 3D and drop what the mask leaked
   3. height is the extent along the belt's normal, from the belt up
-  4. footprint is a minimum-area rectangle in the belt's plane, turned to run
-     along the belt rather than along the image axes
+  4. footprint is a minimum-area rectangle in the belt's plane, reported long
+     side first
 
 Step 3 is the reliable one: the base is pinned to a plane fitted from tens of
 thousands of pixels, and the top edge is against open air. Step 4 is honest but
-weaker in one direction - a single camera sees the front of a parcel and not its
-back, so the across-belt extent is a lower bound whenever no side face is in
-view. Both are reported; only the height is used for calibration.
+weaker - a single camera sees the front of a parcel and not its back, so the
+footprint's short side is a lower bound whenever no side face is in view. Both
+are reported; only the height is used for calibration, because it is the only
+one a single view measures whole.
 """
 
 from __future__ import annotations
@@ -144,8 +145,8 @@ class ParcelSize:
     """One parcel, measured. Lengths in metres, distance along the camera axis."""
 
     distance_m: float
-    length_m: float            # along the belt
-    width_m: float             # across the belt
+    length_m: float            # footprint, long side
+    width_m: float             # footprint, short side
     height_m: float            # above the belt
     volume_l: float
     points: int
@@ -187,16 +188,17 @@ def measure(mask: np.ndarray, depth: np.ndarray, K: Intrinsics, belt: BeltPlane,
     height = max(top - max(base, 0.0), 0.0)
 
     plane_xy = belt.in_plane(P).astype(np.float32)
-    (_, _), (a, b), angle = cv2.minAreaRect(plane_xy)
-    # The rectangle comes back in its own rotated frame and OpenCV is free to
-    # return its two sides in either order, so which side is the along-belt one
-    # has to be read off the angle rather than assumed. Side `a` runs along
-    # (cos, sin) of the rect's rotation and side `b` along (-sin, cos), both in
-    # the belt's own (along, across) coordinates, so whichever has the larger
-    # component on the first axis is the length.
-    theta = np.radians(angle)
-    length, width = ((a, b) if abs(np.cos(theta)) >= abs(np.sin(theta))
-                     else (b, a))
+    (_, _), (a, b), _ = cv2.minAreaRect(plane_xy)
+    # The parcel's own footprint, long side first - not its extent along the
+    # belt axes. Those are different questions once a parcel sits at an angle,
+    # and only this one has an answer a depot can use: a carton is 720 x 500
+    # whichever way round it was set down, and that is what gets billed.
+    #
+    # Resolving it the other way needs the rect's rotation, and reading that
+    # from OpenCV is a trap worth recording: `minAreaRect` returns the angle in
+    # (-90, 0] with the `w` side along it, so a test on cos vs sin of that angle
+    # silently swaps the two sides for every parcel rotated past 45 degrees.
+    length, width = max(a, b), min(a, b)
 
     length, width, height = (float(length) * scale, float(width) * scale,
                              float(height) * scale)

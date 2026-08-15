@@ -136,12 +136,12 @@ CLIPS: list[ClipConfig] = [
         # Adding this prompt finds it at conf 0.55 for +0.7 det/frame; a bare
         # "bag" scores marginally higher but adds 2.4 det/frame of loose boxes.
         # "styrofoam box" is the second instance of the same lesson the holdall
-        # taught, found by asking why the count was 7 when the slit-scan says 8.
-        # The cream container that crosses last is not missed by the detector -
-        # it scores 0.098 as "parcel", which clears the confidence floor and the
-        # depth corridor but never reaches the tracker's new_track_thresh, so no
-        # track is ever created and nothing can be counted. Naming the material
-        # takes the same box from 0.098 to 0.580, well clear of every gate.
+        # taught, found by asking why the last container on the belt carried no
+        # box at all. It is not missed by the detector: it scores 0.098 as
+        # "parcel", which clears the confidence floor and the depth corridor but
+        # never reaches the tracker's new_track_thresh of 0.20, so no track is
+        # ever created and the object exists in no output. Naming the material
+        # takes the same box from 0.098 to 0.580, clear of every gate.
         #
         #   base prompts                0.098   +0.00 det/frame
         #   + "styrofoam box"           0.580   +0.67   <- adopted
@@ -152,12 +152,16 @@ CLIPS: list[ClipConfig] = [
         label="package",
         # 0.15 -> 0.08. The old floor was set to keep the static stack of
         # cartons at the back of the shot out of the count, and it paid for that
-        # with real traffic: the cream box crosses at 0.10, the dark parcel
-        # behind it at 0.12, the far-right carton at 0.10. A slit-scan of the
-        # counting column says eight parcels cross; at 0.15 the pipeline found
-        # seven. The stack is now fenced off in depth instead - it stands 1.4 m
-        # further back - which costs the count nothing and lets the floor drop
-        # far enough to see every parcel on the belt.
+        # with real traffic: the last cream container scored 0.098 as "parcel",
+        # the dark parcel behind it 0.12, the far-right carton 0.10 - all
+        # invisible at 0.15. The stack is fenced off in depth now, 1.4 m further
+        # back, so the floor can drop without the background flooding in.
+        #
+        # This does not change the count, and it was never going to: the objects
+        # it recovers are at the tail of the clip and none of them completes a
+        # crossing before the belt stops. What it changes is whether the belt is
+        # fully seen, which is a different question and the one a depot cares
+        # about - every parcel now carries a box, an identity and a size.
         conf=0.08,
         min_track_age=4,
         tracker_overrides={
