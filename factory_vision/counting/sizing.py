@@ -32,13 +32,16 @@ carton's 500 mm top face spans **17 pixels**, and no algorithm recovers a depth
 extent from 17 pixels. The same camera sees a 110 mm bag's top over 30 px and
 measures it correctly.
 
-That difference is why one blanket correction cannot serve both. Scaling every
-footprint up by the factor that fixes the cartons inflated a flat bag from a
-true ~420 mm to 824 mm and moved it from M to L. So no correction is applied;
-instead `ParcelSize.footprint_measurable` reports, per parcel, whether the
-camera saw enough to answer, and the size class carries a `+` when it is a
-lower bound. The remedy for the cartons is geometric - raise the camera or add
-a view across the lane - not algorithmic.
+That difference decides where the footprint correction may be applied. It was
+measured on two cartons whose top faces spanned 10 and 14 px - both deep in the
+under-resolved regime - so that regime is what it describes. Applied to
+everything it inflated a flat bag the camera had measured correctly, from 444 mm
+to 527, and pushed it out of M into L. Applied only where the camera could not
+resolve the top face, it puts both 720 mm cartons in L and leaves the bag alone.
+
+So the footprint is either measured or estimated, per parcel, and the size class
+says which with a `*`. The real remedy for the tall cartons is geometric - raise
+the camera or add a view across the lane - and no constant substitutes for it.
 """
 
 from __future__ import annotations
@@ -186,6 +189,7 @@ class ParcelSize:
     mask_kept: float           # share of the mask that survived the depth gate
     base_offset_m: float       # how far the parcel's base sits off the belt
     top_face_px: float = 0.0   # pixels the parcel's top face spans in depth
+    footprint_estimated: bool = False  # footprint came via the calibrated correction
     trusted: bool = True
     notes: list[str] = field(default_factory=list)
 
@@ -242,15 +246,15 @@ class ParcelSize:
     def class_mark(self) -> str:
         """How much to trust the class, in one character.
 
-        ``+``  the footprint is a lower bound, so the class is too: this parcel
-               is *at least* this class and may be larger. It is what an
-               under-measured 720 mm carton should say instead of a flat "M".
-        ``?``  the longest side sits within the measurement's own uncertainty of
-               a class boundary.
+        ``?``  the longest side sits within the measurement's own uncertainty
+               of a class boundary - the class could go either way.
+        ``*``  the camera could not resolve this parcel's top face, so the
+               footprint came from the calibrated correction rather than from
+               direct measurement. Good to about +-10 %, not to the millimetre.
         """
-        if not self.footprint_measurable and self.longest_m > self.height_m:
-            return "+"
-        return "" if self.class_certain else "?"
+        if not self.class_certain:
+            return "?"
+        return "*" if self.footprint_estimated else ""
 
 
 def measure(mask: np.ndarray, depth: np.ndarray, K: Intrinsics, belt: BeltPlane,
@@ -304,9 +308,9 @@ def measure(mask: np.ndarray, depth: np.ndarray, K: Intrinsics, belt: BeltPlane,
     # depth accuracy. Leaving it uncorrected is not the neutral choice it looks
     # like - it puts a carton that prints 720 mm on its side into the wrong size
     # class, which is a business output, not a rounding error.
-    length, width = sorted((float(length) * scale * footprint_scale[0],
-                            float(width) * scale * footprint_scale[1]),
-                           reverse=True)
+    # `scale` is the depth model's global correction and applies to all three
+    # axes. Whether `footprint_scale` applies is decided below, from geometry.
+    length, width = float(length) * scale, float(width) * scale
     height = float(height) * scale
     # Re-sorted because the two factors differ: on a nearly square footprint the
     # larger correction can overtake the smaller side and print 47 x 49 in a
@@ -333,10 +337,23 @@ def measure(mask: np.ndarray, depth: np.ndarray, K: Intrinsics, belt: BeltPlane,
         notes.append("wider than the lane")
         trusted = False
     distance = float(np.median(P[:, 2]))
-    # How many pixels of top face the camera gets across the parcel's depth.
-    # See ParcelSize.footprint_measurable for why this decides everything.
+    # How many pixels of top face the camera gets across the parcel's depth,
+    # measured from what was observed - before any correction, because this is a
+    # statement about the image rather than about the parcel.
     lift = max(belt.camera_height_m - height, 0.0)
-    top_face_px = K.fx * lift / max(distance ** 2, 1e-6) * width
+    top_face_px = float(K.fx * lift / max(distance ** 2, 1e-6) * width)
+
+    # The correction goes on only where it was measured. Both cartons it was
+    # fitted to had top faces of 10 and 14 px - deep inside the under-determined
+    # regime - so that is the regime it describes. Applying it to a parcel the
+    # camera *did* resolve is extrapolation outside its calibration domain, and
+    # it showed: a flat poly bag measured correctly at 444 mm was inflated to
+    # 527 and pushed out of M into L.
+    estimated = top_face_px < TOP_FACE_MIN_PX
+    if estimated:
+        length, width = length * footprint_scale[0], width * footprint_scale[1]
+    length, width = max(length, width), min(length, width)
+
     return ParcelSize(
         distance_m=distance,
         length_m=length, width_m=width, height_m=height,

@@ -60,7 +60,8 @@ def _consensus(sizes):
         volume_l=length * width * height * 1000.0,
         points=int(np.median([s.points for s in sizes])),
         mask_kept=med("mask_kept"), base_offset_m=med("base_offset_m"),
-        top_face_px=med("top_face_px"), trusted=True, notes=[f"median of {len(sizes)} frames"],
+        top_face_px=med("top_face_px"),
+        footprint_estimated=any(x.footprint_estimated for x in sizes), trusted=True, notes=[f"median of {len(sizes)} frames"],
     )
 
 
@@ -465,6 +466,7 @@ def _dimension_summary(cfg, depth_model, belt, track_sizes, track_age,
             "size_class_mark": s.class_mark,
             "top_face_px": round(s.top_face_px, 1),
             "footprint_measurable": bool(s.footprint_measurable),
+            "footprint_estimated": bool(s.footprint_estimated),
             "mask_kept": round(s.mask_kept, 2),
             # spread of the height across the pass: the honest error bar on a
             # measurement nobody can check against a tape measure

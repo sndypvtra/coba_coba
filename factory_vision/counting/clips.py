@@ -255,19 +255,28 @@ CLIPS: list[ClipConfig] = [
         size_scale=340.0 / 277.4,
         size_scale_note=("one printed 720x500x340 mm carton (height 277.4 mm measured); "
                          "a second, unseen carton then reads 340.5 mm against 340"),
-        # No footprint correction. One was fitted here to the two printed
-        # cartons (x1.187 long, x1.608 short) because their footprints read 19 %
-        # short, and it did fix them - but it inflated a flat poly bag from a
-        # true ~420 mm to 824 mm and moved it from M to L. The bias is not
-        # systematic: this camera under-reads tall parcels, whose top faces it
-        # cannot see, and over-reads flat shiny ones, whose depth is noisy.
+        # The footprint's own correction, and the domain it is allowed in.
         #
-        # A constant cannot correct a bias that changes sign with the object, so
-        # the footprint is reported as measured and each parcel carries whether
-        # the camera saw enough of its top face to measure it at all. See
-        # sizing.ParcelSize.footprint_measurable.
-        footprint_scale=(1.0, 1.0),
-        footprint_scale_note="none applied; see sizing.footprint_measurable",
+        # Measured on the same two cartons after size_scale:
+        #
+        #                       long        short     top face
+        #   brown carton     579 -> x1.244  288       10 px
+        #   white carton     637 -> x1.130  338       14 px
+        #   applied          x1.187         x1.608
+        #
+        # Both were deep in the regime where this camera cannot resolve a top
+        # face at all, so that regime is what the correction describes. Applied
+        # to everything it inflated a flat poly bag the camera *had* measured
+        # correctly - 444 mm became 527 and the bag jumped from M to L. Applied
+        # only where the top face is under-resolved, it puts both 720 mm cartons
+        # in L and leaves the bag where it was.
+        #
+        # Where it does apply it transfers between the two cartons to about
+        # +-10 % on the long side and +-16 % on the short, so a parcel measured
+        # this way carries a `*` and is not claimed to the millimetre.
+        footprint_scale=(1.187, 1.608),
+        footprint_scale_note=("applied only where the top face is under-resolved; "
+                              "both reference cartons were in that regime, at 10 and 14 px"),
         extra_notes="static stack excluded in depth, not by an x-band",
     ),
 ]
