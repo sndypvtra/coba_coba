@@ -53,6 +53,16 @@ MAX_PARCEL_M = 0.85
 # partly in view, so its extent is unmeasurable rather than merely uncertain.
 EDGE_MARGIN = 4
 
+# Longest side, in metres, separating S from M and M from L. The ordinary parcel
+# boundaries; nothing about this installation moves them.
+CLASS_BOUNDS = (0.30, 0.60)
+# How wrong the corrected footprint can be. Not a guess: it is the transfer error
+# of `footprint_scale` measured between the two cartons that print their own
+# size - fit the correction on one, apply it to the other, and the long side
+# lands within 10 %. A class assigned closer than this to a boundary is a coin
+# toss dressed up as a measurement.
+FOOTPRINT_UNCERTAINTY = 0.10
+
 
 @dataclass
 class BeltPlane:
@@ -178,11 +188,26 @@ class ParcelSize:
         single-camera footprint bias: without it a 720 mm carton measures 579 and
         lands in M, one side of a boundary that decides how it is handled.
         """
-        if self.longest_m < 0.30:
+        if self.longest_m < CLASS_BOUNDS[0]:
             return "S"
-        if self.longest_m < 0.60:
+        if self.longest_m < CLASS_BOUNDS[1]:
             return "M"
         return "L"
+
+    @property
+    def class_certain(self) -> bool:
+        """Is the parcel far enough from a boundary for the class to mean it?
+
+        A big brown carton on this belt measured 595 mm against a 600 mm
+        boundary and was reported flatly as M. It is not that the boundary sits
+        in the wrong place - it is that a footprint corrected to +-10 % cannot
+        resolve five millimetres, and printing an unqualified M says it can.
+        Within the measurement's own uncertainty of a boundary the class is
+        marked, and the panel counts it separately, because "borderline, look at
+        it" is a different instruction to a depot than "it is an M".
+        """
+        u = FOOTPRINT_UNCERTAINTY * self.longest_m
+        return all(abs(self.longest_m - b) > u for b in CLASS_BOUNDS)
 
 
 def measure(mask: np.ndarray, depth: np.ndarray, K: Intrinsics, belt: BeltPlane,
