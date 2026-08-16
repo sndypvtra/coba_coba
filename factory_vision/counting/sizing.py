@@ -23,11 +23,22 @@ resting on:
      side first
 
 Step 3 is the reliable one: the base is pinned to a plane fitted from tens of
-thousands of pixels, and the top edge is against open air. Step 4 is honest but
-weaker - a single camera sees the front of a parcel and not its back, so the
-footprint's short side is a lower bound whenever no side face is in view. Both
-are reported; only the height is used for calibration, because it is the only
-one a single view measures whole.
+thousands of pixels, and the top edge is against open air.
+
+Step 4 is only sometimes possible, and the pipeline says which. A parcel's
+extent *away* from the camera lives on its top face, and this camera rides
+488 mm above the belt - 125 mm above a 363 mm carton's lid. At 2.25 m that
+carton's 500 mm top face spans **17 pixels**, and no algorithm recovers a depth
+extent from 17 pixels. The same camera sees a 110 mm bag's top over 30 px and
+measures it correctly.
+
+That difference is why one blanket correction cannot serve both. Scaling every
+footprint up by the factor that fixes the cartons inflated a flat bag from a
+true ~420 mm to 824 mm and moved it from M to L. So no correction is applied;
+instead `ParcelSize.footprint_measurable` reports, per parcel, whether the
+camera saw enough to answer, and the size class carries a `+` when it is a
+lower bound. The remedy for the cartons is geometric - raise the camera or add
+a view across the lane - not algorithmic.
 """
 
 from __future__ import annotations
@@ -56,12 +67,14 @@ EDGE_MARGIN = 4
 # Longest side, in metres, separating S from M and M from L. The ordinary parcel
 # boundaries; nothing about this installation moves them.
 CLASS_BOUNDS = (0.30, 0.60)
-# How wrong the corrected footprint can be. Not a guess: it is the transfer error
-# of `footprint_scale` measured between the two cartons that print their own
-# size - fit the correction on one, apply it to the other, and the long side
-# lands within 10 %. A class assigned closer than this to a boundary is a coin
+# How wrong a footprint can be even when the camera did see enough of the top
+# face to measure it. A class assigned closer than this to a boundary is a coin
 # toss dressed up as a measurement.
 FOOTPRINT_UNCERTAINTY = 0.10
+# Pixels a parcel's top face must span in the depth direction before its
+# footprint counts as measured rather than guessed. Below this the far side of
+# the parcel is simply not in the image.
+TOP_FACE_MIN_PX = 25.0
 
 
 @dataclass
@@ -172,8 +185,27 @@ class ParcelSize:
     points: int
     mask_kept: float           # share of the mask that survived the depth gate
     base_offset_m: float       # how far the parcel's base sits off the belt
+    top_face_px: float = 0.0   # pixels the parcel's top face spans in depth
     trusted: bool = True
     notes: list[str] = field(default_factory=list)
+
+    @property
+    def footprint_measurable(self) -> bool:
+        """Did the camera see enough of the top face to measure the footprint?
+
+        This is geometry, not a fitted constant. A parcel's extent *away* from
+        the camera is only visible on its top face, and that face is
+        foreshortened by ``(H - h) / z`` - the camera's height above the parcel
+        over its distance. Here H is 488 mm and the cartons are 346-363 mm tall,
+        so the camera rides 125 mm above their lids at 2.25 m and their 500 mm
+        top faces span **17 to 22 pixels**. There is no algorithm that recovers a
+        depth extent from 17 pixels; the information was never captured.
+
+        The same camera sees a 110 mm bag's top face over 30 px and measures it
+        fine. That is why one blanket correction could not serve both, and why
+        this returns a per-parcel answer instead.
+        """
+        return self.top_face_px >= TOP_FACE_MIN_PX
 
     @property
     def longest_m(self) -> float:
@@ -198,16 +230,27 @@ class ParcelSize:
     def class_certain(self) -> bool:
         """Is the parcel far enough from a boundary for the class to mean it?
 
-        A big brown carton on this belt measured 595 mm against a 600 mm
-        boundary and was reported flatly as M. It is not that the boundary sits
-        in the wrong place - it is that a footprint corrected to +-10 % cannot
-        resolve five millimetres, and printing an unqualified M says it can.
-        Within the measurement's own uncertainty of a boundary the class is
-        marked, and the panel counts it separately, because "borderline, look at
-        it" is a different instruction to a depot than "it is an M".
+        A brown carton measured 595 mm against a 600 mm boundary and was
+        reported flatly as M. The boundary is not in the wrong place - it is
+        that a footprint good to +-10 % cannot resolve five millimetres, and an
+        unqualified M claims it can.
         """
         u = FOOTPRINT_UNCERTAINTY * self.longest_m
         return all(abs(self.longest_m - b) > u for b in CLASS_BOUNDS)
+
+    @property
+    def class_mark(self) -> str:
+        """How much to trust the class, in one character.
+
+        ``+``  the footprint is a lower bound, so the class is too: this parcel
+               is *at least* this class and may be larger. It is what an
+               under-measured 720 mm carton should say instead of a flat "M".
+        ``?``  the longest side sits within the measurement's own uncertainty of
+               a class boundary.
+        """
+        if not self.footprint_measurable and self.longest_m > self.height_m:
+            return "+"
+        return "" if self.class_certain else "?"
 
 
 def measure(mask: np.ndarray, depth: np.ndarray, K: Intrinsics, belt: BeltPlane,
@@ -289,12 +332,17 @@ def measure(mask: np.ndarray, depth: np.ndarray, K: Intrinsics, belt: BeltPlane,
     if max(length, width) > MAX_PARCEL_M:
         notes.append("wider than the lane")
         trusted = False
+    distance = float(np.median(P[:, 2]))
+    # How many pixels of top face the camera gets across the parcel's depth.
+    # See ParcelSize.footprint_measurable for why this decides everything.
+    lift = max(belt.camera_height_m - height, 0.0)
+    top_face_px = K.fx * lift / max(distance ** 2, 1e-6) * width
     return ParcelSize(
-        distance_m=float(np.median(P[:, 2])),
+        distance_m=distance,
         length_m=length, width_m=width, height_m=height,
         volume_l=length * width * height * 1000.0,
         points=int(len(v)), mask_kept=kept, base_offset_m=base,
-        trusted=trusted, notes=notes,
+        top_face_px=float(top_face_px), trusted=trusted, notes=notes,
     )
 
 

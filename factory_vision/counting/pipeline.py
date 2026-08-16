@@ -60,7 +60,7 @@ def _consensus(sizes):
         volume_l=length * width * height * 1000.0,
         points=int(np.median([s.points for s in sizes])),
         mask_kept=med("mask_kept"), base_offset_m=med("base_offset_m"),
-        trusted=True, notes=[f"median of {len(sizes)} frames"],
+        top_face_px=med("top_face_px"), trusted=True, notes=[f"median of {len(sizes)} frames"],
     )
 
 
@@ -84,7 +84,7 @@ def _operations(frame_idx: int, fps: float, counted: int, crossing_frames,
     borderline = 0
     for s in counted_sizes:
         mix[s.class_name] = mix.get(s.class_name, 0) + 1
-        borderline += not s.class_certain
+        borderline += bool(s.class_mark)
     gaps = [(b - a) / fps for a, b in zip(crossing_frames, crossing_frames[1:])]
     return {
         "counted": counted,
@@ -362,7 +362,7 @@ def process(cfg: ClipConfig, args) -> dict:
                         continue
                     dims = (f"{size.length_m*100:.0f}x{size.width_m*100:.0f}"
                             f"x{size.height_m*100:.0f}cm")
-                    cls = size.class_name + ("" if size.class_certain else "?")
+                    cls = size.class_name + size.class_mark
                     if tid in locked_sizes:
                         labels.append(f"#{tid} LOCKED {dims} {size.volume_l:.0f}L "
                                       f"[{cls}] {size.distance_m:.2f}m")
@@ -462,7 +462,9 @@ def _dimension_summary(cfg, depth_model, belt, track_sizes, track_age,
             "longest_side_mm": round(dims[0] * 1000),
             "volume_l": round(s.volume_l, 1),
             "size_class": s.class_name,
-            "size_class_certain": bool(s.class_certain),
+            "size_class_mark": s.class_mark,
+            "top_face_px": round(s.top_face_px, 1),
+            "footprint_measurable": bool(s.footprint_measurable),
             "mask_kept": round(s.mask_kept, 2),
             # spread of the height across the pass: the honest error bar on a
             # measurement nobody can check against a tape measure
