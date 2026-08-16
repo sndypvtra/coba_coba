@@ -359,7 +359,8 @@ def measure(mask: np.ndarray, depth: np.ndarray, K: Intrinsics, belt: BeltPlane,
         length_m=length, width_m=width, height_m=height,
         volume_l=length * width * height * 1000.0,
         points=int(len(v)), mask_kept=kept, base_offset_m=base,
-        top_face_px=float(top_face_px), trusted=trusted, notes=notes,
+        top_face_px=float(top_face_px), footprint_estimated=estimated,
+        trusted=trusted, notes=notes,
     )
 
 
