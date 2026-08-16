@@ -28,10 +28,15 @@ the quickest.
 |---|---|
 | `main.py` | entry point |
 | `calibration.py` | every constant tied to this one station — eleven of them |
+| `assets.py` | the clip, pinned to the 1080p rendition |
+| `roi.py` | holding the measurement window on the bottle against camera shake |
 | `segmentation.py` | product mask and bottle silhouette |
 | `profile.py` | bore, surface, isotonic fit, volume integration |
+| `bore.py` | pass 1 — the fixed bore, and the capacity it implies |
+| `level.py` | pass 2 — the surface per frame, de-flickered |
+| `pipeline.py` | the sequence, and pass 3's render |
 | `panel.py` | the readout panel |
-| `pipeline.py` | three passes over the clip |
+| `report.py` | the console read-out |
 
 ## What is measured and what is configured
 

@@ -25,8 +25,10 @@ of the first.
 
 | | |
 |---|---|
-| `main.py` | entry point — assets, run, the per-parcel table |
+| `main.py` | entry point — assets, run, report |
 | `config.py` | every constant, each with the measurement that set it |
+| `assets.py` | the clip, the detector, and the two depth checkpoints (~2.9 GB) |
+| `report.py` | the read-out: measurement chain, per-parcel table, and what `*`/`?` mean |
 | `input/`, `output/` | clip in, video + `summary.json` + depth cache out |
 
 Shared engine in `factory_vision/counting/`: `pipeline.py` (detect → track →

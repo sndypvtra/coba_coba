@@ -21,7 +21,6 @@ different words.
 
 from __future__ import annotations
 
-import argparse
 import json
 import time
 import warnings
@@ -38,7 +37,7 @@ from factory_vision.counting.geometry import (build_counting_line, draw_roi,
 from factory_vision.counting.overlay import PALETTE, Hud
 from factory_vision.counting.sizing import measure, on_belt
 from factory_vision.tracking import resolve_tracker_cfg
-from factory_vision.paths import ROOT, WEIGHTS_DIR
+from factory_vision.paths import WEIGHTS_DIR
 
 warnings.filterwarnings("ignore")
 

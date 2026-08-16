@@ -24,8 +24,21 @@ python main.py --all
 |---|---|
 | `main.py` | entry point |
 | `config.py` | per-room zones: mirrors to exclude, the service point |
-| `pipeline.py` | detect → track → role → dwell → render |
+| `assets.py` | what has to be present before a run |
+| `zones.py` | frame regions that are not ordinary customers — geometry only |
+| `detection.py` | pass 1 — detect, filter by zone, track, describe |
+| `identity.py` | re-linking tracks the tracker broke on occlusion |
+| `roles.py` | staff or customer, decided once per person |
+| `render.py` | pass 2 — the annotated video |
+| `overlay.py` | the readout strip and the box tags |
+| `summary.py` | the result record and its quality signals |
+| `pipeline.py` | the six-step sequence, and nothing else |
+| `report.py` | the console read-out |
 | `input/`, `output/` | the two pre-cut clips, and results |
+
+Four of those six steps are about *identity* rather than pixels, which is the
+shape of the problem: occupancy falls out of detection alone, and everything
+else depends on one person keeping one ID.
 
 ## The two numbers are not equally good
 

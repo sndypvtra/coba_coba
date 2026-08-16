@@ -18,8 +18,10 @@ python main.py
 
 | | |
 |---|---|
-| `main.py` | entry point — identical to project 01's but for the clip it needs |
+| `main.py` | entry point — identical to project 01's but for the case number |
 | `config.py` | one prompt (`tomato`), a line 9.4° off vertical, and a y-ROI |
+| `assets.py` | identical to project 01's but for the clip id |
+| `report.py` | identical to project 01's, so the two outputs compare line by line |
 | `input/`, `output/` | this project's own video in and results out |
 
 ## Why this project exists next to project 01

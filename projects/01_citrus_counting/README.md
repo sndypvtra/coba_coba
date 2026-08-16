@@ -22,8 +22,10 @@ Everything missing is fetched on first run, with a progress bar: the clip into
 
 | | |
 |---|---|
-| `main.py` | entry point — fetches assets, runs, prints the report |
+| `main.py` | entry point — four calls, no logic of its own |
 | `config.py` | the prompts, the confidence floor, the counting line, the belt's measured travel |
+| `assets.py` | what has to be downloaded before a run |
+| `report.py` | the console read-out |
 | `input/` | source clip |
 | `output/` | rendered video and `summary.json` |
 

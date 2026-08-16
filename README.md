@@ -279,7 +279,8 @@ them. Intersection over the *smaller* box does, cleanly.
 Mirrors are excluded by region, not by appearance: nothing in a reflection's
 pixels says "reflection", and what does say it is where it is in a fixed
 camera's frame. Each room therefore carries its own zones in
-[`factory_vision/dwell/config.py`](factory_vision/dwell/config.py).
+[`projects/05_cafe_dwell_time/config.py`](projects/05_cafe_dwell_time/config.py),
+resolved by [`zones.py`](projects/05_cafe_dwell_time/zones.py).
 
 </details>
 
@@ -391,11 +392,17 @@ projects/
   05_cafe_dwell_time/       occupancy and per-person dwell
   06_warehouse_3d/          four cameras -> one floor plan in metres
 
-    each contains
-      main.py               the entry point: fetch what is missing, then run
-      README.md             what it does, what it measured, what breaks it
+    every project has these four
+      main.py               the entry point, and only the sequence of steps
       config.py             every constant, with the measurement that set it
+      assets.py             what must be downloaded before a run
+      report.py             the console read-out
+      README.md             what it does, what it measured, what breaks it
       input/  output/       this project's own video in, results out
+
+    and the four that carry their own pipeline split it by stage, e.g.
+      04: roi -> segmentation -> profile -> bore -> level -> pipeline -> panel
+      05: zones -> detection -> identity -> roles -> render -> summary
 
 factory_vision/             the shared half, and only what is genuinely shared
   assets.py                 first-run downloads with a progress bar
