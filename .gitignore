@@ -18,3 +18,4 @@ output/*.mp4
 # per-variant series from factory_vision/tools/perturbation_test.py; the baseline
 # output/liquid_level_summary.json is committed, these are regenerable
 output/liquid_level_summary_*.json
+output/.depth_cache/

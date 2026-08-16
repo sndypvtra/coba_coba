@@ -45,6 +45,7 @@ from __future__ import annotations
 import sys
 import types
 from dataclasses import dataclass
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -120,13 +121,16 @@ class Intrinsics:
 class MetricDepth:
     """Depth Anything 3, wired for a fixed camera and returning metres."""
 
-    def __init__(self, process_res: int = 896, threads: int = 4):
+    def __init__(self, process_res: int = 896, threads: int = 4,
+                 cache_dir=None):
         import torch
 
         torch.set_num_threads(threads)
         from depth_anything_3.api import DepthAnything3
 
         self.process_res = process_res
+        self.cache_dir = Path(cache_dir) if cache_dir else None
+        self.frames_cached = 0
         self._geometry = DepthAnything3.from_pretrained(GEOMETRY_MODEL).eval()
         self._metric = DepthAnything3.from_pretrained(METRIC_MODEL).eval()
         self.intrinsics: Intrinsics | None = None
@@ -152,17 +156,46 @@ class MetricDepth:
         self.intrinsics_spread = spread
         return self.intrinsics
 
-    def depth(self, bgr: np.ndarray) -> np.ndarray:
-        """Metric depth in metres, at the frame's own resolution."""
+    def depth(self, bgr: np.ndarray, cache_key: str | None = None) -> np.ndarray:
+        """Metric depth in metres, at the frame's own resolution.
+
+        A ``cache_key`` makes the map reusable. On this machine one forward pass
+        costs 7 s when the host is quiet and 60 s when it is not, so a 511-frame
+        render is anywhere between 25 minutes and two hours - and a container
+        restart part-way through threw all of it away once. The maps depend only
+        on the frame and the processing resolution, both of which are fixed, so
+        caching them makes a re-render for a label or panel change nearly free
+        and makes an interrupted run resumable.
+
+        Stored at the processing resolution in float16: 0.9 MB a frame instead
+        of 8, and a quantisation step of about 1 mm at these distances, which is
+        far below the model's own error.
+        """
         if self.intrinsics is None:
             self.solve_intrinsics([bgr])
+        h, w = bgr.shape[:2]
+        path = self._cache_path(cache_key)
+        if path is not None and path.exists():
+            self.frames_cached += 1
+            return cv2.resize(np.load(path).astype(np.float32), (w, h),
+                              interpolation=cv2.INTER_LINEAR)
+
         rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
         pred = self._metric.inference([rgb], process_res=self.process_res,
                                       export_dir=None)
         metres = pred.depth[0] * self.intrinsics.focal / CANONICAL_FOCAL
         self.frames_run += 1
-        h, w = bgr.shape[:2]
+        if path is not None:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            tmp = path.with_suffix(".tmp.npy")
+            np.save(tmp, metres.astype(np.float16))
+            tmp.replace(path)        # atomic, so a kill mid-write leaves no stub
         return cv2.resize(metres, (w, h), interpolation=cv2.INTER_LINEAR)
+
+    def _cache_path(self, key: str | None):
+        if key is None or self.cache_dir is None:
+            return None
+        return self.cache_dir / f"{key}_{self.process_res}.npy"
 
 
 def masked_depth(depth: np.ndarray, mask: np.ndarray,

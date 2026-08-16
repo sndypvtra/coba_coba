@@ -133,14 +133,15 @@ def _prepare_depth(cfg: ClipConfig, src, w: int, h: int):
             probes.append(frame)
     cap.release()
 
-    model = MetricDepth(process_res=cfg.depth_process_res)
+    cache = OUTPUT_DIR / ".depth_cache" / Path(cfg.filename).stem
+    model = MetricDepth(process_res=cfg.depth_process_res, cache_dir=cache)
     K_proc = model.solve_intrinsics(probes[:4])
     K = K_proc.scaled_to(w, h)
     print(f"    depth   : DA3 {cfg.depth_process_res}px  fx={K.fx:.0f} fy={K.fy:.0f} "
           f"hFOV={K.hfov_deg:.1f}deg  spread={model.intrinsics_spread*100:.1f}%  "
           f"square-pixel error={K_proc.square_pixel_error*100:.1f}%")
 
-    maps = [model.depth(f) for f in probes]
+    maps = [model.depth(f, f"probe{i}") for i, f in enumerate(probes)]
     belt = fit_belt(bare_belt_depth(maps), K, cfg.belt_patches, cfg.motion)
     print(f"    belt    : plane rms {belt.rms_m*1000:.1f} mm from {belt.samples} px, "
           f"camera {belt.camera_height_m*1000:.0f} mm above it")
@@ -260,7 +261,7 @@ def process(cfg: ClipConfig, args) -> dict:
             # the static stack at the back, does not move at all.
             if depth_model is not None and (idx - 1) % cfg.depth_every == 0:
                 td = time.time()
-                last_depth = depth_model.depth(frame)
+                last_depth = depth_model.depth(frame, f"f{idx:05d}")
                 depth_ms.append((time.time() - td) * 1000)
 
             # One measurement per detection serves two purposes: it decides
@@ -482,6 +483,7 @@ def _dimension_summary(cfg, depth_model, belt, track_sizes, track_age,
         "process_res": cfg.depth_process_res,
         "depth_every_n_frames": cfg.depth_every,
         "depth_frames": depth_model.frames_run,
+        "depth_frames_from_cache": depth_model.frames_cached,
         "avg_depth_ms": round(float(np.mean(depth_ms)), 1) if depth_ms else None,
         "intrinsics": {
             "fx": round(K.fx, 1), "fy": round(K.fy, 1),
