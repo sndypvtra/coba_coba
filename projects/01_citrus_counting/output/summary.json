@@ -1,0 +1,42 @@
+{
+  "video": "01_oranges_production_line.mp4",
+  "scene": "Citrus sorting line - oranges on roller conveyor",
+  "source_url": "https://www.pexels.com/video/fruit-on-production-line-10576687/",
+  "output": "01_oranges_production_line__counted.mp4",
+  "resolution": "1920x1080",
+  "fps": 30.0,
+  "frames_written": 286,
+  "model": "yoloe-11l-seg",
+  "prompts": [
+    "orange",
+    "round orange fruit"
+  ],
+  "conf": 0.095,
+  "imgsz": 1280,
+  "tracker": "TrackTrack (CVPR 2025) + ReID + GMC",
+  "count_total": 5,
+  "count_in": 5,
+  "count_reverse_crossings": 0,
+  "line": [
+    [
+      1008,
+      1014
+    ],
+    [
+      791,
+      275
+    ]
+  ],
+  "motion_px_per_frame": [
+    -3.21,
+    0.94
+  ],
+  "min_track_age": 4,
+  "per_class": {
+    "orange": 5
+  },
+  "unique_track_ids": 32,
+  "avg_detections_per_frame": 7.72,
+  "avg_ms_per_frame": 1208.7,
+  "notes": ""
+}

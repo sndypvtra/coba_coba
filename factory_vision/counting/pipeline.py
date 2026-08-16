@@ -10,9 +10,13 @@ Per frame:
      boxes, ID labels, motion traces, the counting line, and a HUD.
   4. ``sv.LineZone`` turns crossings into counts, attributed per class.
 
-Run all clips:      python -m factory_vision.counting.pipeline
-Run one clip:       python -m factory_vision.counting.pipeline --only 02_tomatoes_conveyor.mp4
-Smoke test (fast):  python -m factory_vision.counting.pipeline --max-frames 60 --stride 2
+This module is the engine, not an entry point. Projects 01, 02 and 03 each own
+a `config.py` and a `main.py` and call `run_case` with their own directories -
+which is the whole demonstration for the first two: same engine, same weights,
+different words.
+
+    from factory_vision.counting import run_case
+    summary = run_case(cfg, video_dir=..., output_dir=...)
 """
 
 from __future__ import annotations
@@ -28,13 +32,13 @@ import numpy as np
 import supervision as sv
 from ultralytics import YOLOE
 
-from factory_vision.counting.clips import CLIPS, ClipConfig
+from factory_vision.counting.clips import ClipConfig
 from factory_vision.counting.geometry import (build_counting_line, draw_roi,
                                               filter_detections)
 from factory_vision.counting.overlay import PALETTE, Hud
 from factory_vision.counting.sizing import measure, on_belt
-from factory_vision.counting.tracking import resolve_tracker_cfg
-from factory_vision.paths import OUTPUT_DIR, ROOT, VIDEO_DIR, WEIGHTS_DIR
+from factory_vision.tracking import resolve_tracker_cfg
+from factory_vision.paths import ROOT, WEIGHTS_DIR
 
 warnings.filterwarnings("ignore")
 
@@ -112,7 +116,7 @@ def _size_of(tid: int, locked: dict, running: dict):
     return _consensus(running.get(tid))
 
 
-def _prepare_depth(cfg: ClipConfig, src, w: int, h: int):
+def _prepare_depth(cfg: ClipConfig, src, w: int, h: int, output_dir: Path):
     """Solve the camera and fit the belt once, before the clip starts.
 
     Both are properties of the installation, not of any frame: the camera does
@@ -133,7 +137,7 @@ def _prepare_depth(cfg: ClipConfig, src, w: int, h: int):
             probes.append(frame)
     cap.release()
 
-    cache = OUTPUT_DIR / ".depth_cache" / Path(cfg.filename).stem
+    cache = output_dir / ".depth_cache" / Path(cfg.filename).stem
     model = MetricDepth(process_res=cfg.depth_process_res, cache_dir=cache)
     K_proc = model.solve_intrinsics(probes[:4])
     K = K_proc.scaled_to(w, h)
@@ -152,13 +156,14 @@ def _prepare_depth(cfg: ClipConfig, src, w: int, h: int):
     return model, belt, maps[0]
 
 
-def process(cfg: ClipConfig, args) -> dict:
-    src = VIDEO_DIR / cfg.filename
+def process(cfg: ClipConfig, args, video_dir: Path, output_dir: Path) -> dict:
+    src = video_dir / cfg.filename
     info = sv.VideoInfo.from_video_path(str(src))
     w, h = info.width, info.height
     scale = w / 1920.0
 
-    tracker_cfg = resolve_tracker_cfg(args.tracker, cfg.tracker_overrides, cfg.filename[:2])
+    tracker_cfg = resolve_tracker_cfg(args.tracker, cfg.tracker_overrides, cfg.filename[:2],
+                                     output_dir)
     tracker_label = {
         "tracktrack": "TrackTrack (CVPR 2025) + ReID + GMC",
         "botsort": "BoT-SORT + ReID + GMC",
@@ -200,7 +205,7 @@ def process(cfg: ClipConfig, args) -> dict:
 
     hud = Hud(cfg, tracker_label, model_label, info.total_frames)
 
-    out_path = OUTPUT_DIR / f"{Path(cfg.filename).stem}__counted.mp4"
+    out_path = output_dir / f"{Path(cfg.filename).stem}__counted.mp4"
     out_info = sv.VideoInfo(width=w, height=h, fps=info.fps, total_frames=info.total_frames)
 
     per_class: dict[str, int] = {}
@@ -221,7 +226,7 @@ def process(cfg: ClipConfig, args) -> dict:
     crossing_frames: list[int] = []        # when each count happened, for headway
     counted_sizes: list = []               # the size each counted parcel carried
     if cfg.measure_size:
-        depth_model, belt, last_depth = _prepare_depth(cfg, src, w, h)
+        depth_model, belt, last_depth = _prepare_depth(cfg, src, w, h, output_dir)
 
     cap = cv2.VideoCapture(str(src))
     print(f"\n>>> {cfg.filename}  {w}x{h} @ {info.fps:.2f}fps  {info.total_frames} frames")
@@ -512,37 +517,14 @@ def _dimension_summary(cfg, depth_model, belt, track_sizes, track_age,
     }
 
 
-def merge_summary(summary: dict, path: Path | None = None) -> None:
-    """Fold one clip's summary into output/summary.json, keeping the others.
+def run_case(cfg: ClipConfig, video_dir: Path, output_dir: Path, **overrides) -> dict:
+    """Run one clip end to end, write its summary, and return it.
 
-    Each case script runs a single clip, so it must not overwrite the shared
-    file with a one-element list - the entry is replaced in place and the
-    remaining clips are left as they were. Entries are held in CLIPS order so
-    the file reads the same however the cases were run.
-    """
-    path = path or (OUTPUT_DIR / "summary.json")
-    existing: list[dict] = []
-    if path.exists():
-        try:
-            loaded = json.loads(path.read_text())
-            if isinstance(loaded, list):
-                existing = [e for e in loaded if isinstance(e, dict)]
-        except json.JSONDecodeError:
-            existing = []  # unreadable file is not worth losing this run over
-
-    merged = [e for e in existing if e.get("video") != summary["video"]] + [summary]
-    order = {c.filename: i for i, c in enumerate(CLIPS)}
-    merged.sort(key=lambda e: order.get(e.get("video"), len(order)))
-    path.write_text(json.dumps(merged, indent=2))
-
-
-def run_case(filename: str, **overrides) -> dict:
-    """Run one clip end to end and return its summary.
-
-    The per-case scripts in `cases/` call this. They stay thin on purpose: the
-    three counting cases differ only in their ClipConfig, so duplicating the
-    pipeline into each script would mean three copies of the same tracker,
-    counting and rendering code drifting apart on the next fix.
+    Each project owns its own `config.py` and its own `output/`, so a summary is
+    one clip's and nothing else's. The previous version merged every clip into a
+    single shared file and had to re-sort it on every run to stop one case
+    clobbering another's entry - a problem that only existed because the output
+    was shared.
     """
     from types import SimpleNamespace
 
@@ -550,43 +532,8 @@ def run_case(filename: str, **overrides) -> dict:
                            imgsz=1280, max_frames=0, stride=1)
     for key, value in overrides.items():
         setattr(args, key, value)
-    try:
-        cfg = next(c for c in CLIPS if c.filename == filename)
-    except StopIteration:
-        raise SystemExit(f"no clip named {filename}")
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    summary = process(cfg, args)
-    merge_summary(summary, Path(getattr(args, "summary", OUTPUT_DIR / "summary.json")))
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    summary = process(cfg, args, video_dir, output_dir)
+    (output_dir / "summary.json").write_text(json.dumps(summary, indent=2))
     return summary
-
-
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--weights", default="yoloe-11l-seg.pt")
-    ap.add_argument("--tracker", default="tracktrack", choices=["tracktrack", "botsort"])
-    ap.add_argument("--imgsz", type=int, default=1280)
-    ap.add_argument("--only", default=None, help="process a single filename")
-    ap.add_argument("--max-frames", type=int, default=0, help="0 = whole clip")
-    ap.add_argument("--stride", type=int, default=1)
-    ap.add_argument("--summary", default=str(OUTPUT_DIR / "summary.json"))
-    args = ap.parse_args()
-
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    clips = [c for c in CLIPS if args.only in (None, c.filename)]
-    if not clips:
-        raise SystemExit(f"no clip matches --only {args.only}")
-
-    summaries = [process(cfg, args) for cfg in clips]
-
-    Path(args.summary).write_text(json.dumps(summaries, indent=2))
-    print("\n==================== SUMMARY ====================")
-    for s in summaries:
-        print(
-            f"{s['output']:46s} count={s['count_total']:4d} "
-            f"ids={s['unique_track_ids']:4d} {s['avg_ms_per_frame']:.0f}ms/f"
-        )
-    print(f"\nwrote {args.summary}")
-
-
-if __name__ == "__main__":
-    main()

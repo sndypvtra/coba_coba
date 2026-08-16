@@ -1,21 +1,28 @@
-"""factory-vision-poc — computer vision for production lines.
+"""factory-vision-poc — the shared half of six computer-vision projects.
 
-Two independent pipelines, kept apart because they share nothing but OpenCV:
+Each case lives in its own folder under `projects/`, with its own `main.py`,
+its own `input/` and `output/`, and its own configuration. What sits here is
+only what more than one of them genuinely needs:
+
+``factory_vision.assets``
+    Fetches a project's clips, weights and Hub models on first run, with a
+    progress bar, so `python main.py` works on a clean clone.
 
 ``factory_vision.counting``
-    Zero-shot object counting on conveyors (cases 1-3). YOLOE text prompts ->
-    TrackTrack -> supervision line counting. No training, no fixed class list.
+    The zero-shot counting engine behind projects 01, 02 and 03. Shared on
+    purpose: those three differ only in their `config.py`, and copying the
+    pipeline into each would be three versions of one tracker drifting apart.
 
-``factory_vision.filling``
-    Fill-volume inspection on a bottling line (case 4). HSV segmentation and
-    disc integration, calibrated to one station.
+``factory_vision.detect`` and ``factory_vision.tracking``
+    Detection filtering and the retuned tracker gates, used by the counting
+    engine and by projects 05 and 06 which drive the tracker directly.
 
 ``factory_vision.tools``
-    Calibration and measurement scripts that support the two above.
+    Calibration and measurement scripts that support the projects.
 """
 
 from __future__ import annotations
 
-from factory_vision.paths import OUTPUT_DIR, ROOT, VIDEO_DIR, WEIGHTS_DIR
+from factory_vision.paths import PROJECTS_DIR, ROOT, WEIGHTS_DIR, project_dirs
 
-__all__ = ["ROOT", "VIDEO_DIR", "OUTPUT_DIR", "WEIGHTS_DIR"]
+__all__ = ["ROOT", "WEIGHTS_DIR", "PROJECTS_DIR", "project_dirs"]

@@ -5,12 +5,12 @@ named in plain English, embedded with ``get_text_pe()``, tracked with TrackTrack
 and counted as they cross a line laid perpendicular to the belt's travel.
 
     from factory_vision.counting import run_case
-    summary = run_case("02_tomatoes_conveyor.mp4")
+    summary = run_case(cfg, video_dir, output_dir)
 """
 
 from __future__ import annotations
 
-from factory_vision.counting.clips import CLIPS, ClipConfig
-from factory_vision.counting.pipeline import merge_summary, process, run_case
+from factory_vision.counting.clips import ClipConfig
+from factory_vision.counting.pipeline import process, run_case
 
-__all__ = ["CLIPS", "ClipConfig", "run_case", "process", "merge_summary"]
+__all__ = ["ClipConfig", "run_case", "process"]

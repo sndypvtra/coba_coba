@@ -4,9 +4,9 @@ Overview and results in the [repository README](../README.md).
 
 Measures how much liquid a filling machine puts into a bottle, from video alone.
 
-    python -m factory_vision.filling.pipeline --capacity-ml 1500
-    python -m factory_vision.filling.pipeline --video clip.mp4 --out-name result.mp4
-    python -m factory_vision.filling.pipeline --detect          # overlay live YOLOE segmentation
+    cd projects/04_bottle_fill_volume && python main.py --capacity-ml 1500
+    python main.py --detect
+    # --detect overlays live YOLOE segmentation
 
 Source: [Pexels 8720278](https://www.pexels.com/video/empty-bottles-in-a-filling-machine-8720278/),
 inline filler, clear bottles, amber product. Output:
@@ -14,7 +14,7 @@ inline filler, clear bottles, amber product. Output:
 case script), series in `output/liquid_level_summary.json`.
 
 **On the numbers in this document.** The headline result — **1,001 mL / 66.7%** —
-is measured on the 1920×1080 rendition `scripts/fetch_assets.sh` downloads, so it
+is measured on the 1920×1080 rendition `main.py` downloads, so it
 reproduces from a clean clone. The intermediate figures in the development
 history below were measured on a higher-bitrate local copy of the same footage
 that Pexels does not actually serve; they read ~0.4 points higher (1,006 mL where

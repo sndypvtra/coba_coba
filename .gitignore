@@ -19,3 +19,10 @@ output/*.mp4
 # output/liquid_level_summary.json is committed, these are regenerable
 output/liquid_level_summary_*.json
 output/.depth_cache/
+
+# per-project artefacts
+projects/*/input/*
+projects/*/output/*.mp4
+projects/*/output/.depth_cache/
+!projects/*/input/.gitkeep
+projects/*/output/.*_resolved.yaml

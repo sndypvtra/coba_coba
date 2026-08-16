@@ -1,0 +1,398 @@
+{
+  "scene": "warehouse_014_full",
+  "description": "Warehouse_014 - all 12 fixed cameras over one 19.3 x 19.3 m floor",
+  "source": "https://huggingface.co/datasets/nvidia/PhysicalAI-SmartSpaces - MTMC_Tracking_2025/train/Warehouse_014",
+  "licence": "CC BY 4.0",
+  "cameras": [
+    {
+      "sensor": "Camera_02",
+      "side": "left",
+      "row": 0,
+      "col": 0,
+      "banner_tile": "banner tile: left block, row 1 col 1"
+    },
+    {
+      "sensor": "Camera_03",
+      "side": "left",
+      "row": 0,
+      "col": 1,
+      "banner_tile": "banner tile: left block, row 1 col 2"
+    },
+    {
+      "sensor": "Camera_08",
+      "side": "left",
+      "row": 1,
+      "col": 0,
+      "banner_tile": "banner tile: left block, row 2 col 1"
+    },
+    {
+      "sensor": "Camera_09",
+      "side": "left",
+      "row": 1,
+      "col": 1,
+      "banner_tile": "banner tile: left block, row 2 col 2"
+    },
+    {
+      "sensor": "Camera",
+      "side": "left",
+      "row": 2,
+      "col": 0,
+      "banner_tile": "banner tile: left block, row 3 col 1"
+    },
+    {
+      "sensor": "Camera_07",
+      "side": "left",
+      "row": 2,
+      "col": 1,
+      "banner_tile": "banner tile: left block, row 3 col 2"
+    },
+    {
+      "sensor": "Camera_06",
+      "side": "right",
+      "row": 0,
+      "col": 0,
+      "banner_tile": "banner tile: right block, row 1 col 1"
+    },
+    {
+      "sensor": "Camera_11",
+      "side": "right",
+      "row": 0,
+      "col": 1,
+      "banner_tile": "banner tile: right block, row 1 col 2"
+    },
+    {
+      "sensor": "Camera_04",
+      "side": "right",
+      "row": 1,
+      "col": 0,
+      "banner_tile": "banner tile: right block, row 2 col 1"
+    },
+    {
+      "sensor": "Camera_05",
+      "side": "right",
+      "row": 1,
+      "col": 1,
+      "banner_tile": "banner tile: right block, row 2 col 2"
+    },
+    {
+      "sensor": "Camera_10",
+      "side": "right",
+      "row": 2,
+      "col": 0,
+      "banner_tile": "banner tile: right block, row 3 col 1"
+    },
+    {
+      "sensor": "Camera_01",
+      "side": "right",
+      "row": 2,
+      "col": 1,
+      "banner_tile": "banner tile: right block, row 3 col 2"
+    }
+  ],
+  "clip": {
+    "start_frame": 1950,
+    "window_frames": 900,
+    "stride": 3,
+    "frames_rendered": 8,
+    "fps_out": 10.0,
+    "duration_seconds": 0.8
+  },
+  "prompts": [
+    "person",
+    "humanoid robot",
+    "transport robot",
+    "cardboard box"
+  ],
+  "conf": 0.15,
+  "distinct_people": 0,
+  "distinct_robots": 0,
+  "occupancy_mean": 0.0,
+  "occupancy_max": 0,
+  "floor_walked_m": 0,
+  "walking_speed_mean_ms": null,
+  "person_height_median_m": null,
+  "operations": {
+    "headcount_mean": 0.0,
+    "headcount_peak": 0,
+    "person_seconds_observed": 0.0,
+    "walking_share_pct": null,
+    "travel_m_per_person_hour": 0.0,
+    "travel_m_per_person": 0.0,
+    "time_by_area_pct": {},
+    "pallet_lane_entries": 0,
+    "pallet_lane_seconds": 0,
+    "pallet_lane_share_pct": 0.0,
+    "pallet_lane_entries_per_person_hour": 0.0,
+    "implied_per_8h_shift": {
+      "walk_km_per_person": 0.0,
+      "pallet_lane_entries_per_person": 0.0,
+      "caveat": "linear extrapolation of a 30 s sample, not an observation"
+    },
+    "note": "rates are per person-hour; walking means a straight-line world speed above 0.15 m/s over a 0.6 s window"
+  },
+  "fusion": {
+    "observations_merged": 108,
+    "same_camera_duplicates_dropped": 8,
+    "cross_camera_agreement_m": null,
+    "mean_views_per_person": null,
+    "single_camera_share": null,
+    "associations_recovered_by_track_key": 2,
+    "min_corroborating_views": 2,
+    "identities_dropped_as_single_view": 0
+  },
+  "filtering": {
+    "raw_detections": 976,
+    "duplicate_boxes_removed": 47,
+    "lift_rejected": {
+      "height implausible for class": 57,
+      "feet below frame": 32
+    }
+  },
+  "zone_seconds": {},
+  "restricted_lane_seconds": {},
+  "proximity": {
+    "frames_with_both": 0
+  },
+  "goods": {
+    "transfers": 0,
+    "by_route": {},
+    "median_seconds": null,
+    "moves": [],
+    "pallet_seconds_by_bay": {},
+    "pallets_tracked": 0
+  },
+  "people": [],
+  "robots": [],
+  "pallets": [],
+  "replay": {
+    "fps": 10.0,
+    "frames": 8,
+    "floor_bounds_m": [
+      -9.63,
+      -19.65,
+      9.63,
+      -0.37
+    ],
+    "zones": [
+      {
+        "name": "Staging area",
+        "kind": "area",
+        "polygon_m": [
+          [
+            -5.19,
+            -17.98
+          ],
+          [
+            8.02,
+            -17.98
+          ],
+          [
+            8.02,
+            -9.73
+          ],
+          [
+            -5.19,
+            -9.73
+          ]
+        ]
+      },
+      {
+        "name": "Staging aisle",
+        "kind": "area",
+        "polygon_m": [
+          [
+            -7.7,
+            -20.5
+          ],
+          [
+            10.5,
+            -20.5
+          ],
+          [
+            10.5,
+            -7.2
+          ],
+          [
+            -7.7,
+            -7.2
+          ]
+        ]
+      },
+      {
+        "name": "Bay 1",
+        "kind": "restricted",
+        "polygon_m": [
+          [
+            4.54,
+            -16.8
+          ],
+          [
+            6.41,
+            -16.8
+          ],
+          [
+            6.41,
+            -11.19
+          ],
+          [
+            4.54,
+            -11.19
+          ]
+        ]
+      },
+      {
+        "name": "Bay 2",
+        "kind": "restricted",
+        "polygon_m": [
+          [
+            0.21,
+            -17.13
+          ],
+          [
+            2.42,
+            -17.13
+          ],
+          [
+            2.42,
+            -10.91
+          ],
+          [
+            0.21,
+            -10.91
+          ]
+        ]
+      },
+      {
+        "name": "Bay 3",
+        "kind": "restricted",
+        "polygon_m": [
+          [
+            -4.01,
+            -17.07
+          ],
+          [
+            -1.83,
+            -17.07
+          ],
+          [
+            -1.83,
+            -10.87
+          ],
+          [
+            -4.01,
+            -10.87
+          ]
+        ]
+      }
+    ],
+    "cameras": [
+      {
+        "id": "Camera_02",
+        "x": 1.7,
+        "y": -7.75
+      },
+      {
+        "id": "Camera_03",
+        "x": -9.92,
+        "y": -7.24
+      },
+      {
+        "id": "Camera_08",
+        "x": -8.74,
+        "y": -11.94
+      },
+      {
+        "id": "Camera_09",
+        "x": -8.76,
+        "y": -19.53
+      },
+      {
+        "id": "Camera",
+        "x": -5.02,
+        "y": -14.7
+      },
+      {
+        "id": "Camera_07",
+        "x": -10.1,
+        "y": -1.55
+      },
+      {
+        "id": "Camera_06",
+        "x": 1.73,
+        "y": -18.51
+      },
+      {
+        "id": "Camera_11",
+        "x": -3.08,
+        "y": -2.45
+      },
+      {
+        "id": "Camera_04",
+        "x": -6.8,
+        "y": -1.03
+      },
+      {
+        "id": "Camera_05",
+        "x": -5.5,
+        "y": -14.2
+      },
+      {
+        "id": "Camera_10",
+        "x": 7.18,
+        "y": -15.11
+      },
+      {
+        "id": "Camera_01",
+        "x": 8.65,
+        "y": -14.65
+      }
+    ],
+    "tracks": []
+  },
+  "occupancy_series": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "walking_series": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "avg_ms_per_frame": 9243.5,
+  "output": "warehouse_014_full__spatial.mp4",
+  "validation": {
+    "gt_person_boxes": 24,
+    "estimated_person_boxes": 0,
+    "matched": 0,
+    "recall": 0.0,
+    "precision": null,
+    "false_positives": 0,
+    "localisation_error_m": {
+      "median": null,
+      "mean": null,
+      "p95": null
+    },
+    "count_error_per_frame": {
+      "mean": -3.0,
+      "abs_mean": 3.0,
+      "frames_exact": 0,
+      "frames": 8
+    },
+    "gt_objects_seen": 0,
+    "global_ids_per_gt_object": [],
+    "id_fragmentation": null,
+    "gate_m": 1.0,
+    "note": "ground truth is read only here; detection, lifting and fusion never see it"
+  }
+}
