@@ -18,7 +18,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from config import CLIP  # noqa: E402
 
-from factory_vision.assets import Clip, Requirements, ensure, place_mobileclip  # noqa: E402
+from factory_vision.assets import (Clip, Requirements, adopt_mobileclip, ensure,  # noqa: E402
+                                   place_mobileclip)
 from factory_vision.counting import run_case  # noqa: E402
 from factory_vision.paths import WEIGHTS_DIR, project_dirs  # noqa: E402
 
@@ -62,6 +63,7 @@ def main() -> int:
         print(f"  {label:<28} {value}")
     print(f"  {'video':<28} output/{summary['output']}")
     print(f"  {'summary':<28} output/summary.json")
+    adopt_mobileclip(WEIGHTS_DIR, Path.cwd())
     print("-" * 74)
     return 0
 

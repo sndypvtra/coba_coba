@@ -24,7 +24,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from config import SCENES  # noqa: E402
 from pipeline import run_case  # noqa: E402
 
-from factory_vision.assets import Requirements, ensure, place_mobileclip  # noqa: E402
+from factory_vision.assets import (Requirements, adopt_mobileclip, ensure,  # noqa: E402
+                                   place_mobileclip)
 from factory_vision.paths import WEIGHTS_DIR, project_dirs  # noqa: E402
 
 VIDEO_DIR, OUTPUT_DIR = project_dirs(__file__)
@@ -73,6 +74,7 @@ def main() -> int:
 
     summary = run_case(cfg.name, max_frames=args.max_frames, progress=args.progress)
     print(f"\n  video   output/{summary['output']}")
+    adopt_mobileclip(WEIGHTS_DIR, Path.cwd())
     return 0
 
 

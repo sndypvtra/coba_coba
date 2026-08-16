@@ -19,7 +19,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from config import CLIP  # noqa: E402
 
-from factory_vision.assets import Clip, Requirements, ensure, place_mobileclip  # noqa: E402
+from factory_vision.assets import (Clip, Requirements, adopt_mobileclip, ensure,  # noqa: E402
+                                   place_mobileclip)
 from factory_vision.counting import run_case  # noqa: E402
 from factory_vision.paths import WEIGHTS_DIR, project_dirs  # noqa: E402
 
@@ -78,6 +79,7 @@ def main() -> int:
     print("-" * 74)
 
     if not dim:
+        adopt_mobileclip(WEIGHTS_DIR, Path.cwd())
         return 0
 
     K = dim["intrinsics"]
@@ -107,6 +109,7 @@ def main() -> int:
     print("    ?  the longest side sits within that uncertainty of a class boundary.")
     print("    A lens 488 mm above a belt of 340 mm cartons sees 10-17 px of their")
     print("    tops. The remedy is a second view across the lane, not an algorithm.")
+    adopt_mobileclip(WEIGHTS_DIR, Path.cwd())
     return 0
 
 

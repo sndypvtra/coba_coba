@@ -193,15 +193,45 @@ def _say(quiet: bool, text: str) -> None:
 def place_mobileclip(weights_dir: Path, run_dir: Path) -> None:
     """Put the MobileCLIP text encoder where ultralytics will look for it.
 
-    It resolves the file against the *current working directory*, so running a
-    project from its own folder makes ultralytics re-download 572 MB that is
-    already on disk one directory up. Linking it costs nothing and saves that.
+    Ultralytics resolves this file against the *current working directory*, and
+    every project now runs from its own folder. Without this, each one
+    re-downloads the same 572 MB into its own directory - which is exactly what
+    happened the first time the projects were split, four times over, before the
+    link below was pointed at the right source.
+
+    The encoder lives in the shared `weights/` with the detector checkpoints,
+    for the same reason they do: it is identical for every project and far too
+    large to hold six copies of.
     """
     source = weights_dir / MOBILECLIP
     target = run_dir / MOBILECLIP
-    if not source.exists() or target.exists():
+    if target.exists() or target.is_symlink():
+        return
+    if not source.exists():
+        # Nothing to link yet. Ultralytics will fetch it into the project folder
+        # on the first `get_text_pe()`; move it into weights/ afterwards and
+        # every other project picks it up from there.
         return
     try:
         target.symlink_to(source)
     except OSError:
         shutil.copy2(source, target)
+
+
+def adopt_mobileclip(weights_dir: Path, run_dir: Path) -> None:
+    """Move a freshly downloaded encoder into the shared cache and link it back.
+
+    Called after the model has run, so the 572 MB ultralytics just fetched into
+    a project folder is available to the other five instead of being downloaded
+    again by each of them.
+    """
+    here = run_dir / MOBILECLIP
+    shared = weights_dir / MOBILECLIP
+    if not here.is_file() or here.is_symlink() or shared.exists():
+        return
+    weights_dir.mkdir(parents=True, exist_ok=True)
+    shutil.move(str(here), str(shared))
+    try:
+        here.symlink_to(shared)
+    except OSError:
+        pass
