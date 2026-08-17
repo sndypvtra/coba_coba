@@ -9,11 +9,15 @@ shared `weights/` at the repository root, and the result in `output/`.
 
 Where the work happens:
 
-    config.py    the line, the prompts, the thresholds - the whole calibration
-    assets.py    what has to be downloaded before a run
-    report.py    the console read-out
-    ../../factory_vision/counting/   the detector, tracker and counting rule,
-                 shared with project 02 because nothing in it is fruit-specific
+    config.py     the line, the prompts, the thresholds - the whole calibration
+    assets.py     what has to be downloaded before a run
+    panel.py      what the live dashboard shows; this line counts and does not
+                  measure, so it has no size or volume row to print
+    report.py     the console read-out
+    baseline.py   the last verified count, checked and printed on every run
+
+The detector, tracker and counting rule live in `factory_vision/counting/`,
+shared with projects 02 and 03 because nothing in them is fruit-specific.
 """
 
 from __future__ import annotations

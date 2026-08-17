@@ -22,6 +22,8 @@ Six models are in play here, and each one has a module that owns it:
     measurement.py   the order of operations, and the contract the shared
                      counting pipeline calls through
 
+    panel.py         the live dashboard - the only project of the three that is
+                     entitled to print a size, because it is the one measuring
     config.py        CLIP (counting) and SIZING (metric), kept apart because
                      only one of them survives the camera being moved
     assets.py        the clip, the detector, and the two depth checkpoints

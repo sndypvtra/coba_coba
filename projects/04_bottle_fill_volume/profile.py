@@ -146,20 +146,24 @@ def liquid_volume(surface: int | None, profile: np.ndarray) -> float:
 
 
 def bottle_profile(observed: np.ndarray) -> np.ndarray:
-    """Bore width per row, measured only. Returns (profile, reference_row).
+    """Bore width per row, from what the liquid actually revealed.
 
-    Earlier versions extrapolated the unwetted neck up to a hand-read mouth
-    diameter. That was wrong twice over: the figure was taken from the bottle's
-    outer rim (185 px) while the mask measures the inner bore (max 159 px), so
-    the neck came out *wider* than the body — an inverted funnel — and the
-    extrapolation covered 60% of the profile, meaning most of the "capacity" was
-    a guess rather than a measurement.
+    Returns one array - the bore per ROI row, zero where no liquid ever reached.
+    Holes inside the wetted body are interpolated, the whole thing is smoothed
+    over 15 rows, and rows whose bore is implausibly narrow are trimmed off the
+    top (see BORE_MIN_FRACTION).
 
-    Now nothing is extrapolated. The bore is known only for rows the liquid
-    actually reached, and `reference_row` is the highest of those: the fullest
-    level the machine reached in this clip. Fill is reported against that, which
-    is also the industrially meaningful datum, since a filler targets a nominal
-    level at the shoulder rather than the brim.
+    Nothing is extrapolated *here*, and that is the point of the split: an
+    earlier version reached the unwetted neck up to a hand-read mouth diameter,
+    taken from the bottle's outer rim (185 px) while the mask measures the inner
+    bore (max 159 px). The neck came out wider than the body - an inverted
+    funnel - and the guess covered 60 % of the profile.
+
+    Extending the bore to the capacity datum is a separate decision and lives in
+    `bore.capacity`, which carries the neck up from a robust estimate of the
+    upper body and says so on the console when it does. Keeping the two apart is
+    what stops a measurement and an assumption sharing one array with no way to
+    tell which is which.
     """
     prof = observed.copy()
     known = np.where(prof > 0)[0]

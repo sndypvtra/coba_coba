@@ -1,10 +1,11 @@
 """The console read-out.
 
 Identical to `01_citrus_counting/report.py`, deliberately. The two cases run the
-same engine over different words, and reporting them in the same format is what
-lets the two outputs be compared line by line. It stays a copy in each project
-rather than a shared import because a project folder that cannot be read on its
-own is not a worked example.
+same engine over different words - they differ in `config.py` and `panel.py` and
+nothing else - and reporting them in the same format is what lets the two outputs
+be compared line by line. It stays a copy in each project rather than a shared
+import because a project folder that cannot be read on its own is not a worked
+example.
 """
 
 from __future__ import annotations

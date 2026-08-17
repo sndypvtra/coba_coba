@@ -1,9 +1,10 @@
 """The console read-out.
 
 Shared word for word with project 02, which is the point: the two cases differ
-only in `config.py`, and identical reporting is what makes that visible instead
-of merely claimed. It stays a copy in each project rather than a shared import
-because a project folder that cannot be read on its own is not a worked example.
+in `config.py` and `panel.py` and nothing else, so identical reporting is what
+makes that visible instead of merely claimed. It stays a copy in each project
+rather than a shared import because a project folder that cannot be read on its
+own is not a worked example.
 """
 
 from __future__ import annotations

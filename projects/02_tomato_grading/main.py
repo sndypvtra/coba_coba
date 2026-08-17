@@ -3,17 +3,24 @@
 
     python main.py
 
-The only difference from project 01 is `config.py`. Same weights, same tracker,
-same counting rule, the same four files in the same shape - one word changed and
-a line moved. That is the whole claim of a zero-shot pipeline, and putting the
-two projects side by side is what makes it checkable rather than asserted.
+Same weights, same tracker, same counting rule, the same six modules in the same
+shape. Two of them differ from project 01: `config.py` (one prompt instead of
+two, a line 9.4 degrees off vertical, a y-ROI) and `panel.py` (the words on the
+dashboard). Nothing else. That is the whole claim of a zero-shot pipeline, and
+putting the two projects side by side is what makes it checkable rather than
+asserted.
 
 Where the work happens:
 
-    config.py    the line, the prompts, the thresholds - the whole calibration
-    assets.py    what has to be downloaded before a run
-    report.py    the console read-out
-    ../../factory_vision/counting/   the detector, tracker and counting rule
+    config.py     one prompt, a tilted line, and the y-ROI that excludes the
+                  blurred foreground lane
+    assets.py     what has to be downloaded before a run
+    panel.py      the dashboard; says "in-focus lanes only" on the frame, so the
+                  count cannot be read as every tomato on the machine
+    report.py     the console read-out
+    baseline.py   the last verified count, checked and printed on every run
+
+The detector, tracker and counting rule live in `factory_vision/counting/`.
 """
 
 from __future__ import annotations
