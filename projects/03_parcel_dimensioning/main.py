@@ -63,8 +63,10 @@ SLIT_SCAN_TRUTH = 8
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--count-only", action="store_true",
-                    help="count without measuring: no depth models, no sizes, "
-                         "exactly what projects 01 and 02 run")
+                    help="run without Depth Anything 3: no depth models and no "
+                         "sizes. NOTE the count is then wrong - 10 against a "
+                         "verified 8 - because the depth corridor is what fences "
+                         "off the static stack. For seeing it run, not quoting.")
     args = ap.parse_args()
 
     report.banner(CLIP)

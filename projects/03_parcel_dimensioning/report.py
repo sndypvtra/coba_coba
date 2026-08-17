@@ -48,24 +48,48 @@ def settings(clip, sizing, measuring: bool = True) -> None:
 
 
 def headline(summary: dict, cfg, slit_scan_truth: int) -> None:
-    """The counting result, against the frame-by-frame truth it was checked on."""
+    """The counting result, against the frame-by-frame truth it was checked on.
+
+    The metric rows are printed only when there was a measurement. Under
+    `--count-only` they used to read `-`, `-` and `Total volume 0 L`, which is a
+    structural zero: a figure that looks measured and is not.
+    """
     dim = summary.get("dimensioning", {})
-    print("-" * 74)
-    for label, value in (
+    rows = [
         ("Counted (line crossings)", f"{summary['count_total']}  "
                                      f"(slit-scan truth at x={cfg.line_center[0]}: "
                                      f"{slit_scan_truth})"),
         ("Unique track IDs", summary["unique_track_ids"]),
         ("Reverse crossings", summary["count_reverse_crossings"]),
         ("Detections / frame", summary["avg_detections_per_frame"]),
-        ("Rejected off the belt", dim.get("detections_outside_corridor", "-")),
-        ("Parcels dimensioned", dim.get("parcels_measured", "-")),
-        ("Total volume", f"{dim.get('total_volume_l', 0):.0f} L"),
-        ("Speed", f"{summary['avg_ms_per_frame']:.0f} ms/frame detect"
-                  f" + {dim.get('avg_depth_ms') or 0:.0f} ms/frame depth"),
-    ):
+    ]
+    if dim:
+        rows += [
+            ("Rejected off the belt", dim.get("detections_outside_corridor", "-")),
+            ("Parcels dimensioned", dim.get("parcels_measured", "-")),
+            ("Total volume", f"{dim.get('total_volume_l', 0):.0f} L"),
+            ("Speed", f"{summary['avg_ms_per_frame']:.0f} ms/frame detect"
+                      f" + {dim.get('avg_depth_ms') or 0:.0f} ms/frame depth"),
+        ]
+    else:
+        rows.append(("Speed", f"{summary['avg_ms_per_frame']:.0f} ms/frame detect"))
+    print("-" * 74)
+    for label, value in rows:
         print(f"  {label:<28} {value}")
     print(f"  {'video':<28} output/{summary['output']}")
+    if not dim and summary["count_total"] != slit_scan_truth:
+        # Measured, not feared: --count-only on this clip counts 10 against a
+        # truth of 8. The depth corridor is not decoration - it is what fences
+        # off the static stack of cartons at the back, and conf=0.05 was chosen
+        # on the assumption that it is there.
+        print("-" * 74)
+        print(f"  WARNING  this count is {summary['count_total']}, not the "
+              f"verified {slit_scan_truth}.")
+        print("  --count-only removes the depth corridor and the belt-plane test,")
+        print("  and the confidence floor of "
+              f"{cfg.conf} was set assuming both were in place.")
+        print("  Use it to see the counter run without Depth Anything 3, not for")
+        print("  a number to quote.")
     print("-" * 74)
 
 

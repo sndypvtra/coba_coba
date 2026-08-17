@@ -37,17 +37,42 @@ output, which is what makes 8 = 8 worth anything.
 
 ```bash
 python main.py                # count and measure
-python main.py --count-only   # count only: no depth models, no sizes
+python main.py --count-only   # no depth models - and a count of 10, not 8
 ```
 
 Depth Anything 3 is the one dependency `main.py` cannot install for you (four
 lines, below). It is checked for **before anything is downloaded**, and if it is
 missing the run stops immediately and prints those lines — rather than fetching
 2.9 GB of checkpoints and then raising `ModuleNotFoundError` from inside a model
-constructor, several minutes into what looked like progress. `--count-only` is the
-way to run the counting half meanwhile: it skips the depth checkpoints entirely
-and falls back to the shared counting dashboard, because a panel with a SIZE MIX
-row and nothing to put in it is the exact defect `panel.py` exists to prevent.
+constructor, several minutes into what looked like progress.
+
+### `--count-only` counts 10, and the right answer is 8
+
+It skips the depth checkpoints entirely and falls back to the shared counting
+dashboard — a panel with a SIZE MIX row and nothing to put in it is the exact
+defect `panel.py` exists to prevent. But it is **not** "project 03 minus the
+sizes", and the run proves it:
+
+| | with depth | `--count-only` |
+|---|:--:|:--:|
+| **counted** (truth: 8) | **8** | **10** |
+| reverse crossings | 0 | 1 |
+| unique track ids | 26 | 49 |
+| detections / frame | 6.92 | 21.79 |
+
+The depth corridor is not decoration on top of a counter that works without it.
+It is what fences off the static stack of cartons at the back of the trailer, and
+the confidence floor of **0.05 was chosen on the assumption that the fence is
+there** — low enough to catch a cream container scoring 0.098, which is only safe
+because geometry, not confidence, rejects the background. Take the fence away and
+that floor lets the stack in: 22 extra identities, three times the detections, two
+phantom crossings and a spurious reverse.
+
+So `--count-only` is for watching the counter run on a machine without DA3
+installed. The console prints a warning next to the number, and the number is not
+one to quote. Treated the other way round, this is the cleanest measurement in the
+project of **what the depth models actually buy**: two counts and 23 phantom
+identities.
 
 The heaviest of the collection to set up, and the rest of it automatic: two Depth
 Anything 3 checkpoints (~2.9 GB) arrive alongside the detector on the first run.
@@ -75,8 +100,8 @@ per processed frame. It is **not** in the repository — it is a build artefact,
 this collection behaves like that: projects 01, 02 and 05 take 8–12 minutes on
 any run, and project 04 under two.
 
-If you only need the count, `--count-only` skips all of it and runs in the same
-15–20 minutes as the other conveyor cases.
+`--count-only` skips all of it and runs in the same 15–20 minutes as the other
+conveyor cases — but see above for why its count is 10 and not 8.
 
 <details>
 <summary>Python environment, including the Depth Anything 3 install</summary>
@@ -105,9 +130,9 @@ pip install --no-deps -e depth-anything-3
 imports both at module scope for its Gaussian-splat and COLMAP writers, neither of
 which this pipeline calls and neither of which builds against a current setuptools.
 
-**Without DA3 installed**, `python main.py --count-only` still counts — that is
-exactly the `run_case` call projects 01 and 02 make, with no backend and no
-measurement.
+**Without DA3 installed**, `python main.py --count-only` still runs the counter —
+the same `run_case` call projects 01 and 02 make, with no backend and no
+measurement. On this clip it over-counts, for the reason tabled above.
 
 Weights fetched on first run: `yoloe-11l-seg.pt`, `yolo11n-cls.pt`,
 `depth-anything/DA3-LARGE` (camera intrinsics) and

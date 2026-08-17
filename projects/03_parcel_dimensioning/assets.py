@@ -49,9 +49,13 @@ DA3_INSTALL = """\
       git clone --depth 1 https://github.com/ByteDance-Seed/depth-anything-3
       pip install --no-deps -e depth-anything-3
 
-  Or run the counting half on its own, which needs none of it:
+  Or watch the counter run without it - but read what that costs first:
 
       python main.py --count-only
+
+  On this clip that counts 10 against a verified 8, because the depth corridor
+  is also what fences off the static stack of cartons at the back, and the
+  confidence floor was set assuming it is there.
 """
 
 
