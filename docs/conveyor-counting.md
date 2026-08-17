@@ -396,7 +396,7 @@ plus 7,373 ms on every fifth frame for depth.
 | Tracks / parcels dimensioned | 26 / 20, of which **16** are measured on ≥15 frames |
 | Detections rejected on geometry | 7,602 |
 | Total volume dimensioned | 1,027 L |
-| Belt-plane fit | 8.4 mm rms over 34,905 px |
+| Belt-plane fit | 8.4 mm rms over 34,903 px |
 | Intrinsics | fx 1372, hFOV 69.9°, frame-to-frame spread 0.8%, square-pixel error 0.4% |
 
 The gap between 21 dimensioned and 17 well-observed is worth naming rather than

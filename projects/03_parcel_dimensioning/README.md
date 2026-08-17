@@ -18,13 +18,11 @@ of the first.
 | **Counted** | **8** crossings, 0 reverse — matching the slit-scan ground truth exactly |
 | Dimensioned | 21 parcels, 1,087 L |
 | Rejected off the belt | 7,602 detections, on geometry |
-| Belt-plane fit | 8.4 mm rms over 34,905 px |
+| Belt-plane fit | 8.4 mm rms over 34,903 px |
 | Speed | 1.25 s/frame detect, plus depth every 5th frame |
 
 ## Files
 
-| | |
-|---|---|
 Six models are in play, and each has a module that owns it.
 
 | | |
@@ -72,7 +70,8 @@ git clone --depth 1 https://github.com/ByteDance-Seed/depth-anything-3
 pip install --no-deps -e depth-anything-3
 ```
 
-Without it, set `measure_size=False` in `config.py` and the project still counts.
+Without it, drop the `backend=` argument from the `run_case` call in `main.py`
+and the project still counts — exactly the call projects 01 and 02 make.
 
 ## What the size classes mean
 
