@@ -22,6 +22,7 @@ shared with projects 02 and 03 because nothing in them is fruit-specific.
 
 from __future__ import annotations
 
+import argparse
 import sys
 from pathlib import Path
 
@@ -42,6 +43,15 @@ VIDEO_DIR, OUTPUT_DIR = project_dirs(__file__)
 
 
 def main() -> int:
+    ap = argparse.ArgumentParser(
+        description=__doc__.splitlines()[0],
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+    # No options on purpose - the whole calibration is `config.py`, and a flag
+    # that moved a counting line would put the answer somewhere the repository
+    # cannot see. It is here so that `--help` prints help and a mistyped flag is
+    # refused, rather than silently ignored while a seven-minute render starts.
+    ap.parse_args()
+
     report.banner(CLIP, "1", "Citrus sorting line - zero-shot counting")
 
     if not assets.fetch(VIDEO_DIR, WEIGHTS_DIR):
