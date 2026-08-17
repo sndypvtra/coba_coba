@@ -62,5 +62,21 @@ exclusion zone is in `config.py` with the reason written next to it.
 
 ## Source clips
 
-Cut from a long stock video rather than downloaded whole, so `input/` ships with
-them rather than fetching by id.
+The two clips in `input/` are **committed**, and this is the only project of the
+six whose source is. The others fetch on first run — five by Pexels id, case 6
+from HuggingFace — so keeping their inputs out of git costs nothing.
+
+This one cannot. The source is the [CAFE dataset](https://dk-kim.github.io/CAFE/),
+distributed as a single ~150 GB Google Drive archive with no API, which no
+`main.py` can reasonably pull. So the two 30-second cuts live in the repository
+instead, 47 MB, and `python main.py` works on a clean clone.
+
+Each is 150 consecutive frames of a 29.97 fps recording, every 6th frame kept —
+4.995 fps, 30.0 s. That frame rate is not incidental: at ~5 fps a walking person
+crosses far more pixels between frames than a tracker's motion model expects,
+which is the whole reason [`identity.py`](identity.py) exists.
+
+> CAFE is credited to its authors at the link above. If you redistribute this
+> repository, check the dataset's own licence terms rather than relying on this
+> note — the project page states CC BY-SA 4.0 for the site, and is less explicit
+> about the data itself.

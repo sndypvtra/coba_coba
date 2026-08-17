@@ -49,5 +49,15 @@ def results(summary: dict) -> None:
 
 
 def clips_not_found(missing: list[str]) -> None:
-    print(f"\n  input/ is missing {missing}. See README.md for how these two "
-          f"clips are cut from the source video.")
+    """Both clips are committed, so this means the checkout is incomplete.
+
+    Worth saying explicitly. Every other project would answer "it will download
+    on the next run"; here it will not, because CAFE has no fetchable API, so
+    the remedy is to restore the file rather than to re-run.
+    """
+    print(f"\n  input/ is missing {missing}.")
+    print("  These clips are committed to the repository - they are not fetched -")
+    print("  so a missing one means an incomplete checkout rather than a failed")
+    print("  download. Restore it with:")
+    print("      git checkout -- projects/05_cafe_dwell_time/input/")
+    print("  README.md records where the footage comes from and how it was cut.")

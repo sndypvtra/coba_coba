@@ -26,3 +26,14 @@ projects/*/output/*.mp4
 projects/*/output/.depth_cache/
 !projects/*/input/.gitkeep
 projects/*/output/.*_resolved.yaml
+
+# Case 5's two clips are the one exception, and they are committed on purpose.
+# Every other project's input is fetched on first run - by Pexels id, or from
+# HuggingFace for case 6 - so keeping it out of git costs nothing. Case 5's
+# source is the CAFE dataset, distributed as a single ~150 GB Google Drive
+# archive with no API, which no `main.py` can reasonably pull. Without these
+# two 30-second cuts in the repository, `python main.py` fails on a clean
+# clone, and that was the one thing the per-project layout was meant to fix.
+# 47 MB is the price of the project being runnable.
+!projects/05_cafe_dwell_time/input/cafe_scene1_30s.mp4
+!projects/05_cafe_dwell_time/input/cafe_scene5_30s.mp4

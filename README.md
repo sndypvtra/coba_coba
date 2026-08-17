@@ -386,6 +386,12 @@ source repository should not carry ~60 MB of video. Each `main.py` regenerates
 its own. Preview stills and `summary.json` are committed, so the numbers in
 every README can be checked without running anything.
 
+Source clips are **fetched, not committed** — by Pexels id for cases 1–4, and
+from HuggingFace for case 6. Case 5 is the single exception: the CAFE dataset
+ships as one ~150 GB Google Drive archive with no API, so its two 30-second cuts
+(47 MB) live in the repository, because otherwise the one thing this layout
+promises — clone it, run `main.py` — would not be true for that project.
+
 ## Layout
 
 Six projects, six folders. Each one is self-contained: its own `main.py`, its
