@@ -1,0 +1,41 @@
+{
+  "video": "02_tomatoes_conveyor.mp4",
+  "scene": "Tomato grading line - roller conveyor close-up",
+  "source_url": "https://www.pexels.com/video/tomatoes-on-a-moving-conveyor-belt-8675102/",
+  "output": "02_tomatoes_conveyor__counted.mp4",
+  "resolution": "1920x1080",
+  "fps": 29.97,
+  "frames_written": 212,
+  "model": "yoloe-11l-seg",
+  "prompts": [
+    "tomato"
+  ],
+  "conf": 0.059,
+  "imgsz": 1280,
+  "tracker": "TrackTrack (CVPR 2025) + ReID + GMC",
+  "count_total": 16,
+  "count_in": 16,
+  "count_reverse_crossings": 0,
+  "line": [
+    [
+      953,
+      766
+    ],
+    [
+      1046,
+      203
+    ]
+  ],
+  "motion_px_per_frame": [
+    -14.79,
+    -2.47
+  ],
+  "min_track_age": 3,
+  "per_class": {
+    "tomato": 16
+  },
+  "unique_track_ids": 50,
+  "avg_detections_per_frame": 11.89,
+  "avg_ms_per_frame": 1524.4,
+  "notes": "counts the in-focus lanes; blurred foreground lane excluded by ROI"
+}

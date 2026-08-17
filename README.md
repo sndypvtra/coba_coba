@@ -90,11 +90,19 @@ Full write-up, including every bug found and how: **[`docs/liquid-level.md`](doc
 
 ## Cases 1–3 — Zero-shot conveyor counting
 
-<img src="projects/01_citrus_counting/output/preview.jpg" alt="Conveyor counting result" width="100%">
+<p align="center">
+  <img src="projects/01_citrus_counting/output/preview.jpg" alt="Citrus line, counted" width="49%">
+  <img src="projects/02_tomato_grading/output/preview.jpg" alt="Tomato line, counted" width="49%">
+</p>
 
 No training, no labelled data, no fixed class list. Objects are named in plain
 English, embedded with `get_text_pe()`, tracked with TrackTrack, and counted as
 they cross a line drawn with supervision.
+
+Two lines, side by side, because that is the claim made visible: same weights,
+same tracker, same counting rule, one word changed and a line moved. Each panel
+reports only what its own project can measure — neither prints a size or a
+volume, because neither measures one.
 
 | Case | Scene | Prompts | Counted | Frames |
 |:--:|---|---|:--:|:--:|
