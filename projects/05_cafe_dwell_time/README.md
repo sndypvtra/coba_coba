@@ -4,19 +4,46 @@ Two rooms of the same cafe. How many people are here, and how long did each of
 them stay.
 
 ```bash
-python main.py                              # scene 5
-python main.py --clip cafe_scene1_30s.mp4   # scene 1
-python main.py --all
+python main.py              # scene 5, the default room
+python main.py --scene 1    # the other room
+python main.py --all        # both, one after another
 ```
 
 | | scene 1 | scene 5 |
 |---|:--:|:--:|
 | **Distinct visitors** | 12 | 12 |
-| Occupancy, mean / max | — | 9.0 / 10 |
-| **Dwell, mean** | 24.6 s | **21.19 s** |
-| Staff service time | — | 16.02 s |
-| Duplicate boxes removed | — | 76 |
-| Tracks with gaps | — | 1 of 12 |
+| Occupancy, mean / max | 10.32 / 12 | 9.0 / 10 |
+| **Dwell, mean / max** | **24.64 s** / 30.03 s | **21.19 s** / 30.03 s |
+| Staff service time | 14.21 s | 16.02 s |
+| — of which observed | 38 frames | 74 frames |
+| — of which held | **33 frames** | 6 frames |
+| Duplicate boxes removed | 80 | 76 |
+| Broken tracks re-linked | 0 | 4 |
+| Tracks with gaps | **3 of 12** | 1 of 12 |
+| Worst continuity | **0.152** | 0.75 |
+
+Both rooms are measured by the same twelve modules; only `config.py` differs,
+and only in the zones. Every figure above comes from `output/*__dwell.json`.
+
+### Scene 1 is the harder room, and its numbers say so
+
+Read the two rows in bold before quoting scene 1's dwell time.
+
+**Its service figure is nearly half interpolated.** The counter sits deep in the
+room, backlit by the menu boards, with equipment on the counter top cutting the
+server in half. She is detected in 38 frames and held across 33 more, so 14.21 s
+of service is 8.0 s observed and 6.2 s inferred. Scene 5's server is detected in
+74 of 80. The held frames are reported separately in the JSON precisely so this
+cannot be passed off as observation.
+
+**Its identity assignment is much weaker.** Worst continuity 0.152 means one
+customer was seen in 15 % of the frames between their first and last sighting —
+the tracker lost them repeatedly and re-linking joined none of it, because the
+gaps exceed what `identity.py` will bridge on appearance alone. Three of twelve
+tracks are fragmented against one of twelve in scene 5.
+
+Occupancy is unaffected by any of this — it is a per-frame detection count, and
+10.32 / 12 is as sound here as 9.0 / 10 is next door.
 
 ## Files
 

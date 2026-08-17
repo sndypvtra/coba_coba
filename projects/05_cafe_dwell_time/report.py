@@ -9,9 +9,23 @@ prints them in the same typeface without saying so is misleading.
 from __future__ import annotations
 
 
+def rooms(selected, others) -> None:
+    """Say which room is being measured, and which ones are not.
+
+    A default run measures one room. Without this line it looks like the whole
+    project, and the second room stays invisible to anyone who does not read
+    the argument parser.
+    """
+    which = ", ".join(f"scene {c.scene_id}" for c in selected)
+    print(f"\n  measuring: {which}")
+    if others:
+        rest = ", ".join(f"--scene {c.scene_id}" for c in others)
+        print(f"  not run  : {rest}   (or --all for every room)")
+
+
 def banner(cfg) -> None:
     print("=" * 74)
-    print(f"CASE 5  |  Cafe occupancy and dwell time - {cfg.filename}")
+    print(f"CASE 5  |  Cafe occupancy and dwell time - scene {cfg.scene_id}")
     print(f"  scene : {cfg.scene}")
     print(f"  source: {cfg.source}")
     print("=" * 74)

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Case 5 - Cafe: how many people, and how long each of them stayed.
 
-    python main.py
-    python main.py --clip cafe_scene1_30s.mp4
-    python main.py --all
+    python main.py              # scene 5, the default room
+    python main.py --scene 1    # the other room
+    python main.py --all        # both, one after another
 
 Two rooms of the same cafe, counted and timed from words alone. Occupancy is a
 detection result and is the number to trust; dwell time additionally needs an
@@ -46,10 +46,16 @@ VIDEO_DIR, OUTPUT_DIR = project_dirs(__file__)
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--clip", default=CLIPS[0].filename,
-                    choices=[c.filename for c in CLIPS])
-    ap.add_argument("--all", action="store_true", help="run every configured room")
+    rooms = [c.scene_id for c in CLIPS]
+    ap = argparse.ArgumentParser(
+        description="Occupancy and dwell time for one room of the cafe.")
+    # A room number, not a file name. `--clip cafe_scene1_30s.mp4` made the
+    # command line depend on how the footage happens to be named; a room is what
+    # the person running this actually has in mind.
+    ap.add_argument("--scene", type=int, default=rooms[0], choices=rooms,
+                    metavar="N", help=f"which room to measure {tuple(rooms)}")
+    ap.add_argument("--all", action="store_true",
+                    help="measure every room, one after another")
     args = ap.parse_args()
 
     if not assets.fetch(VIDEO_DIR, WEIGHTS_DIR):
@@ -57,12 +63,16 @@ def main() -> int:
         return 1
     place_mobileclip(WEIGHTS_DIR, Path.cwd())
 
-    todo = CLIPS if args.all else [next(c for c in CLIPS if c.filename == args.clip)]
+    todo = CLIPS if args.all else [c for c in CLIPS if c.scene_id == args.scene]
     missing = assets.missing_clips(VIDEO_DIR, todo)
     if missing:
         report.clips_not_found(missing)
         return 1
 
+    # The rooms are independent measurements, not views of one scene, so they
+    # are reported one after another and never combined. Saying which others
+    # exist keeps a default run from hiding them.
+    report.rooms(todo, [c for c in CLIPS if c not in todo])
     for cfg in todo:
         report.banner(cfg)
         report.results(run_case(cfg.filename))

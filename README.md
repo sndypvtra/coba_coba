@@ -256,7 +256,15 @@ people have appeared) and **dwell time** per person.
 | Occupancy, mean / max | 9.00 / 10 | 10.32 / 12 |
 | Dwell, mean | **21.19 s** | **24.64 s** |
 | Server time in the service zone | 16.02 s | 14.21 s |
+| — frames observed / held across gaps | 74 / 6 | **38 / 33** |
 | Tracks that were lost and re-acquired | 1 of 12 | 3 of 12 |
+
+Scene 1 is the harder room and its own figures say so. Its counter is deep in
+the room and backlit, so nearly half that 14.21 s is interpolated across frames
+where the server was not detected — held frames are counted separately in the
+JSON so the interpolation is never passed off as observation. Its worst track
+continuity is 0.152 against scene 5's 0.75. Occupancy is unaffected by either,
+being a per-frame detection count.
 
 ```bash
 cd projects/05_cafe_dwell_time && python main.py --all

@@ -49,6 +49,10 @@ class ExclusionZone:
 @dataclass
 class DwellConfig:
     filename: str
+    # The room, by the number CAFE gives it. A room number is what a person
+    # asks for - `--scene 1` - and deriving it by parsing the file name would
+    # make renaming a clip silently change the command line.
+    scene_id: int
     prompts: list[str]
     label: str
     scene: str
@@ -81,6 +85,7 @@ class DwellConfig:
 CLIPS = [
     DwellConfig(
         filename="cafe_scene5_30s.mp4",
+        scene_id=5,
         prompts=["person"],
         label="person",
         scene="Cafe interior, elevated fixed camera - CAFE dataset scene 5",
@@ -122,6 +127,7 @@ CLIPS = [
     # with another zone.
     DwellConfig(
         filename="cafe_scene1_30s.mp4",
+        scene_id=1,
         prompts=["person"],
         label="person",
         scene="Cafe interior, elevated fixed camera - CAFE dataset scene 1",
