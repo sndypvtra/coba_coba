@@ -60,6 +60,78 @@ def appearance(frame, box) -> np.ndarray:
     return cv2.normalize(hist, hist).astype(np.float32)
 
 
+# A within-track step below this colour correlation is not the same person.
+# Calibrated from the data rather than chosen: over 1,333 within-track steps on
+# scene 5 the 5th percentile is 0.798 and the 1st is 0.585, so 0.55 splits only
+# the most extreme half-percent. A person turning, or half-hidden for a frame,
+# stays far above it.
+SWITCH_APPEARANCE = 0.55
+# ...but only when the box also skipped a frame or actually travelled. On two
+# adjacent frames a person turning their back can drop the hue histogram on its
+# own, and splitting there would invent a second person out of a pirouette.
+SWITCH_MOVE = 0.35
+
+
+def split_switched_tracks(frames, src, appear_gate=SWITCH_APPEARANCE,
+                          move_gate=SWITCH_MOVE):
+    """Split a track where its box moved onto somebody else.
+
+    The merge below repairs *over*-fragmentation - one person, several tracks.
+    This repairs the opposite, and until it existed nothing did: one track
+    covering several people. On scene 5 the tracker does that three times inside
+    the first fifteen seconds, and the worst of them puts the server's box on a
+    customer walking up to the counter, so her identity and his dwell time are
+    both wrong from then on.
+
+    The test is a step *within* one track. Genuine motion at 5 fps produces a
+    large displacement with a *high* colour correlation - the person moved, they
+    still look like themselves. A switch produces a collapse in correlation,
+    because the box landed on someone else, and it does so whether the box
+    travelled far (a teleport across the room) or barely at all (two people
+    standing at the same counter).
+
+    Splitting runs *before* merging on purpose. It hands the merge clean pieces,
+    and the station gates then reassemble the server from them - which is how
+    the same clip ends up with fewer switches *and* a stronger service identity
+    rather than trading one for the other.
+
+    Returns the relabelled per-frame assignments and the list of splits made,
+    with the measurement behind each so it can be audited.
+    """
+    seq: dict[int, list] = {}
+    cap = cv2.VideoCapture(str(src))
+    for idx, row in enumerate(frames, start=1):
+        ok, frame = cap.read()
+        if not ok:
+            break
+        for tid, box in row["people"]:
+            seq.setdefault(tid, []).append((idx, box, appearance(frame, box)))
+    cap.release()
+
+    next_id = max(seq) + 1 if seq else 1
+    remap: dict[tuple[int, int], int] = {}
+    splits = []
+    for tid, obs in seq.items():
+        current = tid
+        for (f0, b0, h0), (f1, b1, h1) in zip(obs, obs[1:]):
+            c0 = ((b0[0] + b0[2]) / 2, (b0[1] + b0[3]) / 2)
+            c1 = ((b1[0] + b1[2]) / 2, (b1[1] + b1[3]) / 2)
+            span = (float(np.hypot(b0[2] - b0[0], b0[3] - b0[1]))
+                    + float(np.hypot(b1[2] - b1[0], b1[3] - b1[1]))) / 2.0
+            move = float(np.hypot(c1[0] - c0[0], c1[1] - c0[1])) / max(span, 1e-9)
+            app = float(cv2.compareHist(h0, h1, cv2.HISTCMP_CORREL))
+            if app < appear_gate and (f1 - f0 > 1 or move >= move_gate):
+                splits.append((current, next_id, f0, f1, round(move, 3), round(app, 3)))
+                current = next_id
+                next_id += 1
+            remap[(tid, f1)] = current
+
+    relabelled = [{**row, "people": [(remap.get((tid, idx), tid), box)
+                                     for tid, box in row["people"]]}
+                  for idx, row in enumerate(frames, start=1)]
+    return relabelled, splits
+
+
 def merge_broken_tracks(tracks, fps, diag, max_gap_s=3.0,
                         max_move_frac=0.12, min_similarity=0.65,
                         station_share=0.6, station_max_gap_s=15.0,

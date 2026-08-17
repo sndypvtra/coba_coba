@@ -103,14 +103,35 @@ def observe(cfg: DwellConfig, args, src, masks, w: int, h: int,
         for r in np.asarray(out):
             box, tid = r[:4], int(r[4])
             row["people"].append((tid, box.tolist()))
-            _describe(obs.tracks, tid, idx, box, frame, cfg, masks, w, h)
         obs.frames.append(row)
     cap.release()
 
-    for t in obs.tracks.values():
+    obs.tracks = describe_tracks(obs.frames, src, cfg, masks, w, h)
+    return obs
+
+
+def describe_tracks(frames, src, cfg, masks, w: int, h: int) -> dict:
+    """Per-track records, derived from the per-frame assignments.
+
+    Derived, and deliberately so: `identity.split_switched_tracks` rewrites who
+    is who, and every aggregate - lifetime, zone share, colour signature - has
+    to be recomputed from the corrected assignment rather than patched. Building
+    these inside the detection loop made that impossible, which is why it costs
+    a second pass over the video now.
+    """
+    tracks: dict[int, dict] = {}
+    cap = cv2.VideoCapture(str(src))
+    for idx, row in enumerate(frames, start=1):
+        ok, frame = cap.read()
+        if not ok:
+            break
+        for tid, box in row["people"]:
+            _describe(tracks, tid, idx, box, frame, cfg, masks, w, h)
+    cap.release()
+    for t in tracks.values():
         if t["n_hist"]:
             t["hist"] /= t["n_hist"]
-    return obs
+    return tracks
 
 
 def _view(det: sv.Detections) -> DetView:

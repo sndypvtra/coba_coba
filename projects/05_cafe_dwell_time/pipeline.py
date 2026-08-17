@@ -11,14 +11,20 @@ Three numbers come out of this:
 
 The first is a detection problem and is the easy one. The other two are tracking
 problems, and they are only as good as the identity assignment - which is why
-the chain below spends four of its six steps on identity rather than on pixels:
+the chain below spends five of its seven steps on identity rather than on pixels:
 
   1. detection.observe   detect, filter by zone, track, describe        (pass 1)
-  2. identity.merge      re-link tracks the tracker broke on occlusion
-  3. roles.classify      staff or customer, decided once per person
-  4. roles.hold          carry confirmed staff over gaps in detection
-  5. render.render       replay the clip against the settled identities (pass 2)
-  6. summary.build       the result, with the quality signals attached
+  2. identity.split      cut a track where its box moved onto someone else
+  3. identity.merge      re-link tracks the tracker broke on occlusion
+  4. roles.classify      staff or customer, decided once per person
+  5. roles.hold          carry confirmed staff over gaps in detection
+  6. render.render       replay the clip against the settled identities (pass 2)
+  7. summary.build       the result, with the quality signals attached
+
+Split before merge, and both before anything is drawn. The tracker makes both
+errors - it breaks one person into several tracks, and it lets one track drift
+onto several people - and they have to be repaired in that order, because
+splitting is what gives the merge clean pieces to work with.
 
 This module is the sequence and nothing else. Every step above lives in its own
 file, so a change to how staff are recognised cannot accidentally change how
@@ -64,6 +70,12 @@ def process(cfg: DwellConfig, args) -> dict:
     # ---- pass 1: detect, filter, track, describe ---------------------------
     obs = detection.observe(cfg, args, src, masks, w, h, fps, OUTPUT_DIR)
 
+    # ---- cut tracks that drifted onto a different person -------------------
+    obs.frames, splits = identity.split_switched_tracks(obs.frames, src)
+    if splits:
+        obs.tracks = detection.describe_tracks(obs.frames, src, cfg, masks, w, h)
+        _report_splits(splits)
+
     # ---- re-link tracks broken by occlusion --------------------------------
     alias, merges, refused = identity.merge_broken_tracks(obs.tracks, fps, diag)
     _report_merges(merges, refused, obs.tracks)
@@ -100,6 +112,14 @@ def _announce(cfg, args, info) -> None:
           f"min_track_age={cfg.min_track_age} dedup={cfg.dedup_containment}")
     for z in cfg.exclusion_zones:
         print(f"    zone '{z.name}' [{z.mode}]: {z.reason}")
+
+
+def _report_splits(splits) -> None:
+    """Every track the repair cut in two, and the measurement that justified it."""
+    print(f"    split {len(splits)} tracks that had moved onto another person:")
+    for old, new, f0, f1, move, app in splits:
+        print(f"      #{old} -> #{new} at f{f0}->{f1}   moved {move:.2f} body widths  "
+              f"appearance {app:.2f}")
 
 
 def _report_merges(merges, refused, tracks) -> None:

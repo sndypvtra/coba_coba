@@ -11,16 +11,18 @@ python main.py --all        # both, one after another
 
 | | scene 1 | scene 5 |
 |---|:--:|:--:|
-| **Distinct visitors** | 12 | 12 |
+| **Distinct visitors** | 12 | 14 |
 | Occupancy, mean / max | 10.32 / 12 | 9.04 / 10 |
-| **Dwell, mean / max** | **24.64 s** / 30.03 s | **20.97 s** / 30.03 s |
-| Staff service time | 14.21 s | 19.82 s |
-| — of which observed | 38 frames | 93 frames |
+| **Dwell, mean / max** | **24.64 s** / 30.03 s | **17.88 s** / 30.03 s |
+| Staff service time | 14.21 s | 21.22 s |
+| — of which observed | 38 frames | 100 frames |
 | — of which held | **33 frames** | 6 frames |
 | Server's share of the service zone | 100 % | 94 % |
 | Duplicate boxes removed | 80 | 76 |
-| Broken tracks re-linked | 0 | 4 |
-| Tracks with gaps | **3 of 12** | 2 of 12 |
+| Tracks split (drifted onto another person) | 0 | 10 |
+| Tracks re-linked | 0 | 12 |
+| Tracks with gaps | **3 of 12** | 1 of 14 |
+| **Identity switches remaining** | 0 | **0** (was 9) |
 
 Both rooms are measured by the same twelve modules; only `config.py` differs,
 and only in the zones. Every figure above comes from `output/*__dwell.json`.
@@ -40,7 +42,7 @@ cannot be passed off as observation.
 customer was seen in 15 % of the frames between their first and last sighting —
 the tracker lost them repeatedly and re-linking joined none of it, because the
 gaps exceed what `identity.py` will bridge on appearance alone. Three of twelve
-tracks are fragmented against two of twelve in scene 5.
+tracks are fragmented against one of fourteen in scene 5.
 
 Occupancy is unaffected by any of this — it is a per-frame detection count, and
 10.32 / 12 is as sound here as 9.04 / 10 is next door.
@@ -71,11 +73,49 @@ taste: of the five candidate pairs in this clip, three score 0.82–0.98 and two
 score 0.50–0.53. The empty band between them is 0.286 wide, five times the next
 largest gap, and 0.65 sits in the middle of it.
 
-What is *not* fixed: for the ~50 frames she is hidden, her occasional visible
-detections are absorbed by the customer tracks around her, so she carries no
-PELAYAN box there. Four alternative tracker settings were measured — heavier
-ReID, a longer track buffer, a looser match threshold — and each traded that for
-a worse defect, either splitting her in two again or losing a visitor.
+**A track drifted onto another person, nine times.** The first two repairs left
+the tracker's own errors untouched, and auditing every step *within* each track
+found nine of them — the worst being track #7, whose box left the counter at f6
+and reappeared at f23 on somebody at the far right of the room, 1.06 body widths
+away with its colour correlation collapsed to 0.41.
+
+`split_switched_tracks` cuts a track at such a step. The threshold is measured:
+over 1,333 within-track steps the 5th percentile of colour correlation is 0.798
+and the 1st is 0.585, so **0.55 splits the most extreme half-percent** and
+nothing else. A displacement is additionally required on adjacent frames,
+because a person turning their back drops the hue histogram on its own and
+splitting there would invent a person out of a pirouette.
+
+Split runs *before* merge, and the pair is self-correcting: three of the ten
+splits were rejoined by the merge step at aggregate similarities of 0.81–0.91,
+because the two halves did look alike over their whole lives even though one
+step between them did not. Only the splits that survive that test change the
+answer.
+
+| | before | after |
+|---|:--:|:--:|
+| Identity switches | **9** | **0** |
+| Server's zone share | 94 % over 93 frames | 94 % over 100 frames |
+| Tracks with gaps | 2 of 12 | **1 of 14** |
+| Distinct visitors | 12 | 14 |
+
+**Why 14 visitors is the fix and not a regression.** Two of the fourteen are
+~1.2 s glimpses — one is a second person behind the counter for six frames at
+the start. Those frames used to be glued onto *other people's* tracks, inflating
+their dwell times. Reattaching them to whoever they actually show is the honest
+outcome, and it is also why the dwell mean falls to 17.88 s: that is arithmetic
+over fourteen entries, two of them a second long, not a loss of accuracy. If a
+one-second glimpse should not count as a visit at all, the gate for that is
+`min_track_age` in `config.py` — a deliberate decision about what "visit" means,
+not something to hide inside the tracker.
+
+What is *not* fixed: for the ~50 frames the server is hidden behind customers she
+is not separately detected, so she carries no PELAYAN box there. The in-zone
+detections in that stretch belong to the tall customers at the counter, whose box
+centres fall inside the polygon — correctly kept as customers by the 60 % share
+gate. Four alternative tracker settings were measured against the occlusion —
+heavier ReID, a longer track buffer, a looser match threshold — and each traded
+it for a worse defect, either splitting her in two again or losing a visitor.
 
 ## Files
 
@@ -86,19 +126,20 @@ a worse defect, either splitting her in two again or losing a visitor.
 | `assets.py` | what has to be present before a run |
 | `zones.py` | frame regions that are not ordinary customers — geometry only |
 | `detection.py` | pass 1 — detect, filter by zone, track, describe |
-| `identity.py` | re-linking tracks the tracker broke on occlusion |
+| `identity.py` | splitting tracks that drifted onto another person, and re-linking those the tracker broke |
 | `roles.py` | staff or customer, decided once per person |
 | `render.py` | pass 2 — the annotated video |
 | `overlay.py` | the readout strip and the box tags |
 | `summary.py` | the result record and its quality signals |
-| `pipeline.py` | the six-step sequence, and nothing else |
+| `pipeline.py` | the seven-step sequence, and nothing else |
 | `baseline.py` | each room's last verified figures, checked on every run |
 | `report.py` | the console read-out, including the regression line |
 | `input/`, `output/` | the two pre-cut clips, and results |
 
-Four of those six steps are about *identity* rather than pixels, which is the
+Five of those seven steps are about *identity* rather than pixels, which is the
 shape of the problem: occupancy falls out of detection alone, and everything
-else depends on one person keeping one ID.
+else depends on one person keeping one ID — through occlusion, and without the
+box wandering onto the neighbour.
 
 ## The two numbers are not equally good
 
@@ -107,7 +148,7 @@ identity required. It is the number to trust.
 
 **Dwell time is a tracking result.** It needs one person to keep one ID while
 someone walks in front of them. `tracks_with_gaps` reports how often that failed
-— 2 of 12 in scene 5, 3 of 12 in scene 1 — and the visitor total inherits the
+— 1 of 14 in scene 5, 3 of 12 in scene 1 — and the visitor total inherits the
 same risk: a broken identity becomes two visitors who each stayed half as long.
 `baseline.py` pins both, so a change that moves them says so on the next run.
 

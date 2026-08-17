@@ -34,20 +34,28 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-# Measured after the identity fixes: the overlap guard that stops one person
-# being in two places, and the station gates that keep a server behind a counter
-# from being split in half by the customers leaning on it.
+# Measured after the three identity repairs: the split that cuts a track which
+# drifted onto another person, the overlap guard that stops one person being in
+# two places, and the station gates that keep a server behind a counter from
+# being halved by the customers leaning on it.
+#
+# Scene 5's visitor total is 14 rather than the 12 it read before the split, and
+# that is the fix rather than a regression: two of those identities are ~1.2 s
+# glimpses whose frames used to be glued onto other people's tracks, inflating
+# their dwell. Reattaching them to whoever they actually show is what drops the
+# dwell mean to 17.88 s - arithmetic over fourteen entries, two of them short,
+# not a loss of accuracy.
 ROOMS: dict[int, dict] = {
     5: {
-        "visitors_total": 12,
+        "visitors_total": 14,
         "occupancy_mean": 9.04,
         "occupancy_max": 10,
-        "dwell_mean_seconds": 20.97,
+        "dwell_mean_seconds": 17.88,
         "staff_count": 1,
-        "staff_service_seconds": 19.82,
+        "staff_service_seconds": 21.22,
         "duplicate_boxes_removed": 76,
-        "tracks_relinked": 4,
-        "tracks_with_gaps": 2,
+        "tracks_relinked": 12,
+        "tracks_with_gaps": 1,
     },
     1: {
         "visitors_total": 12,
