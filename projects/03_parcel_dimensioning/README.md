@@ -26,7 +26,7 @@ frame; the 21 parcels in the results below are the whole clip.*
 | Intrinsics | fx 1372, fy 1367, hFOV 70.0°, square-pixel error 0.42 % |
 | Calibration | ×1.226 from one printed carton; a second, unseen carton then reads 340.5 mm against a true 340 |
 | Clip | 511 frames, 1920×1080 @ 29.97 fps |
-| Speed | 1.6 s/frame detect, plus depth every 5th frame |
+| Speed | 1.6 s/frame detect; depth every 5th frame, and the first run pays ~2 h for it — [see below](#budget-about-two-and-a-half-hours-for-the-first-run-and-twenty-minutes-after) |
 
 The count is checked against a **slit-scan** of the counting line's own pixel
 column — one column per frame, stacked into an image, counted by hand. That is a
@@ -51,12 +51,32 @@ row and nothing to put in it is the exact defect `panel.py` exists to prevent.
 
 The heaviest of the collection to set up, and the rest of it automatic: two Depth
 Anything 3 checkpoints (~2.9 GB) arrive alongside the detector on the first run.
-They are cached afterwards — by Hugging Face, and per frame by the pipeline itself
-in `output/.depth_cache` as float16 maps — so a second run costs a fraction of the
-first. On the run that produced the figures above, **all 109 depth maps came from
-the cache**, so no depth forward pass ran during the render at all; what remained
-was 56 ms per map of disk read and resize. The intrinsics pass is not cached and
-still costs one real forward (~54 s) at startup.
+
+### Budget about two and a half hours for the first run, and twenty minutes after
+
+This is worth stating in numbers, because the gap between the two is a factor of
+a thousand and a reader who expects the second figure will think the first has
+hung.
+
+| | first run, cold | later runs |
+|---|---|---|
+| depth, per map | **~75 s** — a real DA3 forward pass | **56 ms** — a float16 read off disk |
+| depth, all 109 maps | ~2 h 15 | ~6 s |
+| detection | 511 frames × 1.6–2.3 s ≈ 15–20 min | the same |
+| camera intrinsics | one forward, ~54 s | ~54 s — never cached |
+
+Both figures were measured on four CPU cores: 75-77 s/map over the first 29 maps
+of a clean clone, and 56 ms/map on a run where **all 109 came from the cache**, so
+no depth forward pass ran during the render at all.
+
+What makes the difference is `output/.depth_cache`, which holds one float16 map
+per processed frame. It is **not** in the repository — it is a build artefact, and
+95 MB of them — so a fresh clone always pays the full price once. Nothing else in
+this collection behaves like that: projects 01, 02 and 05 take 8–12 minutes on
+any run, and project 04 under two.
+
+If you only need the count, `--count-only` skips all of it and runs in the same
+15–20 minutes as the other conveyor cases.
 
 <details>
 <summary>Python environment, including the Depth Anything 3 install</summary>

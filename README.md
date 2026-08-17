@@ -389,8 +389,17 @@ cd projects/06_warehouse_3d        && python fetch_scene.py && python main.py
 ```
 
 Only project 03 needs an extra install (Depth Anything 3, which must go in
-`--no-deps`; its README gives the four lines). Project 06 fetches a research
+`--no-deps`; its README gives the four lines, and `main.py` prints them if it is
+missing rather than downloading 2.9 GB first). Project 06 fetches a research
 dataset with `fetch_scene.py` before its first run.
+
+**Project 03's first run takes about two and a half hours**, and every later run
+about twenty minutes. That is not a warning about a slow machine: its depth cache
+is a build artefact and is not in the repository, so a fresh clone pays 75 s per
+depth map where a cached run pays 56 ms. Measured both ways, tabled in
+[its README](projects/03_parcel_dimensioning#budget-about-two-and-a-half-hours-for-the-first-run-and-twenty-minutes-after).
+`python main.py --count-only` skips all of it. The other four are 8–12 minutes,
+and project 04 under two.
 
 CPU-only throughout. Reference machine: 4 cores, and the per-frame cost each
 project's own `summary.json` recorded — 1.2 s/frame for the cafe at `imgsz=1280`,
