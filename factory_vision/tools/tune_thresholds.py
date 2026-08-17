@@ -16,9 +16,13 @@ Reported per setting:
   lag_p90    90th percentile entry lag - the stragglers
   early%     share of tracks picked up within 15% of the entry edge
 
-Usage:
-  python src/tune_thresholds.py --clips 01,02,03
-  python src/tune_thresholds.py --clips 02 --confs 0.05,0.08,0.11
+Usage, from the repository root:
+  python -m factory_vision.tools.tune_thresholds --clips 01,02,03
+  python -m factory_vision.tools.tune_thresholds --clips 02 --confs 0.05,0.08,0.11
+
+The clip configs are read from the projects themselves, so a threshold swept here
+is the threshold that project actually runs with - there is no second copy of the
+prompts or the motion vector to fall out of step.
 """
 
 from __future__ import annotations
@@ -35,12 +39,13 @@ from ultralytics import YOLOE
 
 warnings.filterwarnings("ignore")
 
-from factory_vision.paths import ROOT, VIDEO_DIR, WEIGHTS_DIR
+from factory_vision.paths import ROOT, WEIGHTS_DIR, clip_path
 import sys
 
 sys.path.insert(0, str(ROOT))
-from factory_vision.counting import CLIPS
 from factory_vision.counting.geometry import filter_detections  # noqa: E402
+from factory_vision.tools import project_clip  # noqa: E402
+from factory_vision.tracking import TRACKER_DIR  # noqa: E402
 
 import supervision as sv  # noqa: E402
 
@@ -60,7 +65,7 @@ def run(cfg, conf, tracker_path, imgsz, min_age, max_frames):
     model = YOLOE(str(WEIGHTS_DIR / "yoloe-11l-seg.pt"))
     model.set_classes(cfg.prompts, model.get_text_pe(cfg.prompts))
 
-    cap = cv2.VideoCapture(str(VIDEO_DIR / cfg.filename))
+    cap = cv2.VideoCapture(str(clip_path(cfg.filename)))
     w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     axis, from_high = entry_axis(cfg.motion)
@@ -130,13 +135,12 @@ def main():
     ap.add_argument("--scratch", default="/tmp")
     args = ap.parse_args()
 
-    base = ROOT / "factory_vision" / "counting" / "trackers" / "tracktrack_zeroshot.yaml"
+    base = TRACKER_DIR / "tracktrack_zeroshot.yaml"
     scratch = Path(args.scratch)
-    wanted = args.clips.split(",")
+    wanted = [c.strip() for c in args.clips.split(",") if c.strip()]
 
-    for cfg in CLIPS:
-        if cfg.filename[:2] not in wanted:
-            continue
+    for prefix in wanted:
+        cfg = project_clip(prefix)
         print(f"\n=== {cfg.filename}  (current conf={cfg.conf}, min_age={cfg.min_track_age})")
         print(f"{'setting':46s} {'det/f':>6s} {'tracks':>7s} {'lag_med':>8s} {'lag_p90':>8s} {'early%':>7s}")
 

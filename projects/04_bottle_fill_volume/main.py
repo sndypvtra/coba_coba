@@ -3,6 +3,7 @@
 
     python main.py
     python main.py --capacity-ml 1000        # a different SKU
+    python main.py --video other_fill.mp4    # new footage from the SAME station
 
 Not counting, and not zero-shot. Product inside the bottle is segmented on
 saturation, the liquid surface is located, and the volume below it is integrated
@@ -50,6 +51,15 @@ def main() -> int:
                     help="nominal fill volume for this SKU, base to thread line")
     ap.add_argument("--detect", action="store_true",
                     help="overlay live YOLOE bottle segmentation")
+    # Every pixel constant in calibration.py belongs to one camera position, so
+    # --video is only meaningful for another clip from the same bolted-down
+    # station. It lives here rather than in pipeline.py because a project with
+    # two command lines has one too many.
+    ap.add_argument("--video", default=None,
+                    help="source clip; the calibration is per-installation, so "
+                         "this means another clip from the same station")
+    ap.add_argument("--max-frames", type=int, default=0,
+                    help="stop after N frames (0 = the whole clip)")
     args = ap.parse_args()
 
     report.banner()
@@ -59,7 +69,11 @@ def main() -> int:
         return 1
 
     report.settings(args.capacity_ml)
-    summary = run_case(capacity_ml=args.capacity_ml, detect=args.detect)
+    overrides = {"capacity_ml": args.capacity_ml, "detect": args.detect,
+                 "max_frames": args.max_frames}
+    if args.video:
+        overrides["video"] = args.video
+    summary = run_case(**overrides)
     report.results(summary, args.capacity_ml)
     return 0
 

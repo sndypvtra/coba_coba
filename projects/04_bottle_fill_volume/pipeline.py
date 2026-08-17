@@ -29,7 +29,6 @@ Usage:
 
 from __future__ import annotations
 
-import argparse
 import json
 import warnings
 from pathlib import Path
@@ -153,7 +152,13 @@ def _summary(args, src_video, series, info) -> dict:
 
 
 def run_case(**overrides) -> dict:
-    """Run the fill-volume inspection and return its summary."""
+    """Run the fill-volume inspection and return its summary.
+
+    The only entry point. Command-line handling belongs to `main.py`; this file
+    used to carry a second parser of its own, which nothing could reach - no
+    `__main__` guard, no importer - so its `--video` flag was documented and
+    unusable. Overrides arrive as keywords instead, from one place.
+    """
     from types import SimpleNamespace
 
     args = SimpleNamespace(video=str(VIDEO), out_name="07_bottle_filling__liquid.mp4",
@@ -162,16 +167,3 @@ def run_case(**overrides) -> dict:
     for key, value in overrides.items():
         setattr(args, key, value)
     return run(args)
-
-
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--video", default=str(VIDEO),
-                    help="source clip; note the calibration is per-installation")
-    ap.add_argument("--out-name", default="07_bottle_filling__liquid.mp4")
-    ap.add_argument("--capacity-ml", type=float, default=1500.0,
-                    help="nominal SKU capacity, base to thread line; scales the mL readout")
-    ap.add_argument("--detect", action="store_true",
-                    help="also run YOLOE and overlay its bottle segmentation")
-    ap.add_argument("--max-frames", type=int, default=0)
-    return run(ap.parse_args())

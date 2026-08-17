@@ -10,23 +10,35 @@ The clip is re-rendered with a modest zoom and translation - the sort of change
 a camera knocked and re-mounted would produce, not a different production line -
 and the same pipeline is run over it unchanged.
 
-Run:  python src/perturbation_test.py
-      python src/perturbation_test.py --zoom 1.15 --dx 100 --dy 0
+Run, from the repository root:
+      python -m factory_vision.tools.perturbation_test --sweep
+      python -m factory_vision.tools.perturbation_test --zoom 1.15 --dx 100 --dy 0
+
+It reads project 04's own pipeline rather than a copy, so what is perturbed here
+is exactly what `python main.py` runs there.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
 import cv2
 
-from factory_vision.paths import ROOT, VIDEO_DIR, WEIGHTS_DIR
-if __name__ == "__main__" and str(ROOT) not in __import__("sys").path:
-    __import__("sys").path.insert(0, str(ROOT))
+from factory_vision.paths import ROOT
 
-from factory_vision import filling as L  # noqa: E402
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from factory_vision.tools import project_module  # noqa: E402
+
+# Project 04's pipeline module: VIDEO, OUT_DIR and run_case come from it. The
+# code used to live in a `factory_vision.filling` package; it moved into the
+# project when each case became a folder of its own, and this is the tool that
+# reaches back in for it.
+L = project_module("04", "pipeline")
 
 
 def perturb_clip(src: Path, dst: Path, zoom: float, dx: int, dy: int) -> None:
@@ -92,7 +104,7 @@ def main() -> None:
 
     baseline_path = L.OUT_DIR / "liquid_level_summary.json"
     if not baseline_path.exists():
-        raise SystemExit("run cases/case4_bottle_fill_volume.py first - "
+        raise SystemExit("run projects/04_bottle_fill_volume/main.py first - "
                          f"{baseline_path} is the baseline this compares against")
     baseline = json.loads(baseline_path.read_text())
     b_ml, b_frac = baseline["final_estimated_ml"], baseline["final_fill_volume_frac"]

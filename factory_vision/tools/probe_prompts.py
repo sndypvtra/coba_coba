@@ -15,7 +15,7 @@ from ultralytics import YOLOE
 
 warnings.filterwarnings("ignore")
 
-from factory_vision.paths import ROOT, VIDEO_DIR, WEIGHTS_DIR
+from factory_vision.paths import WEIGHTS_DIR, clip_path
 
 CANDIDATES = {
     "01_oranges_production_line.mp4": [
@@ -78,7 +78,7 @@ def main():
 
     model = YOLOE(args.weights)
     for name, prompt_sets in CANDIDATES.items():
-        video = VIDEO_DIR / name
+        video = clip_path(name)
         if video.exists():
             probe(model, video, prompt_sets, args.conf, args.imgsz, args.frames)
         else:

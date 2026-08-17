@@ -269,8 +269,18 @@ real SKU capacity and the number means something; the 1,500 mL default is
 illustrative. Disc integration also assumes a solid of revolution — true for
 these round bottles, false for a flask or a rectangular jerrycan.
 
-Residual limits worth knowing: the fill series still dips up to 5.3% frame to
-frame while the surface is turbulent under the nozzle, and the ROI clips a
-little of the bottle's base bulge, so the profile is slightly truncated. Both
-affect the fraction only mildly because numerator and denominator are measured
-the same way, but neither is zero.
+Residual limits worth knowing. The committed series no longer dips at all —
+checked over all 231 frame pairs in `output/liquid_level_summary.json`, none
+falls and the worst single-frame rise is 3.1%. An earlier version of this
+section said it "still dips up to 5.3% frame to frame"; that figure predates the
+isotonic fit being applied to the reported series, and is recorded here rather
+than deleted because a limits section that quietly drops a number is worth less
+than one that says which way it moved.
+
+The correction is not an improvement in surface-finding, though, and reading it
+as one would be the mistake: monotonicity is *imposed* by the fit, so it is not
+evidence the surface was located correctly on every frame, and a genuine fall in
+level could not appear in the output even if it occurred. Separately, the ROI
+clips a little of the bottle's base bulge, so the profile is slightly truncated;
+that affects the fraction only mildly, because numerator and denominator are
+measured the same way, but it is not zero.

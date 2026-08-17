@@ -29,7 +29,9 @@ PyYAML==6.0.1             # tracker configs are read directly, not only via ultr
 #   git clone --depth 1 https://github.com/ByteDance-Seed/depth-anything-3
 #   pip install --no-deps -e depth-anything-3
 #
-# `factory_vision/counting/depth.py` stubs moviepy and pycolmap at import time:
+# `projects/03_parcel_dimensioning/depth.py` stubs moviepy and pycolmap at import
+# time (the module used to live in factory_vision/counting/ and moved out when the
+# metric half became project 03's own):
 # DA3's export package imports both at module scope for its Gaussian-splat and
 # COLMAP writers, neither of which this pipeline calls, and neither of which
 # builds against a current setuptools.
