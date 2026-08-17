@@ -11,15 +11,16 @@ Three numbers come out of this:
 
 The first is a detection problem and is the easy one. The other two are tracking
 problems, and they are only as good as the identity assignment - which is why
-the chain below spends five of its seven steps on identity rather than on pixels:
+the chain below spends six of its eight steps on identity rather than on pixels:
 
   1. detection.observe   detect, filter by zone, track, describe        (pass 1)
   2. identity.split      cut a track where its box moved onto someone else
   3. identity.merge      re-link tracks the tracker broke on occlusion
   4. roles.classify      staff or customer, decided once per person
-  5. roles.hold          carry confirmed staff over gaps in detection
-  6. render.render       replay the clip against the settled identities (pass 2)
-  7. summary.build       the result, with the quality signals attached
+  5. roles.confine       keep a station worker's frames at their station
+  6. roles.hold          carry confirmed staff over gaps in detection
+  7. render.render       replay the clip against the settled identities (pass 2)
+  8. summary.build       the result, with the quality signals attached
 
 Split before merge, and both before anything is drawn. The tracker makes both
 errors - it breaks one person into several tracks, and it lets one track drift
@@ -85,6 +86,14 @@ def process(cfg: DwellConfig, args) -> dict:
     _report_zone_shares(merged)
     customers, staff_locked = roles.classify(merged, cfg)
     _report_staff(merged, staff_locked)
+
+    # ---- keep a station worker at their station ----------------------------
+    # Before holding, because a held box should be one of hers.
+    off = roles.confine_to_station(obs.frames, alias, staff_locked,
+                                   cfg.exclusion_zones, masks, w, h)
+    if off:
+        print(f"    dropped {off} service observations that had drifted outside "
+              f"the service zone (the box had slid onto someone else)")
 
     # ---- hold staff across short detection gaps ----------------------------
     hold = max([z.hold_frames for z in cfg.exclusion_zones] or [0])

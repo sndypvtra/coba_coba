@@ -12,15 +12,16 @@ python main.py --all        # both, one after another
 | | scene 1 | scene 5 |
 |---|:--:|:--:|
 | **Distinct visitors** | 12 | 14 |
-| Occupancy, mean / max | 10.32 / 12 | 9.04 / 10 |
+| Occupancy, mean / max | 10.32 / 12 | 8.96 / 10 |
 | **Dwell, mean / max** | **24.64 s** / 30.03 s | **17.88 s** / 30.03 s |
-| Staff service time | 14.21 s | 21.22 s |
-| — of which observed | 38 frames | 100 frames |
+| Staff service time | 14.21 s | 18.82 s |
+| — of which observed | 38 frames | 88 frames |
 | — of which held | **33 frames** | 6 frames |
 | Server's share of the service zone | 100 % | 94 % |
 | Duplicate boxes removed | 80 | 76 |
 | Tracks split (drifted onto another person) | 0 | 10 |
 | Tracks re-linked | 0 | 12 |
+| Service frames dropped as off-station | 0 | 12 |
 | Tracks with gaps | **3 of 12** | 1 of 14 |
 | **Identity switches remaining** | 0 | **0** (was 9) |
 
@@ -35,7 +36,7 @@ Read the two rows in bold before quoting scene 1's dwell time.
 room, backlit by the menu boards, with equipment on the counter top cutting the
 server in half. She is detected in 38 frames and held across 33 more, so 14.21 s
 of service is 8.0 s observed and 6.2 s inferred. Scene 5's server is detected in
-93 of 99. The held frames are reported separately in the JSON precisely so this
+88 of 94. The held frames are reported separately in the JSON precisely so this
 cannot be passed off as observation.
 
 **Its identity assignment is much weaker.** Worst continuity 0.152 means one
@@ -45,7 +46,7 @@ gaps exceed what `identity.py` will bridge on appearance alone. Three of twelve
 tracks are fragmented against one of fourteen in scene 5.
 
 Occupancy is unaffected by any of this — it is a per-frame detection count, and
-10.32 / 12 is as sound here as 9.04 / 10 is next door.
+10.32 / 12 is as sound here as 8.96 / 10 is next door.
 
 ### What the server cost to get right
 
@@ -96,6 +97,7 @@ answer.
 |---|:--:|:--:|
 | Identity switches | **9** | **0** |
 | Server's zone share | 94 % over 93 frames | 94 % over 100 frames |
+| Server's box on the wrong person | frames 8–19 | **none** |
 | Tracks with gaps | 2 of 12 | **1 of 14** |
 | Distinct visitors | 12 | 14 |
 
@@ -109,13 +111,35 @@ one-second glimpse should not count as a visit at all, the gate for that is
 `min_track_age` in `config.py` — a deliberate decision about what "visit" means,
 not something to hide inside the tracker.
 
+**And the box slid, which no step-wise test catches.** Even after the split, the
+PELAYAN box left the server between f8 and f19 and settled on the customer in
+front of her. There was no jump to find: it *grew*, from 127×166 at f1 to
+197×601 by f15, swallowing him a few pixels at a time. Every step was innocent —
+displacement 0.03–0.26 body widths, colour correlation 0.81–0.94, because she
+wears black and so does he.
+
+`roles.confine_to_station` fixes it with domain fact rather than another pixel
+threshold: **a station worker is at the station.** An observation is kept only if
+it is inside the service polygon *and* still her size. The polygon alone was not
+enough — the zone is a wide strip along the top of the frame, so the growing box
+kept its centre inside it for six frames after the annexation. Her in-zone height
+holds 163–172 px for the first seven frames and jumps to 270–347 during the
+drift, and every growth gate from 1.3× to 1.6× drops exactly the same six
+observations, so 1.5× is not a tuned number.
+
+This also repairs a claim the panel had been making falsely. It has always been
+captioned "time inside the service ROI" while `render.py` counted *every* frame
+of the staff identity, off-station ones included. Now the figure means what the
+caption says, which is why service time reads 18.82 s rather than 21.22 s.
+
 What is *not* fixed: for the ~50 frames the server is hidden behind customers she
-is not separately detected, so she carries no PELAYAN box there. The in-zone
-detections in that stretch belong to the tall customers at the counter, whose box
-centres fall inside the polygon — correctly kept as customers by the 60 % share
-gate. Four alternative tracker settings were measured against the occlusion —
-heavier ReID, a longer track buffer, a looser match threshold — and each traded
-it for a worse defect, either splitting her in two again or losing a visitor.
+is not separately detected, so she carries no PELAYAN box there — correctly, she
+is not visible. The in-zone detections in that stretch belong to the tall
+customers at the counter, whose box centres fall inside the polygon and whom the
+60 % share gate correctly keeps as customers. Four alternative tracker settings
+were measured against the occlusion — heavier ReID, a longer track buffer, a
+looser match threshold — and each traded it for a worse defect, either splitting
+her in two again or losing a visitor.
 
 ## Files
 
@@ -127,16 +151,16 @@ it for a worse defect, either splitting her in two again or losing a visitor.
 | `zones.py` | frame regions that are not ordinary customers — geometry only |
 | `detection.py` | pass 1 — detect, filter by zone, track, describe |
 | `identity.py` | splitting tracks that drifted onto another person, and re-linking those the tracker broke |
-| `roles.py` | staff or customer, decided once per person |
+| `roles.py` | staff or customer, and keeping a station worker at their station |
 | `render.py` | pass 2 — the annotated video |
 | `overlay.py` | the readout strip and the box tags |
 | `summary.py` | the result record and its quality signals |
-| `pipeline.py` | the seven-step sequence, and nothing else |
+| `pipeline.py` | the eight-step sequence, and nothing else |
 | `baseline.py` | each room's last verified figures, checked on every run |
 | `report.py` | the console read-out, including the regression line |
 | `input/`, `output/` | the two pre-cut clips, and results |
 
-Five of those seven steps are about *identity* rather than pixels, which is the
+Six of those eight steps are about *identity* rather than pixels, which is the
 shape of the problem: occupancy falls out of detection alone, and everything
 else depends on one person keeping one ID — through occlusion, and without the
 box wandering onto the neighbour.

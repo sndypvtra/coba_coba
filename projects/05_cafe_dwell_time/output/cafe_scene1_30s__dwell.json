@@ -49,7 +49,7 @@
     "worst_continuity": 0.152,
     "note": "continuity = frames actually seen / first-to-last span. Below 1.0 the track was lost and re-acquired; re-linking joins the obvious cases but cannot join every one."
   },
-  "avg_ms_per_frame": 1195.6,
+  "avg_ms_per_frame": 1240.0,
   "occupancy_series": [
     10,
     10,

@@ -253,10 +253,10 @@ people have appeared) and **dwell time** per person.
 | | Scene 5 | Scene 1 |
 |---|:--:|:--:|
 | Distinct visitors | **14** | **12** |
-| Occupancy, mean / max | 9.04 / 10 | 10.32 / 12 |
+| Occupancy, mean / max | 8.96 / 10 | 10.32 / 12 |
 | Dwell, mean | **17.88 s** | **24.64 s** |
-| Server time in the service zone | 21.22 s | 14.21 s |
-| — frames observed / held across gaps | 100 / 6 | **38 / 33** |
+| Server time in the service zone | 18.82 s | 14.21 s |
+| — frames observed / held across gaps | 88 / 6 | **38 / 33** |
 | Tracks that were lost and re-acquired | 1 of 14 | 3 of 12 |
 | Identity switches remaining | **0** (was 9) | 0 |
 

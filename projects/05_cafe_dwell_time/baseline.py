@@ -48,11 +48,11 @@ from dataclasses import dataclass
 ROOMS: dict[int, dict] = {
     5: {
         "visitors_total": 14,
-        "occupancy_mean": 9.04,
+        "occupancy_mean": 8.96,
         "occupancy_max": 10,
         "dwell_mean_seconds": 17.88,
         "staff_count": 1,
-        "staff_service_seconds": 21.22,
+        "staff_service_seconds": 18.82,
         "duplicate_boxes_removed": 76,
         "tracks_relinked": 12,
         "tracks_with_gaps": 1,
