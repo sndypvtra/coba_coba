@@ -35,6 +35,7 @@ shared with projects 01 and 02. Nothing metric does.
 
 from __future__ import annotations
 
+import argparse
 import sys
 from pathlib import Path
 
@@ -60,19 +61,38 @@ SLIT_SCAN_TRUTH = 8
 
 
 def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--count-only", action="store_true",
+                    help="count without measuring: no depth models, no sizes, "
+                         "exactly what projects 01 and 02 run")
+    args = ap.parse_args()
+
     report.banner(CLIP)
 
-    if not assets.fetch(VIDEO_DIR, WEIGHTS_DIR):
+    # Checked before a single byte is downloaded. Without this the run fetched
+    # 2.9 GB of depth checkpoints and only then raised ModuleNotFoundError from
+    # inside a model constructor, several minutes into what looked like progress.
+    if not args.count_only and not assets.depth_installed():
+        print(f"\n{assets.DA3_INSTALL}")
+        return 1
+
+    if not assets.fetch(VIDEO_DIR, WEIGHTS_DIR, with_depth=not args.count_only):
         print("\nSome assets could not be fetched; see above.")
         return 1
     place_mobileclip(WEIGHTS_DIR, Path.cwd())
 
-    report.settings(CLIP, SIZING)
+    report.settings(CLIP, SIZING, measuring=not args.count_only)
     # The backend is what makes this project measure rather than merely count.
-    # Projects 01 and 02 make the same run_case call without one.
-    summary = run_case(CLIP, VIDEO_DIR, OUTPUT_DIR,
-                       backend=ParcelMeasurement(SIZING, CLIP),
-                       panel=panel.build)
+    # Projects 01 and 02 make the same run_case call without one - and so does
+    # --count-only, which also drops this project's panel: a dashboard with a
+    # SIZE MIX row and nothing to put in it is the defect panel.py exists to
+    # prevent, so the shared counting panel is used instead.
+    if args.count_only:
+        summary = run_case(CLIP, VIDEO_DIR, OUTPUT_DIR)
+    else:
+        summary = run_case(CLIP, VIDEO_DIR, OUTPUT_DIR,
+                           backend=ParcelMeasurement(SIZING, CLIP),
+                           panel=panel.build)
     report.headline(summary, CLIP, SLIT_SCAN_TRUTH)
 
     dim = summary.get("dimensioning", {})

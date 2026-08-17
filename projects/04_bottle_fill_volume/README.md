@@ -43,6 +43,9 @@ python main.py --video other_fill.mp4   # new footage from the SAME station
 The clip is fetched on the first run into `input/`; the annotated video and
 `liquid_level_summary.json` land in `output/`. This is the **only project of the
 six that runs no neural network by default**, and by a wide margin the quickest.
+Nothing but the 5.9 MB clip is downloaded either — the detector arrives only when
+`--detect` asks for it, which is worth stating because it used to be fetched
+unconditionally: 71 MB of weights for a pipeline that never opened them.
 
 <details>
 <summary>Python environment</summary>

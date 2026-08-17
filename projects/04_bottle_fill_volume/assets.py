@@ -15,15 +15,27 @@ from pathlib import Path
 
 from factory_vision.assets import Clip, Requirements, ensure
 
+# 25 fps, unlike the 30 fps conveyor clips.
+CLIP = Clip("07_bottle_filling_line.mp4", 8720278, "hd_1920_1080_25fps")
+
 NEEDS = Requirements(
-    # 25 fps, unlike the 30 fps conveyor clips.
-    clips=(Clip("07_bottle_filling_line.mp4", 8720278, "hd_1920_1080_25fps"),),
+    clips=(CLIP,),
+    notes=("the measurement is colour and geometry - no network is downloaded "
+           "or run unless --detect asks for the overlay",),
+)
+
+# Only `--detect` needs a detector, so only `--detect` fetches one. It used to be
+# unconditional, which meant a clean clone pulled 71 MB of weights to run a
+# pipeline that never opens them - and contradicted this project's one real
+# selling point, that it needs no network at all.
+NEEDS_DETECT = Requirements(
+    clips=(CLIP,),
     weights=("yoloe-11l-seg.pt",),
-    notes=("weights are only needed for --detect; the measurement itself is "
-           "colour and geometry, no network",),
+    notes=("--detect overlays YOLOE, so the detector is fetched; the "
+           "measurement itself still does not use it",),
 )
 
 
-def fetch(video_dir: Path, weights_dir: Path) -> bool:
+def fetch(video_dir: Path, weights_dir: Path, detect: bool = False) -> bool:
     """Download whatever is missing. False if the project cannot run."""
-    return ensure(NEEDS, video_dir, weights_dir)
+    return ensure(NEEDS_DETECT if detect else NEEDS, video_dir, weights_dir)

@@ -9,6 +9,12 @@ supervision==0.29.1       # annotators, LineZone counting, VideoSink
 opencv-python==5.0.0.93   # OpenCV 5
 lap                       # linear assignment used by the trackers
 PyYAML==6.0.1             # tracker configs are read directly, not only via ultralytics
+numpy                     # imported directly by every project, not only via cv2
+tqdm                      # the download progress bars in factory_vision/assets.py
+
+# Listed even though ultralytics and supervision pull them in anyway: this repo
+# imports both by name, and a dependency you import is one you declare. The pin
+# is deliberately absent - whatever ultralytics settles on is what should be used.
 
 # pulled in automatically by ultralytics on first `get_text_pe` call:
 #   clip (git+https://github.com/ultralytics/CLIP.git), ftfy, regex

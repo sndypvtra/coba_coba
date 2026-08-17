@@ -64,7 +64,7 @@ def main() -> int:
 
     report.banner()
 
-    if not assets.fetch(VIDEO_DIR, WEIGHTS_DIR):
+    if not assets.fetch(VIDEO_DIR, WEIGHTS_DIR, detect=args.detect):
         print("\nSome assets could not be fetched; see above.")
         return 1
 

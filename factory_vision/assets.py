@@ -36,6 +36,13 @@ ULTRALYTICS_RELEASE = "https://github.com/ultralytics/assets/releases/download/v
 PEXELS_CDN = "https://videos.pexels.com/video-files"
 PEXELS_DOWNLOAD = "https://www.pexels.com/download/video"
 
+# Pexels' CDN refuses the default `Python-urllib/3.x` User-Agent with a bare 403,
+# on HEAD and GET alike, so every clip fetch failed on a clean clone while the
+# same URL returned 200 to curl. Any other User-Agent is accepted; this one says
+# who is calling rather than pretending to be a browser.
+USER_AGENT = ("factory-vision-poc/1.0 "
+              "(+https://github.com/sndypvtra/coba_coba)")
+
 # Ultralytics fetches this itself the first time `get_text_pe()` runs, into the
 # *working directory* rather than anywhere sensible. Naming it here lets a
 # project pre-place it so the download happens with the others, in view, instead
@@ -64,30 +71,36 @@ class Requirements:
     notes: tuple[str, ...] = field(default_factory=tuple)
 
 
-class _Bar(tqdm):
-    """A tqdm sized in bytes, updated from urlretrieve's block callback."""
-
-    def hook(self):
-        last = [0]
-
-        def report(blocks, block_size, total):
-            if total > 0:
-                self.total = total
-            self.update(blocks * block_size - last[0])
-            last[0] = blocks * block_size
-
-        return report
+def _open(url: str, method: str = "GET", timeout: int = 30):
+    """Open a URL with a User-Agent that CDNs accept - see USER_AGENT."""
+    request = urllib.request.Request(url, method=method,
+                                     headers={"User-Agent": USER_AGENT})
+    return urllib.request.urlopen(request, timeout=timeout)
 
 
 def _download(url: str, target: Path, label: str) -> bool:
-    """Fetch one file, atomically. Returns False if the source refused."""
+    """Fetch one file, atomically. Returns False if the source refused.
+
+    Streamed by hand rather than through `urlretrieve`, which cannot carry a
+    User-Agent header. That is not a style preference: without one Pexels answers
+    403 and no clip can be fetched at all.
+    """
     target.parent.mkdir(parents=True, exist_ok=True)
     tmp = target.with_suffix(target.suffix + ".part")
     try:
-        with _Bar(unit="B", unit_scale=True, unit_divisor=1024, miniters=1,
-                  desc=f"  {label:<34}", leave=True,
-                  bar_format="{desc} {percentage:3.0f}%|{bar:24}| {n_fmt}/{total_fmt}") as bar:
-            urllib.request.urlretrieve(url, tmp, reporthook=bar.hook())
+        with _open(url) as response:
+            total = int(response.headers.get("Content-Length") or 0)
+            with tqdm(total=total or None, unit="B", unit_scale=True,
+                      unit_divisor=1024, miniters=1, desc=f"  {label:<34}",
+                      leave=True,
+                      bar_format="{desc} {percentage:3.0f}%|{bar:24}| "
+                                 "{n_fmt}/{total_fmt}") as bar, tmp.open("wb") as out:
+                while True:
+                    chunk = response.read(1 << 16)
+                    if not chunk:
+                        break
+                    out.write(chunk)
+                    bar.update(len(chunk))
     except (urllib.error.URLError, urllib.error.HTTPError, OSError) as exc:
         tmp.unlink(missing_ok=True)
         print(f"  {label:<34} FAILED: {exc}")
@@ -101,23 +114,58 @@ def _download(url: str, target: Path, label: str) -> bool:
 def _resolve_clip(clip: Clip) -> str | None:
     """The named rendition if it still exists, else whatever Pexels redirects to."""
     direct = f"{PEXELS_CDN}/{clip.pexels_id}/{clip.pexels_id}-{clip.rendition}.mp4"
-    request = urllib.request.Request(direct, method="HEAD")
     try:
-        with urllib.request.urlopen(request, timeout=30):
+        with _open(direct, method="HEAD"):
             return direct
     except Exception:
         pass
     try:
-        with urllib.request.urlopen(f"{PEXELS_DOWNLOAD}/{clip.pexels_id}/",
-                                    timeout=30) as response:
+        with _open(f"{PEXELS_DOWNLOAD}/{clip.pexels_id}/") as response:
             print(f"  !! {clip.rendition} is gone for pexels {clip.pexels_id}; "
                   f"falling back to the default rendition.")
-            print("     If that is not 1920x1080 this project's pixel constants "
-                  "will not line up.")
+            print("     Every pixel constant in this project was measured on "
+                  f"{clip.rendition}, so the download is checked against it and")
+            print("     refused if it does not match - see _verify_rendition.")
             return response.geturl()
     except Exception as exc:
         print(f"  !! could not resolve pexels {clip.pexels_id}: {exc}")
         return None
+
+
+def _expected_size(rendition: str) -> tuple[int, int] | None:
+    """The frame size a rendition name promises: hd_1920_1080_30fps -> 1920x1080."""
+    parts = rendition.split("_")
+    for i in range(len(parts) - 1):
+        if parts[i].isdigit() and parts[i + 1].isdigit():
+            return int(parts[i]), int(parts[i + 1])
+    return None
+
+
+def _verify_rendition(path: Path, clip: Clip) -> bool:
+    """Refuse a clip whose frame size is not the one the constants were set on.
+
+    The fallback above exists because a rendition can be withdrawn, but what
+    Pexels hands back instead is *the largest* one - 3840x2160 for the bottling
+    clip. Downloading that and carrying on would leave every ROI, counting line
+    and bottle outline pointing at the wrong pixels, and nothing in the output
+    would say so: the run would simply report a confident wrong number. So the
+    file is measured before it is accepted.
+    """
+    want = _expected_size(clip.rendition)
+    if want is None:
+        return True
+    import cv2  # local: this module is imported before the pipeline needs cv2
+
+    cap = cv2.VideoCapture(str(path))
+    got = (int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+    cap.release()
+    if got == want:
+        return True
+    print(f"  {clip.name:<34} WRONG RENDITION: {got[0]}x{got[1]}, "
+          f"expected {want[0]}x{want[1]}")
+    print("     This project's pixel constants were measured on "
+          f"{clip.rendition}; a different frame size would move all of them.")
+    return False
 
 
 def ensure(req: Requirements, video_dir: Path, weights_dir: Path,
@@ -166,7 +214,19 @@ def ensure(req: Requirements, video_dir: Path, weights_dir: Path,
                 continue
             url = _resolve_clip(clip)
             if url and _download(url, target, clip.name):
-                fetched.append(clip.name)
+                if _verify_rendition(target, clip):
+                    fetched.append(clip.name)
+                else:
+                    # Renamed rather than deleted: it is a perfectly good video,
+                    # just not the one this project is calibrated for, and a
+                    # silent delete would look like the download failed. The
+                    # rename is what matters, though - left under its expected
+                    # name, the next run's `exists()` check would call it present
+                    # and measure the wrong pixels without a word.
+                    kept = target.with_suffix(".wrong-rendition.mp4")
+                    target.replace(kept)
+                    print(f"     kept as {kept.name}, not accepted as the input")
+                    ok = False
             else:
                 ok = False
 
@@ -205,7 +265,13 @@ def place_mobileclip(weights_dir: Path, run_dir: Path) -> None:
     """
     source = weights_dir / MOBILECLIP
     target = run_dir / MOBILECLIP
-    if target.exists() or target.is_symlink():
+    if target.is_symlink() and not target.exists():
+        # A link left by an earlier run whose target has since moved - the repo
+        # was relocated, or weights/ was pruned. `is_symlink()` is true for a
+        # broken link, so returning early here would leave ultralytics to open a
+        # dangling path and fail somewhere far less obvious.
+        target.unlink()
+    if target.exists():
         return
     if not source.exists():
         # Nothing to link yet. Ultralytics will fetch it into the project folder

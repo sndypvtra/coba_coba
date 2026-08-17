@@ -435,8 +435,12 @@ projects/
       input/  output/       this project's own video in, results out
       docs/                 the stills its README shows
 
-    projects 01, 02, 03 and 05 add
-      baseline.py           the last verified figures, checked on every run
+    projects 01, 02 and 05 add
+      baseline.py           the last verified figures, checked on every run.
+                            03 and 04 do not have one yet, which is backwards:
+                            they carry the most numbers and so have the most to
+                            drift. 03 pins only its count, as SLIT_SCAN_TRUTH
+                            in main.py; 04 pins nothing.
 
     and the four that carry their own pipeline split it by stage, e.g.
       03: intrinsics -> depth -> depth_cache -> belt -> sizing -> measurement

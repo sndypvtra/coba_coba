@@ -14,6 +14,8 @@ dependencies = [
     "opencv-python==5.0.0.93",
     "lap",
     "PyYAML==6.0.1",
+    "numpy",                  # imported directly, not only through cv2
+    "tqdm",                   # the download progress bars in assets.py
 ]
 
 [project.urls]
@@ -27,4 +29,9 @@ Source = "https://github.com/sndypvtra/coba_coba"
 include = ["factory_vision*"]
 
 [tool.setuptools.package-data]
-"factory_vision.counting" = ["trackers/*.yaml"]
+# The tracker gates are data, not code, and `resolve_tracker_cfg` reads them off
+# disk - so an install that omits them cannot track anything. This said
+# `factory_vision.counting` until it was checked: the directory is
+# `factory_vision/trackers/`, and has been since the counting engine was split
+# out, so `pip install .` was shipping no tracker config at all.
+"factory_vision" = ["trackers/*.yaml"]

@@ -36,10 +36,20 @@ output, which is what makes 8 = 8 worth anything.
 ## Run it
 
 ```bash
-python main.py
+python main.py                # count and measure
+python main.py --count-only   # count only: no depth models, no sizes
 ```
 
-The heaviest of the collection to set up, and all of it automatic: two Depth
+Depth Anything 3 is the one dependency `main.py` cannot install for you (four
+lines, below). It is checked for **before anything is downloaded**, and if it is
+missing the run stops immediately and prints those lines — rather than fetching
+2.9 GB of checkpoints and then raising `ModuleNotFoundError` from inside a model
+constructor, several minutes into what looked like progress. `--count-only` is the
+way to run the counting half meanwhile: it skips the depth checkpoints entirely
+and falls back to the shared counting dashboard, because a panel with a SIZE MIX
+row and nothing to put in it is the exact defect `panel.py` exists to prevent.
+
+The heaviest of the collection to set up, and the rest of it automatic: two Depth
 Anything 3 checkpoints (~2.9 GB) arrive alongside the detector on the first run.
 They are cached afterwards — by Hugging Face, and per frame by the pipeline itself
 in `output/.depth_cache` as float16 maps — so a second run costs a fraction of the
@@ -75,9 +85,9 @@ pip install --no-deps -e depth-anything-3
 imports both at module scope for its Gaussian-splat and COLMAP writers, neither of
 which this pipeline calls and neither of which builds against a current setuptools.
 
-**Without DA3 installed**, drop the `backend=` argument from the `run_case` call in
-`main.py` and the project still counts — that is exactly the call projects 01 and
-02 make.
+**Without DA3 installed**, `python main.py --count-only` still counts — that is
+exactly the `run_case` call projects 01 and 02 make, with no backend and no
+measurement.
 
 Weights fetched on first run: `yoloe-11l-seg.pt`, `yolo11n-cls.pt`,
 `depth-anything/DA3-LARGE` (camera intrinsics) and
@@ -218,7 +228,7 @@ it follows from, rather than in a footnote.
 
 | | |
 |---|---|
-| `main.py` | entry point — assets, run, report |
+| `main.py` | entry point — the DA3 preflight, assets, run, report |
 | `config.py` | `CLIP` (counting) and `SIZING` (metric), deliberately two objects |
 | `assets.py` | the clip, the detector, and the two depth checkpoints (~2.9 GB) |
 | `intrinsics.py` | DA3-LARGE's camera decoder, and the square-pixel test |

@@ -26,13 +26,21 @@ def banner(cfg) -> None:
     print("=" * 74)
 
 
-def settings(clip, sizing) -> None:
-    """Two blocks, because they are two configs - see config.py."""
+def settings(clip, sizing, measuring: bool = True) -> None:
+    """Two blocks, because they are two configs - see config.py.
+
+    `measuring=False` is `--count-only`: printing the metric block there would
+    describe a calibration the run is not using.
+    """
     print(f"\n  prompts: {clip.prompts}")
     print(f"  conf={clip.conf}  min_track_age={clip.min_track_age}  "
           f"belt motion={clip.motion} px/frame")
     print(f"  line   : x={clip.line_center[0]} plumb={clip.line_plumb} "
           f"span y={clip.line_span}")
+    if not measuring:
+        print("  size   : --count-only, so nothing is measured and no size "
+              "is reported\n")
+        return
     print(f"  size   : locked once the centre passes x={sizing.size_lock_x}")
     print(f"  depth  : every {sizing.depth_every} frames @ "
           f"{sizing.depth_process_res}px, corridor {sizing.depth_corridor} m, "
