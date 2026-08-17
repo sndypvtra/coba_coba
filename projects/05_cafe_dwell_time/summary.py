@@ -21,7 +21,7 @@ import roles
 
 
 def build(cfg, args, obs, merged, customers, staff_locked, timeline, merges,
-          out_path, info) -> dict:
+          out_path, info, splits=(), off_station: int = 0) -> dict:
     fps = info.fps
     people = _people(customers, merged, timeline.dwell, fps)
     staff = _staff(staff_locked, merged, timeline.staff_dwell, obs.frames, fps)
@@ -48,6 +48,14 @@ def build(cfg, args, obs, merged, customers, staff_locked, timeline, merges,
             "duplicate_boxes_removed": obs.duplicates_dropped,
             "zones": [{"name": z.name, "mode": z.mode, "reason": z.reason,
                        "min_overlap": z.min_overlap} for z in cfg.exclusion_zones],
+            # Both identity repairs are recorded, not just the joining one.
+            # The video is produced by eight steps and a result record that
+            # documents five of them cannot be audited against it.
+            "tracks_split": len(splits),
+            "split_detail": [{"from": old, "into": new, "at_frame": f1,
+                              "moved_body_widths": move, "appearance": app}
+                             for old, new, f0, f1, move, app in splits],
+            "service_observations_off_station": off_station,
             "tracks_relinked": len(merges),
             "relink_detail": [{"from": b, "into": a, "gap_seconds": g,
                                "moved_frac": mv, "appearance": s}

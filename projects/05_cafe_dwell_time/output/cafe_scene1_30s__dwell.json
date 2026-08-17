@@ -41,6 +41,9 @@
         "min_overlap": 0.7
       }
     ],
+    "tracks_split": 0,
+    "split_detail": [],
+    "service_observations_off_station": 0,
     "tracks_relinked": 0,
     "relink_detail": []
   },
@@ -49,7 +52,7 @@
     "worst_continuity": 0.152,
     "note": "continuity = frames actually seen / first-to-last span. Below 1.0 the track was lost and re-acquired; re-linking joins the obvious cases but cannot join every one."
   },
-  "avg_ms_per_frame": 1240.0,
+  "avg_ms_per_frame": 1244.6,
   "occupancy_series": [
     10,
     10,

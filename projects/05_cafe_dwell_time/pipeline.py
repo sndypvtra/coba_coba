@@ -73,7 +73,7 @@ def process(cfg: DwellConfig, args) -> dict:
 
     # ---- cut tracks that drifted onto a different person -------------------
     obs.frames, splits = identity.split_switched_tracks(obs.frames, src)
-    if splits:
+    if splits:  # every aggregate is derived, so rebuild rather than patch
         obs.tracks = detection.describe_tracks(obs.frames, src, cfg, masks, w, h)
         _report_splits(splits)
 
@@ -108,7 +108,8 @@ def process(cfg: DwellConfig, args) -> dict:
                       cfg, info, len(merges))
 
     result = summarise.build(cfg, args, obs, merged, customers, staff_locked,
-                             timeline, merges, out_path, info)
+                             timeline, merges, out_path, info,
+                             splits=splits, off_station=off)
     summarise.write(result, OUTPUT_DIR, cfg.filename)
     _report_done(result, obs, out_path, merges)
     return result

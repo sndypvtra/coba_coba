@@ -7,12 +7,20 @@ count goes up by one. Occupancy does not care - it is a per-frame detection
 count - which is why occupancy is the number to trust and these two are the
 numbers that need this module.
 
-Nothing here invents an identity. It only joins two tracks the tracker already
-produced, and every join is reported so the repair can be audited rather than
-taken on faith.
+The tracker makes two opposite errors and this module repairs both:
 
-TWO GATES, BECAUSE A COUNTER IS NOT A ROOM
-------------------------------------------
+  split_switched_tracks   one track that covered several people, cut apart
+  merge_broken_tracks     several tracks that were one person, joined up
+
+Split runs first. It hands the merge clean pieces, and the pair is
+self-correcting - a split whose halves turn out to look alike over their whole
+lives is rejoined, so only the ones that survive both tests change the answer.
+
+Nothing here invents an identity. Every cut and every join is reported with the
+measurement behind it, so the repair can be audited rather than taken on faith.
+
+MERGE GATES: A COUNTER IS NOT A ROOM
+------------------------------------
 Customers circulate; staff stand at a station. Measured on scene 5, the server
 is tracked for the first 19 frames, hidden behind customers leaning on the
 counter for the next 51, and picked up again for the last 80 - a 10.4 s gap, at

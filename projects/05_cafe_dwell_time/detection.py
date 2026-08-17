@@ -1,9 +1,16 @@
 """Pass 1: detect people, filter them, track them, describe them.
 
-One walk through the clip, producing everything the later stages need and
-nothing they do not: a per-frame list of boxes with track ids, and a per-track
-record of when it lived, where it sat and what colour it was. Rendering is a
-separate pass because the identity repair in `identity.py` has to see the whole
+The detector walks the clip once and produces the thing everything else is built
+on: a per-frame list of boxes with track ids.
+
+`describe_tracks` then makes a second, cheap pass to aggregate those into
+per-track records - lifetime, service-zone share, colour signature. It is
+separate, and public, because `identity.split_switched_tracks` rewrites who is
+who: after a split every aggregate has to be recomputed from the corrected
+assignment rather than patched, and building them inside the detection loop made
+that impossible.
+
+Rendering is a third pass, because the identity repairs have to see the whole
 clip before the first frame can be drawn.
 """
 

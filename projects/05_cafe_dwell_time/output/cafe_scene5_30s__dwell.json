@@ -47,6 +47,80 @@
         "min_overlap": 0.7
       }
     ],
+    "tracks_split": 10,
+    "split_detail": [
+      {
+        "from": 1,
+        "into": 31,
+        "at_frame": 53,
+        "moved_body_widths": 0.293,
+        "appearance": 0.524
+      },
+      {
+        "from": 2,
+        "into": 32,
+        "at_frame": 32,
+        "moved_body_widths": 0.15,
+        "appearance": 0.415
+      },
+      {
+        "from": 32,
+        "into": 33,
+        "at_frame": 37,
+        "moved_body_widths": 0.347,
+        "appearance": 0.493
+      },
+      {
+        "from": 3,
+        "into": 34,
+        "at_frame": 35,
+        "moved_body_widths": 0.124,
+        "appearance": 0.444
+      },
+      {
+        "from": 6,
+        "into": 35,
+        "at_frame": 142,
+        "moved_body_widths": 0.508,
+        "appearance": 0.492
+      },
+      {
+        "from": 7,
+        "into": 36,
+        "at_frame": 23,
+        "moved_body_widths": 1.06,
+        "appearance": 0.41
+      },
+      {
+        "from": 12,
+        "into": 37,
+        "at_frame": 32,
+        "moved_body_widths": 0.217,
+        "appearance": 0.55
+      },
+      {
+        "from": 15,
+        "into": 38,
+        "at_frame": 55,
+        "moved_body_widths": 0.153,
+        "appearance": 0.391
+      },
+      {
+        "from": 38,
+        "into": 39,
+        "at_frame": 64,
+        "moved_body_widths": 0.427,
+        "appearance": 0.294
+      },
+      {
+        "from": 24,
+        "into": 40,
+        "at_frame": 132,
+        "moved_body_widths": 0.198,
+        "appearance": 0.484
+      }
+    ],
+    "service_observations_off_station": 12,
     "tracks_relinked": 12,
     "relink_detail": [
       {
@@ -140,7 +214,7 @@
     "worst_continuity": 0.75,
     "note": "continuity = frames actually seen / first-to-last span. Below 1.0 the track was lost and re-acquired; re-linking joins the obvious cases but cannot join every one."
   },
-  "avg_ms_per_frame": 1223.2,
+  "avg_ms_per_frame": 1214.8,
   "occupancy_series": [
     10,
     10,

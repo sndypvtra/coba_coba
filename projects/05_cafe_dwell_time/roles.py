@@ -12,6 +12,16 @@ Both numbers a room is judged on depend on this split:
   service    staff only, reported separately, because how long a server spent
              attending the counter is the one measurement a manager wants from
              them and dropping staff outright throws it away
+
+Two things happen here, and the second is not about deciding a role at all:
+
+  classify            staff or customer, once per person, from where the track
+                      lived rather than from any single frame
+  confine_to_station  keep a station worker's observations at their station,
+                      because a tracker box that slides onto the customer in
+                      front of her is still labelled with her identity, and no
+                      per-frame threshold catches a theft committed a few
+                      pixels at a time
 """
 
 from __future__ import annotations
