@@ -75,3 +75,23 @@ def clips_not_found(missing: list[str]) -> None:
     print("  download. Restore it with:")
     print("      git checkout -- projects/05_cafe_dwell_time/input/")
     print("  README.md records where the footage comes from and how it was cut.")
+
+
+def regression(checks) -> None:
+    """Did this room reproduce its last verified run?
+
+    Printed rather than asserted. A moved number here is usually information
+    about the footage or a threshold, not a crash, and the person running it
+    should see which figure moved and by how much.
+    """
+    if not checks:
+        return
+    print("  AGAINST THE LAST VERIFIED RUN  (baseline.py)")
+    for c in checks:
+        print(f"    {c}")
+    if all(c.ok for c in checks):
+        print("    every recorded figure reproduced.")
+    else:
+        print("    something moved - baseline.py says what each figure means;")
+        print("    update it in the same commit if the change is intended.")
+    print("-" * 74)

@@ -28,7 +28,7 @@ measured by running the code in this repository, not estimated.
 | **2** | Tomato grading line | Count tomatoes past a line | **16** counted · 50 tracks |
 | **3** | Parcel unloading belt | Count and dimension mixed packages | **8** counted · dimensioned to ±10 % |
 | **4** | Bottling line | Measure dispensed volume | **1,001 mL** · 66.7 % of nominal |
-| **5** | Cafe, two rooms | Occupancy and per-person dwell time | **12** visitors each · mean dwell **21.2 s** / **24.6 s** |
+| **5** | Cafe, two rooms | Occupancy and per-person dwell time | **12** visitors each · mean dwell **21.0 s** / **24.6 s** |
 | **6** | Warehouse, four cameras | Locate people in 3D, one floor plan, operational KPIs | median error **0.181 m** vs the dataset's own 3D truth |
 
 Cases 1–3, 5 and 6 are **zero-shot**: the detector is given words, never labels,
@@ -253,11 +253,11 @@ people have appeared) and **dwell time** per person.
 | | Scene 5 | Scene 1 |
 |---|:--:|:--:|
 | Distinct visitors | **12** | **12** |
-| Occupancy, mean / max | 9.00 / 10 | 10.32 / 12 |
-| Dwell, mean | **21.19 s** | **24.64 s** |
-| Server time in the service zone | 16.02 s | 14.21 s |
-| — frames observed / held across gaps | 74 / 6 | **38 / 33** |
-| Tracks that were lost and re-acquired | 1 of 12 | 3 of 12 |
+| Occupancy, mean / max | 9.04 / 10 | 10.32 / 12 |
+| Dwell, mean | **20.97 s** | **24.64 s** |
+| Server time in the service zone | 19.82 s | 14.21 s |
+| — frames observed / held across gaps | 93 / 6 | **38 / 33** |
+| Tracks that were lost and re-acquired | 2 of 12 | 3 of 12 |
 
 Scene 1 is the harder room and its own figures say so. Its counter is deep in
 the room and backlit, so nearly half that 14.21 s is interpolated across frames

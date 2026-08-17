@@ -21,7 +21,7 @@
   "dwell_max_seconds": 30.03,
   "staff": [
     {
-      "track_id": 13,
+      "track_id": 46,
       "service_seconds": 14.21,
       "frames_total": 71,
       "frames_detected": 38,
@@ -49,7 +49,7 @@
     "worst_continuity": 0.152,
     "note": "continuity = frames actually seen / first-to-last span. Below 1.0 the track was lost and re-acquired; re-linking joins the obvious cases but cannot join every one."
   },
-  "avg_ms_per_frame": 1446.4,
+  "avg_ms_per_frame": 1522.6,
   "occupancy_series": [
     10,
     10,
@@ -204,7 +204,7 @@
   ],
   "people": [
     {
-      "track_id": 1,
+      "track_id": 34,
       "first_frame": 1,
       "last_frame": 150,
       "frames_seen": 150,
@@ -213,7 +213,7 @@
       "continuity": 1.0
     },
     {
-      "track_id": 2,
+      "track_id": 35,
       "first_frame": 1,
       "last_frame": 150,
       "frames_seen": 113,
@@ -222,7 +222,7 @@
       "continuity": 0.753
     },
     {
-      "track_id": 3,
+      "track_id": 36,
       "first_frame": 1,
       "last_frame": 150,
       "frames_seen": 150,
@@ -231,7 +231,7 @@
       "continuity": 1.0
     },
     {
-      "track_id": 4,
+      "track_id": 37,
       "first_frame": 1,
       "last_frame": 150,
       "frames_seen": 150,
@@ -240,7 +240,7 @@
       "continuity": 1.0
     },
     {
-      "track_id": 5,
+      "track_id": 38,
       "first_frame": 1,
       "last_frame": 150,
       "frames_seen": 150,
@@ -249,7 +249,7 @@
       "continuity": 1.0
     },
     {
-      "track_id": 6,
+      "track_id": 39,
       "first_frame": 1,
       "last_frame": 150,
       "frames_seen": 149,
@@ -258,7 +258,7 @@
       "continuity": 0.993
     },
     {
-      "track_id": 7,
+      "track_id": 40,
       "first_frame": 1,
       "last_frame": 150,
       "frames_seen": 150,
@@ -267,7 +267,7 @@
       "continuity": 1.0
     },
     {
-      "track_id": 8,
+      "track_id": 41,
       "first_frame": 1,
       "last_frame": 150,
       "frames_seen": 133,
@@ -276,7 +276,7 @@
       "continuity": 0.887
     },
     {
-      "track_id": 9,
+      "track_id": 42,
       "first_frame": 1,
       "last_frame": 150,
       "frames_seen": 150,
@@ -285,7 +285,7 @@
       "continuity": 1.0
     },
     {
-      "track_id": 10,
+      "track_id": 43,
       "first_frame": 1,
       "last_frame": 150,
       "frames_seen": 150,
@@ -294,7 +294,7 @@
       "continuity": 1.0
     },
     {
-      "track_id": 12,
+      "track_id": 45,
       "first_frame": 9,
       "last_frame": 41,
       "frames_seen": 5,
@@ -303,7 +303,7 @@
       "continuity": 0.152
     },
     {
-      "track_id": 15,
+      "track_id": 48,
       "first_frame": 107,
       "last_frame": 150,
       "frames_seen": 27,

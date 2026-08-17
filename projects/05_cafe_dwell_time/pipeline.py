@@ -65,8 +65,8 @@ def process(cfg: DwellConfig, args) -> dict:
     obs = detection.observe(cfg, args, src, masks, w, h, fps, OUTPUT_DIR)
 
     # ---- re-link tracks broken by occlusion --------------------------------
-    alias, merges = identity.merge_broken_tracks(obs.tracks, fps, diag)
-    _report_merges(merges)
+    alias, merges, refused = identity.merge_broken_tracks(obs.tracks, fps, diag)
+    _report_merges(merges, refused, obs.tracks)
     merged = identity.collapse(obs.tracks, alias)
 
     # ---- decide staff or customer, once per person -------------------------
@@ -102,13 +102,22 @@ def _announce(cfg, args, info) -> None:
         print(f"    zone '{z.name}' [{z.mode}]: {z.reason}")
 
 
-def _report_merges(merges) -> None:
-    if not merges:
-        return
-    print(f"    re-linked {len(merges)} broken tracks:")
-    for b, a, gap, move, sim in merges:
-        print(f"      #{b} -> #{a}   gap {gap}s  moved {move * 100:.1f}% of frame  "
-              f"appearance {sim:.2f}")
+def _report_merges(merges, refused, tracks) -> None:
+    """What the repair joined, and what it declined to.
+
+    The refusals matter as much as the joins: a union that would have put two
+    tracks sharing a frame into one identity is a claim that one person was in
+    two places, and it is worth seeing that the code caught it.
+    """
+    if merges:
+        print(f"    re-linked {len(merges)} broken tracks:")
+        for b, a, gap, move, sim in merges:
+            print(f"      #{b} -> #{a}   gap {gap}s  moved {move * 100:.1f}% of frame  "
+                  f"appearance {sim:.2f}")
+    for b, a, (x, y) in refused:
+        tx, ty = tracks[x], tracks[y]
+        print(f"    refused #{b} -> #{a}: it would join #{x} (f{tx['first']}-{tx['last']}) "
+              f"and #{y} (f{ty['first']}-{ty['last']}), which share frames")
 
 
 def _report_zone_shares(merged) -> None:

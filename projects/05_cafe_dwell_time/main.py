@@ -35,6 +35,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import assets  # noqa: E402
+import baseline  # noqa: E402
 import report  # noqa: E402
 from config import CLIPS  # noqa: E402
 from pipeline import run_case  # noqa: E402
@@ -75,7 +76,9 @@ def main() -> int:
     report.rooms(todo, [c for c in CLIPS if c not in todo])
     for cfg in todo:
         report.banner(cfg)
-        report.results(run_case(cfg.filename))
+        summary = run_case(cfg.filename)
+        report.results(summary)
+        report.regression(baseline.check(cfg.scene_id, summary))
     adopt_mobileclip(WEIGHTS_DIR, Path.cwd())
     return 0
 

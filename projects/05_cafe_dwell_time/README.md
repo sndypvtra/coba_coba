@@ -12,15 +12,15 @@ python main.py --all        # both, one after another
 | | scene 1 | scene 5 |
 |---|:--:|:--:|
 | **Distinct visitors** | 12 | 12 |
-| Occupancy, mean / max | 10.32 / 12 | 9.0 / 10 |
-| **Dwell, mean / max** | **24.64 s** / 30.03 s | **21.19 s** / 30.03 s |
-| Staff service time | 14.21 s | 16.02 s |
-| — of which observed | 38 frames | 74 frames |
+| Occupancy, mean / max | 10.32 / 12 | 9.04 / 10 |
+| **Dwell, mean / max** | **24.64 s** / 30.03 s | **20.97 s** / 30.03 s |
+| Staff service time | 14.21 s | 19.82 s |
+| — of which observed | 38 frames | 93 frames |
 | — of which held | **33 frames** | 6 frames |
+| Server's share of the service zone | 100 % | 94 % |
 | Duplicate boxes removed | 80 | 76 |
 | Broken tracks re-linked | 0 | 4 |
-| Tracks with gaps | **3 of 12** | 1 of 12 |
-| Worst continuity | **0.152** | 0.75 |
+| Tracks with gaps | **3 of 12** | 2 of 12 |
 
 Both rooms are measured by the same twelve modules; only `config.py` differs,
 and only in the zones. Every figure above comes from `output/*__dwell.json`.
@@ -33,17 +33,49 @@ Read the two rows in bold before quoting scene 1's dwell time.
 room, backlit by the menu boards, with equipment on the counter top cutting the
 server in half. She is detected in 38 frames and held across 33 more, so 14.21 s
 of service is 8.0 s observed and 6.2 s inferred. Scene 5's server is detected in
-74 of 80. The held frames are reported separately in the JSON precisely so this
+93 of 99. The held frames are reported separately in the JSON precisely so this
 cannot be passed off as observation.
 
 **Its identity assignment is much weaker.** Worst continuity 0.152 means one
 customer was seen in 15 % of the frames between their first and last sighting —
 the tracker lost them repeatedly and re-linking joined none of it, because the
 gaps exceed what `identity.py` will bridge on appearance alone. Three of twelve
-tracks are fragmented against one of twelve in scene 5.
+tracks are fragmented against two of twelve in scene 5.
 
 Occupancy is unaffected by any of this — it is a per-frame detection count, and
-10.32 / 12 is as sound here as 9.0 / 10 is next door.
+10.32 / 12 is as sound here as 9.04 / 10 is next door.
+
+### What the server cost to get right
+
+Scene 5's server stands at the till for the whole clip, and customers lean on
+the counter in front of her. She is tracked for 19 frames, hidden for the next
+51, and picked up again for the last 80. Two defects followed, and both are
+fixed in [`identity.py`](identity.py):
+
+**One person was put in two places.** The pairwise re-link rule refuses to join
+tracks that coexist, but union-find joined them transitively anyway — two weak
+matches (similarity 0.50 and 0.53) chained the server's track to three people
+elsewhere in the room. The identity that came out was 15 % inside the service
+polygon instead of her 68 %, so she was reported as a *customer* and the room
+looked unattended for the first 70 frames. A union is now refused when any
+member of one group shares a frame with any member of the other.
+
+**A counter is not a room.** Her 10.4 s occlusion is far outside the 3 s gap
+that suits a customer walking behind someone. A service polygon is a fixed
+workplace, so two tracks that both sit predominantly inside one now get a longer
+gap and a looser displacement. She is one identity again, 94 % inside the zone,
+labelled from frame 1.
+
+The similarity floor moved 0.45 → 0.65 at the same time, and the value is not a
+taste: of the five candidate pairs in this clip, three score 0.82–0.98 and two
+score 0.50–0.53. The empty band between them is 0.286 wide, five times the next
+largest gap, and 0.65 sits in the middle of it.
+
+What is *not* fixed: for the ~50 frames she is hidden, her occasional visible
+detections are absorbed by the customer tracks around her, so she carries no
+PELAYAN box there. Four alternative tracker settings were measured — heavier
+ReID, a longer track buffer, a looser match threshold — and each traded that for
+a worse defect, either splitting her in two again or losing a visitor.
 
 ## Files
 
@@ -60,7 +92,8 @@ Occupancy is unaffected by any of this — it is a per-frame detection count, an
 | `overlay.py` | the readout strip and the box tags |
 | `summary.py` | the result record and its quality signals |
 | `pipeline.py` | the six-step sequence, and nothing else |
-| `report.py` | the console read-out |
+| `baseline.py` | each room's last verified figures, checked on every run |
+| `report.py` | the console read-out, including the regression line |
 | `input/`, `output/` | the two pre-cut clips, and results |
 
 Four of those six steps are about *identity* rather than pixels, which is the
@@ -74,8 +107,9 @@ identity required. It is the number to trust.
 
 **Dwell time is a tracking result.** It needs one person to keep one ID while
 someone walks in front of them. `tracks_with_gaps` reports how often that failed
-— 1 of 12 here — and the visitor total inherits the same risk: a broken identity
-becomes two visitors who each stayed half as long.
+— 2 of 12 in scene 5, 3 of 12 in scene 1 — and the visitor total inherits the
+same risk: a broken identity becomes two visitors who each stayed half as long.
+`baseline.py` pins both, so a change that moves them says so on the next run.
 
 Reporting them as though they were equally reliable is the failure this project
 is built to avoid.
