@@ -111,6 +111,14 @@ class MetricDepth:
         metres = pred.depth[0] * self.intrinsics.focal / CANONICAL_FOCAL
         self.frames_run += 1
         self.cache.store(cache_key, metres)
+        # Quantised the same way the cache stores it, so the run that *computes*
+        # a map measures the same numbers as every run that later *reads* it.
+        # Returning the float32 here instead made the first run disagree with all
+        # its successors: on a clean clone 20 of 21 parcels came out 1-7 mm from
+        # the committed figures, and the belt plane fitted over 34,912 px against
+        # 34,903. Physically negligible, and it meant the results in the README
+        # could not be reproduced from a cold start.
+        metres = metres.astype(np.float16).astype(np.float32)
         return cv2.resize(metres, (w, h), interpolation=cv2.INTER_LINEAR)
 
 
