@@ -113,11 +113,18 @@ class MetricDepth:
         self.cache.store(cache_key, metres)
         # Quantised the same way the cache stores it, so the run that *computes*
         # a map measures the same numbers as every run that later *reads* it.
-        # Returning the float32 here instead made the first run disagree with all
-        # its successors: on a clean clone 20 of 21 parcels came out 1-7 mm from
-        # the committed figures, and the belt plane fitted over 34,912 px against
-        # 34,903. Physically negligible, and it meant the results in the README
-        # could not be reproduced from a cold start.
+        # Returning float32 here while storing float16 made a first run disagree
+        # with all of its own successors, which is a difference this pipeline can
+        # remove and should.
+        #
+        # It does NOT make two independent runs agree, and it would be wrong to
+        # read it that way. DA3 is bit-identical within one process but not
+        # across processes: its output moves by ~1e-6 canonical units, far below
+        # anything physical - and float16 then rounds those wobbles to +/-1 step,
+        # which is 2-8 mm at these ranges. Two cold runs of this clip agreed on
+        # every map to a median of exactly zero and a p99 of 3.9 mm, and that was
+        # enough to move parcel dimensions by up to 5 mm. See the README's
+        # note on run-to-run tolerance.
         metres = metres.astype(np.float16).astype(np.float32)
         return cv2.resize(metres, (w, h), interpolation=cv2.INTER_LINEAR)
 

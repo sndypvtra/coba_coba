@@ -212,6 +212,42 @@ applied *only* where the top face is under-resolved, because applying it
 everywhere inflated the poly bag the camera had measured correctly — 444 mm became
 527 mm and the bag jumped from M to L.
 
+### How closely two runs agree — and the one parcel that changed class
+
+Every figure in this README comes from a specific run, and two runs of this code
+on this clip do **not** agree to the millimetre. Measured across two independent
+runs:
+
+| | run A | run B |
+|---|---|---|
+| counted, track ids, detections/frame, parcels | **identical** | **identical** |
+| belt-plane fit | 34,903 px | 34,912 px |
+| total volume | 1,087.1 L | 1,085.6 L (−0.14 %) |
+| largest change in a measured side | — | **5 mm** |
+| size mix | L7 M13 S1 | **L6 M14 S1** |
+
+The cause is not the pipeline and not the camera. Depth Anything 3 is
+bit-identical within one process, but across processes its output drifts by about
+1e-6 canonical units — far below anything physical, and below the depth cache's
+own resolution. Storing float16 then rounds that wobble to ±1 quantisation step,
+2–8 mm at these ranges: comparing the two runs' 109 depth maps gives a **median
+difference of exactly zero and a p99 of 3.9 mm**. Sizing takes medians over
+masked depth samples, so a handful of flipped pixels moves a side by a few
+millimetres.
+
+**And that is how a parcel changed class.** Track #50 measured 603 mm on its
+longest side in one run and 599 mm in the other, crossing the 600 mm L/M
+boundary — so the size mix reads L7 M13 in one and L6 M14 in the other. It was
+already flagged `L?` in the first run and `M?` in the second, which is exactly
+what that mark is for: *the longest side sits within the measurement's own
+uncertainty of a class boundary.* It is not a decorative caveat. On this clip it
+demonstrably flips.
+
+So: treat the counts, classes and marks as the results, the millimetres as good
+to roughly ±5 mm run to run, and any `?` row as a genuine coin-toss at the
+boundary. If you need tighter, store the cache as float32 — ~1e-6 m of agreement
+for 190 MB instead of 95 — and re-measure.
+
 ### The size mix, in full
 
 | class | count | meaning |
@@ -223,11 +259,12 @@ everywhere inflated the poly bag the camera had measured correctly — 444 mm be
 | M\* | 12 | medium, footprint corrected |
 | S? | 1 | small, but within the uncertainty of the boundary |
 
-Only the two unmarked rows have a footprint the camera resolved. The other 19 rest
-on the correction: 15 show `*`, and the remaining 4 show `?` instead because
-sitting within the uncertainty of a class boundary is the more serious caveat and
-takes the mark. The read-out prints this per parcel, next to the `top px` column
-it follows from, rather than in a footnote.
+That is run A's mix, and `L?` is one of the rows that moved to `M?` in run B —
+see above. Only the two unmarked rows have a footprint the camera resolved. The
+other 19 rest on the correction: 15 show `*`, and the remaining 4 show `?`
+instead because sitting within the uncertainty of a class boundary is the more
+serious caveat and takes the mark. The read-out prints this per parcel, next to
+the `top px` column it follows from, rather than in a footnote.
 
 ## What this does not measure
 

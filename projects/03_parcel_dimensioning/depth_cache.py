@@ -15,13 +15,23 @@ Two details make the cache safe rather than merely fast:
 quantisation step around 1 mm at these distances - far below the model's own
 error, so the cache costs nothing in accuracy.
 
-It did cost *reproducibility*, though, until `MetricDepth.depth` was made to
-quantise its own return value the same way. Storing float16 while returning
-float32 meant the run that computed a map measured slightly different numbers
-from every run that later read it: on a clean clone 20 of 21 parcels came out
-1-7 mm from the committed figures. No size class moved and nothing was less
-accurate - but a first run that cannot reproduce the README is a defect in a
-repository that pins its figures.
+It does cost *reproducibility*, and in two different ways that are worth keeping
+apart.
+
+The fixable one: storing float16 while returning float32 meant the run that
+computed a map measured different numbers from every run that later read it.
+`MetricDepth.depth` now quantises its return value the same way, so a computed
+map and its read-back are bitwise equal.
+
+The one that remains: DA3 is bit-identical within a process but not across
+processes, drifting by ~1e-6 canonical units - orders of magnitude below anything
+physical, and below this cache's own resolution. Rounding to float16 turns those
+wobbles into +/-1 quantisation step, 2-8 mm at these ranges, on a minority of
+pixels. Comparing two independent runs of the same clip: median difference
+exactly 0, p99 3.9 mm, and that is enough to move a parcel's measured side by up
+to 5 mm. Storing float32 would shrink this to ~1e-6 m at the cost of doubling the
+cache to 190 MB; the tolerance is documented in the README instead, because a
+figure quoted without one is the actual hazard.
 
 *Atomic replace.* The map is written to a temporary name and moved into place,
 so a process killed mid-write leaves no truncated file that the next run would
