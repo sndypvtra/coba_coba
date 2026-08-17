@@ -40,6 +40,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import assets  # noqa: E402
+import panel  # noqa: E402
 import report  # noqa: E402
 from config import CLIP, SIZING  # noqa: E402
 from measurement import ParcelMeasurement  # noqa: E402
@@ -68,7 +69,8 @@ def main() -> int:
     # The backend is what makes this project measure rather than merely count.
     # Projects 01 and 02 make the same run_case call without one.
     summary = run_case(CLIP, VIDEO_DIR, OUTPUT_DIR,
-                       backend=ParcelMeasurement(SIZING, CLIP))
+                       backend=ParcelMeasurement(SIZING, CLIP),
+                       panel=panel.build)
     report.headline(summary, CLIP, SLIT_SCAN_TRUTH)
 
     dim = summary.get("dimensioning", {})

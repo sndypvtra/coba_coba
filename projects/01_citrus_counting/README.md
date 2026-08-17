@@ -25,14 +25,20 @@ Everything missing is fetched on first run, with a progress bar: the clip into
 | `main.py` | entry point — four calls, no logic of its own |
 | `config.py` | the prompts, the confidence floor, the counting line, the belt's measured travel |
 | `assets.py` | what has to be downloaded before a run |
-| `report.py` | the console read-out |
+| `panel.py` | what the live dashboard shows — rate, headway, what is in view |
+| `report.py` | the console read-out, including the regression line |
+| `baseline.py` | the last verified count, and the check every run prints |
 | `input/` | source clip |
 | `output/` | rendered video and `summary.json` |
 
 The pipeline itself lives in `factory_vision/counting/`, shared with projects 02
-and 03. That is deliberate: those three differ **only** in `config.py`, and
-copying the engine into each would be three versions of one tracker drifting
-apart on the next fix.
+and 03 — copying the engine into each would be three versions of one tracker
+drifting apart on the next fix.
+
+Projects 01 and 02 differ from each other in `config.py` and `panel.py` and
+nothing else, which is the zero-shot claim made checkable. Project 03 shares the
+same counter but adds a whole metric half of its own; it is the exception, and
+its README says why.
 
 ## What this case is really for
 

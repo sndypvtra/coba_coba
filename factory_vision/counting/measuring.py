@@ -76,6 +76,18 @@ class Measurement(Protocol):
     def consensus(self, sizes: list):
         """One size from every frame that measured the same object."""
 
+    def panel_stats(self, stats: dict, counted_sizes: list, live: list,
+                    locked: dict) -> dict:
+        """Extra numbers for the live panel, merged over the counting stats.
+
+        Only a project that measures can produce these, which is why they arrive
+        here rather than being computed in the pipeline. A volume rate on a
+        citrus line has no meaning, and the way it used to be printed anyway -
+        as a structural zero, under a heading, next to a footer crediting a
+        depth model that never ran - is the failure this method exists to make
+        impossible.
+        """
+
     def summary(self, track_sizes: dict, track_age: dict, min_track_age: int,
                 depth_ms: list) -> dict:
         """The measurement half of the report, for `summary.json`."""

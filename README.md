@@ -417,7 +417,8 @@ factory_vision/             the shared half, and only what is genuinely shared
     measuring.py            the protocol a project implements if it also
                             measures; only project 03 does, and its depth
                             and sizing code lives in that project
-    overlay.py              palette and the live operations panel
+    overlay.py              palette, and how to draw a panel - each project
+                            decides what goes on its own, in its panel.py
   tools/                    calibration and measurement scripts
 
 weights/                    shared model cache (gitignored)

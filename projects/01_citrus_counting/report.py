@@ -36,3 +36,20 @@ def results(summary: dict) -> None:
     print(f"  {'video':<28} output/{summary['output']}")
     print(f"  {'summary':<28} output/summary.json")
     print("-" * 74)
+
+
+def regression(checks) -> None:
+    """Did this run reproduce the last verified one?
+
+    Printed rather than asserted: a moved number is information, not a crash,
+    and the person running it should see what moved and by how much.
+    """
+    print("  AGAINST THE LAST VERIFIED RUN  (baseline.py)")
+    for c in checks:
+        print(f"    {c}")
+    if all(c.ok for c in checks):
+        print("    every recorded figure reproduced.")
+    else:
+        print("    something moved - see baseline.py for what the figure means")
+        print("    and update it in the same commit if the change is intended.")
+    print("-" * 74)

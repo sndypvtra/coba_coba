@@ -34,50 +34,41 @@ from ultralytics import YOLOE
 from factory_vision.counting.clips import ClipConfig
 from factory_vision.counting.geometry import (build_counting_line, draw_roi,
                                               filter_detections)
-from factory_vision.counting.overlay import PALETTE, Hud
+from factory_vision.counting.overlay import INK, PALETTE, WARM, Hud, Panel
 from factory_vision.tracking import resolve_tracker_cfg
 from factory_vision.paths import WEIGHTS_DIR
 
 warnings.filterwarnings("ignore")
 
 
-def _operations(frame_idx: int, fps: float, counted: int, crossing_frames,
-                counted_sizes, on_belt_now, locked_count: int) -> dict:
-    """The numbers a depot runs on, not the numbers the model produces.
+def _counting_stats(frame_idx: int, fps: float, counted: int, crossing_frames,
+                    active: int, tracks_seen: int) -> dict:
+    """What every counting line knows about itself, and nothing more.
 
-    A count on its own answers nothing an operator can act on. What a parcel
-    hub schedules against is rate - how many an hour, how many cubic metres an
-    hour, how far apart they arrive - and what it bills on is the size mix.
-    Everything here is derived from the same crossings and the same locked
-    measurements, so nothing needs a second pass.
+    A count on its own answers nothing an operator can act on: what a line is
+    scheduled against is rate - how many an hour, how far apart they arrive.
+    Both are derived from the crossings already recorded, so nothing here needs
+    a second pass over anything.
 
-    Rates are extrapolations from a 17-second clip and are labelled as such
-    on the panel; the counts and volumes underneath them are observations.
+    Rates are extrapolations from a clip of a few seconds. The panel labels them
+    as rates and prints the observed count beside them, because an extrapolation
+    shown without its sample size is how a demo becomes a promise nobody can
+    keep.
+
+    Anything beyond this - volumes, size mixes - is a *measurement*, and a
+    project that does not measure must not be able to print one. Those keys are
+    merged in by the measurement backend, if there is one.
     """
     elapsed_s = max(frame_idx / max(fps, 1e-6), 1e-6)
     hours = elapsed_s / 3600.0
-    volume_l = sum(s.volume_l for s in counted_sizes)
-    mix = {"S": 0, "M": 0, "L": 0}
-    borderline = 0
-    for s in counted_sizes:
-        mix[s.class_name] = mix.get(s.class_name, 0) + 1
-        borderline += bool(s.class_mark)
     gaps = [(b - a) / fps for a, b in zip(crossing_frames, crossing_frames[1:])]
     return {
         "counted": counted,
         "elapsed_s": elapsed_s,
         "per_hour": counted / hours if hours > 0 else 0.0,
-        "m3_per_hour": (volume_l / 1000.0) / hours if hours > 0 else 0.0,
-        "volume_l": volume_l,
-        "mean_volume_l": volume_l / counted if counted else 0.0,
         "headway_s": float(np.mean(gaps)) if gaps else None,
-        "mix": mix,
-        "borderline": borderline,
-        "on_belt": len(on_belt_now),
-        "on_belt_l": sum(s.volume_l for s in on_belt_now),
-        "largest": max((s for s in counted_sizes),
-                       key=lambda s: s.volume_l, default=None),
-        "locked": locked_count,
+        "active": active,
+        "tracks_seen": tracks_seen,
     }
 
 
@@ -88,8 +79,26 @@ def _size_of(tid: int, locked: dict, running: dict, backend):
     return backend.consensus(running.get(tid) or [])
 
 
+def _generic_panel(cfg: ClipConfig, stats: dict) -> Panel:
+    """The panel a project gets if it does not build its own.
+
+    Deliberately dull, and deliberately honest: it names the thing being counted
+    from `cfg.label` and shows only what a counting line can actually know.
+    """
+    noun = cfg.label.upper()
+    return Panel(
+        title=f"{noun} COUNTING - LIVE",
+        headline=f"{noun} COUNTED",
+        subtitle=f"{stats['elapsed_s']:.1f} s elapsed",
+        rows=[("THROUGHPUT", f"{stats['per_hour']:,.0f} /h", WARM),
+              ("IN VIEW NOW", f"{stats['active']}", INK),
+              ("HEADWAY", f"{stats['headway_s']:.1f} s" if stats["headway_s"] else "-", WARM),
+              ("TRACKS SEEN", f"{stats['tracks_seen']}", INK)],
+    )
+
+
 def process(cfg: ClipConfig, args, video_dir: Path, output_dir: Path,
-            backend=None) -> dict:
+            backend=None, panel=None) -> dict:
     src = video_dir / cfg.filename
     info = sv.VideoInfo.from_video_path(str(src))
     w, h = info.width, info.height
@@ -137,6 +146,9 @@ def process(cfg: ClipConfig, args, video_dir: Path, output_dir: Path,
     )
 
     hud = Hud(cfg, tracker_label, model_label, info.total_frames)
+    # A project draws its own dashboard. What it cannot measure, it cannot
+    # print - which is the whole reason this is injected rather than shared.
+    build_panel = panel or (lambda stats: _generic_panel(cfg, stats))
 
     out_path = output_dir / f"{Path(cfg.filename).stem}__counted.mp4"
     out_info = sv.VideoInfo(width=w, height=h, fps=info.fps, total_frames=info.total_frames)
@@ -298,14 +310,16 @@ def process(cfg: ClipConfig, args, video_dir: Path, output_dir: Path,
                 annotated = label_ann.annotate(annotated, tracked, labels)
 
             annotated = line_ann.annotate(annotated, line)
-            live = []
-            if backend is not None and len(tracked):
+            stats = _counting_stats(idx, info.fps, line.in_count, crossing_frames,
+                                    len(tracked), len(unique_ids))
+            if backend is not None:
                 live = [s for s in (_size_of(int(t), locked_sizes, track_sizes, backend)
-                                    for t in tracked.tracker_id) if s is not None]
+                                    for t in tracked.tracker_id) if s is not None] \
+                    if len(tracked) else []
+                stats.update(backend.panel_stats(stats, counted_sizes, live,
+                                                 locked_sizes))
             annotated = hud.draw(annotated, idx, line.in_count,
-                                 _operations(idx, info.fps, line.in_count,
-                                             crossing_frames, counted_sizes, live,
-                                             len(locked_sizes)),
+                                 build_panel(stats),
                                  float(np.mean(times[-30:])))
             sink.write_frame(annotated)
             frames_written += 1
@@ -362,7 +376,7 @@ def process(cfg: ClipConfig, args, video_dir: Path, output_dir: Path,
 
 
 def run_case(cfg: ClipConfig, video_dir: Path, output_dir: Path, backend=None,
-             **overrides) -> dict:
+             panel=None, **overrides) -> dict:
     """Run one clip end to end, write its summary, and return it.
 
     Each project owns its own `config.py` and its own `output/`, so a summary is
@@ -374,6 +388,11 @@ def run_case(cfg: ClipConfig, video_dir: Path, output_dir: Path, backend=None,
     ``backend`` is an optional `measuring.Measurement`. Give one and the clip is
     measured as well as counted; leave it out - as projects 01 and 02 do - and
     nothing metric is loaded at all.
+
+    ``panel`` is an optional callable that turns one frame's stats into an
+    `overlay.Panel`. Each project supplies its own, so a project cannot print a
+    KPI it has no way of measuring - which is exactly what went wrong when the
+    parcel dashboard was hardcoded here and the citrus line inherited it.
     """
     from types import SimpleNamespace
 
@@ -383,6 +402,7 @@ def run_case(cfg: ClipConfig, video_dir: Path, output_dir: Path, backend=None,
         setattr(args, key, value)
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    summary = process(cfg, args, video_dir, output_dir, backend=backend)
+    summary = process(cfg, args, video_dir, output_dir, backend=backend,
+                      panel=panel)
     (output_dir / "summary.json").write_text(json.dumps(summary, indent=2))
     return summary

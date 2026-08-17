@@ -36,6 +36,7 @@ Six models are in play, and each has a module that owns it.
 | `belt.py` | the plane heights are measured from, and the on-belt test |
 | `sizing.py` | mask + depth + plane → millimetres, and how much to trust them |
 | `measurement.py` | the order of operations, and the contract with the counter |
+| `panel.py` | the live dashboard — the only project entitled to a size row |
 | `report.py` | the read-out: measurement chain, per-parcel table, `*`/`?` |
 | `input/`, `output/` | clip in, video + `summary.json` + depth cache out |
 
@@ -55,7 +56,10 @@ does not measure" is a structural fact — no torch, no DA3, no checkpoints —
 rather than a flag that happens to be `False`.
 
 Still shared, because all three genuinely use it: `pipeline.py` (detect → track →
-count → render), `geometry.py` (the counting line), `overlay.py` (the panel).
+count → render), `geometry.py` (the counting line), and `overlay.py` — which now
+knows how to *draw* a panel and nothing about what belongs on one. Each project
+builds its own in `panel.py`, so this project's SIZE MIX and VOLUME RATE rows
+cannot leak onto a citrus line again.
 
 ## Extra install
 

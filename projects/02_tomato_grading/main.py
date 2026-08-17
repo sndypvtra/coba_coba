@@ -25,6 +25,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import assets  # noqa: E402
+import baseline  # noqa: E402
+import panel  # noqa: E402
 import report  # noqa: E402
 from config import CLIP  # noqa: E402
 
@@ -44,7 +46,12 @@ def main() -> int:
     place_mobileclip(WEIGHTS_DIR, Path.cwd())
 
     report.settings(CLIP)
-    report.results(run_case(CLIP, VIDEO_DIR, OUTPUT_DIR))
+    # This project draws its own dashboard. It counts and does not
+    # measure, so `panel.build` has no size or volume row to print -
+    # which is the point, and used to be the bug.
+    summary = run_case(CLIP, VIDEO_DIR, OUTPUT_DIR, panel=panel.build)
+    report.results(summary)
+    report.regression(baseline.check(summary))
     adopt_mobileclip(WEIGHTS_DIR, Path.cwd())
     return 0
 

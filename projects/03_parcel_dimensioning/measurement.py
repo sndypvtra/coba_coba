@@ -137,6 +137,38 @@ class ParcelMeasurement:
     def consensus(self, sizes):
         return sizing.consensus(sizes)
 
+    def panel_stats(self, stats: dict, counted_sizes: list, live: list,
+                    locked: dict) -> dict:
+        """The measured half of the live dashboard - see `panel.py`.
+
+        Computed here rather than in the shared pipeline because only a project
+        that measures can produce any of it. Everything comes off the same
+        locked measurements the summary uses, so the panel and the report can
+        never disagree.
+
+        ``stats`` is the counting half, already computed. The volume *rate*
+        needs both halves - litres from here, elapsed time from there - so it is
+        derived here rather than leaving the panel to do arithmetic.
+        """
+        volume_l = sum(s.volume_l for s in counted_sizes)
+        hours = stats["elapsed_s"] / 3600.0
+        mix = {"S": 0, "M": 0, "L": 0}
+        borderline = 0
+        for s in counted_sizes:
+            mix[s.class_name] = mix.get(s.class_name, 0) + 1
+            borderline += bool(s.class_mark)
+        return {
+            "volume_l": volume_l,
+            "m3_per_hour": (volume_l / 1000.0) / hours if hours > 0 else 0.0,
+            "mean_volume_l": volume_l / len(counted_sizes) if counted_sizes else 0.0,
+            "mix": mix,
+            "borderline": borderline,
+            "on_belt": len(live),
+            "on_belt_l": sum(s.volume_l for s in live),
+            "largest": max(counted_sizes, key=lambda s: s.volume_l, default=None),
+            "locked": len(locked),
+        }
+
     # ---------------------------------------------------------------- report
 
     def summary(self, track_sizes: dict, track_age: dict, min_track_age: int,
