@@ -9,14 +9,26 @@ reason this project can answer *how big was it* from a single fixed camera, and
 they are cached afterwards - both by Hugging Face, and per-frame by the pipeline
 itself in `output/.depth_cache`, so a second run costs a fraction of the first.
 
-Where the work happens:
+Six models are in play here, and each one has a module that owns it:
 
-    config.py    the line, the belt patches, the depth corridor, both
-                 calibration scales - every constant the millimetres rest on
-    assets.py    the clip, the detector, and the two depth checkpoints
-    report.py    the read-out, including the error budget beside each number
-    ../../factory_vision/counting/depth.py    canonical depth -> metres
-    ../../factory_vision/counting/sizing.py   pixels + range -> millimetres
+    intrinsics.py    DA3-LARGE's camera decoder -> fx, fy, and the square-pixel
+                     test that rejected two processing resolutions
+    depth.py         DA3METRIC-LARGE -> canonical depth x focal / 300 = metres
+    depth_cache.py   float16 maps on disk, so the second run is nearly free
+    belt.py          the plane every height is measured against, plus the
+                     two-part test for whether a detection is on it at all
+    sizing.py        mask + depth + plane -> millimetres, and how much to
+                     trust each one
+    measurement.py   the order of operations, and the contract the shared
+                     counting pipeline calls through
+
+    config.py        CLIP (counting) and SIZING (metric), kept apart because
+                     only one of them survives the camera being moved
+    assets.py        the clip, the detector, and the two depth checkpoints
+    report.py        the read-out, including the error budget beside each number
+
+The detector, tracker and counting rule stay in `factory_vision/counting/`,
+shared with projects 01 and 02. Nothing metric does.
 """
 
 from __future__ import annotations
@@ -29,7 +41,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import assets  # noqa: E402
 import report  # noqa: E402
-from config import CLIP  # noqa: E402
+from config import CLIP, SIZING  # noqa: E402
+from measurement import ParcelMeasurement  # noqa: E402
 
 from factory_vision.assets import adopt_mobileclip, place_mobileclip  # noqa: E402
 from factory_vision.counting import run_case  # noqa: E402
@@ -51,8 +64,11 @@ def main() -> int:
         return 1
     place_mobileclip(WEIGHTS_DIR, Path.cwd())
 
-    report.settings(CLIP)
-    summary = run_case(CLIP, VIDEO_DIR, OUTPUT_DIR)
+    report.settings(CLIP, SIZING)
+    # The backend is what makes this project measure rather than merely count.
+    # Projects 01 and 02 make the same run_case call without one.
+    summary = run_case(CLIP, VIDEO_DIR, OUTPUT_DIR,
+                       backend=ParcelMeasurement(SIZING, CLIP))
     report.headline(summary, CLIP, SLIT_SCAN_TRUTH)
 
     dim = summary.get("dimensioning", {})

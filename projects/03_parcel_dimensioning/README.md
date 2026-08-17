@@ -25,16 +25,39 @@ of the first.
 
 | | |
 |---|---|
+Six models are in play, and each has a module that owns it.
+
+| | |
+|---|---|
 | `main.py` | entry point — assets, run, report |
-| `config.py` | every constant, each with the measurement that set it |
+| `config.py` | `CLIP` (counting) and `SIZING` (metric), deliberately apart |
 | `assets.py` | the clip, the detector, and the two depth checkpoints (~2.9 GB) |
-| `report.py` | the read-out: measurement chain, per-parcel table, and what `*`/`?` mean |
+| `intrinsics.py` | DA3-LARGE's camera decoder, and the square-pixel test |
+| `depth.py` | DA3METRIC-LARGE — canonical depth × focal ÷ 300 = metres |
+| `depth_cache.py` | float16 maps on disk; the second run is nearly free |
+| `belt.py` | the plane heights are measured from, and the on-belt test |
+| `sizing.py` | mask + depth + plane → millimetres, and how much to trust them |
+| `measurement.py` | the order of operations, and the contract with the counter |
+| `report.py` | the read-out: measurement chain, per-parcel table, `*`/`?` |
 | `input/`, `output/` | clip in, video + `summary.json` + depth cache out |
 
-Shared engine in `factory_vision/counting/`: `pipeline.py` (detect → track →
-count → measure → render), `depth.py` (Depth Anything 3 → metres), `sizing.py`
-(belt plane, parcel dimensions, the on-belt test), `geometry.py` (the counting
-line), `overlay.py` (the operations panel).
+### Why the metric half lives here and not in the shared engine
+
+`depth.py` and `sizing.py` used to sit in `factory_vision/counting/`, alongside
+the counter shared with projects 01 and 02 — 619 lines that neither of those two
+ever executes, in a package named for what the three have in common. `ClipConfig`
+carried eleven metric fields for the same reason, so reading project 01 meant
+stepping over belt patches and footprint scales that have nothing to do with
+oranges.
+
+The measurement now reaches the counter through
+`factory_vision/counting/measuring.py`, a protocol the shared pipeline calls
+when it is given a backend and skips entirely when it is not. So "project 01
+does not measure" is a structural fact — no torch, no DA3, no checkpoints —
+rather than a flag that happens to be `False`.
+
+Still shared, because all three genuinely use it: `pipeline.py` (detect → track →
+count → render), `geometry.py` (the counting line), `overlay.py` (the panel).
 
 ## Extra install
 

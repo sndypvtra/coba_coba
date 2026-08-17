@@ -11,6 +11,7 @@ and counted as they cross a line laid perpendicular to the belt's travel.
 from __future__ import annotations
 
 from factory_vision.counting.clips import ClipConfig
+from factory_vision.counting.measuring import Measurement
 from factory_vision.counting.pipeline import process, run_case
 
-__all__ = ["ClipConfig", "run_case", "process"]
+__all__ = ["ClipConfig", "Measurement", "run_case", "process"]

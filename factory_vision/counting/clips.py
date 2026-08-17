@@ -52,33 +52,15 @@ class ClipConfig:
     # Endpoints in y, source pixels. Overrides line_half_len when set.
     line_span: tuple[int, int] | None = None
 
-    # --- metric depth and sizing --------------------------------------------
-    # Off by default: the two other counting clips have no belt plane to fit and
-    # nothing to measure against, so they should not pay for a depth model.
-    measure_size: bool = False
-    # Run the depth model every Nth frame and carry each track's measurement
-    # between runs. Parcels move 4.7 px/frame here, so a value of 5 costs 23 px
-    # of travel between measurements - well inside the mask.
-    depth_every: int = 5
-    depth_process_res: int = 896
-    # Bare stretches of belt used to fit the plane, as (x0, x1, y0, y1). Spread
-    # across the view so the fit does not extrapolate.
-    belt_patches: tuple = ()
-    # Keep only detections whose median depth falls in this corridor, in metres,
-    # AND whose base sits this far from the fitted belt plane. Both are needed;
-    # see sizing.on_belt for what each one catches that the other misses.
-    depth_corridor: tuple[float, float] | None = None
-    belt_base_band: tuple[float, float] = (-0.10, 0.15)
-    # Freeze a parcel's measured size once its centre passes this x, so the
-    # number it is counted with is the one taken where it was best seen.
-    size_lock_x: int | None = None
-    # One number, from one reference object of known size, that turns relative
-    # metric depth into absolute. See sizing.measure.
-    size_scale: float = 1.0
-    size_scale_note: str = ""
-    # Corrects the footprint's two horizontal axes only, as (long, short). A
-    # separate constant from size_scale because it fixes a different thing: not
-    # the depth model's accuracy, but the fact that one camera cannot see the
-    # back of a parcel.
-    footprint_scale: tuple[float, float] = (1.0, 1.0)
-    footprint_scale_note: str = ""
+    # --- measuring, if this installation does any -----------------------------
+    # Deliberately NOT a set of size fields. Everything metric - the depth
+    # model's resolution, the belt patches, the corridor, both calibration
+    # scales - belongs to the project that measures, and lives there:
+    # `projects/03_parcel_dimensioning/config.py`.
+    #
+    # Those eleven fields used to sit here, and two of this class's three users
+    # never read one of them. A config that describes a belt plane to a project
+    # counting oranges is not a shared config, it is one project's config with
+    # the others tolerated in it. The measurement now arrives as a backend
+    # object instead - see `measuring.Measurement` - so the presence of a
+    # measurement is a structural fact rather than a flag defaulting to False.

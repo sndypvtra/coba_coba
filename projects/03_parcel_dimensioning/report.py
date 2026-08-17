@@ -26,15 +26,17 @@ def banner(cfg) -> None:
     print("=" * 74)
 
 
-def settings(cfg) -> None:
-    print(f"\n  prompts: {cfg.prompts}")
-    print(f"  conf={cfg.conf}  min_track_age={cfg.min_track_age}  "
-          f"belt motion={cfg.motion} px/frame")
-    print(f"  line   : x={cfg.line_center[0]} plumb={cfg.line_plumb} "
-          f"span y={cfg.line_span}")
-    print(f"  size   : locked once the centre passes x={cfg.size_lock_x}")
-    print(f"  depth  : every {cfg.depth_every} frames @ {cfg.depth_process_res}px, "
-          f"corridor {cfg.depth_corridor} m, base band {cfg.belt_base_band} m\n")
+def settings(clip, sizing) -> None:
+    """Two blocks, because they are two configs - see config.py."""
+    print(f"\n  prompts: {clip.prompts}")
+    print(f"  conf={clip.conf}  min_track_age={clip.min_track_age}  "
+          f"belt motion={clip.motion} px/frame")
+    print(f"  line   : x={clip.line_center[0]} plumb={clip.line_plumb} "
+          f"span y={clip.line_span}")
+    print(f"  size   : locked once the centre passes x={sizing.size_lock_x}")
+    print(f"  depth  : every {sizing.depth_every} frames @ "
+          f"{sizing.depth_process_res}px, corridor {sizing.depth_corridor} m, "
+          f"base band {sizing.belt_base_band} m\n")
 
 
 def headline(summary: dict, cfg, slit_scan_truth: int) -> None:

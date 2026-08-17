@@ -35,37 +35,10 @@ from factory_vision.counting.clips import ClipConfig
 from factory_vision.counting.geometry import (build_counting_line, draw_roi,
                                               filter_detections)
 from factory_vision.counting.overlay import PALETTE, Hud
-from factory_vision.counting.sizing import measure, on_belt
 from factory_vision.tracking import resolve_tracker_cfg
 from factory_vision.paths import WEIGHTS_DIR
 
 warnings.filterwarnings("ignore")
-
-
-def _consensus(sizes):
-    """One parcel's size, as the median of every frame that measured it.
-
-    A single frame reads short whenever the parcel behind it clips the mask or
-    the one in front hides its base. Those failures are one-sided and sporadic,
-    so a median over the pass is both steadier and closer to the truth than the
-    best single frame - and it is available for free, because the parcel is
-    measured on every depth frame it survives.
-    """
-    if not sizes:
-        return None
-    from factory_vision.counting.sizing import ParcelSize
-
-    med = lambda key: float(np.median([getattr(s, key) for s in sizes]))
-    length, width, height = med("length_m"), med("width_m"), med("height_m")
-    return ParcelSize(
-        distance_m=sizes[-1].distance_m,          # distance is live, not a median
-        length_m=length, width_m=width, height_m=height,
-        volume_l=length * width * height * 1000.0,
-        points=int(np.median([s.points for s in sizes])),
-        mask_kept=med("mask_kept"), base_offset_m=med("base_offset_m"),
-        top_face_px=med("top_face_px"),
-        footprint_estimated=any(x.footprint_estimated for x in sizes), trusted=True, notes=[f"median of {len(sizes)} frames"],
-    )
 
 
 def _operations(frame_idx: int, fps: float, counted: int, crossing_frames,
@@ -108,54 +81,15 @@ def _operations(frame_idx: int, fps: float, counted: int, crossing_frames,
     }
 
 
-def _size_of(tid: int, locked: dict, running: dict):
+def _size_of(tid: int, locked: dict, running: dict, backend):
     """A track's size: the frozen one if it has been locked, else the running one."""
     if tid in locked:
         return locked[tid]
-    return _consensus(running.get(tid))
+    return backend.consensus(running.get(tid) or [])
 
 
-def _prepare_depth(cfg: ClipConfig, src, w: int, h: int, output_dir: Path):
-    """Solve the camera and fit the belt once, before the clip starts.
-
-    Both are properties of the installation, not of any frame: the camera does
-    not move and neither does the belt. Doing this per frame would cost the run
-    a second model pass and would let the belt plane wander with the noise in
-    each depth map, which is exactly the thing every height is measured against.
-    """
-    from factory_vision.counting.depth import MetricDepth
-    from factory_vision.counting.sizing import bare_belt_depth, fit_belt
-
-    cap = cv2.VideoCapture(str(src))
-    total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) or 500
-    probes = []
-    for idx in np.linspace(0, max(total - 2, 0), 6).astype(int):
-        cap.set(cv2.CAP_PROP_POS_FRAMES, int(idx))
-        ok, frame = cap.read()
-        if ok:
-            probes.append(frame)
-    cap.release()
-
-    cache = output_dir / ".depth_cache" / Path(cfg.filename).stem
-    model = MetricDepth(process_res=cfg.depth_process_res, cache_dir=cache)
-    K_proc = model.solve_intrinsics(probes[:4])
-    K = K_proc.scaled_to(w, h)
-    print(f"    depth   : DA3 {cfg.depth_process_res}px  fx={K.fx:.0f} fy={K.fy:.0f} "
-          f"hFOV={K.hfov_deg:.1f}deg  spread={model.intrinsics_spread*100:.1f}%  "
-          f"square-pixel error={K_proc.square_pixel_error*100:.1f}%")
-
-    maps = [model.depth(f, f"probe{i}") for i, f in enumerate(probes)]
-    belt = fit_belt(bare_belt_depth(maps), K, cfg.belt_patches, cfg.motion)
-    print(f"    belt    : plane rms {belt.rms_m*1000:.1f} mm from {belt.samples} px, "
-          f"camera {belt.camera_height_m*1000:.0f} mm above it")
-    model.frame_K = K
-    # Seed the rolling map with the clip's own first frame. The loop refreshes it
-    # on frame 1 anyway, so this only matters if depth_every is ever changed such
-    # that it does not - and then the right stale map to hold is the near one.
-    return model, belt, maps[0]
-
-
-def process(cfg: ClipConfig, args, video_dir: Path, output_dir: Path) -> dict:
+def process(cfg: ClipConfig, args, video_dir: Path, output_dir: Path,
+            backend=None) -> dict:
     src = video_dir / cfg.filename
     info = sv.VideoInfo.from_video_path(str(src))
     w, h = info.width, info.height
@@ -214,18 +148,18 @@ def process(cfg: ClipConfig, args, video_dir: Path, output_dir: Path) -> dict:
     frames_written = 0
     total_dets = 0
 
-    depth_model = belt = None
-    last_depth = None
     depth_ms: list[float] = []
-    corridor_dropped = 0
     # every measurement each track ever produced, so the reported size is a
     # median over a parcel's whole pass rather than one lucky frame
     track_sizes: dict[int, list] = {}
     locked_sizes: dict[int, object] = {}   # frozen once the parcel nears the line
     crossing_frames: list[int] = []        # when each count happened, for headway
     counted_sizes: list = []               # the size each counted parcel carried
-    if cfg.measure_size:
-        depth_model, belt, last_depth = _prepare_depth(cfg, src, w, h, output_dir)
+    # A backend is the whole of "does this installation measure". Without one,
+    # no depth model is loaded and the measurement path below is never entered -
+    # see `measuring.Measurement`.
+    if backend is not None:
+        backend.prepare(src, w, h, output_dir)
 
     cap = cv2.VideoCapture(str(src))
     print(f"\n>>> {cfg.filename}  {w}x{h} @ {info.fps:.2f}fps  {info.total_frames} frames")
@@ -259,13 +193,11 @@ def process(cfg: ClipConfig, args, video_dir: Path, output_dir: Path) -> dict:
             det = sv.Detections.from_ultralytics(result)
             det = filter_detections(det, cfg, w, h)
 
-            # Depth runs on every Nth frame; the gate uses the most recent map.
-            # At 4.7 px/frame a parcel drifts 23 px between runs, which a median
-            # over the whole mask absorbs - and the thing the gate has to reject,
-            # the static stack at the back, does not move at all.
-            if depth_model is not None and (idx - 1) % cfg.depth_every == 0:
+            # Depth is refreshed every Nth frame; the gate uses the most recent
+            # map. Which N, and why it is safe, is the backend's business.
+            if backend is not None and (idx - 1) % backend.refresh_every == 0:
                 td = time.time()
-                last_depth = depth_model.depth(frame, f"f{idx:05d}")
+                backend.refresh(frame, f"f{idx:05d}")
                 depth_ms.append((time.time() - td) * 1000)
 
             # One measurement per detection serves two purposes: it decides
@@ -274,19 +206,8 @@ def process(cfg: ClipConfig, args, video_dir: Path, output_dir: Path) -> dict:
             # confidence floor sit at 0.05 - the background is rejected on
             # geometry, before the tracker is asked to hold an identity for it.
             frame_sizes: list = []
-            if belt is not None and last_depth is not None and len(det):
-                masks = det.mask if det.mask is not None else [None] * len(det)
-                keep = np.zeros(len(det), bool)
-                for i, mk in enumerate(masks):
-                    size = (measure(mk.astype(np.uint8), last_depth,
-                                    depth_model.frame_K, belt, cfg.size_scale,
-                                    cfg.footprint_scale)
-                            if mk is not None else None)
-                    keep[i] = on_belt(size, cfg.depth_corridor, cfg.belt_base_band)
-                    frame_sizes.append(size)
-                corridor_dropped += int((~keep).sum())
-                frame_sizes = [s for s, k in zip(frame_sizes, keep) if k]
-                det = det[keep]
+            if backend is not None:
+                det, frame_sizes = backend.measure_frame(det)
             total_dets += len(det)
 
             # every prompt alias is the same physical object type -> one label
@@ -324,19 +245,19 @@ def process(cfg: ClipConfig, args, video_dir: Path, output_dir: Path) -> dict:
                 name = locked.data.get("class_name", [cfg.label] * len(locked))[j]
                 per_class[name] = per_class.get(name, 0) + 1
                 crossing_frames.append(idx)
-                if locked.tracker_id is not None:
-                    size = _size_of(int(locked.tracker_id[j]), locked_sizes, track_sizes)
+                if locked.tracker_id is not None and backend is not None:
+                    size = _size_of(int(locked.tracker_id[j]), locked_sizes,
+                                    track_sizes, backend)
                     if size is not None:
                         counted_sizes.append(size)
 
             # Attach each measurement to the track that carries it, and stop
-            # once the parcel is close to the line. A parcel measured all the
-            # way to the edge of frame would keep revising its size while it is
-            # being clipped by the frame border and occluded by the trolley -
-            # the reading would move at exactly the moment it is counted. So the
-            # value is frozen `size_lock_x` pixels before the line, where the
-            # parcel is nearest the camera, fully in view, and best resolved.
-            if belt is not None and len(det) and det.tracker_id is not None and frame_sizes:
+            # once the backend says the reading should be frozen. A parcel
+            # measured all the way to the edge of frame would keep revising its
+            # size while it is being clipped by the frame border and occluded by
+            # the trolley - the reading would move at exactly the moment it is
+            # counted.
+            if backend is not None and len(det) and det.tracker_id is not None and frame_sizes:
                 for tid, size, box in zip(det.tracker_id, frame_sizes, det.xyxy):
                     if tid is None or size is None or not size.trusted:
                         continue
@@ -345,10 +266,8 @@ def process(cfg: ClipConfig, args, video_dir: Path, output_dir: Path) -> dict:
                         continue
                     track_sizes.setdefault(tid, []).append(size)
                     centre_x = float(box[0] + box[2]) / 2.0
-                    past_lock = (cfg.size_lock_x is not None
-                                 and centre_x <= cfg.size_lock_x)
-                    if past_lock and len(track_sizes[tid]) >= 2:
-                        locked_sizes[tid] = _consensus(track_sizes[tid])
+                    if backend.lock_ready(centre_x, len(track_sizes[tid])):
+                        locked_sizes[tid] = backend.consensus(track_sizes[tid])
 
             annotated = draw_roi(frame.copy(), cfg, w, h)
             if len(tracked):
@@ -362,7 +281,8 @@ def process(cfg: ClipConfig, args, video_dir: Path, output_dir: Path) -> dict:
                 labels = []
                 for tid, conf in zip(tracked.tracker_id, tracked.confidence):
                     tid = int(tid)
-                    size = _size_of(tid, locked_sizes, track_sizes)
+                    size = (_size_of(tid, locked_sizes, track_sizes, backend)
+                            if backend is not None else None)
                     if size is None:
                         labels.append(f"#{tid}  {conf:.2f}")
                         continue
@@ -379,8 +299,8 @@ def process(cfg: ClipConfig, args, video_dir: Path, output_dir: Path) -> dict:
 
             annotated = line_ann.annotate(annotated, line)
             live = []
-            if belt is not None and len(tracked):
-                live = [s for s in (_size_of(int(t), locked_sizes, track_sizes)
+            if backend is not None and len(tracked):
+                live = [s for s in (_size_of(int(t), locked_sizes, track_sizes, backend)
                                     for t in tracked.tracker_id) if s is not None]
             annotated = hud.draw(annotated, idx, line.in_count,
                                  _operations(idx, info.fps, line.in_count,
@@ -430,9 +350,9 @@ def process(cfg: ClipConfig, args, video_dir: Path, output_dir: Path) -> dict:
         "avg_ms_per_frame": round(float(np.mean(times)), 1),
         "notes": cfg.extra_notes,
     }
-    if cfg.measure_size:
-        summary["dimensioning"] = _dimension_summary(
-            cfg, depth_model, belt, track_sizes, track_age, corridor_dropped, depth_ms)
+    if backend is not None:
+        summary["dimensioning"] = backend.summary(track_sizes, track_age,
+                                                  cfg.min_track_age, depth_ms)
     print(
         f"    DONE {out_path.name}  IN={line.in_count} (reverse={line.out_count}) "
         f"ids={len(unique_ids)} {np.mean(times):.0f}ms/f  "
@@ -441,82 +361,8 @@ def process(cfg: ClipConfig, args, video_dir: Path, output_dir: Path) -> dict:
     return summary
 
 
-def _dimension_summary(cfg, depth_model, belt, track_sizes, track_age,
-                       corridor_dropped, depth_ms) -> dict:
-    """The measurement half of the report: distance, size and how good they are.
-
-    Only tracks the tracker held long enough to be countable are listed. A
-    two-frame flicker has a size too, and reporting it would pad the table with
-    rows nobody can act on.
-    """
-    K = depth_model.frame_K
-    parcels = []
-    for tid, sizes in sorted(track_sizes.items()):
-        if track_age.get(tid, 0) < cfg.min_track_age or len(sizes) < 2:
-            continue
-        s = _consensus(sizes)
-        dims = sorted([s.length_m, s.width_m, s.height_m], reverse=True)
-        parcels.append({
-            "track": tid,
-            "frames_measured": len(sizes),
-            "distance_m": round(float(np.median([x.distance_m for x in sizes])), 3),
-            "distance_range_m": [round(float(min(x.distance_m for x in sizes)), 2),
-                                 round(float(max(x.distance_m for x in sizes)), 2)],
-            "length_mm": round(s.length_m * 1000),
-            "width_mm": round(s.width_m * 1000),
-            "height_mm": round(s.height_m * 1000),
-            "longest_side_mm": round(dims[0] * 1000),
-            "volume_l": round(s.volume_l, 1),
-            "size_class": s.class_name,
-            "size_class_mark": s.class_mark,
-            "top_face_px": round(s.top_face_px, 1),
-            "footprint_measurable": bool(s.footprint_measurable),
-            "footprint_estimated": bool(s.footprint_estimated),
-            "mask_kept": round(s.mask_kept, 2),
-            # spread of the height across the pass: the honest error bar on a
-            # measurement nobody can check against a tape measure
-            "height_iqr_mm": round(float(np.subtract(*np.percentile(
-                [x.height_m for x in sizes], [75, 25])) * 1000)),
-        })
-    volumes = [p["volume_l"] for p in parcels]
-    classes = {}
-    for p in parcels:
-        classes[p["size_class"]] = classes.get(p["size_class"], 0) + 1
-    return {
-        "method": "Depth Anything 3 (DA3-LARGE intrinsics + DA3METRIC-LARGE depth)",
-        "process_res": cfg.depth_process_res,
-        "depth_every_n_frames": cfg.depth_every,
-        "depth_frames": depth_model.frames_run,
-        "depth_frames_from_cache": depth_model.frames_cached,
-        "avg_depth_ms": round(float(np.mean(depth_ms)), 1) if depth_ms else None,
-        "intrinsics": {
-            "fx": round(K.fx, 1), "fy": round(K.fy, 1),
-            "cx": round(K.cx, 1), "cy": round(K.cy, 1),
-            "hfov_deg": round(K.hfov_deg, 1),
-            "frame_to_frame_spread_pct": round(depth_model.intrinsics_spread * 100, 2),
-            "square_pixel_error_pct": round(K.square_pixel_error * 100, 2),
-            "note": "predicted, not calibrated; distance scales with it, size does not",
-        },
-        "belt_plane": {
-            "fit_rms_mm": round(belt.rms_m * 1000, 1),
-            "pixels": belt.samples,
-            "camera_height_above_belt_mm": round(belt.camera_height_m * 1000),
-        },
-        "size_scale": round(cfg.size_scale, 4),
-        "size_scale_note": cfg.size_scale_note,
-        "footprint_scale": list(cfg.footprint_scale),
-        "footprint_scale_note": cfg.footprint_scale_note,
-        "depth_corridor_m": list(cfg.depth_corridor) if cfg.depth_corridor else None,
-        "detections_outside_corridor": corridor_dropped,
-        "parcels_measured": len(parcels),
-        "size_classes": classes,
-        "total_volume_l": round(float(np.sum(volumes)), 1) if volumes else 0.0,
-        "median_volume_l": round(float(np.median(volumes)), 1) if volumes else 0.0,
-        "parcels": parcels,
-    }
-
-
-def run_case(cfg: ClipConfig, video_dir: Path, output_dir: Path, **overrides) -> dict:
+def run_case(cfg: ClipConfig, video_dir: Path, output_dir: Path, backend=None,
+             **overrides) -> dict:
     """Run one clip end to end, write its summary, and return it.
 
     Each project owns its own `config.py` and its own `output/`, so a summary is
@@ -524,6 +370,10 @@ def run_case(cfg: ClipConfig, video_dir: Path, output_dir: Path, **overrides) ->
     single shared file and had to re-sort it on every run to stop one case
     clobbering another's entry - a problem that only existed because the output
     was shared.
+
+    ``backend`` is an optional `measuring.Measurement`. Give one and the clip is
+    measured as well as counted; leave it out - as projects 01 and 02 do - and
+    nothing metric is loaded at all.
     """
     from types import SimpleNamespace
 
@@ -533,6 +383,6 @@ def run_case(cfg: ClipConfig, video_dir: Path, output_dir: Path, **overrides) ->
         setattr(args, key, value)
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    summary = process(cfg, args, video_dir, output_dir)
+    summary = process(cfg, args, video_dir, output_dir, backend=backend)
     (output_dir / "summary.json").write_text(json.dumps(summary, indent=2))
     return summary

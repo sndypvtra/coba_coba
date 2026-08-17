@@ -24,7 +24,8 @@ NEEDS = Requirements(
     weights=("yoloe-11l-seg.pt", "yolo11n-cls.pt"),
     hub_models=("depth-anything/DA3METRIC-LARGE", "depth-anything/DA3-LARGE"),
     notes=("Depth Anything 3 must be installed separately - see this project's "
-           "README; without it, set measure_size=False in config.py to count only",),
+           "README; without it, drop the backend= argument in main.py and the "
+           "project still counts, exactly as projects 01 and 02 do",),
 )
 
 

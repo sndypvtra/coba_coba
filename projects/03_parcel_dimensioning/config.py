@@ -1,11 +1,26 @@
-"""The parcel belt: prompts, line, depth corridor and the two size calibrations.
+"""The parcel belt, configured twice over - once to count it, once to measure it.
 
 The longest config in the repository, and every constant in it was measured
 rather than chosen. The comments carry the measurement, so a number can be
 re-derived instead of trusted.
+
+Two objects, because they answer to two different pieces of machinery:
+
+  ``CLIP``    a `ClipConfig`, the same type projects 01 and 02 fill in. Prompts,
+              thresholds, the counting line. Nothing in it is metric.
+  ``SIZING``  a `SizingConfig`, which exists only here. The depth model's
+              resolution, the belt patches, the corridor, both calibration
+              scales - everything that stops being meaningful the moment the
+              camera moves.
+
+They used to be one object, with the eleven metric fields living in the shared
+`ClipConfig` where projects 01 and 02 inherited them and never read one. Keeping
+them apart is what lets the shared counter stay honest about being shared.
 """
 
 from __future__ import annotations
+
+from dataclasses import dataclass
 
 from factory_vision.counting import ClipConfig
 
@@ -70,15 +85,14 @@ CLIP = ClipConfig(
     # trolley handle at x 230-330 starts cutting into the mask.
     line_center=(350, 640),
     line_half_len=260,
-    # Freeze each parcel's size 170 px before the line - about 36 frames of
-    # travel - so what gets counted is a settled measurement rather than
-    # whatever the last frame happened to say.
-    size_lock_x=520,
     # The belt, measured by optical flow restricted to the belt surface and
     # to features that actually move: the previous (-1.52, 0.08) was taken
     # over the whole frame and was dragged towards zero by the stationary
     # stack, under-reading the speed by a factor of three. A parcel takes
     # 154 frames to cross this view, not 470.
+    #
+    # Shared by both configs below: it orients the counting line, and it is
+    # also how the belt plane learns which way "along" points.
     motion=(-4.69, 0.27),
     line_plumb=True,
     # the full working height of the lane at x=350: below the belt's front
@@ -87,10 +101,31 @@ CLIP = ClipConfig(
     scene="Parcel unloading belt - mixed boxes, bags and parcels",
     source_url="https://www.pexels.com/video/unloading-packages-on-a-conveyor-belt-5370836/",
     max_box_area_frac=0.10,
-    measure_size=True,
-    depth_every=5,
-    belt_patches=((150, 380, 705, 745), (880, 1120, 690, 725),
-                  (1180, 1450, 678, 715), (1500, 1850, 660, 695)),
+    extra_notes="static stack excluded in depth, not by an x-band",
+)
+
+
+@dataclass
+class SizingConfig:
+    """Everything metric about this one installation.
+
+    Re-measure all of it if the camera moves, the lens changes or the belt is
+    re-sited. None of it transfers to another station, which is exactly why it
+    does not live in the shared `ClipConfig`.
+    """
+
+    # Run the depth model every Nth frame and carry each track's measurement
+    # between runs. Parcels move 4.7 px/frame here, so a value of 5 costs 23 px
+    # of travel between measurements - well inside the mask.
+    depth_every: int = 5
+    # Chosen by the square-pixel test in `intrinsics.py`, not by taste: 392 and
+    # 700 px make the camera decoder emit non-square pixels (8 % error), while
+    # 518 and 896 land at 0.2-0.4 %.
+    depth_process_res: int = 896
+    # Bare stretches of belt used to fit the plane, as (x0, x1, y0, y1). Spread
+    # across the view on purpose - a plane fitted from one corner extrapolates
+    # badly to the other, and parcels are measured at both ends.
+    belt_patches: tuple = ()
     # The lane runs 1.87 m where parcels leave frame to 2.90 m where they
     # enter it, but a parcel's *body* reads up to 0.3 m further back than the
     # belt beneath it, so the far bound is the belt's 2.90 plus that - not
@@ -98,8 +133,28 @@ CLIP = ClipConfig(
     # far end, measured at 2.99, 3.00 and 3.11 m. The nearest background is
     # the stack at 3.26 m, which leaves only 0.06 m of room, which is why
     # belt_base_band exists as a second, independent test.
+    depth_corridor: tuple[float, float] | None = None
+    belt_base_band: tuple[float, float] = (-0.10, 0.15)
+    # Freeze a parcel's measured size once its centre passes this x, so the
+    # number it is counted with is the one taken where it was best seen.
+    size_lock_x: int | None = None
+    size_scale: float = 1.0
+    size_scale_note: str = ""
+    footprint_scale: tuple[float, float] = (1.0, 1.0)
+    footprint_scale_note: str = ""
+
+
+SIZING = SizingConfig(
+    depth_every=5,
+    depth_process_res=896,
+    belt_patches=((150, 380, 705, 745), (880, 1120, 690, 725),
+                  (1180, 1450, 678, 715), (1500, 1850, 660, 695)),
     depth_corridor=(1.45, 3.20),
     belt_base_band=(-0.10, 0.15),
+    # Freeze each parcel's size 170 px before the line - about 36 frames of
+    # travel - so what gets counted is a settled measurement rather than
+    # whatever the last frame happened to say.
+    size_lock_x=520,
     # Monocular metric depth is scale-accurate to about 20 % and no amount
     # of geometry fixes that, because the error is in the depth itself. One
     # reference object fixes it for the whole install - which is exactly how
@@ -147,5 +202,4 @@ CLIP = ClipConfig(
     footprint_scale=(1.187, 1.608),
     footprint_scale_note=("applied only where the top face is under-resolved; "
                           "both reference cartons were in that regime, at 10 and 14 px"),
-    extra_notes="static stack excluded in depth, not by an x-band",
 )

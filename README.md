@@ -411,11 +411,12 @@ factory_vision/             the shared half, and only what is genuinely shared
   tracking.py               tracker gates retuned for zero-shot score ranges
   trackers/*.yaml
   counting/                 the counting engine behind projects 01-03
-    pipeline.py             detect -> track -> count -> measure -> render
+    pipeline.py             detect -> track -> count -> render
     clips.py                the ClipConfig each project fills in
-    geometry.py             the counting line, ROI, size gating
-    depth.py                Depth Anything 3 -> metres, and the camera
-    sizing.py               belt plane, parcel dimensions, the on-belt test
+    geometry.py             the counting line, ROI, detection gating
+    measuring.py            the protocol a project implements if it also
+                            measures; only project 03 does, and its depth
+                            and sizing code lives in that project
     overlay.py              palette and the live operations panel
   tools/                    calibration and measurement scripts
 
