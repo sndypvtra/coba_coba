@@ -24,12 +24,16 @@ measured by running the code in this repository, not estimated.
 
 |  | Case | Task | Headline result |
 |:--:|---|---|---|
-| **1** | Citrus sorting line | Count oranges past a line | **5** counted · 32 tracks |
-| **2** | Tomato grading line | Count tomatoes past a line | **16** counted · 50 tracks |
-| **3** | Parcel unloading belt | Count and dimension mixed packages | **8** counted · dimensioned to ±10 % |
-| **4** | Bottling line | Measure dispensed volume | **1,001 mL** · 66.7 % of nominal |
-| **5** | Cafe, two rooms | Occupancy and per-person dwell time | **14** / **12** visitors · mean dwell **17.9 s** / **24.6 s** |
-| **6** | Warehouse, four cameras | Locate people in 3D, one floor plan, operational KPIs | median error **0.181 m** vs the dataset's own 3D truth |
+| **1** | [Citrus sorting line](projects/01_citrus_counting) | Count oranges past a line | **5** counted · 32 tracks |
+| **2** | [Tomato grading line](projects/02_tomato_grading) | Count tomatoes past a line | **16** counted · 50 tracks |
+| **3** | [Parcel unloading belt](projects/03_parcel_dimensioning) | Count and dimension mixed packages | **8** counted · 21 dimensioned, 19 footprints corrected |
+| **4** | [Bottling line](projects/04_bottle_fill_volume) | Measure dispensed volume | **1,001 mL** · 66.7 % of nominal |
+| **5** | [Cafe, two rooms](projects/05_cafe_dwell_time) | Occupancy and per-person dwell time | **14** / **12** visitors · mean dwell **17.9 s** / **24.6 s** |
+| **6** | [Warehouse, four cameras](projects/06_warehouse_3d) | Locate people in 3D, one floor plan, operational KPIs | median error **0.181 m** vs the dataset's own 3D truth |
+
+Each project's own README carries its method, its measured figures and what
+breaks it, and is written to stand on its own if the folder is lifted into a
+separate repository.
 
 Cases 1–3, 5 and 6 are **zero-shot**: the detector is given words, never labels,
 never training. Case 4 is a **calibrated inspection**: colour segmentation and
@@ -39,7 +43,7 @@ geometry, tuned to one station.
 
 ## Case 4 — Fill-volume inspection
 
-<img src="projects/04_bottle_fill_volume/output/preview.jpg" alt="Fill-volume inspection result" width="100%">
+<img src="projects/04_bottle_fill_volume/docs/fill-final.jpg" alt="Fill-volume inspection result" width="100%">
 
 Product inside the bottle is segmented, the liquid surface is located, and the
 volume beneath it is integrated over the bottle's bore as a stack of discs.
@@ -91,8 +95,8 @@ Full write-up, including every bug found and how: **[`docs/liquid-level.md`](doc
 ## Cases 1–3 — Zero-shot conveyor counting
 
 <p align="center">
-  <img src="projects/01_citrus_counting/output/preview.jpg" alt="Citrus line, counted" width="49%">
-  <img src="projects/02_tomato_grading/output/preview.jpg" alt="Tomato line, counted" width="49%">
+  <img src="projects/01_citrus_counting/docs/citrus-counted.jpg" alt="Citrus line, counted" width="49%">
+  <img src="projects/02_tomato_grading/docs/tomato-counted.jpg" alt="Tomato line, counted" width="49%">
 </p>
 
 No training, no labelled data, no fixed class list. Objects are named in plain
@@ -160,7 +164,7 @@ More, including the counting rules and threshold-tuning results:
 
 <br>
 
-<img src="projects/03_parcel_dimensioning/output/preview.jpg" alt="Parcel dimensioning result" width="100%">
+<img src="projects/03_parcel_dimensioning/docs/parcel-measured.jpg" alt="Parcel dimensioning result" width="100%">
 
 Every parcel on the belt carries its distance and its size; the static stack of
 cartons behind it carries nothing, because it is a metre and a half outside the
@@ -241,8 +245,8 @@ of the unload.
 ## Case 5 — Cafe occupancy and dwell time
 
 <p>
-  <img src="projects/05_cafe_dwell_time/output/preview.jpg" alt="Cafe occupancy and dwell time" width="49%">
-  <img src="projects/05_cafe_dwell_time/output/preview_scene1.jpg" alt="Cafe occupancy and dwell time, second room" width="49%">
+  <img src="projects/05_cafe_dwell_time/docs/scene5-dwell.jpg" alt="Cafe occupancy and dwell time" width="49%">
+  <img src="projects/05_cafe_dwell_time/docs/scene1-dwell.jpg" alt="Cafe occupancy and dwell time, second room" width="49%">
 </p>
 
 The prompt is one word — `person` — and the question is different from the
@@ -305,7 +309,7 @@ resolved by [`zones.py`](projects/05_cafe_dwell_time/zones.py).
 
 ## Case 6 — Warehouse: 3D localisation across four cameras
 
-<img src="projects/06_warehouse_3d/output/preview.jpg" alt="Multi-camera 3D localisation and eagle view" width="100%">
+<img src="projects/06_warehouse_3d/docs/eagle-view.jpg" alt="Multi-camera 3D localisation and eagle view" width="100%">
 
 Four fixed cameras, one warehouse floor. Each person is placed **in metres**,
 given one identity across all four views, plotted on the building's own top-down
@@ -388,12 +392,16 @@ Only project 03 needs an extra install (Depth Anything 3, which must go in
 `--no-deps`; its README gives the four lines). Project 06 fetches a research
 dataset with `fetch_scene.py` before its first run.
 
-CPU-only throughout. Reference machine: 4 cores, ~1.2 s/frame at `imgsz=1280`.
+CPU-only throughout. Reference machine: 4 cores, and the per-frame cost each
+project's own `summary.json` recorded — 1.2 s/frame for the cafe at `imgsz=1280`,
+1.5–1.6 s/frame for the conveyor cases, and project 04 far quicker than any of
+them because it runs no network at all.
 
 Rendered `.mp4` results are **not committed** — they are build artefacts, and a
 source repository should not carry ~60 MB of video. Each `main.py` regenerates
-its own. Preview stills and `summary.json` are committed, so the numbers in
-every README can be checked without running anything.
+its own. The stills in each project's `docs/` and its `summary.json` **are**
+committed, so every number quoted in a README can be checked without running
+anything.
 
 Source clips are **fetched, not committed** — by Pexels id for cases 1–4, and
 from HuggingFace for case 6. Case 5 is the single exception: the CAFE dataset
@@ -415,15 +423,23 @@ projects/
   05_cafe_dwell_time/       occupancy and per-person dwell
   06_warehouse_3d/          four cameras -> one floor plan in metres
 
-    every project has these four
+    every project has these
       main.py               the entry point, and only the sequence of steps
       config.py             every constant, with the measurement that set it
       assets.py             what must be downloaded before a run
       report.py             the console read-out
-      README.md             what it does, what it measured, what breaks it
+      panel.py              what this project's live dashboard shows - never
+                            a row for something it does not measure
+      README.md             what it does, what it measured, what breaks it,
+                            written to stand alone if the project is split out
       input/  output/       this project's own video in, results out
+      docs/                 the stills its README shows
+
+    projects 01, 02, 03 and 05 add
+      baseline.py           the last verified figures, checked on every run
 
     and the four that carry their own pipeline split it by stage, e.g.
+      03: intrinsics -> depth -> depth_cache -> belt -> sizing -> measurement
       04: roi -> segmentation -> profile -> bore -> level -> pipeline -> panel
       05: zones -> detection -> identity -> roles -> render -> summary
 
@@ -449,8 +465,14 @@ docs/                       long-form method write-ups
 ```
 
 Projects 01, 02 and 03 share `factory_vision/counting/` rather than each holding
-a copy. They differ **only** in `config.py`, which is the entire zero-shot claim
-— and three copies of one tracker would drift apart on the next fix.
+a copy — three copies of one tracker would drift apart on the next fix.
+
+How far that sharing goes is the zero-shot claim, and it is worth stating
+precisely rather than generously. **Projects 01 and 02 differ in `config.py` and
+`panel.py` and nothing else**: same weights, same tracker, same counting rule,
+one word changed and a line moved. **Project 03 is the exception** — it runs the
+same counter, and then adds a metric half of its own (six modules, two depth
+checkpoints) that neither of the others loads at all.
 
 ## Sources
 

@@ -1,0 +1,531 @@
+{
+  "video": "03_packages_conveyor.mp4",
+  "scene": "Parcel unloading belt - mixed boxes, bags and parcels",
+  "source_url": "https://www.pexels.com/video/unloading-packages-on-a-conveyor-belt-5370836/",
+  "output": "03_packages_conveyor__counted.mp4",
+  "resolution": "1920x1080",
+  "fps": 29.97,
+  "frames_written": 511,
+  "model": "yoloe-11l-seg",
+  "prompts": [
+    "cardboard box",
+    "parcel",
+    "plastic bag",
+    "sports bag",
+    "styrofoam box"
+  ],
+  "conf": 0.05,
+  "imgsz": 1280,
+  "tracker": "TrackTrack (CVPR 2025) + ReID + GMC",
+  "count_total": 8,
+  "count_in": 8,
+  "count_reverse_crossings": 0,
+  "line": [
+    [
+      350,
+      1010
+    ],
+    [
+      350,
+      400
+    ]
+  ],
+  "motion_px_per_frame": [
+    -4.69,
+    0.27
+  ],
+  "min_track_age": 4,
+  "per_class": {
+    "package": 8
+  },
+  "unique_track_ids": 26,
+  "avg_detections_per_frame": 6.92,
+  "avg_ms_per_frame": 1638.7,
+  "notes": "static stack excluded in depth, not by an x-band",
+  "dimensioning": {
+    "method": "Depth Anything 3 (DA3-LARGE intrinsics + DA3METRIC-LARGE depth)",
+    "process_res": 896,
+    "depth_every_n_frames": 5,
+    "depth_frames": 0,
+    "depth_frames_from_cache": 109,
+    "avg_depth_ms": 55.7,
+    "intrinsics": {
+      "fx": 1372.2,
+      "fy": 1366.5,
+      "cx": 960.0,
+      "cy": 540.0,
+      "hfov_deg": 70.0,
+      "frame_to_frame_spread_pct": 0.8,
+      "square_pixel_error_pct": 0.42,
+      "note": "predicted, not calibrated; distance scales with it, size does not"
+    },
+    "belt_plane": {
+      "fit_rms_mm": 8.4,
+      "pixels": 34903,
+      "camera_height_above_belt_mm": 488
+    },
+    "size_scale": 1.2257,
+    "size_scale_note": "one printed 720x500x340 mm carton (height 277.4 mm measured); a second, unseen carton then reads 340.5 mm against 340",
+    "footprint_scale": [
+      1.187,
+      1.608
+    ],
+    "footprint_scale_note": "applied only where the top face is under-resolved; both reference cartons were in that regime, at 10 and 14 px",
+    "depth_corridor_m": [
+      1.45,
+      3.2
+    ],
+    "detections_outside_corridor": 7602,
+    "parcels_measured": 21,
+    "size_classes": {
+      "L": 7,
+      "M": 13,
+      "S": 1
+    },
+    "total_volume_l": 1087.1,
+    "median_volume_l": 37.2,
+    "parcels": [
+      {
+        "track": 1,
+        "frames_measured": 162,
+        "distance_m": 2.253,
+        "distance_range_m": [
+          1.98,
+          2.4
+        ],
+        "length_mm": 689,
+        "width_mm": 465,
+        "height_mm": 366,
+        "longest_side_mm": 689,
+        "volume_l": 117.4,
+        "size_class": "L",
+        "size_class_mark": "*",
+        "top_face_px": 10.0,
+        "footprint_measurable": false,
+        "footprint_estimated": true,
+        "mask_kept": 0.88,
+        "height_iqr_mm": 10
+      },
+      {
+        "track": 2,
+        "frames_measured": 2,
+        "distance_m": 2.06,
+        "distance_range_m": [
+          2.06,
+          2.06
+        ],
+        "length_mm": 722,
+        "width_mm": 573,
+        "height_mm": 180,
+        "longest_side_mm": 722,
+        "volume_l": 74.2,
+        "size_class": "L",
+        "size_class_mark": "",
+        "top_face_px": 57.1,
+        "footprint_measurable": true,
+        "footprint_estimated": false,
+        "mask_kept": 0.95,
+        "height_iqr_mm": 0
+      },
+      {
+        "track": 4,
+        "frames_measured": 280,
+        "distance_m": 2.572,
+        "distance_range_m": [
+          2.08,
+          2.91
+        ],
+        "length_mm": 383,
+        "width_mm": 352,
+        "height_mm": 140,
+        "longest_side_mm": 383,
+        "volume_l": 18.8,
+        "size_class": "M",
+        "size_class_mark": "*",
+        "top_face_px": 17.8,
+        "footprint_measurable": false,
+        "footprint_estimated": true,
+        "mask_kept": 0.9,
+        "height_iqr_mm": 6
+      },
+      {
+        "track": 15,
+        "frames_measured": 96,
+        "distance_m": 2.293,
+        "distance_range_m": [
+          2.18,
+          2.39
+        ],
+        "length_mm": 462,
+        "width_mm": 362,
+        "height_mm": 159,
+        "longest_side_mm": 462,
+        "volume_l": 26.6,
+        "size_class": "M",
+        "size_class_mark": "*",
+        "top_face_px": 25.4,
+        "footprint_measurable": true,
+        "footprint_estimated": true,
+        "mask_kept": 0.92,
+        "height_iqr_mm": 14
+      },
+      {
+        "track": 18,
+        "frames_measured": 25,
+        "distance_m": 2.315,
+        "distance_range_m": [
+          2.27,
+          2.34
+        ],
+        "length_mm": 444,
+        "width_mm": 427,
+        "height_mm": 138,
+        "longest_side_mm": 444,
+        "volume_l": 26.2,
+        "size_class": "M",
+        "size_class_mark": "",
+        "top_face_px": 38.0,
+        "footprint_measurable": true,
+        "footprint_estimated": false,
+        "mask_kept": 0.91,
+        "height_iqr_mm": 13
+      },
+      {
+        "track": 20,
+        "frames_measured": 128,
+        "distance_m": 2.47,
+        "distance_range_m": [
+          2.36,
+          2.57
+        ],
+        "length_mm": 282,
+        "width_mm": 234,
+        "height_mm": 102,
+        "longest_side_mm": 282,
+        "volume_l": 6.7,
+        "size_class": "S",
+        "size_class_mark": "?",
+        "top_face_px": 14.0,
+        "footprint_measurable": false,
+        "footprint_estimated": true,
+        "mask_kept": 0.85,
+        "height_iqr_mm": 12
+      },
+      {
+        "track": 23,
+        "frames_measured": 229,
+        "distance_m": 2.525,
+        "distance_range_m": [
+          2.04,
+          2.76
+        ],
+        "length_mm": 391,
+        "width_mm": 338,
+        "height_mm": 108,
+        "longest_side_mm": 391,
+        "volume_l": 14.3,
+        "size_class": "M",
+        "size_class_mark": "*",
+        "top_face_px": 21.9,
+        "footprint_measurable": false,
+        "footprint_estimated": true,
+        "mask_kept": 0.89,
+        "height_iqr_mm": 13
+      },
+      {
+        "track": 24,
+        "frames_measured": 322,
+        "distance_m": 2.367,
+        "distance_range_m": [
+          2.1,
+          3.19
+        ],
+        "length_mm": 376,
+        "width_mm": 313,
+        "height_mm": 268,
+        "longest_side_mm": 376,
+        "volume_l": 31.6,
+        "size_class": "M",
+        "size_class_mark": "*",
+        "top_face_px": 10.7,
+        "footprint_measurable": false,
+        "footprint_estimated": true,
+        "mask_kept": 0.9,
+        "height_iqr_mm": 29
+      },
+      {
+        "track": 28,
+        "frames_measured": 240,
+        "distance_m": 2.194,
+        "distance_range_m": [
+          1.9,
+          2.91
+        ],
+        "length_mm": 754,
+        "width_mm": 543,
+        "height_mm": 341,
+        "longest_side_mm": 754,
+        "volume_l": 139.8,
+        "size_class": "L",
+        "size_class_mark": "*",
+        "top_face_px": 13.7,
+        "footprint_measurable": false,
+        "footprint_estimated": true,
+        "mask_kept": 0.94,
+        "height_iqr_mm": 22
+      },
+      {
+        "track": 32,
+        "frames_measured": 7,
+        "distance_m": 3.19,
+        "distance_range_m": [
+          3.15,
+          3.19
+        ],
+        "length_mm": 506,
+        "width_mm": 476,
+        "height_mm": 253,
+        "longest_side_mm": 506,
+        "volume_l": 60.8,
+        "size_class": "M",
+        "size_class_mark": "*",
+        "top_face_px": 10.0,
+        "footprint_measurable": false,
+        "footprint_estimated": true,
+        "mask_kept": 0.9,
+        "height_iqr_mm": 2
+      },
+      {
+        "track": 36,
+        "frames_measured": 15,
+        "distance_m": 3.139,
+        "distance_range_m": [
+          3.12,
+          3.2
+        ],
+        "length_mm": 505,
+        "width_mm": 416,
+        "height_mm": 221,
+        "longest_side_mm": 505,
+        "volume_l": 46.5,
+        "size_class": "M",
+        "size_class_mark": "*",
+        "top_face_px": 10.8,
+        "footprint_measurable": false,
+        "footprint_estimated": true,
+        "mask_kept": 0.69,
+        "height_iqr_mm": 10
+      },
+      {
+        "track": 39,
+        "frames_measured": 300,
+        "distance_m": 2.494,
+        "distance_range_m": [
+          2.1,
+          2.81
+        ],
+        "length_mm": 508,
+        "width_mm": 317,
+        "height_mm": 224,
+        "longest_side_mm": 508,
+        "volume_l": 36.0,
+        "size_class": "M",
+        "size_class_mark": "*",
+        "top_face_px": 12.5,
+        "footprint_measurable": false,
+        "footprint_estimated": true,
+        "mask_kept": 0.87,
+        "height_iqr_mm": 12
+      },
+      {
+        "track": 41,
+        "frames_measured": 225,
+        "distance_m": 2.632,
+        "distance_range_m": [
+          2.27,
+          2.91
+        ],
+        "length_mm": 645,
+        "width_mm": 414,
+        "height_mm": 280,
+        "longest_side_mm": 645,
+        "volume_l": 74.7,
+        "size_class": "L",
+        "size_class_mark": "?",
+        "top_face_px": 10.4,
+        "footprint_measurable": false,
+        "footprint_estimated": true,
+        "mask_kept": 0.92,
+        "height_iqr_mm": 11
+      },
+      {
+        "track": 45,
+        "frames_measured": 192,
+        "distance_m": 2.749,
+        "distance_range_m": [
+          2.38,
+          3.05
+        ],
+        "length_mm": 628,
+        "width_mm": 445,
+        "height_mm": 242,
+        "longest_side_mm": 628,
+        "volume_l": 67.7,
+        "size_class": "L",
+        "size_class_mark": "?",
+        "top_face_px": 13.6,
+        "footprint_measurable": false,
+        "footprint_estimated": true,
+        "mask_kept": 0.9,
+        "height_iqr_mm": 10
+      },
+      {
+        "track": 48,
+        "frames_measured": 119,
+        "distance_m": 2.941,
+        "distance_range_m": [
+          2.6,
+          3.2
+        ],
+        "length_mm": 448,
+        "width_mm": 295,
+        "height_mm": 193,
+        "longest_side_mm": 448,
+        "volume_l": 25.5,
+        "size_class": "M",
+        "size_class_mark": "*",
+        "top_face_px": 8.9,
+        "footprint_measurable": false,
+        "footprint_estimated": true,
+        "mask_kept": 0.9,
+        "height_iqr_mm": 32
+      },
+      {
+        "track": 49,
+        "frames_measured": 134,
+        "distance_m": 2.91,
+        "distance_range_m": [
+          2.6,
+          3.2
+        ],
+        "length_mm": 506,
+        "width_mm": 463,
+        "height_mm": 120,
+        "longest_side_mm": 506,
+        "volume_l": 28.1,
+        "size_class": "M",
+        "size_class_mark": "*",
+        "top_face_px": 17.9,
+        "footprint_measurable": false,
+        "footprint_estimated": true,
+        "mask_kept": 0.94,
+        "height_iqr_mm": 14
+      },
+      {
+        "track": 50,
+        "frames_measured": 26,
+        "distance_m": 3.028,
+        "distance_range_m": [
+          2.97,
+          3.18
+        ],
+        "length_mm": 603,
+        "width_mm": 576,
+        "height_mm": 182,
+        "longest_side_mm": 603,
+        "volume_l": 63.1,
+        "size_class": "L",
+        "size_class_mark": "?",
+        "top_face_px": 17.0,
+        "footprint_measurable": false,
+        "footprint_estimated": true,
+        "mask_kept": 0.95,
+        "height_iqr_mm": 3
+      },
+      {
+        "track": 52,
+        "frames_measured": 15,
+        "distance_m": 3.177,
+        "distance_range_m": [
+          3.12,
+          3.19
+        ],
+        "length_mm": 525,
+        "width_mm": 454,
+        "height_mm": 273,
+        "longest_side_mm": 525,
+        "volume_l": 65.0,
+        "size_class": "M",
+        "size_class_mark": "*",
+        "top_face_px": 9.5,
+        "footprint_measurable": false,
+        "footprint_estimated": true,
+        "mask_kept": 0.81,
+        "height_iqr_mm": 151
+      },
+      {
+        "track": 53,
+        "frames_measured": 8,
+        "distance_m": 3.034,
+        "distance_range_m": [
+          2.99,
+          3.2
+        ],
+        "length_mm": 471,
+        "width_mm": 309,
+        "height_mm": 256,
+        "longest_side_mm": 471,
+        "volume_l": 37.2,
+        "size_class": "M",
+        "size_class_mark": "*",
+        "top_face_px": 7.3,
+        "footprint_measurable": false,
+        "footprint_estimated": true,
+        "mask_kept": 0.75,
+        "height_iqr_mm": 7
+      },
+      {
+        "track": 57,
+        "frames_measured": 31,
+        "distance_m": 3.037,
+        "distance_range_m": [
+          2.96,
+          3.11
+        ],
+        "length_mm": 466,
+        "width_mm": 345,
+        "height_mm": 109,
+        "longest_side_mm": 466,
+        "volume_l": 17.5,
+        "size_class": "M",
+        "size_class_mark": "*",
+        "top_face_px": 11.7,
+        "footprint_measurable": false,
+        "footprint_estimated": true,
+        "mask_kept": 0.92,
+        "height_iqr_mm": 13
+      },
+      {
+        "track": 59,
+        "frames_measured": 2,
+        "distance_m": 3.13,
+        "distance_range_m": [
+          3.11,
+          3.15
+        ],
+        "length_mm": 997,
+        "width_mm": 580,
+        "height_mm": 189,
+        "longest_side_mm": 997,
+        "volume_l": 109.4,
+        "size_class": "L",
+        "size_class_mark": "*",
+        "top_face_px": 15.1,
+        "footprint_measurable": false,
+        "footprint_estimated": true,
+        "mask_kept": 0.88,
+        "height_iqr_mm": 7
+      }
+    ]
+  }
+}
