@@ -398,8 +398,10 @@ about twenty minutes. That is not a warning about a slow machine: its depth cach
 is a build artefact and is not in the repository, so a fresh clone pays 75 s per
 depth map where a cached run pays 56 ms. Measured both ways, tabled in
 [its README](projects/03_parcel_dimensioning#budget-about-two-and-a-half-hours-for-the-first-run-and-twenty-minutes-after).
-`python main.py --count-only` skips all of it. The other four are 8–12 minutes,
-and project 04 under two.
+`python main.py --count-only` skips all of it — but counts 10 against a verified
+8, because the depth corridor is also what fences off the static stack, so it is
+for watching the counter run without DA3 rather than for a number. The other four
+projects are 8–12 minutes, and project 04 under two.
 
 CPU-only throughout. Reference machine: 4 cores, and the per-frame cost each
 project's own `summary.json` recorded — 1.2 s/frame for the cafe at `imgsz=1280`,
