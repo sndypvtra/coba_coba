@@ -280,28 +280,32 @@ Each is 150 consecutive frames of a 29.97 fps recording, every 6th frame kept �
 > the project page states CC BY-SA 4.0 for the site and is less explicit about the
 > data itself.
 
-## The shared engine
+## The engine, vendored
 
-This project uses a small shared package that lives outside this folder:
+This project is self-contained: every module it imports is in this folder.
 
 ```
-factory_vision/
-├── assets.py         the downloader (progress bars, weight and clip placement)
-├── paths.py          where weights, clips and outputs go
-├── detect.py         YOLOE, the tracker view, and contained-box suppression
-├── tracking.py       TrackTrack config resolution
-└── trackers/*.yaml   the tracker gates themselves
+05_cafe_dwell_time/
+├── main.py, config.py, assets.py, report.py, baseline.py, pipeline.py
+├── zones.py, detection.py, identity.py, roles.py, render.py, overlay.py, summary.py
+├── factory_vision/
+│   ├── assets.py         the weight downloader
+│   ├── detect.py         YOLOE, the tracker view, contained-box suppression
+│   ├── tracking.py       TrackTrack config resolution
+│   ├── trackers/*.yaml   the tracker gates themselves
+│   └── paths.py          where weights, input and output live
+└── input/  output/  docs/
 ```
 
 Those five, and nothing else — `detection.py` imports `DetView`, `build_tracker`
 and `suppress_contained` from `detect.py`, and `resolve_tracker_cfg` from
-`tracking.py`, which reads the YAML.
-
-**If you move this project into a repository of its own, `factory_vision/` has to
-come with it**, at the same level as the project folder — `main.py` inserts its
-parent's parent on `sys.path`. The counting code in `factory_vision/counting/` is
-*not* used here: this project counts nothing across a line, so it has its own
+`tracking.py`, which reads the YAML. The counting engine the conveyor projects
+use is **not** here: this project counts nothing across a line, so it has its own
 `detection.py`, `render.py` and `overlay.py`.
+
+`factory_vision/` came from a monorepo where one copy served six cases. A shared
+package cannot travel into six separate repositories, so each carries its own —
+at the cost of a fix needing to be applied in each place rather than once.
 
 The tracker configuration is the one tuned for 30 fps conveyor footage, reused
 unchanged at 4.995 fps. That mismatch is deliberate — it is what exposed the

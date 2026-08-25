@@ -310,7 +310,7 @@ resolved by [`zones.py`](projects/05_cafe_dwell_time/zones.py).
 
 ## Case 6 — Warehouse: 3D localisation across four cameras
 
-<img src="projects/06_warehouse_3d/docs/eagle-view.jpg" alt="Multi-camera 3D localisation and eagle view" width="100%">
+<img src="projects/06_warehouse_3d/docs/warehouse-floor.jpg" alt="Multi-camera 3D localisation and eagle view" width="100%">
 
 Four fixed cameras, one warehouse floor. Each person is placed **in metres**,
 given one identity across all four views, plotted on the building's own top-down
