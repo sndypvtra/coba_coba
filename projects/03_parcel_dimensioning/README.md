@@ -40,11 +40,28 @@ python main.py                # count and measure
 python main.py --count-only   # no depth models - and a count of 10, not 8
 ```
 
-Depth Anything 3 is the one dependency `main.py` cannot install for you (four
-lines, below). It is checked for **before anything is downloaded**, and if it is
-missing the run stops immediately and prints those lines — rather than fetching
-2.9 GB of checkpoints and then raising `ModuleNotFoundError` from inside a model
-constructor, several minutes into what looked like progress.
+**The model weights download themselves** on the first run — the detector, plus
+two Depth Anything 3 checkpoints (~2.9 GB) from the Hugging Face hub.
+
+**The source clip you fetch yourself.** Run `main.py` once and it prints the link,
+the exact rendition and a ready-made `curl`:
+
+```bash
+curl -L -o 'input/03_packages_conveyor.mp4' \
+     'https://videos.pexels.com/video-files/5370836/5370836-hd_1920_1080_30fps.mp4'
+```
+
+Source page: [Pexels 5370836](https://www.pexels.com/video/unloading-packages-on-a-conveyor-belt-5370836/) ·
+rendition `hd_1920_1080_30fps` (1920×1080). Every metric constant in `config.py` —
+the belt patches, the depth corridor, the lock line — is a pixel coordinate on
+that one rendition, so the file is checked when it arrives and refused if its
+frame size is different.
+
+**Depth Anything 3 itself** is the one dependency `main.py` cannot install for you
+(four lines, below). It is checked for **before anything is downloaded**, and if
+it is missing the run stops immediately and prints those lines — rather than
+fetching 2.9 GB of checkpoints and then raising `ModuleNotFoundError` from inside
+a model constructor, several minutes into what looked like progress.
 
 ### `--count-only` counts 10, and the right answer is 8
 
@@ -74,9 +91,6 @@ one to quote. Treated the other way round, this is the cleanest measurement in t
 project of **what the depth models actually buy**: two counts and 23 phantom
 identities.
 
-The heaviest of the collection to set up, and the rest of it automatic: two Depth
-Anything 3 checkpoints (~2.9 GB) arrive alongside the detector on the first run.
-
 ### Budget about two and a half hours for the first run, and twenty minutes after
 
 This is worth stating in numbers, because the gap between the two is a factor of
@@ -95,8 +109,8 @@ of a clean clone, and 56 ms/map on a run where **all 109 came from the cache**, 
 no depth forward pass ran during the render at all.
 
 What makes the difference is `output/.depth_cache`, which holds one float16 map
-per processed frame. It is **not** in the repository — it is a build artefact, and
-95 MB of them — so a fresh clone always pays the full price once. Nothing else in
+per processed frame. It is **not** committed — it is a build artefact, and 95 MB
+of them — so a fresh copy of this project always pays the full price once. Nothing else in
 this collection behaves like that: projects 01, 02 and 05 take 8–12 minutes on
 any run, and project 04 under two.
 
@@ -136,8 +150,8 @@ measurement. On this clip it over-counts, for the reason tabled above.
 
 Weights fetched on first run: `yoloe-11l-seg.pt`, `yolo11n-cls.pt`,
 `depth-anything/DA3-LARGE` (camera intrinsics) and
-`depth-anything/DA3METRIC-LARGE` (canonical metric depth). Clip:
-[Pexels 5370836](https://www.pexels.com/video/unloading-packages-on-a-conveyor-belt-5370836/).
+`depth-anything/DA3METRIC-LARGE` (canonical metric depth). The clip is not
+fetched — see above.
 
 </details>
 
@@ -334,41 +348,39 @@ the belt-motion vector (the previous −1.52 px/frame was measured over the whol
 frame and dragged towards zero by the stationary stack, under-reading the speed
 threefold).
 
-## The shared engine, and what deliberately is not in it
+## The engine, vendored — and what is deliberately not in it
 
-The detector, tracker, counting rule and overlay renderer are shared with the two
-counting-only projects:
+This project is self-contained: every module it imports is in this folder.
 
 ```
-factory_vision/
-├── assets.py              downloader shared by every project
-├── paths.py               where weights, clips and outputs go
-├── tracking.py            TrackTrack config resolution
-├── trackers/*.yaml        the tracker gates, retuned for zero-shot score ranges
-├── tools/                 how the shared constants were arrived at
-└── counting/
-    ├── clips.py           ClipConfig — the per-clip contract
-    ├── geometry.py        the counting line, the ROI, size gating
-    ├── pipeline.py        detect → track → count → render
-    ├── overlay.py         how to draw a panel (not what goes on one)
-    └── measuring.py       the measurement protocol this project implements
+03_parcel_dimensioning/
+├── main.py, config.py, assets.py, report.py, panel.py
+├── intrinsics.py, depth.py, depth_cache.py, belt.py, sizing.py, measurement.py
+├── factory_vision/            the counting engine, vendored
+│   ├── assets.py              weight downloads, and the manual-clip check
+│   ├── paths.py               where weights, input and output live
+│   ├── tracking.py            TrackTrack config resolution
+│   ├── trackers/*.yaml        gates retuned for zero-shot score ranges
+│   └── counting/
+│       ├── clips.py           ClipConfig — the per-clip contract
+│       ├── geometry.py        the counting line, the ROI, size gating
+│       ├── pipeline.py        detect → track → count → render
+│       ├── overlay.py         how to draw a panel (not what goes on one)
+│       └── measuring.py       the measurement protocol this project implements
+└── input/  output/  docs/
 ```
 
-**If you move this project into a repository of its own, `factory_vision/` has to
-come with it**, at the same level as the project folder — `main.py` inserts its
-parent's parent on `sys.path`.
+**The metric half is deliberately not inside `factory_vision/`.** `depth.py` and
+`sizing.py` used to sit in `factory_vision/counting/` alongside the shared counter
+— 619 lines that neither counting project ever executes, in a package named for
+what the three have in common — and `ClipConfig` carried eleven metric fields for
+the same reason, so reading the citrus project meant stepping over belt patches
+and footprint scales that have nothing to do with oranges.
 
-**The metric half is deliberately not in there.** `depth.py` and `sizing.py` used
-to sit in `factory_vision/counting/` alongside the shared counter — 619 lines that
-neither counting project ever executes, in a package named for what the three have
-in common — and `ClipConfig` carried eleven metric fields for the same reason, so
-reading project 01 meant stepping over belt patches and footprint scales that have
-nothing to do with oranges.
-
-The measurement now reaches the counter through `measuring.py`, a `Protocol` the
-shared pipeline calls when it is given a backend and skips entirely when it is not.
-So "project 01 does not measure" is a structural fact — no torch depth model, no
-checkpoints — rather than a flag that happens to be `False`. And `overlay.py` now
+The measurement reaches the counter through `measuring.py`, a `Protocol` the
+shared pipeline calls when it is given a backend and skips entirely when it is
+not. So "the citrus line does not measure" is a structural fact — no depth model,
+no checkpoints — rather than a flag that happens to be `False`. And `overlay.py`
 knows how to *draw* a panel and nothing about what belongs on one; each project
 builds its own in `panel.py`, so this project's SIZE MIX and VOLUME RATE rows
 cannot leak onto a citrus line again. They once did, for a whole 286-frame video.

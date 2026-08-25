@@ -1,0 +1,41 @@
+# TrackTrack (CVPR 2025) tuned for open-vocabulary / zero-shot detections.
+#
+# Why the retune: YOLOE text-prompted detections on this conveyor footage score
+# roughly 0.10-0.65, so the stock thresholds (track_high_thresh 0.6,
+# new_track_thresh 0.7) would reject nearly every box and produce no tracks.
+# The gates below are moved down to sit inside the zero-shot score range while
+# keeping TrackTrack's multi-cue association and track-aware initialization.
+
+tracker_type: tracktrack
+
+track_high_thresh: 0.22 # stock 0.6  - first-stage gate, lowered into zero-shot range
+track_low_thresh: 0.06 # stock 0.25 - keeps weak boxes for the second pass
+new_track_thresh: 0.28 # stock 0.7  - allows tracks to spawn from zero-shot scores
+track_buffer: 45 # stock 30   - conveyor items get briefly occluded by rollers/frames
+match_thresh: 0.7
+lost_match_thr: 0.9 # stock 0.0  - enables the relaxed rebind pass for occlusions
+
+# Association weights (multi-cue: HMIoU + appearance + confidence + corner angle)
+iou_weight: 0.5
+reid_weight: 0.5
+conf_weight: 0.1
+angle_weight: 0.05
+
+# Iterative assignment
+penalty_p: 0.2
+penalty_q: 0.4
+reduce_step: 0.05
+
+# Track-Aware Initialization
+tai_thr: 0.55
+min_track_len: 3
+
+# Camera motion compensation - cheap insurance against handheld shake
+gmc_method: sparseOptFlow
+
+# ReID: an explicit backbone is required here - model "auto" reuses the
+# detector's own features, which crashes on YOLOE *-seg checkpoints
+# (get_obj_feats permutes a 4D map but the seg head hands back a 3D one).
+# The path is re-resolved to an absolute one at runtime by conveyor_count.py.
+with_reid: True
+model: weights/yolo11n-cls.pt

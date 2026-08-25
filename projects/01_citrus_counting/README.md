@@ -36,10 +36,30 @@ two figures are reported separately and only the first is the answer.
 python main.py
 ```
 
-That is the whole procedure. Everything missing is fetched on the first run with
-a progress bar — the clip into `input/`, the model weights into `weights/` — and
-the annotated video plus `summary.json` land in `output/`. Nothing to install by
-hand, no order to remember, and a second run reuses what the first downloaded.
+Two kinds of dependency, handled two ways.
+
+**The model weights download themselves** on the first run, with a progress bar,
+into `weights/`. One copy of a checkpoint is the same as any other, so there is
+nothing to get wrong.
+
+**The source clip you fetch yourself.** Run `main.py` once and it prints the
+link, the exact rendition and a ready-made `curl`:
+
+```bash
+curl -L -o 'input/01_oranges_production_line.mp4' \
+     'https://videos.pexels.com/video-files/10576687/10576687-hd_1920_1080_30fps.mp4'
+```
+
+Source page: [Pexels 10576687](https://www.pexels.com/video/fruit-on-production-line-10576687/) ·
+rendition `hd_1920_1080_30fps` (1920×1080).
+
+That step is deliberately yours. The clip is the thing being measured, and the
+counting line and the box-area limit in `config.py` are pixel coordinates on that
+one rendition — so the file is checked when it arrives and **refused if its frame
+size is different**, rather than quietly measured with constants meant for
+something else.
+
+The annotated video and `summary.json` then land in `output/`.
 
 <details>
 <summary>Python environment</summary>
@@ -55,10 +75,8 @@ pip install ultralytics==8.4.106 supervision==0.29.1 opencv-python==5.0.0.93 lap
 it pulls the MobileCLIP text encoder (~572 MB) and the `clip`/`ftfy`/`regex`
 packages by itself.
 
-Downloaded on first run: the clip
-([Pexels 10576687](https://www.pexels.com/video/fruit-on-production-line-10576687/)),
-`yoloe-11l-seg.pt` (detector) and `yolo11n-cls.pt` (the tracker's
-re-identification backbone).
+Downloaded on first run: `yoloe-11l-seg.pt` (detector) and `yolo11n-cls.pt`
+(the tracker's re-identification backbone). The clip is not — see above.
 
 </details>
 
@@ -101,15 +119,11 @@ objects acquired early did not. **A lower threshold is not the same thing as
 better recall**, and the only way to know which one you have is to measure where
 objects are first seen rather than how many boxes appear.
 
-The sweep is re-runnable, from the repository root:
-
-```bash
-python -m factory_vision.tools.tune_thresholds --clips 01
-```
-
-It reads this project's own `config.py`, so what it sweeps is what the project
-runs. The same sweep on the tomato line next door reached the opposite conclusion
-— tuning is per-installation.
+Those figures come from a threshold sweep that measures *where* objects are
+first acquired, not how many boxes appear. It lives in the monorepo this project
+came from, so the numbers are recorded here rather than regenerable from this
+folder alone. The same sweep on the tomato line reached the opposite conclusion —
+tuning is per-installation.
 
 ## What is in this project
 
@@ -121,7 +135,7 @@ runs. The same sweep on the tomato line next door reached the opposite conclusio
 | `panel.py` | what the live dashboard shows — rate, headway, what is in view |
 | `report.py` | the console read-out, including the regression line |
 | `baseline.py` | the last verified count, checked and printed on every run |
-| `input/` | source clip (fetched) |
+| `input/` | the source clip **you** put here |
 | `output/` | annotated video and `summary.json` |
 | `docs/` | the still used in this README |
 
@@ -146,39 +160,39 @@ measures**. A citrus line has no size, volume or depth row, so there is none.
   the belt travel and the box-area limit all need re-measuring. The prompts
   transfer; the geometry does not.
 
-## The shared engine
+## The engine, vendored
 
-The detector, tracker, counting rule and overlay renderer live in a package
-outside this folder:
+This project is self-contained: every module it imports is in this
+folder, so it runs wherever you put it.
 
 ```
-factory_vision/
-├── assets.py              downloader shared by every project
-├── paths.py               where weights, clips and outputs go
-├── tracking.py            TrackTrack config resolution
-├── trackers/*.yaml        the tracker gates, retuned for zero-shot score ranges
-├── tools/                 how the constants above were arrived at, including
-                           the threshold sweep quoted earlier
-└── counting/
-    ├── clips.py           ClipConfig — the per-clip contract
-    ├── geometry.py        the counting line, the ROI, size gating
-    ├── pipeline.py        detect → track → count → render
-    ├── overlay.py         how to draw a panel (not what goes on one)
-    └── measuring.py       the optional measurement protocol, unused here
+<project folder>/
+├── main.py, config.py, assets.py, panel.py, report.py, baseline.py
+├── factory_vision/            the engine, vendored so this folder stands alone
+│   ├── assets.py              weight downloads, and the manual-clip check
+│   ├── paths.py               where weights, input and output live
+│   ├── tracking.py            TrackTrack config resolution
+│   ├── trackers/*.yaml        gates retuned for zero-shot score ranges
+│   └── counting/
+│       ├── clips.py           ClipConfig — the per-clip contract
+│       ├── geometry.py        the counting line, the ROI, size gating
+│       ├── pipeline.py        detect → track → count → render
+│       ├── overlay.py         how to draw a panel (not what goes on one)
+│       └── measuring.py       the measurement protocol, unused here
+└── input/  output/  docs/
 ```
 
-**If you move this project into a repository of its own, `factory_vision/` has
-to come with it**, at the same level as the project folder — `main.py` inserts
-its parent's parent on `sys.path`. It is ~1,650 lines and no part of it is
-fruit-specific, which is the point: the project next door counts tomatoes
-through the same code, differing only in `config.py` and `panel.py`. Copying the
-engine into each project instead would be several versions of one tracker
-drifting apart on the next fix.
+`factory_vision/` is the counting engine, and it came from a monorepo where
+one copy served this project, the tomatoes line and the parcel belt. Those
+three differ only in `config.py` and `panel.py`, which is the whole zero-shot
+claim — but a shared package cannot travel into three separate repositories,
+so each carries its own copy. The trade is real and worth naming: a fix to the
+tracker now has to be applied in each place rather than once.
 
 `measuring.py` is a Protocol the pipeline calls only when a project hands it a
-measurement backend. This one does not, so "the citrus line does not measure" is
-structural — no torch depth model, no checkpoints — rather than a flag that
-happens to be `False`.
+measurement backend. This one does not, so "this line does not measure" is
+structural — no depth model, no checkpoints — rather than a flag set to
+`False`.
 
 ## Credits
 

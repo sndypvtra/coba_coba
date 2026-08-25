@@ -1,37 +1,42 @@
-"""What this project needs before it can run.
+"""What this project needs before it can run, and which parts arrive by itself.
 
-The heaviest of the six to set up, and all of it automatic. Two Depth Anything 3
-checkpoints (~2.9 GB) arrive alongside the detector on first run, because metric
-depth here is split across two models rather than one:
+The heaviest of the set. Three kinds of dependency, treated three ways:
 
-    DA3METRIC-LARGE   returns *canonical* depth - metres divided by the focal
-                      length, which no single image can pin down
-    DA3-LARGE         supplies the focal length, from its camera decoder
+  model weights   fetched automatically - the detector, plus two Depth Anything 3
+                  checkpoints (~2.9 GB) from the Hugging Face hub. Metric depth
+                  here is split across two models rather than one:
 
-Multiply the two and the result is metres. They are cached afterwards - by
-Hugging Face for the weights, and per-frame by the pipeline in
-`output/.depth_cache` - so a second run costs a fraction of the first.
+                      DA3METRIC-LARGE   canonical depth - metres divided by the
+                                        focal length, which no single image pins
+                      DA3-LARGE         that focal length, from its camera decoder
+
+                  Multiply the two and the result is metres.
+  the source clip fetched by *you*, from the link printed on a first run. Every
+                  metric constant in `config.py` - the belt patches, the depth
+                  corridor, the lock line - was measured on one rendition of it.
+  Depth Anything 3 itself, the Python package, which no `main.py` can install.
+                  Checked before anything downloads; see DA3_INSTALL below.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
 
-from factory_vision.assets import Clip, Requirements, ensure
+from factory_vision.assets import Clip, Requirements, ensure, require_clip
 
-CLIP = Clip("03_packages_conveyor.mp4", 5370836)
+CLIP = Clip("03_packages_conveyor.mp4", 5370836, "hd_1920_1080_30fps")
+SOURCE_PAGE = ("https://www.pexels.com/video/"
+               "unloading-packages-on-a-conveyor-belt-5370836/")
 DETECTOR = ("yoloe-11l-seg.pt", "yolo11n-cls.pt")
 
 NEEDS = Requirements(
-    clips=(CLIP,),
     weights=DETECTOR,
     hub_models=("depth-anything/DA3METRIC-LARGE", "depth-anything/DA3-LARGE"),
 )
 
-# `--count-only` runs the shared counter with no measurement at all, which is
-# what projects 01 and 02 do. It must not fetch the depth checkpoints: 2.9 GB for
-# models the run will never open.
-NEEDS_COUNT_ONLY = Requirements(clips=(CLIP,), weights=DETECTOR,
+# `--count-only` runs the shared counter with no measurement at all. It must not
+# fetch the depth checkpoints: 2.9 GB for models the run will never open.
+NEEDS_COUNT_ONLY = Requirements(weights=DETECTOR,
                                 notes=("--count-only: the depth checkpoints are "
                                        "not fetched and no size is reported",))
 
@@ -42,7 +47,7 @@ DA3_INSTALL = """\
   Depth Anything 3 is not installed, and it is the one thing this project cannot
   fetch for you. It has to go in WITHOUT its dependency list: upstream pins
   numpy<2 and pulls opencv-python, xformers and open3d, which between them would
-  downgrade numpy and OpenCV out from under the rest of this repository.
+  downgrade numpy and OpenCV out from under the rest of this project.
 
       pip install --pre "omegaconf>=2.4.0.dev0"
       pip install --no-deps addict einops plyfile trimesh
@@ -70,5 +75,9 @@ def depth_installed() -> bool:
 
 
 def fetch(video_dir: Path, weights_dir: Path, with_depth: bool = True) -> bool:
-    """Download whatever is missing. False if the project cannot run."""
-    return ensure(NEEDS if with_depth else NEEDS_COUNT_ONLY, video_dir, weights_dir)
+    """Download the weights, check the clip. False if the project cannot run."""
+    weights_ok = ensure(NEEDS if with_depth else NEEDS_COUNT_ONLY,
+                        video_dir, weights_dir)
+    print("\n  source clip (manual)")
+    clip_ok = require_clip(CLIP, video_dir, SOURCE_PAGE)
+    return weights_ok and clip_ok

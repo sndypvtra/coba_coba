@@ -40,12 +40,27 @@ python main.py --detect                 # also overlay live YOLOE segmentation
 python main.py --video other_fill.mp4   # new footage from the SAME station
 ```
 
-The clip is fetched on the first run into `input/`; the annotated video and
-`liquid_level_summary.json` land in `output/`. This is the **only project of the
-six that runs no neural network by default**, and by a wide margin the quickest.
-Nothing but the 5.9 MB clip is downloaded either — the detector arrives only when
-`--detect` asks for it, which is worth stating because it used to be fetched
-unconditionally: 71 MB of weights for a pipeline that never opened them.
+This is the **only project of the six that runs no neural network by default**,
+and by a wide margin the quickest — so by default it **downloads nothing at all**.
+The detector arrives only when `--detect` asks for it, which is worth stating
+because it used to be fetched unconditionally: 71 MB of weights for a pipeline
+that never opened them.
+
+**The source clip you fetch yourself.** Run `main.py` once and it prints the link,
+the exact rendition and a ready-made `curl`:
+
+```bash
+curl -L -o 'input/07_bottle_filling_line.mp4' \
+     'https://videos.pexels.com/video-files/8720278/8720278-hd_1920_1080_25fps.mp4'
+```
+
+Source page: [Pexels 8720278](https://www.pexels.com/video/empty-bottles-in-a-filling-machine-8720278/) ·
+rendition `hd_1920_1080_25fps` (1920×1080). **The rendition matters more here than
+anywhere else in the set**: this clip's default is 3840×2160, and all eleven
+constants in `calibration.py` are absolute pixel coordinates on the 1080p one.
+The file is checked when it arrives and refused if it is the wrong size.
+
+The annotated video and `liquid_level_summary.json` land in `output/`.
 
 <details>
 <summary>Python environment</summary>
@@ -59,10 +74,8 @@ pip install opencv-python==5.0.0.93 supervision==0.29.1 numpy
 `torch` and `ultralytics` are needed **only** for the optional `--detect`
 overlay. The measurement path imports neither.
 
-The clip is pinned to the 1080p 25 fps rendition of
-[Pexels 8720278](https://www.pexels.com/video/empty-bottles-in-a-filling-machine-8720278/)
-by name, not left to the generic download endpoint: its default rendition is
-3840×2160, and every pixel constant here was measured on the 1080p one.
+The clip is named by rendition rather than left to Pexels' generic download
+endpoint, which hands back the largest available: 3840×2160 for this one.
 
 </details>
 
@@ -135,13 +148,8 @@ bottles, false for a flask or a rectangular jerrycan.
 ## What breaks it
 
 This is **a calibrated station, not a general model**. How far it tolerates a
-moved camera is measured, not asserted —
-`factory_vision/tools/perturbation_test.py` re-renders the clip with the framing
-changed and runs the pipeline over it unchanged:
-
-```bash
-python -m factory_vision.tools.perturbation_test --sweep
-```
+moved camera is measured, not asserted: a sweep re-renders the clip with the
+framing changed and runs the pipeline over it unchanged.
 
 | Framing | Volume | Fill | Error |
 |---|---:|---:|---:|
@@ -222,23 +230,30 @@ mouth diameter read off the outer rim that produced an inverted funnel. Those
 notes are the reason the constants above are defensible rather than merely
 present.
 
-## Relationship to the rest of the collection
+## What is vendored here
 
 This project came out of a six-case monorepo and is the odd one out: the others
 count or track objects with a zero-shot detector, and this one measures a
-quantity with classical CV. It shares only two small helpers with them:
+quantity with classical CV. It borrows almost nothing, and what it does borrow is
+now in this folder, so it runs wherever you put it:
 
 ```
-factory_vision/
-├── assets.py     the downloader (progress bars, Pexels renditions)
-├── paths.py      where weights, clips and outputs go
-└── tools/perturbation_test.py    the framing sweep tabled above
+04_bottle_fill_volume/
+├── main.py, calibration.py, assets.py, report.py, panel.py
+├── roi.py, segmentation.py, profile.py, bore.py, level.py, pipeline.py
+├── factory_vision/
+│   ├── assets.py     the weight downloader, and the manual-clip check
+│   └── paths.py      where weights, input and output live
+└── input/  output/  docs/
 ```
 
-**If you move this project into a repository of its own, those need to come with
-it** at the same level as the project folder — `main.py` inserts its parent's
-parent on `sys.path`. Nothing else in `factory_vision/` is used here; in
-particular no detector, tracker or counting code is on the measurement path.
+No detector, tracker or counting code is on the measurement path — the only
+reason `factory_vision/assets.py` is here at all is `--detect`, which fetches
+YOLOE to overlay it.
+
+The camera-perturbation sweep tabled above was run with a script that lives in
+the monorepo this came from; the results are recorded here rather than
+regenerable from this folder alone.
 
 ## Credits
 

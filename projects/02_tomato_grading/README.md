@@ -35,9 +35,27 @@ The two figures are reported separately and only the first is the answer.
 python main.py
 ```
 
-That is the whole procedure. Everything missing is fetched on the first run with
-a progress bar — the clip into `input/`, the model weights into `weights/` — and
-the annotated video plus `summary.json` land in `output/`.
+Two kinds of dependency, handled two ways.
+
+**The model weights download themselves** on the first run, with a progress bar,
+into `weights/`.
+
+**The source clip you fetch yourself.** Run `main.py` once and it prints the
+link, the exact rendition and a ready-made `curl`:
+
+```bash
+curl -L -o 'input/02_tomatoes_conveyor.mp4' \
+     'https://videos.pexels.com/video-files/8675102/8675102-hd_1920_1080_30fps.mp4'
+```
+
+Source page: [Pexels 8675102](https://www.pexels.com/video/tomatoes-on-a-moving-conveyor-belt-8675102/) ·
+rendition `hd_1920_1080_30fps` (1920×1080).
+
+That step is deliberately yours. The tilted counting line and the y-ROI in
+`config.py` are pixel coordinates on that one rendition, so the file is checked
+when it arrives and **refused if its frame size is different**.
+
+The annotated video and `summary.json` then land in `output/`.
 
 <details>
 <summary>Python environment</summary>
@@ -53,10 +71,8 @@ pip install ultralytics==8.4.106 supervision==0.29.1 opencv-python==5.0.0.93 lap
 it pulls the MobileCLIP text encoder (~572 MB) and the `clip`/`ftfy`/`regex`
 packages by itself.
 
-Downloaded on first run: the clip
-([Pexels 8675102](https://www.pexels.com/video/tomatoes-on-a-moving-conveyor-belt-8675102/)),
-`yoloe-11l-seg.pt` (detector) and `yolo11n-cls.pt` (the tracker's
-re-identification backbone).
+Downloaded on first run: `yoloe-11l-seg.pt` (detector) and `yolo11n-cls.pt`
+(the tracker's re-identification backbone). The clip is not — see above.
 
 </details>
 
@@ -105,14 +121,9 @@ already tracked. Tuning is per-installation, and the only way to tell the two
 outcomes apart is to measure *where objects are first seen* rather than how many
 boxes appear.
 
-The sweep is re-runnable, from the repository root:
-
-```bash
-python -m factory_vision.tools.tune_thresholds --clips 02
-```
-
-It reads this project's own `config.py`, so what it sweeps is what the project
-runs.
+Those figures come from a threshold sweep that measures *where* objects are
+first acquired. It lives in the monorepo this project came from, so they are
+recorded here rather than regenerable from this folder alone.
 
 ## The near lane is deliberately excluded
 
@@ -136,7 +147,7 @@ per-clip contract in one dataclass.
 | `panel.py` | the dashboard — same shape as 01's, different words |
 | `report.py` | the console read-out; identical to 01's, so the two outputs compare line by line |
 | `baseline.py` | the last verified count, checked and printed on every run |
-| `input/` | source clip (fetched) |
+| `input/` | the source clip **you** put here |
 | `output/` | annotated video and `summary.json` |
 | `docs/` | the still used in this README |
 
@@ -151,35 +162,39 @@ per-clip contract in one dataclass.
 - **The calibration is per-installation.** The prompt transfers; the line, the
   travel vector, the ROI and the box-area limit are properties of this camera.
 
-## The shared engine
+## The engine, vendored
 
-The detector, tracker, counting rule and overlay renderer live in a package
-outside this folder:
+This project is self-contained: every module it imports is in this
+folder, so it runs wherever you put it.
 
 ```
-factory_vision/
-├── assets.py              downloader shared by every project
-├── paths.py               where weights, clips and outputs go
-├── tracking.py            TrackTrack config resolution
-├── trackers/*.yaml        the tracker gates, retuned for zero-shot score ranges
-├── tools/                 how the constants above were arrived at, including
-                           the threshold sweep quoted earlier
-└── counting/
-    ├── clips.py           ClipConfig — the per-clip contract
-    ├── geometry.py        the counting line, the ROI, size gating
-    ├── pipeline.py        detect → track → count → render
-    ├── overlay.py         how to draw a panel (not what goes on one)
-    └── measuring.py       the optional measurement protocol, unused here
+<project folder>/
+├── main.py, config.py, assets.py, panel.py, report.py, baseline.py
+├── factory_vision/            the engine, vendored so this folder stands alone
+│   ├── assets.py              weight downloads, and the manual-clip check
+│   ├── paths.py               where weights, input and output live
+│   ├── tracking.py            TrackTrack config resolution
+│   ├── trackers/*.yaml        gates retuned for zero-shot score ranges
+│   └── counting/
+│       ├── clips.py           ClipConfig — the per-clip contract
+│       ├── geometry.py        the counting line, the ROI, size gating
+│       ├── pipeline.py        detect → track → count → render
+│       ├── overlay.py         how to draw a panel (not what goes on one)
+│       └── measuring.py       the measurement protocol, unused here
+└── input/  output/  docs/
 ```
 
-**If you move this project into a repository of its own, `factory_vision/` has
-to come with it**, at the same level as the project folder — `main.py` inserts
-its parent's parent on `sys.path`. It is ~1,650 lines and none of it is
-fruit-specific.
+`factory_vision/` is the counting engine, and it came from a monorepo where
+one copy served this project, the oranges line and the parcel belt. Those
+three differ only in `config.py` and `panel.py`, which is the whole zero-shot
+claim — but a shared package cannot travel into three separate repositories,
+so each carries its own copy. The trade is real and worth naming: a fix to the
+tracker now has to be applied in each place rather than once.
 
 `measuring.py` is a Protocol the pipeline calls only when a project hands it a
-measurement backend. This one does not, so "the tomato line does not measure" is
-structural — no depth model, no checkpoints — rather than a flag set to `False`.
+measurement backend. This one does not, so "this line does not measure" is
+structural — no depth model, no checkpoints — rather than a flag set to
+`False`.
 
 ## Credits
 

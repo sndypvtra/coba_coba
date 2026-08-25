@@ -120,8 +120,9 @@ cd projects/02_tomato_grading      && python main.py
 cd projects/03_parcel_dimensioning && python main.py
 ```
 
-Three folders, one shared engine, and the only file that differs between the
-first two is `config.py`. Each has its own README with its own numbers.
+Three folders, each carrying its own copy of the same engine, and the only files
+that differ between the first two are `config.py` and `panel.py`. Each has its own
+README with its own numbers.
 
 <details>
 <summary><b>The prompt list defines what exists</b> — the most useful finding here</summary>
@@ -375,10 +376,13 @@ pip install -r requirements.txt
 cd projects/01_citrus_counting && python main.py
 ```
 
-That is the whole setup. Every project fetches what it is missing on first run —
-source clip, model weights, Hugging Face checkpoints — each with a progress bar,
-into `input/` and the shared `weights/`. Nothing to download by hand and no
-order to remember.
+**Model weights** arrive on their own, with a progress bar. **The source clip you
+place yourself**: the first run prints the link, the exact rendition and a
+ready-made `curl` for it, then checks the file once it is in `input/` and refuses
+a different frame size rather than measuring it with the wrong constants.
+
+Cases 1-4 work this way. Case 5's clips are committed; case 6 fetches its scene
+with `fetch_scene.py`.
 
 ```bash
 cd projects/02_tomato_grading    && python main.py
@@ -414,16 +418,27 @@ its own. The stills in each project's `docs/` and its `summary.json` **are**
 committed, so every number quoted in a README can be checked without running
 anything.
 
-Source clips are **fetched, not committed** — by Pexels id for cases 1–4, and
-from HuggingFace for case 6. Case 5 is the single exception: the CAFE dataset
-ships as one ~150 GB Google Drive archive with no API, so its two 30-second cuts
-(47 MB) live in the repository, because otherwise the one thing this layout
-promises — clone it, run `main.py` — would not be true for that project.
+Source clips are **not committed, and for cases 1–4 not downloaded either**.
+Each of those four prints the link, the exact rendition and a ready-made `curl`
+on its first run, and checks the file when you put it in `input/`. That is
+deliberate: the weights are interchangeable, but the clip is the thing being
+measured, and every pixel constant in those projects was set on one specific
+rendition of it — so the choice is made by a person rather than by a redirect
+that hands back whatever is largest.
+
+Case 6 fetches its scene from HuggingFace. Case 5 is the exception in the other
+direction: the CAFE dataset ships as one ~150 GB Google Drive archive with no
+API, so its two 30-second cuts (47 MB) live in the repository.
 
 ## Layout
 
-Six projects, six folders. Each one is self-contained: its own `main.py`, its
-own `input/` and `output/`, its own README with its own measured results.
+Six projects, six folders. **Projects 01-04 are fully self-contained**: each
+carries its own copy of the engine in `factory_vision/`, so the folder can be
+lifted into a repository of its own and run there unchanged. Projects 05 and 06
+still import the shared `factory_vision/` at the root.
+
+Each has its own `main.py`, its own `input/` and `output/`, and its own README
+with its own measured results.
 
 ```
 projects/
@@ -446,6 +461,12 @@ projects/
       input/  output/       this project's own video in, results out
       docs/                 the stills its README shows
 
+    projects 01-04 also carry
+      factory_vision/       a vendored copy of exactly the shared modules that
+                            project needs, so the folder stands alone. The cost
+                            is real: a tracker fix now has to be applied in each
+                            copy rather than once.
+
     projects 01, 02 and 05 add
       baseline.py           the last verified figures, checked on every run.
                             03 and 04 do not have one yet, which is backwards:
@@ -458,7 +479,9 @@ projects/
       04: roi -> segmentation -> profile -> bore -> level -> pipeline -> panel
       05: zones -> detection -> identity -> roles -> render -> summary
 
-factory_vision/             the shared half, and only what is genuinely shared
+factory_vision/             the original shared half - still imported by
+                            projects 05 and 06, and the source the copies in
+                            01-04 were taken from
   assets.py                 first-run downloads with a progress bar
   paths.py                  per-project input/output, shared weights
   detect.py                 detection filtering used by three projects
