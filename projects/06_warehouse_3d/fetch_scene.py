@@ -34,7 +34,9 @@ from pathlib import Path
 
 import cv2
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+# Everything this project needs is in this folder, including its copy of
+# `factory_vision/`. Nothing above it is on the path, which is what lets the
+# folder be lifted into a repository of its own and still run.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from factory_vision.paths import project_dirs  # noqa: E402
