@@ -157,22 +157,30 @@ def require_clip(clip: Clip, video_dir: Path, page_url: str = "") -> bool:
     """
     target = video_dir / clip.name
     size = _expected_size(clip.rendition)
-    if not target.exists():
-        direct = f"{PEXELS_CDN}/{clip.pexels_id}/{clip.pexels_id}-{clip.rendition}.mp4"
-        print("\n  The source clip is not here, and it is not downloaded for you.")
+    direct = f"{PEXELS_CDN}/{clip.pexels_id}/{clip.pexels_id}-{clip.rendition}.mp4"
+
+    def how_to_get_it() -> None:
         print(f"    put it at : {target}")
         print(f"    rendition : {clip.rendition}"
               + (f"  ({size[0]}x{size[1]})" if size else ""))
         if page_url:
             print(f"    source    : {page_url}")
         print(f"    direct    : {direct}")
-        print("\n    curl -L -o "
-              f"'{target}' \\\n         '{direct}'")
+        print(f"\n    curl -L -o '{target}' \\\n         '{direct}'")
+
+    if not target.exists():
+        print("\n  The source clip is not here, and it is not downloaded for you.")
+        how_to_get_it()
         print("\n  The rendition matters: every pixel constant in this project was")
         print("  measured on that one. A different resolution is checked for on")
         print("  arrival and refused rather than quietly measured.")
         return False
     if not _verify_rendition(target, clip):
+        # The likeliest way to land here is following the source page by hand and
+        # taking the button Pexels offers, which is the largest rendition it has.
+        # Saying which file is wanted is more use than saying this one is wrong.
+        print("\n  Replace it with:")
+        how_to_get_it()
         return False
     print(f"  {clip.name:<34} present")
     return True
