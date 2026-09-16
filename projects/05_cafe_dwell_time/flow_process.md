@@ -35,7 +35,7 @@ and an emoji fallback, so whichever set the renderer has will resolve.
 | 1 | Camera A | `CAM-01 · Room 1`<br>2 MP, 25 fps, H.264 | `cctv` | `fa-video` | 📹 | Edge / Field |
 | 2 | Camera B | `CAM-02 · Room 5`<br>2 MP, 25 fps, H.264 | `cctv` | `fa-video` | 📹 | Edge / Field |
 | 3 | PoE switch | `PoE Switch`<br>8-port, 1 GbE, 802.3af | `network` | `fa-network-wired` | 🔀 | Edge / Field |
-| 4 | Edge inference box | `Edge AI Box`<br>Jetson Orin NX 16 GB · TensorRT | `cpu` | `fa-microchip` | 🧠 | Edge / Compute |
+| 4 | Edge inference box | `AI Inference Server`<br>GPU · TensorRT | `cpu` | `fa-microchip` | 🧠 | Edge / Compute |
 | 5 | Local store & forward | `Local Buffer`<br>SQLite queue, 7-day retention | `hard-drive` | `fa-hard-drive` | 💾 | Edge / Compute |
 | 6 | Router / firewall | `Router + Firewall`<br>outbound TLS only | `shield` | `fa-shield-halved` | 🛡️ | Network |
 | 7 | Internet | `Internet`<br>site uplink, VPN tunnel | `cloud` | `fa-cloud` | 🌐 | Network |
@@ -176,7 +176,7 @@ yoloe-11l-seg.pt ──▶ set_classes(["person"]) ──▶ ONNX (opset 17)
 |---|---|---|
 | CPU baseline, 4 cores, PyTorch, 1280 px | **1,215 ms/frame** | **measured** — from `cafe_scene5_30s__dwell.json` |
 | Required per camera at 5 fps | 200 ms/frame | requirement |
-| TensorRT FP16 on Orin NX, 1280 px | 45–70 ms/frame | **budget — benchmark before quoting** |
+| TensorRT FP16 on an embedded GPU, 1280 px | not measured | **benchmark on the board you actually buy** |
 | Cameras per box at 5 fps | `1000 ÷ ms_per_frame ÷ 5` | arithmetic, fill in after benchmarking |
 
 The honest framing for the slide: **the CPU prototype runs at 0.8 fps and the
@@ -309,7 +309,7 @@ type, bottom of the slide:
 |---|---|---|
 | IP camera | 2 MP, H.264, PoE, fixed lens, ceiling mount | 2 |
 | PoE switch | 8-port 1 GbE, 802.3af, 60 W budget | 1 |
-| Edge AI box | Jetson Orin NX 16 GB, 128 GB NVMe, fanless | 1 |
+| AI inference server | embedded GPU module or SFF x86 + GPU, fanless, sized to 2 cameras | 1 |
 | Cabling | Cat6 UTP, per run | 2 |
 | Router / firewall | outbound TLS only, VPN capable | 1 (existing) |
 | Database | PostgreSQL 16 + TimescaleDB | 1 instance |
