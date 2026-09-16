@@ -37,3 +37,11 @@ projects/*/output/.*_resolved.yaml
 # 47 MB is the price of the project being runnable.
 !projects/05_cafe_dwell_time/input/cafe_scene1_30s.mp4
 !projects/05_cafe_dwell_time/input/cafe_scene5_30s.mp4
+
+# The seeded design canvas: 2.5 MB, almost all of it an editor bundled into the
+# page by the design tool rather than anything written here. The source is
+# `design/Main.dc.html` and `design/canvas.json`, both committed and both
+# readable; this is the build output, and the live copy is the published
+# artifact. Regenerate it by re-seeding from those two.
+projects/*/design/*.html
+!projects/*/design/*.dc.html

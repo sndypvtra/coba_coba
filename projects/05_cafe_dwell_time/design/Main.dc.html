@@ -1,0 +1,252 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    body { margin: 0; }
+    a { color: #b45309; } a:hover { color: #92400e; }
+    .sans { font-family: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif; }
+    .mono { font-family: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace; }
+    .card {
+      position: absolute; background: #ffffff; border: 1px solid #dcdcd5;
+      border-radius: 12px; box-shadow: 0 1px 2px rgba(20,22,26,.05);
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 7px; text-align: center;
+    }
+    .nm { font-size: 15px; font-weight: 600; color: #14161a; letter-spacing: -.005em; }
+    .sb { font-size: 12px; color: #6b7077; line-height: 1.35; }
+    .band { position: absolute; background: #ecece6; border-radius: 14px; }
+    .tier { position: absolute; font-size: 12px; font-weight: 600;
+            letter-spacing: .13em; color: #8a8f96; }
+    .llab { position: absolute; font-size: 11.5px; color: #6b7077;
+            letter-spacing: .02em; text-align: center; }
+  </style>
+</helmet>
+
+<div class="sans" style="position: relative; width: 1920px; height: 1080px; background: #f7f7f4; color: #14161a; overflow: hidden;">
+
+  <!-- ============ HEADER ============ -->
+  <div class="mono" style="position: absolute; left: 72px; top: 50px; font-size: 13px; font-weight: 500; letter-spacing: .15em; color: {{accent}};">CASE 05 &middot; FIELD ARCHITECTURE</div>
+  <div style="position: absolute; left: 72px; top: 74px; font-size: 44px; font-weight: 600; letter-spacing: -.022em;">Cafe Occupancy &amp; Dwell Time</div>
+  <div style="position: absolute; left: 72px; top: 130px; width: 1140px; font-size: 18px; line-height: 1.5; color: #4a5058; text-wrap: pretty;">Two ceiling cameras over PoE, an edge box running the detector under TensorRT at 5&nbsp;fps, and PostgreSQL as the sink &mdash; <strong style="font-weight: 600; color: #14161a;">video never leaves the building; only numbers do.</strong></div>
+
+  <div style="position: absolute; right: 72px; top: 72px; display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
+    <div class="mono" style="font-size: 11.5px; letter-spacing: .1em; color: #8a8f96;">PROVENANCE</div>
+    <div class="mono" style="font-size: 13px; color: #4a5058;">cafe_scene5_30s__dwell.json</div>
+    <div style="font-size: 12px; color: #6b7077;">every figure below measured on a 30&nbsp;s validated run</div>
+  </div>
+
+  <div style="position: absolute; left: 72px; top: 184px; width: 1776px; height: 1px; background: #dcdcd5;"></div>
+
+  <!-- ============ TIER BANDS ============ -->
+  <div class="band" style="left: 72px;  top: 226px; width: 380px; height: 378px;"></div>
+  <div class="band" style="left: 470px; top: 226px; width: 290px; height: 378px; background: #f6ecdd;"></div>
+  <div class="band" style="left: 840px; top: 226px; width: 300px; height: 378px;"></div>
+  <div class="band" style="left: 1158px; top: 226px; width: 690px; height: 378px;"></div>
+
+  <div class="tier mono" style="left: 72px;  top: 204px;">FIELD</div>
+  <div class="tier mono" style="left: 470px; top: 204px; color: {{accent}};">EDGE COMPUTE</div>
+  <div class="tier mono" style="left: 840px; top: 204px;">NETWORK</div>
+  <div class="tier mono" style="left: 1158px; top: 204px;">CORE &middot; BACKEND</div>
+
+  <!-- ============ CONNECTOR LINES ============ -->
+  <svg width="1920" height="1080" style="position: absolute; left: 0; top: 0; pointer-events: none;" aria-hidden="true">
+    <defs>
+      <marker id="ar" markerWidth="9" markerHeight="9" refX="7.5" refY="3.2" orient="auto">
+        <path d="M0 0 L7 3.2 L0 6.4 Z" fill="#4a6fa5"></path>
+      </marker>
+    </defs>
+    <!-- LAN / PoE : plain straight lines, no arrowheads -->
+    <line x1="242" y1="322" x2="282" y2="362" stroke="#8a8f96" stroke-width="1.6"></line>
+    <line x1="242" y1="448" x2="282" y2="408" stroke="#8a8f96" stroke-width="1.6"></line>
+    <line x1="432" y1="385" x2="492" y2="385" stroke="#8a8f96" stroke-width="1.6"></line>
+    <line x1="738" y1="385" x2="862" y2="385" stroke="#8a8f96" stroke-width="1.6"></line>
+    <line x1="982" y1="385" x2="1000" y2="385" stroke="#8a8f96" stroke-width="1.6"></line>
+    <!-- logical data flow : arrowheads -->
+    <line x1="1120" y1="385" x2="1236" y2="385" stroke="#4a6fa5" stroke-width="1.8" marker-end="url(#ar)"></line>
+    <line x1="1363" y1="385" x2="1406" y2="385" stroke="#4a6fa5" stroke-width="1.8" marker-end="url(#ar)"></line>
+    <line x1="1593" y1="385" x2="1636" y2="385" stroke="#4a6fa5" stroke-width="1.8" marker-end="url(#ar)"></line>
+    <!-- site boundary -->
+    <line x1="800" y1="214" x2="800" y2="616" stroke="#b91c1c" stroke-width="1.6" stroke-dasharray="7 6"></line>
+  </svg>
+
+  <!-- line labels -->
+  <div class="llab mono" style="left: 196px; top: 356px; width: 130px; transform: rotate(-42deg);">LAN &middot; PoE</div>
+  <div class="llab mono" style="left: 196px; top: 414px; width: 130px; transform: rotate(42deg);">LAN &middot; PoE</div>
+  <div class="llab mono" style="left: 402px; top: 358px; width: 120px;">RTSP &middot; 1 GbE</div>
+  <div class="llab mono" style="left: 740px; top: 358px; width: 120px;">HTTPS</div>
+  <div class="llab mono" style="left: 1128px; top: 358px; width: 100px;">~2 KB / event</div>
+  <div class="llab mono" style="left: 1350px; top: 358px; width: 70px;">INSERT</div>
+  <div class="llab mono" style="left: 1578px; top: 358px; width: 70px;">SQL</div>
+
+  <!-- ============ FIELD ============ -->
+  <div class="card" style="left: 92px; top: 268px; width: 150px; height: 108px;">
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12"></path><path d="M12 3v3.4"></path><rect x="2.5" y="7" width="12" height="8" rx="2"></rect><path d="M14.5 9.3 20.5 7v10l-6-2.3Z"></path><circle cx="7" cy="11" r="1.6"></circle><path d="M8 15v2.5"></path><path d="M5 17.5h6"></path></svg>
+    <div class="nm">CAM-01</div>
+    <div class="sb">Room 1 &middot; 2 MP<br>25 fps &middot; H.264</div>
+  </div>
+  <div class="card" style="left: 92px; top: 394px; width: 150px; height: 108px;">
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12"></path><path d="M12 3v3.4"></path><rect x="2.5" y="7" width="12" height="8" rx="2"></rect><path d="M14.5 9.3 20.5 7v10l-6-2.3Z"></path><circle cx="7" cy="11" r="1.6"></circle><path d="M8 15v2.5"></path><path d="M5 17.5h6"></path></svg>
+    <div class="nm">CAM-02</div>
+    <div class="sb">Room 5 &middot; 2 MP<br>25 fps &middot; H.264</div>
+  </div>
+  <div class="card" style="left: 282px; top: 331px; width: 150px; height: 108px;">
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="10" rx="2"></rect><path d="M5.5 13.6h2M9.5 13.6h2M13.5 13.6h2M17.5 13.6h2"></path><path d="M6 10.4h12"></path></svg>
+    <div class="nm">PoE Switch</div>
+    <div class="sb">8-port 1 GbE<br>802.3af</div>
+  </div>
+
+  <!-- ============ EDGE COMPUTE ============ -->
+  <div class="card" style="left: 492px; top: 309px; width: 246px; height: 150px; border: 1.5px solid {{accent}}; background: #fffdfa; gap: 9px;">
+    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="{{accent}}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6" rx="1"></rect><path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2"></path></svg>
+    <div class="nm" style="font-size: 17px;">Edge AI Box</div>
+    <div class="sb">Jetson Orin NX 16 GB &middot; fanless</div>
+    <div class="mono" style="font-size: 12px; font-weight: 600; color: {{accent}}; background: #f6ecdd; padding: 3px 10px; border-radius: 5px;">TensorRT FP16</div>
+  </div>
+  <div class="card" style="left: 492px; top: 475px; width: 246px; height: 64px; flex-direction: row; gap: 11px;">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"></rect><path d="M2 12h20"></path><circle cx="6.5" cy="15" r="1"></circle></svg>
+    <div style="text-align: left;">
+      <div class="nm" style="font-size: 13.5px;">Local Buffer</div>
+      <div class="sb">store &amp; forward &middot; 7 days</div>
+    </div>
+  </div>
+
+  <!-- ============ SITE BOUNDARY ============ -->
+  <div class="mono" style="position: absolute; left: 706px; top: 192px; width: 188px; text-align: center; font-size: 11.5px; font-weight: 600; letter-spacing: .12em; color: #b91c1c;">SITE BOUNDARY</div>
+  <div style="position: absolute; left: 734px; top: 486px; width: 132px; height: 56px; background: #ffffff; border: 1.5px solid #b91c1c; border-radius: 9px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10.7 6H14a2 2 0 0 1 2 2v2.3l1 1L22 8v8"></path><path d="M16 16a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2"></path><path d="M2 2l20 20"></path></svg>
+    <div class="mono" style="font-size: 10.5px; font-weight: 600; color: #b91c1c; letter-spacing: .04em;">NO FRAMES</div>
+  </div>
+
+  <!-- ============ NETWORK ============ -->
+  <div class="card" style="left: 862px; top: 331px; width: 120px; height: 108px;">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4a6fa5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 4.9-3.4 7.9-8 9-4.6-1.1-8-4.1-8-9V6Z"></path><path d="M9 12l2 2 4-4"></path></svg>
+    <div class="nm">Firewall</div>
+    <div class="sb">outbound<br>TLS 1.3 only</div>
+  </div>
+  <div class="card" style="left: 1000px; top: 331px; width: 120px; height: 108px;">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4a6fa5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19a4.5 4.5 0 0 0 .5-8.97A6 6 0 0 0 6.5 9.5 4 4 0 0 0 7 19Z"></path></svg>
+    <div class="nm">Internet</div>
+    <div class="sb">site uplink<br>VPN tunnel</div>
+  </div>
+
+  <!-- ============ CORE ============ -->
+  <div class="card" style="left: 1243px; top: 331px; width: 120px; height: 108px;">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4a5058" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3.5" width="19" height="7" rx="2"></rect><rect x="2.5" y="13.5" width="19" height="7" rx="2"></rect><path d="M6.5 7h.01M6.5 17h.01"></path></svg>
+    <div class="nm">App Server</div>
+    <div class="sb">ingest API<br>auth</div>
+  </div>
+  <div class="card" style="left: 1413px; top: 307px; width: 180px; height: 154px; border: 1.5px solid #2b5f8a; background: #fafcfe; gap: 8px;">
+    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#2b5f8a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="8.5" ry="3"></ellipse><path d="M3.5 5v6c0 1.66 3.8 3 8.5 3s8.5-1.34 8.5-3V5"></path><path d="M3.5 11v6c0 1.66 3.8 3 8.5 3s8.5-1.34 8.5-3v-6"></path></svg>
+    <div class="nm" style="font-size: 17px;">PostgreSQL 16</div>
+    <div class="sb">+ TimescaleDB</div>
+    <div class="mono" style="font-size: 11.5px; color: #2b5f8a; background: #eaf2f9; padding: 3px 9px; border-radius: 5px;">4 tables</div>
+  </div>
+  <div class="card" style="left: 1643px; top: 331px; width: 120px; height: 108px;">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4a5058" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"></rect><rect x="14" y="3" width="7" height="5" rx="1.5"></rect><rect x="14" y="12" width="7" height="9" rx="1.5"></rect><rect x="3" y="16" width="7" height="5" rx="1.5"></rect></svg>
+    <div class="nm">Dashboard</div>
+    <div class="sb">Grafana / BI</div>
+  </div>
+
+  <!-- ============ BOUNDARY STATEMENT ============ -->
+  <div style="position: absolute; left: 72px; top: 622px; display: flex; align-items: center; gap: 12px;">
+    <div style="width: 3px; height: 34px; background: #b91c1c; border-radius: 2px;"></div>
+    <div style="font-size: 15px; color: #4a5058; line-height: 1.45;"><strong style="font-weight: 600; color: #14161a;">No frames cross the site boundary.</strong> Video is decoded, inferred and discarded in RAM at the edge. What leaves is <strong style="font-weight: 600; color: #14161a;">~0.5 MB per camera per day</strong> of rows &mdash; the same footage as video would be ~15 GB/day.</div>
+  </div>
+
+  <!-- ============ PIPELINE STRIP ============ -->
+  <div class="mono" style="position: absolute; left: 72px; top: 690px; font-size: 12px; font-weight: 600; letter-spacing: .13em; color: #8a8f96;">INSIDE THE EDGE AI BOX &mdash; SIX STAGES, 25 &rarr; 5 FPS</div>
+  <div style="position: absolute; left: 72px; top: 716px; width: 1776px; display: flex; gap: 12px;">
+    <sc-for list="{{stages}}" as="s" hint-placeholder-count="6">
+      <div style="flex: 1 1 0; background: {{s.bg}}; border: 1px solid {{s.bd}}; border-radius: 10px; padding: 14px 16px 15px; display: flex; flex-direction: column; gap: 6px;">
+        <div class="mono" style="font-size: 15px; font-weight: 600; color: {{s.ink}}; letter-spacing: .02em;">{{s.name}}</div>
+        <div style="font-size: 12.5px; color: #6b7077; line-height: 1.4; min-height: 34px;">{{s.what}}</div>
+        <div class="mono" style="font-size: 11px; font-weight: 600; color: {{s.chipInk}}; background: {{s.chipBg}}; align-self: flex-start; padding: 3px 8px; border-radius: 4px; letter-spacing: .04em;">{{s.on}}</div>
+      </div>
+    </sc-for>
+  </div>
+
+  <!-- ============ BOTTOM : TENSORRT ============ -->
+  <div style="position: absolute; left: 72px; top: 866px; width: 876px;">
+    <div class="mono" style="font-size: 12px; font-weight: 600; letter-spacing: .13em; color: {{accent}}; margin-bottom: 4px;">TENSORRT &mdash; CLOSING A 6&times; GAP</div>
+    <div style="height: 2px; background: {{accent}}; width: 46px; margin-bottom: 11px;"></div>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 26px;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 10px; border-bottom: 1px solid #e4e4dd; padding-bottom: 7px;">
+        <span style="font-size: 13px; color: #4a5058;">CPU prototype, 1280 px</span>
+        <span class="mono" style="font-size: 13.5px; font-weight: 600; white-space: nowrap;">1,215 ms <span style="color: #6b7077; font-weight: 400;">measured</span></span>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 10px; border-bottom: 1px solid #e4e4dd; padding-bottom: 7px;">
+        <span style="font-size: 13px; color: #4a5058;">Required per camera @ 5 fps</span>
+        <span class="mono" style="font-size: 13.5px; font-weight: 600; white-space: nowrap;">200 ms</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 10px; border-bottom: 1px solid #e4e4dd; padding-bottom: 7px;">
+        <span style="font-size: 13px; color: #4a5058;">TensorRT FP16, Orin NX</span>
+        <span class="mono" style="font-size: 13.5px; font-weight: 600; color: {{accent}}; white-space: nowrap;">45&ndash;70 ms <span style="color: #a08a6a; font-weight: 400;">budget</span></span>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 10px; border-bottom: 1px solid #e4e4dd; padding-bottom: 7px;">
+        <span style="font-size: 13px; color: #4a5058;">Cameras per box</span>
+        <span class="mono" style="font-size: 13.5px; font-weight: 600; white-space: nowrap;">1000 &divide; ms &divide; 5</span>
+      </div>
+    </div>
+    <div style="margin-top: 13px; font-size: 13px; color: #4a5058; line-height: 1.5; text-wrap: pretty;"><strong style="font-weight: 600; color: #14161a;">The text encoder never ships to the edge.</strong> The prompt <span class="mono" style="font-size: 12.5px; background: #ecece6; padding: 1px 6px; border-radius: 4px;">"person"</span> is embedded once at build time by MobileCLIP-BLT and baked into the detector head, so the box carries a single-class engine, not a vision-language model &mdash; and changing the prompt means re-exporting it.</div>
+  </div>
+
+  <!-- ============ BOTTOM : POSTGRES ============ -->
+  <div style="position: absolute; left: 996px; top: 866px; width: 852px;">
+    <div class="mono" style="font-size: 12px; font-weight: 600; letter-spacing: .13em; color: #2b5f8a; margin-bottom: 4px;">WHAT LANDS IN POSTGRESQL &mdash; ROOM 5, 30 s</div>
+    <div style="height: 2px; background: #2b5f8a; width: 46px; margin-bottom: 11px;"></div>
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px;">
+      <sc-for list="{{tables}}" as="t" hint-placeholder-count="4">
+        <div style="background: #ffffff; border: 1px solid #dcdcd5; border-radius: 9px; padding: 11px 12px 12px; display: flex; flex-direction: column; gap: 5px;">
+          <div class="mono" style="font-size: 12px; font-weight: 600; color: #2b5f8a;">{{t.name}}</div>
+          <div style="font-size: 20px; font-weight: 600; letter-spacing: -.015em;">{{t.big}}</div>
+          <div style="font-size: 11.5px; color: #6b7077; line-height: 1.35;">{{t.sub}}</div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="margin-top: 13px; font-size: 13px; color: #4a5058; line-height: 1.5; text-wrap: pretty;"><strong style="font-weight: 600; color: #14161a;">Observed and interpolated are separate columns.</strong> <span class="mono" style="font-size: 12.5px;">frames_detected</span> and <span class="mono" style="font-size: 12.5px;">frames_held</span> are stored apart, so a service figure that is partly held through occlusion can never read as one that was fully observed &mdash; Room 5 is 88 detected / 6 held; Room 1 is 38 / 33.</div>
+  </div>
+
+  <!-- ============ FOOTER ============ -->
+  <div style="position: absolute; left: 72px; top: 1024px; width: 1776px; height: 1px; background: #dcdcd5;"></div>
+  <div style="position: absolute; left: 72px; top: 1040px; width: 1776px; display: flex; justify-content: space-between; align-items: baseline; gap: 30px;">
+    <div style="font-size: 12.5px; color: #6b7077; line-height: 1.4;"><strong style="font-weight: 600; color: #4a5058;">Read the limits:</strong> occupancy is a detection result and dwell is a tracking result &mdash; a broken identity becomes two visitors who each stayed half as long, so every visit carries a <span class="mono" style="font-size: 12px;">continuity</span> score. No faces, no re-identification across rooms or sessions.</div>
+    <div class="mono" style="font-size: 12px; color: #8a8f96; white-space: nowrap;">YOLOE-11L-seg &middot; conf 0.25 &middot; 1280 px &middot; TrackTrack + ReID + GMC</div>
+  </div>
+
+</div>
+</x-dc>
+<script data-dc-script data-props='{"accent":{"editor":"color","default":"#b45309","options":["#b45309","#2b5f8a","#3f6212","#6d28d9"],"section":"Theme"}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? '#b45309';
+    const plain = { bg: '#ffffff', bd: '#dcdcd5', ink: '#14161a', chipBg: '#ecece6', chipInk: '#6b7077' };
+    const hot   = { bg: '#fffdfa', bd: accent,    ink: accent,   chipBg: '#f6ecdd', chipInk: accent };
+    return {
+      accent,
+      stages: [
+        { ...plain, name: 'DECODE',   what: 'H.264 to frames, zero-copy to GPU', on: 'NVDEC' },
+        { ...plain, name: 'DECIMATE', what: 'keep every 5th frame, 25 to 5 fps', on: 'CPU' },
+        { ...hot,   name: 'DETECT',   what: 'YOLOE-11L-seg, prompt "person", conf 0.25', on: 'GPU / TENSORRT' },
+        { ...plain, name: 'TRACK',    what: 'TrackTrack (CVPR 2025) + ReID + GMC', on: 'CPU' },
+        { ...plain, name: 'IDENTITY', what: 'split, merge, classify, confine, hold', on: 'CPU' },
+        { ...plain, name: 'EVENTS',   what: 'occupancy, visits, service sessions', on: 'CPU' },
+      ],
+      tables: [
+        { name: 'occupancy_sample', big: '150 rows', sub: 'mean 8.96, peak 10 people' },
+        { name: 'visit',            big: '14 rows',  sub: 'mean dwell 17.88 s, max 30.03 s' },
+        { name: 'service_session',  big: '18.82 s',  sub: '88 detected / 6 held, zone 0.94' },
+        { name: 'write volume',     big: '0.5 MB',   sub: 'per camera per day' },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>
