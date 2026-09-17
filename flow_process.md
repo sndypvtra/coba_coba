@@ -10,6 +10,23 @@ Nothing here is tied to one installation. The cafe occupancy case is named once,
 at the end, as a worked example of the workload — not as the source of the
 numbers.
 
+## The drawn version
+
+This brief has been drawn. `architecture.drawio` at the repository root is the
+editable file, and `docs/architecture.png` is a flat render of it.
+
+- **Open it in draw.io** —
+  [app.diagrams.net](https://app.diagrams.net/#Uhttps%3A%2F%2Fraw.githubusercontent.com%2Fsndypvtra%2Fcoba_coba%2Fmain%2Farchitecture.drawio)
+  loads it straight from GitHub. Every node is a real shape, so move, relabel and
+  recolour freely; File → Save As keeps your copy.
+- **Icons** are open-source sets — Material Design Icons, Google Material
+  Symbols and IBM Carbon, all Apache-2.0 — fetched from `api.iconify.design`,
+  plus the PostgreSQL, Grafana and NVIDIA marks. They are base64-embedded in the
+  file rather than hot-linked, which is the answer to the warning in section 3:
+  the diagram renders with no outbound network at all.
+- **Rebuilding it** is `python tools/build_architecture_diagram.py`. That
+  overwrites the `.drawio`, so edit in one place or the other, not both.
+
 ---
 
 ## 1. The slide in one sentence

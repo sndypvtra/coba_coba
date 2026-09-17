@@ -38,6 +38,11 @@ projects/*/output/.*_resolved.yaml
 !projects/05_cafe_dwell_time/input/cafe_scene1_30s.mp4
 !projects/05_cafe_dwell_time/input/cafe_scene5_30s.mp4
 
+# Icons pulled from api.iconify.design by tools/build_architecture_diagram.py.
+# They are base64-embedded into architecture.drawio, so the diagram needs
+# nothing at draw time; this is only a fetch cache for re-running the builder.
+tools/iconcache/
+
 # The seeded design canvas: 2.5 MB, almost all of it an editor bundled into the
 # page by the design tool rather than anything written here. The source is
 # `design/Main.dc.html` and `design/canvas.json`, both committed and both
