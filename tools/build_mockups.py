@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -66,7 +67,16 @@ def render_svg(html_path: Path, svg_path: Path) -> None:
     with pymupdf.open(pdf_path) as doc:
         if len(doc) != 1:
             sys.exit(f"{html_path.name} printed to {len(doc)} pages, expected 1")
-        svg_path.write_text(doc[0].get_svg_image(text_as_path=True), encoding="utf-8")
+        svg = doc[0].get_svg_image(text_as_path=True)
+    # Chromium rounds the 1600x900 px sheet to 1200 x 675.12 pt; trim the stray 0.12 pt
+    # so the SVG is exactly 16:9 and fills a slide with no sliver.
+    w, h = 1200, 675
+
+    def sized(m: re.Match) -> str:
+        tag = re.sub(r'\bheight="[\d.]+"', f'height="{h}"', m.group(0))
+        return re.sub(r'\bviewBox="[^"]+"', f'viewBox="0 0 {w} {h}"', tag)
+
+    svg_path.write_text(re.sub(r"<svg\b[^>]*>", sized, svg, count=1), encoding="utf-8")
 
 
 def main() -> None:
