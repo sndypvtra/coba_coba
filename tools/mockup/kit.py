@@ -218,7 +218,7 @@ def _nav(groups, active: str) -> str:
     return '<div class="nav">' + "".join(out) + "</div>"
 
 
-BRAND = "Tilik"
+BRAND = "Outlytics"
 
 
 def logo(size: int = 18) -> str:
@@ -256,7 +256,7 @@ def sidebar_platform(active: str) -> str:
     ]
     return f"""<aside class="side dark">
   <div class="brand"><span class="logo">{logo()}</span>{BRAND}</div>
-  <div class="outlet"><span class="envtag">INTERNAL</span><div class="grow"><div class="s" style="color:#c3c2b7">Khusus tim {BRAND}</div></div></div>
+  <div class="outlet"><span class="envtag">INTERNAL</span><div class="grow"><div class="s" style="color:#c3c2b7">Tim {BRAND}</div></div></div>
   {_nav(groups, active)}
   <div class="me"><div class="av">BS</div><div class="grow"><div class="n">Bima Saputra</div><div class="r">Super Admin</div></div>{ic('chevron-down', 15, color='#898781')}</div>
 </aside>"""

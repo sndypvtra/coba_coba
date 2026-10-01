@@ -1,10 +1,15 @@
-# Mockup webapp Tilik — gambaran halaman untuk presentasi
+# Mockup webapp Outlytics — gambaran halaman untuk presentasi
 
-Sebelas gambar 16:9 (3200×1800) tentang **Tilik**, webapp yang membungkus pipeline
+Sebelas gambar 16:9 (3200×1800) tentang **Outlytics**, webapp yang membungkus pipeline
 dwell time (project 05) menjadi produk: pantauan live per CCTV, analitik, perbandingan
 outlet, pengaturan CCTV, notifikasi WhatsApp, dan dua sisi akses — aplikasi klien dan
-panel internal. Nama "Tilik" diambil dari *menilik*, melihat dengan saksama. Merek dan
-domain `tilik.id` belum dicek; alamat di gambar hanya contoh.
+panel internal. Nama "Outlytics" berasal dari *outlet* + *analytics*. Per 1 Okt 2026
+belum ditemukan perusahaan atau aplikasi dengan nama itu, dan outlytics.ai, .io, serta
+.id belum terdaftar (outlytics.com diparkir dan dijual). Merek di DJKI belum dicek;
+alamat `app.outlytics.ai` di gambar hanya contoh sampai domainnya dibeli.
+
+Untuk membuat deck investor dari gambar-gambar ini di Claude Design, lampirkan ke-11
+gambar bersama [`prompt-claude-design.md`](prompt-claude-design.md).
 
 Gambar-gambarnya statis. Ini bukan prototipe yang bisa diklik.
 

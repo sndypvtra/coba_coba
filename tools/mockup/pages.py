@@ -23,8 +23,8 @@ from kit import (AXIS, BLUE, BRAND, INK, INK2, MUTED, ORANGE, ORDINAL, SURF, bas
 ROOT = Path(__file__).resolve().parents[2]
 CLIP_STILL = ROOT / "projects/05_cafe_dwell_time/docs/scene5-dwell.jpg"
 RAW_FRAME = Path(__file__).resolve().parents[1] / ".mockup_cache" / "scene5_f149.jpg"
-APP = "app.tilik.id"      # placeholder addresses, not registered
-PANEL = "panel.tilik.id"
+APP = "app.outlytics.ai"      # placeholders: outlytics.ai was still unregistered on 1 Oct 2026
+PANEL = "panel.outlytics.ai"
 
 LIVE_CAM, LIVE_ROOM = "CCTV 02", "Ruang Utama Lt. 1"
 
