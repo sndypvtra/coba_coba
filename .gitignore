@@ -50,3 +50,7 @@ tools/iconcache/
 # artifact. Regenerate it by re-seeding from those two.
 projects/*/design/*.html
 !projects/*/design/*.dc.html
+
+# Fonts, icons, extracted video frames and intermediate HTML for tools/build_mockups.py.
+# All of it is fetched or derived on the first run; only docs/mockup/*.png is kept.
+tools/.mockup_cache/
