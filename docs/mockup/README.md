@@ -48,11 +48,12 @@ Gambar-gambarnya statis. Ini bukan prototipe yang bisa diklik.
   dari arah yang sama dengan CCTV 02: counter melintang hampir datar di belakang, dinding
   bangku turun ke kiri, kamera di bawah. Ruangannya digambar siku seperti denah biasa.
   Isinya sesuai frame:
-  - bangku panjang 6 kursi dengan meja 1–3, dan empat orang di meja 2;
+  - bangku panjang 6 kursi dengan meja 1–3; di meja 2 ada empat orang, dua di bangku dan
+    dua di kursi, duduk saling berhadapan;
   - meja 4 berupa tiga meja dalam satu baris di depan counter, dengan enam kursi saling
     berhadapan; ujung kanannya, tempat seorang pria duduk, bersinggungan dengan area antre;
-  - meja 5 (kosong, ada gelas tertinggal) dan meja 6 (perempuan di latar depan),
-    masing-masing dua kursi, tidak ada kursi di sisi kanan;
+  - meja 5 (kosong, ada gelas tertinggal) dan meja 6 (perempuan di latar depan, duduk
+    di sisi yang menghadap kamera), masing-masing dua kursi yang saling berhadapan;
   - satu orang sedang berjalan, satu staf di belakang counter, total 8 orang (7 tamu,
     1 staf).
 

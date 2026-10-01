@@ -309,16 +309,17 @@ def floorplan(w: int = 706, h: int = 418) -> str:
     t.append(shape(box(1.95, 0.75, 2.5, 1.0), "#b9b7ae"))
     t.append(shape(box(3.25, 0.8, 3.55, 1.15), "#6b6a64"))
     t.append(shape(box(3.6, 0.55, 5.4, 1.35), "#e2e0d8", AXIS, 1))
-    # chairs: meja 5 and 6 have two each, on the bench side and the camera side, none
-    # on the right; meja 4 has three a side, facing each other across the row
-    chairs = [(1.25, 0.95), (1.25, 2.25), (0.7, 1.72), (1.25, 3.35), (1.25, 3.8),     # meja 3, 2, 1
-              (1.6, 4.35), (2.15, 4.9),                                              # meja 5
-              (2.7, 4.55), (3.25, 5.1)]                                              # meja 6
+    # chairs: meja 1 and 2 have two each facing the bench; meja 5 and 6 have two each,
+    # facing each other across the table, none on the right; meja 4 has three a side,
+    # facing each other across the row
+    chairs = [(1.25, 0.95), (1.25, 2.12), (1.25, 2.48), (1.25, 3.35), (1.25, 3.8),    # meja 3, 2, 1
+              (2.15, 3.85), (2.15, 4.85),                                            # meja 5
+              (3.25, 4.05), (3.25, 5.05)]                                            # meja 6
     chairs += [(x0 + 0.175, yy) for x0 in (2.0, 2.65, 3.3) for yy in (1.8, 2.95)]     # meja 4
     for x, y in chairs:
         t.append(shape(box(x, y, x + 0.3, y + 0.3), "#e6e4dd", AXIS, 0.8))
     occ = {"1": False, "2": True, "3": False, "4": True, "5": False, "6": True}
-    tables = {"1": box(0.55, 3.2, 1.15, 4.2), "2": box(0.55, 2.1, 1.15, 2.7), "3": box(0.55, 0.8, 1.15, 1.4),
+    tables = {"1": box(0.55, 3.2, 1.15, 4.2), "2": box(0.55, 2.05, 1.15, 2.85), "3": box(0.55, 0.8, 1.15, 1.4),
               "5": box(2.0, 4.2, 2.6, 4.8), "6": box(3.1, 4.4, 3.7, 5.0)}
     for n, c in tables.items():
         on = occ[n]
@@ -333,10 +334,10 @@ def floorplan(w: int = 706, h: int = 418) -> str:
     for n, c in tables.items():
         t.append(_num(*_mid(c), n, occ[n]))
     t.append(_num(2.975, 2.525, "4", True))
-    # the people in the frame: four at meja 2 (two on the bench, one on a chair facing them,
-    # one at the end), the man at the end of meja 4, the woman at meja 6, one person
-    # walking, and the one member of staff behind the counter
-    guests = [(0.24, 2.2), (0.24, 2.6), (1.4, 2.4), (0.85, 1.87), (3.625, 3.1), (2.85, 4.7), (4.25, 3.95)]
+    # the people in the frame: four at meja 2 (two on the bench and two on chairs, facing
+    # each other), the man at the end of meja 4, the woman on the camera side of meja 6,
+    # one person walking, and the one member of staff behind the counter
+    guests = [(0.24, 2.27), (0.24, 2.63), (1.4, 2.27), (1.4, 2.63), (3.625, 3.1), (3.4, 5.2), (4.25, 3.95)]
     for x, y in guests:
         t.append(_guest(x, y))
     wx, wy = P(*guests[-1])
