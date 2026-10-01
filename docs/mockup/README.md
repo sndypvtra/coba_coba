@@ -10,14 +10,20 @@ alamat `app.outlytics.ai` di gambar hanya contoh sampai domainnya dibeli.
 
 Setiap halaman tersedia dalam dua bentuk:
 
-- **PNG 4800×2700** (`*.png`), untuk semua aplikasi. Resolusinya cukup besar untuk
-  dipotong atau diperbesar di slide.
+- **PNG 2400×1350** (`*.png`), untuk semua aplikasi, termasuk Claude Design dan
+  Google Slides. Ukuran ini paling aman diunggah ke aplikasi slide. Kalau perlu lebih
+  besar, jalankan `python tools/build_mockups.py --scale 3` untuk 4800×2700.
 - **SVG** (`svg/*.svg`), yang tetap tajam di ukuran berapa pun. Teks di dalamnya sudah
-  berupa garis (outline), jadi tidak butuh font. Hanya dua foto CCTV yang tetap berupa
-  piksel, dalam ukuran aslinya. Bisa dimasukkan ke PowerPoint 2019, 2021, atau Microsoft
+  berupa garis (outline), jadi tidak butuh font. Hanya foto (di halaman 00, 02, dan 05)
+  yang tetap berupa piksel. Foto-foto itu ditanam langsung di dalam file SVG, tanpa
+  file terpisah. ID internal di tiap file diawali nomor halamannya (`p02_…`), jadi
+  beberapa SVG aman ditempel ke satu dokumen. Tanpa itu, halaman-halaman bisa saling
+  meminjam bentuk potong (clip), lalu foto hilang: video jadi hitam dan thumbnail
+  kosong. Bisa dimasukkan ke PowerPoint 2019, 2021, atau Microsoft
   365 lewat Insert → Pictures. Google Slides belum menerima SVG, jadi pakai PNG di sana.
-  Di versi SVG, bayangan lembut di sekeliling jendela diganti garis tepi tipis, karena
-  efek bayangan sering tidak tergambar saat SVG diimpor ke aplikasi slide.
+  Kalau foto tetap tidak muncul di sebuah aplikasi, pakai PNG untuk halaman 00, 02,
+  dan 05. Di versi SVG, bayangan lembut di sekeliling jendela diganti garis tepi tipis,
+  karena efek bayangan sering tidak tergambar saat SVG diimpor ke aplikasi slide.
 
 Untuk membuat deck investor dari gambar-gambar ini di Claude Design, lampirkan ke-11
 gambar bersama [`prompt-claude-design.md`](prompt-claude-design.md).

@@ -191,7 +191,7 @@ def home() -> str:
    <div class="col g8">{zone('Bangku panjang', SEATED_BENCH, BENCH_SEATS)}{zone('Meja kayu', SEATED_WOOD, WOOD_SEATS)}{zone('Antrean', 0, 6, '0 orang')}</div></div>
  <div class="card" style="padding:12px 16px"><div class="card-h" style="margin-bottom:6px"><h3>Laporan WhatsApp 08.00</h3>{chip('Terkirim', 'good', 'check')}</div>
    <div class="ink2 sm" style="margin-bottom:8px">Ringkasan kemarin untuk 3 orang</div>
-   <div class="row g6 wrap">{chip('Rina · Owner', 'neutral')}{chip('Bagas · Admin', 'neutral')}{chip('Sari · Manager', 'neutral')}</div></div>
+   <div class="row g6 wrap">{chip('Lucky · Owner', 'neutral')}{chip('Bagas · Admin', 'neutral')}{chip('Sari · Manager', 'neutral')}</div></div>
  <div class="card" style="padding:12px 16px"><div class="card-h" style="margin-bottom:8px"><h3>Status sistem</h3>{chip('1 perlu dicek', 'warn', 'circle-alert')}</div>
    <div class="col g6 sm"><div class="row sp"><span class="ink2">CCTV online</span><span class="b">3 dari 4</span></div>
    <div class="row sp"><span class="ink2">Data terakhir masuk</span><span class="b">3 detik lalu</span></div>
@@ -206,7 +206,7 @@ def home() -> str:
  <div class="card grow" style="padding-bottom:6px">{cardh("Perlu perhatian", "", chip("3 hal", "neutral"))}{attention}</div>
 </div>{bottom}"""
     return page(plane="tenant", active="home", url=f"{APP}/senopati/ringkasan",
-                title="Selamat sore, Rina",
+                title="Selamat sore, Lucky",
                 sub="Kamis, 1 Okt 2026 · Outlet Senopati, Jakarta Selatan · buka 08.00–22.00 · update 15.12",
                 actions=sel("", "Hari ini") + btn("Download PDF", "download"), body=body)
 
@@ -386,7 +386,9 @@ def live() -> str:
               '<span><i class="sq" style="background:#cde2fb"></i>Meja terisi</span>'
               '<span><i class="sq" style="background:#fbe3d8;border:1px solid #f0b495"></i>Area kasir</span>'
               '<span><i class="sq" style="background:#e3edfa;border:1px solid #a8c6ee"></i>Area antre</span>'
-              '<span><i class="sq" style="background:repeating-linear-gradient(45deg,#e9aaaa 0 2px,#fcfcfb 2px 5px)"></i>Tidak dihitung</span>'
+              '<span><svg width="10" height="10" viewBox="0 0 10 10" style="margin-right:6px;vertical-align:middle">'
+              '<clipPath id="lgh"><rect width="10" height="10" rx="3"/></clipPath><g clip-path="url(#lgh)"><rect width="10" height="10" fill="#fcfcfb"/>'
+              '<path d="M-5 5L5-5M-2 10L10-2M3 13L13 3" stroke="#e9aaaa" stroke-width="2"/></g></svg>Tidak dihitung</span>'
               '<span class="muted" style="margin-left:auto">angka = nomor meja</span></div>')
 
     left = f"""<div class="card" style="flex:0 0 58%">{cardh(LIVE_ROOM, f"{LIVE_CAM} · setiap titik = 1 orang, tanpa wajah dan tanpa video", chip("Diperbarui 2 detik lalu", "neutral", "refresh-cw"))}
@@ -662,7 +664,7 @@ def setup() -> str:
 
 # ======================================================== 06 notifikasi & laporan
 def alerts() -> str:
-    wa = ic("whatsapp-icon", 14, prefix="logos")
+    wa = ic("whatsapp", 14, prefix="simple-icons", color="#25d366")  # flat: the gradient logo prints as a bitmap
 
     def ch(kind):
         m = {"wa": f'<span class="chip neutral">{wa}WhatsApp</span>', "push": f'<span class="chip neutral">{ic("bell", 12, 2)}Notifikasi app</span>',
@@ -694,7 +696,7 @@ def alerts() -> str:
     def sch(name, when):
         return f'<div class="row g10" style="padding:7px 0;border-bottom:1px solid #eceae4">{toggle(True)}<div class="grow"><div class="b sm">{name}</div></div><span class="sm ink2">{when}</span></div>'
 
-    schedule = f"""<div class="card grow" style="padding-bottom:4px">{cardh("Laporan otomatis", "Dikirim ke: Rina (Owner), Bagas (Admin), Sari (Manager)")}
+    schedule = f"""<div class="card grow" style="padding-bottom:4px">{cardh("Laporan otomatis", "Dikirim ke: Lucky (Owner), Bagas (Admin), Sari (Manager)")}
  {sch("Harian", "setiap hari 08.00")}{sch("Mingguan", "setiap Senin 07.00")}{sch("Bulanan", "tanggal 1, 07.00")}</div>"""
 
     msg1 = ("<b>Laporan harian · Kedai Pagi Senopati</b><br>Rabu, 30 Sep 2026<br><br>"
@@ -731,7 +733,7 @@ def users() -> str:
         return (f'<tr><td><div class="row g10"><div class="av" style="width:28px;height:28px;font-size:10.5px">{init}</div><div><div class="b">{name}</div><div class="xs muted">{mail}</div></div></div></td>'
                 f'<td>{chip(role, kind)}</td><td class="ink2">{scope}</td><td>{t}</td><td class="muted">{last}</td></tr>')
 
-    rows = (u("RA", "Rina Adiningsih", "rina@kedaipagi.id", "Owner", "Semua outlet", True, "2 menit lalu", "orange")
+    rows = (u("L", "Lucky", "lucky@kedaipagi.id", "Owner", "Semua outlet", True, "2 menit lalu", "orange")
             + u("BP", "Bagas Pratama", "bagas@kedaipagi.id", "Admin", "Semua outlet", True, "1 jam lalu")
             + u("SW", "Sari Wulandari", "sari@kedaipagi.id", "Manager", "Senopati", True, "12 menit lalu")
             + u("DH", "Dimas Hartono", "dimas@kedaipagi.id", "Manager", "Kemang", False, "kemarin")
@@ -819,7 +821,7 @@ def privacy() -> str:
  {lg("15.04", "Sari W. · Manager", "Download data", "Analitik · 7 hari")}
  {lg("14.31", "Bagas P. · Admin", "Mengubah area", "Senopati · CCTV 02 · area kasir")}
  {lg("13.31", "Sistem", "Kirim notifikasi", "Kasir kosong &rarr; WhatsApp")}
- {lg("11.02", "Rina A. · Owner", "Mengubah aturan", "Kasir kosong · 3 menit")}
+ {lg("11.02", "Lucky · Owner", "Mengubah aturan", "Kasir kosong · 3 menit")}
  {lg("09.42", "Sistem", "CCTV offline", "Senopati · CCTV 03 Teras")}
  {lg("08.00", "Sistem", "Kirim laporan", "Harian · 3 orang")}
  {lg("07.55", "Dimas H. · Manager", "Gagal login", "verifikasi 2 langkah belum aktif")}

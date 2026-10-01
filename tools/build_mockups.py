@@ -13,10 +13,11 @@ page renders with no network after that. The one real image on these pages is
 the dwell-time clip: the annotated still from project 05 and a raw frame of the
 same clip for the zone editor.
 
-The PNGs are drawn at 3x (4800x2700) so a slide can crop or stretch them. The SVGs
-never blur at any size: Chromium prints each page to a one-page PDF, and PyMuPDF
-turns that into SVG with the text as outlines, so a slide tool needs no fonts to
-show it. Only the two video frames stay pixels inside them, at their own size.
+The PNGs are drawn at 2400x1350, a size every slide tool takes without trouble
+(pass --scale 3 for 4800x2700). The SVGs never blur at any size: Chromium prints
+each page to a one-page PDF, and PyMuPDF turns that into SVG with the text as
+outlines, so a slide tool needs no fonts to show it. Only the photos stay pixels
+inside them, embedded at their own size.
 
 Needs: a Chromium headless shell (CHROME env var, or the Playwright build), OpenCV
 for the overview slide's thumbnails, and PyMuPDF (pip install pymupdf) for the SVGs.
@@ -49,7 +50,7 @@ def _chrome(*args: str) -> subprocess.CompletedProcess:
     return subprocess.run(cmd, capture_output=True, text=True)
 
 
-def render(html_path: Path, png_path: Path, scale: int) -> None:
+def render(html_path: Path, png_path: Path, scale: float) -> None:
     r = _chrome(f"--force-device-scale-factor={scale}", f"--screenshot={png_path}", f"file://{html_path}")
     if not png_path.exists():
         sys.exit(f"render failed for {html_path.name}:\n{r.stderr[-800:]}")
@@ -76,14 +77,54 @@ def render_svg(html_path: Path, svg_path: Path) -> None:
         tag = re.sub(r'\bheight="[\d.]+"', f'height="{h}"', m.group(0))
         return re.sub(r'\bviewBox="[^"]+"', f'viewBox="0 0 {w} {h}"', tag)
 
-    svg_path.write_text(re.sub(r"<svg\b[^>]*>", sized, svg, count=1), encoding="utf-8")
+    svg = re.sub(r"<svg\b[^>]*>", sized, svg, count=1)
+    # The photos are embedded as data URIs. PyMuPDF wraps their base64 every 64
+    # characters, and XML turns those line breaks into spaces inside the attribute;
+    # Chromium decodes that anyway but stricter viewers drop the image. Write each one
+    # on one line, and give it the SVG 2 `href` as well as the older `xlink:href`.
+    svg = re.sub(r'(data:[\w/+.-]+;base64,)([^"]*)"', lambda m: m.group(1) + re.sub(r"\s+", "", m.group(2)) + '"', svg)
+    svg = re.sub(r'<image\b([^>]*?)\sxlink:href="([^"]*)"', r'<image\1 href="\2" xlink:href="\2"', svg)
+    # Two more changes that a browser cannot see, for the importers that get them
+    # wrong - with either, the photos are what disappears, because every photo sits
+    # inside a rounded clip. Bake each clip outline's transform into its points, since
+    # some importers ignore a transform inside <clipPath>. And give every id the page
+    # number: a deck tool that pastes several pages into one document would otherwise
+    # let a page pick up another page's clip_451 or glyph font_6_363.
+    svg = re.sub(r"<clipPath\b[^>]*>.*?</clipPath>", _bake_clip, svg, flags=re.S)
+    pfx = f"p{svg_path.name[:2]}_"
+    svg = re.sub(r'(\sid="|url\(#|href="#)', lambda m: m.group(1) + pfx, svg)
+    svg_path.write_text(svg, encoding="utf-8")
+
+
+_NUM = r"-?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?"
+
+
+def _bake_clip(m: re.Match) -> str:
+    """Apply a clip outline's matrix(a,0,0,d,e,f) to its absolute M/L/C/H/V points."""
+    def bake(pm: re.Match) -> str:
+        a, b, c, d, e, f = (float(v) for v in pm.group(1).split(","))
+        data = pm.group(2)
+        if b or c or not set(re.findall(r"[A-Za-z]", re.sub(_NUM, " ", data))) <= set("MLCHVZ"):
+            return pm.group(0)
+        out, cmd, i = [], "", 0
+        for tok in re.findall(rf"[A-Za-z]|{_NUM}", data):
+            if tok.isalpha():
+                cmd, i = tok, 0
+                out.append(tok)
+                continue
+            is_y = cmd == "V" or (cmd != "H" and i % 2 == 1)
+            v = float(tok) * d + f if is_y else float(tok) * a + e
+            out.append(f"{v:.3f}".rstrip("0").rstrip("."))
+            i += 1
+        return f'<path d="{" ".join(out)}"'
+    return re.sub(r'<path transform="matrix\(([^)]*)\)" d="([^"]*)"', bake, m.group(0))
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default=str(HERE.parent / "docs" / "mockup"))
     ap.add_argument("--work", default=os.environ.get("MOCKUP_WORK", str(HERE / ".mockup_cache" / "html")))
-    ap.add_argument("--scale", type=int, default=3)
+    ap.add_argument("--scale", type=float, default=1.5, help="1.5 gives 2400x1350")
     ap.add_argument("--only", nargs="*", default=None, help="page-name prefixes, e.g. 01 03")
     ap.add_argument("--no-svg", action="store_true", help="skip the SVG copies")
     a = ap.parse_args()
@@ -121,7 +162,7 @@ def main() -> None:
             src = out / f"{name}.png"
             if not src.exists():
                 sys.exit(f"overview needs {src.name}; render the pages first")
-            # 960 px wide: sharp in the 3x PNG and when the SVG is enlarged on a slide
+            # 960 px wide: sharp in the PNG and when the SVG is enlarged on a slide
             im = cv2.resize(cv2.imread(str(src)), (960, 540), interpolation=cv2.INTER_AREA)
             ok, buf = cv2.imencode(".jpg", im, [cv2.IMWRITE_JPEG_QUALITY, 90])
             thumbs[name] = "data:image/jpeg;base64," + base64.b64encode(buf.tobytes()).decode()

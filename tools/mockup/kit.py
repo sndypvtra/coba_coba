@@ -116,7 +116,7 @@ svg text{font-family:inherit}
 .brand{display:flex;align-items:center;gap:9px;padding:0 6px 13px;font-weight:700;font-size:17px;letter-spacing:-.015em}
 .logo{width:28px;height:28px;border-radius:8px;background:var(--blue);display:grid;place-items:center;flex:none}
 .outlet{border:1px solid var(--border);border-radius:10px;padding:8px 10px;display:flex;align-items:center;gap:9px;background:#fff;margin-bottom:8px}
-.outlet .t{font-weight:600;font-size:13px;line-height:1.2}.outlet .s{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.outlet .t{font-weight:600;font-size:13px;line-height:1.2}.outlet .s{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .nav-g{font-size:10.5px;font-weight:600;letter-spacing:.09em;color:var(--muted);padding:12px 9px 5px;text-transform:uppercase}
 .nav a{display:flex;align-items:center;gap:10px;padding:7px 9px;border-radius:8px;font-size:13.5px;color:var(--ink2);font-weight:500;margin-bottom:1px}
 .nav a.on{background:var(--blue-t);color:var(--blue-d);font-weight:600}
@@ -244,7 +244,7 @@ def sidebar_tenant(active: str) -> str:
   <div class="outlet"><span class="ibox info" style="width:28px;height:28px">{ic('store', 15)}</span>
     <div class="grow"><div class="t">Senopati</div><div class="s">Kedai Pagi · Jakarta</div></div>{ic('chevrons-up-down', 15, color=MUTED)}</div>
   {_nav(groups, active)}
-  <div class="me"><div class="av">RA</div><div class="grow"><div class="n">Rina Adiningsih</div><div class="r">Owner</div></div>{ic('chevron-down', 15, color=MUTED)}</div>
+  <div class="me"><div class="av">L</div><div class="grow"><div class="n">Lucky</div><div class="r">Owner</div></div>{ic('chevron-down', 15, color=MUTED)}</div>
 </aside>"""
 
 
@@ -412,9 +412,12 @@ def heatmap(w: int, h: int, data: list[list[float]], rows: list[str], cols: list
 
 
 def scale_bar(w: int = 150) -> str:
-    stops = "".join(f'<stop offset="{i / 12 * 100:.0f}%" stop-color="{c}"/>' for i, c in enumerate(RAMP))
-    return (f'<svg width="{w}" height="10" viewBox="0 0 {w} 10"><defs><linearGradient id="sb">{stops}</linearGradient></defs>'
-            f'<rect width="{w}" height="10" rx="5" fill="url(#sb)"/></svg>')
+    """The heatmap legend: the same 13 steps the cells use. Steps rather than a
+    gradient - a gradient prints as a bitmap, and the cells are steps anyway."""
+    step = w / len(RAMP)
+    cells = "".join(f'<rect x="{i * step:.2f}" width="{step + 0.6:.2f}" height="10" fill="{c}"/>' for i, c in enumerate(RAMP))
+    return (f'<svg width="{w}" height="10" viewBox="0 0 {w} 10"><clipPath id="sbc"><rect width="{w}" height="10" rx="5"/></clipPath>'
+            f'<g clip-path="url(#sbc)">{cells}</g></svg>')
 
 
 def columns(w: int, h: int, vals: list[float], labels: list[str], ymax: float, hi_idx: set[int] = frozenset(),
