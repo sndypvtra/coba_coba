@@ -87,6 +87,13 @@ CSS = r"""
   --crit:#d03b3b;--crit-t:#fbe5e5;--crit-x:#a42626;
 }
 *{box-sizing:border-box;margin:0;padding:0}
+@page{size:1600px 900px;margin:0}
+*{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+/* The SVG copies are printed, and print drops anything a slide tool's SVG import may
+   not draw: blurred shadows and filters become masked bitmaps in the PDF. Flat edges
+   stand in for them. */
+@media print{*{box-shadow:none!important;filter:none!important}
+  .stage{background:#e3e2dc!important}.win{outline:1px solid rgba(11,11,11,.14)}}
 html,body{width:1600px;height:900px;overflow:hidden;background:#e5e4de}
 body{font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink);
   -webkit-font-smoothing:antialiased;font-size:13px;line-height:1.35}
@@ -159,10 +166,6 @@ h1{font-size:22px;font-weight:700;letter-spacing:-.018em;line-height:1.15}
 .sel{display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 10px;border-radius:8px;border:1px solid var(--border);background:#fff;font-size:12.5px;font-weight:500}
 .sel .k{color:var(--muted);font-weight:400}
 .search{display:flex;align-items:center;gap:7px;height:30px;padding:0 10px;border-radius:8px;border:1px solid var(--border);background:#fff;font-size:12.5px;color:var(--muted);width:210px}
-.sw{width:30px;height:18px;border-radius:999px;background:#c3c2b7;position:relative;flex:none}
-.sw::after{content:"";position:absolute;left:2px;top:2px;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25)}
-.sw.on{background:var(--blue)}.sw.on::after{left:14px}
-.sw.lock{background:#9bb9e3}.sw.lock::after{left:14px}
 
 /* kpi */
 .kpi{padding:13px 15px 12px;gap:0}
@@ -303,7 +306,13 @@ def kpi(label: str, value: str, unit: str, delta: str, dkind: str, dtxt: str, ba
 
 
 def toggle(on: bool = True, lock: bool = False) -> str:
-    return f'<span class="sw {"lock" if lock else ("on" if on else "")}"></span>'
+    """A switch drawn as inline SVG. A CSS knob prints as a masked bitmap, which some
+    slide tools cannot draw; this stays vector in the SVG copies."""
+    bg = "#9bb9e3" if lock else (BLUE if on else "#c3c2b7")
+    cx = 21 if (on or lock) else 9
+    return (f'<svg width="30" height="18" viewBox="0 0 30 18" style="flex:none">'
+            f'<rect width="30" height="18" rx="9" fill="{bg}"/>'
+            f'<circle cx="{cx}" cy="9" r="7" fill="#fff" stroke="#0b0b0b" stroke-opacity=".08"/></svg>')
 
 
 # ------------------------------------------------------------------ charts ---

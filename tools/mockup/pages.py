@@ -30,21 +30,28 @@ LIVE_CAM, LIVE_ROOM = "CCTV 02", "Ruang Utama Lt. 1"
 
 # ------------------------------------------------------------------ tables ---
 # The main room as CCTV 02 sees it: three tables along the long bench under the
-# mirror (two bench seats each), and four wooden tables. 24 seats in all, and the
-# floor plan draws every one of them. At 15.12 meja 2 holds the four people at the
-# bench, meja 5 the man in front of the till, meja 7 the woman in the foreground -
-# the people in the frame the plan is traced from.
+# mirror (two bench seats each); meja 4, three tables pushed into one row in front
+# of the counter with three chairs a side; and two small tables with two chairs
+# each. 21 seats, and the floor plan draws every one of them. At 15.12 meja 2
+# holds the four people at the bench, meja 4 the man at its end by the till, and
+# meja 6 the woman in the foreground - the people in the frame the plan is traced
+# from. Meja 5 is the empty table with a drink left on it.
 NOW = 15.2
-TABLES = [("Meja 1", 4), ("Meja 2", 4), ("Meja 3", 3), ("Meja 4", 4), ("Meja 5", 3), ("Meja 6", 2), ("Meja 7", 4)]
+TABLES = [("Meja 1", 4), ("Meja 2", 4), ("Meja 3", 3), ("Meja 4", 6), ("Meja 5", 2), ("Meja 6", 2)]
 SEGS = {
     "Meja 1": [(8.4, 9.3), (9.9, 12.4), (12.7, 13.6), (13.9, 14.8)],
     "Meja 2": [(8.8, 9.7), (10.0, 10.9), (11.2, 12.0), (12.2, 13.1), (13.4, 15.2)],
     "Meja 3": [(9.0, 10.2), (10.6, 13.9), (14.2, 14.9)],
-    "Meja 4": [(8.2, 12.1), (12.4, 13.2), (13.5, 14.4)],
-    "Meja 5": [(9.6, 10.5), (10.8, 11.7), (12.0, 13.0), (13.3, 14.2), (14.6, 15.2)],
-    "Meja 6": [(10.1, 11.0), (11.4, 13.6), (14.0, 14.9)],
-    "Meja 7": [(8.6, 9.2), (11.3, 12.5), (12.8, 13.9), (14.3, 15.2)],
+    "Meja 4": [(8.2, 12.1), (12.4, 13.2), (13.5, 14.4), (14.6, 15.2)],
+    "Meja 5": [(10.1, 11.0), (11.4, 13.6), (14.0, 14.9)],
+    "Meja 6": [(8.6, 9.2), (11.3, 12.5), (12.8, 13.9), (14.3, 15.2)],
 }
+SEATS = sum(n for _, n in TABLES)                          # 21
+BENCH_SEATS = sum(n for t, n in TABLES if t in ("Meja 1", "Meja 2", "Meja 3"))
+WOOD_SEATS = SEATS - BENCH_SEATS
+SEATED_BENCH, SEATED_WOOD = 4, 2                           # who is sitting where at 15.12
+SEATED = SEATED_BENCH + SEATED_WOOD
+OCC = round(100 * SEATED / SEATS)                          # % of seats taken now
 LONG_H = 2.0  # a stay this long counts as a long stay
 
 
@@ -145,8 +152,8 @@ def home() -> str:
     kpis = "".join([
         kpi("Pengunjung hari ini", "187", "orang", "+9%", "g", "vs Kamis lalu", "line", "door-open",
             [4, 9, 15, 24, 33, 52, 71, 96, 118, 142, 166, 187]),
-        kpi("Kursi terisi sekarang", "25%", "6/24 kursi", "puncak 92%", "n", "pukul 13.05", "det", "armchair",
-            [4, 8, 17, 33, 50, 79, 92, 83, 67, 46, 31, 25]),
+        kpi("Kursi terisi sekarang", f"{OCC}%", f"{SEATED}/{SEATS} kursi", "puncak 92%", "n", "pukul 13.05", "det", "armchair",
+            [4, 8, 17, 33, 50, 79, 92, 83, 67, 46, 34, OCC]),
         kpi("Rata-rata lama berkunjung", "38", "menit", "−7%", "n", "vs Kamis lalu", "trk", "timer",
             [41, 40, 44, 39, 37, 36, 35, 39, 41, 40, 37, 38]),
         kpi("Antrean sekarang", "0", "orang", "terpanjang 6", "n", "pukul 12.58", "det", "users",
@@ -155,10 +162,10 @@ def home() -> str:
             [0, 0, 0, 1, 0, 2, 4, 0, 0, 0, 0, 0]),
     ])
     today = [(8, 4), (8.5, 8), (9, 17), (9.5, 25), (10, 33), (10.5, 38), (11, 50), (11.5, 63), (12, 79),
-             (12.5, 88), (13.08, 92), (13.5, 83), (14, 67), (14.5, 46), (15, 31), (15.2, 25)]
+             (12.5, 88), (13.08, 92), (13.5, 83), (14, 67), (14.5, 46), (15, 34), (15.2, OCC)]
     avg = [(8, 6), (9, 15), (10, 29), (11, 46), (12, 71), (13, 80), (14, 63), (15, 41), (16, 38), (17, 48),
            (18, 62), (19, 70), (20, 57), (21, 34), (22, 14)]
-    chart = line_chart(758, 322, today, avg, now=15.2, peak=(13.08, 92, "Puncak 92% · 13.05"), now_label="25%")
+    chart = line_chart(758, 322, today, avg, now=15.2, peak=(13.08, 92, "Puncak 92% · 13.05"), now_label=f"{OCC}%")
 
     def att(kind, icon_, title, body, action, bas):
         return item(kind, icon_, title, body, f'<span class="btn sm">{action}{ic("arrow-right", 13)}</span>{bas}')
@@ -181,7 +188,7 @@ def home() -> str:
 
     bottom = f"""<div class="grid" style="grid-template-columns:1.1fr 1fr 1fr;gap:12px;height:122px;flex:none">
  <div class="card" style="padding:12px 16px"><div class="card-h" style="margin-bottom:8px"><h3>Area saat ini</h3>{basis('det')}</div>
-   <div class="col g8">{zone('Bangku panjang', 4, 11)}{zone('Meja kayu', 2, 13)}{zone('Antrean', 0, 6, '0 orang')}</div></div>
+   <div class="col g8">{zone('Bangku panjang', SEATED_BENCH, BENCH_SEATS)}{zone('Meja kayu', SEATED_WOOD, WOOD_SEATS)}{zone('Antrean', 0, 6, '0 orang')}</div></div>
  <div class="card" style="padding:12px 16px"><div class="card-h" style="margin-bottom:6px"><h3>Laporan WhatsApp 08.00</h3>{chip('Terkirim', 'good', 'check')}</div>
    <div class="ink2 sm" style="margin-bottom:8px">Ringkasan kemarin untuk 3 orang</div>
    <div class="row g6 wrap">{chip('Rina · Owner', 'neutral')}{chip('Bagas · Admin', 'neutral')}{chip('Sari · Manager', 'neutral')}</div></div>
@@ -193,7 +200,7 @@ def home() -> str:
     body = f"""<div class="grid" style="grid-template-columns:repeat(5,1fr);gap:12px;flex:none">{kpis}</div>
 <div class="row g12" style="flex:1;min-height:0;align-items:stretch">
  <div class="card" style="flex:0 0 61.5%">
-   {cardh("Keramaian hari ini vs rata-rata 4 Kamis terakhir", "% kursi terisi di Ruang Utama (24 kursi)", basis("det"))}
+   {cardh("Keramaian hari ini vs rata-rata 4 Kamis terakhir", f"% kursi terisi di Ruang Utama ({SEATS} kursi)", basis("det"))}
    <div class="lg" style="margin-bottom:4px"><span><i style="background:{BLUE}"></i>Hari ini</span><span><i style="background:{MUTED}"></i>Rata-rata 4 Kamis</span></div>
    {chart}</div>
  <div class="card grow" style="padding-bottom:6px">{cardh("Perlu perhatian", "", chip("3 hal", "neutral"))}{attention}</div>
@@ -205,31 +212,24 @@ def home() -> str:
 
 
 # ============================================================ 02 pantauan live
-# The plan is traced from CCTV 02's frame (frame 149 of the project 05 clip). The
-# vanishing points of the bench edge, the counter edge and the chair legs put the
-# camera about 34° below level, and they show that the bench wall and the counter
-# are not square to each other: they meet at about 128°. That is why, on camera,
-# the counter reads as the bench row carrying straight on, not as a wall turning a
-# corner - and the plan keeps that angle. Positions are the frame's people and
-# furniture projected onto the floor, tidied to whole furniture sizes.
+# The plan is traced from CCTV 02's frame (frame 149 of the project 05 clip) and
+# drawn the way that camera looks at the room: the counter runs almost level
+# across the back, the bench wall falls away to the left, and the camera sits at
+# the bottom. The room itself is drawn square, as a floor plan should be. In the
+# frame the bench wall and the counter actually meet at about 128 degrees, which
+# is why on camera the counter reads as the bench row carrying straight on; the
+# projection below keeps that look.
 #
-# Units are metres. X runs out from the bench wall, Y along it toward the camera.
-# Furniture set square to the counter uses (s, t) instead: s along the counter
-# from where its front edge meets the bench wall, t out from that edge.
-ISO_K, ISO_CX, ISO_TOP = 64.0, 318.0, 152.0
-_ANG = math.radians(38)
-_U = (math.cos(_ANG), -math.sin(_ANG))  # along the counter
-_N = (math.sin(_ANG), math.cos(_ANG))   # from the counter into the room
-
-
-def ST(s: float, t: float) -> tuple[float, float]:
-    return s * _U[0] + t * _N[0], s * _U[1] + t * _N[1]
+# Units are metres: x along the back wall (the counter), y along the bench wall
+# toward the camera, both from the far corner.
+ISO_K, ISO_X0, ISO_Y0 = 55.0, 322.0, 112.0
+_AX, _AY = 1.16, 0.16    # one metre along the counter: nearly level, as on camera
+_BX, _BY = -0.80, 0.62   # one metre along the bench wall: down and to the left
 
 
 def P(x: float, y: float, z: float = 0.0) -> tuple[float, float]:
-    """Room metres -> screen. Isometric, looking the way CCTV 02 looks: the far end of
-    the bench at the top, the camera at the bottom."""
-    return ISO_CX + (x - y) * ISO_K * 0.8660254, ISO_TOP + (x + y) * ISO_K * 0.5 - z
+    """Room metres -> screen, seen from CCTV 02's side of the room."""
+    return ISO_X0 + (x * _AX + y * _BX) * ISO_K, ISO_Y0 + (x * _AY + y * _BY) * ISO_K - z
 
 
 def _pts(seq) -> str:
@@ -241,16 +241,17 @@ def shape(corners, fill, stroke="none", sw=1.0, extra="", z=0.0) -> str:
             f'stroke-width="{sw}" stroke-linejoin="round" {extra}/>')
 
 
-def box_xy(x0, y0, x1, y1) -> list[tuple[float, float]]:
+def box(x0, y0, x1, y1) -> list[tuple[float, float]]:
     return [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
-
-
-def box_st(s0, t0, s1, t1) -> list[tuple[float, float]]:
-    return [ST(s0, t0), ST(s1, t0), ST(s1, t1), ST(s0, t1)]
 
 
 def _mid(corners) -> tuple[float, float]:
     return sum(c[0] for c in corners) / len(corners), sum(c[1] for c in corners) / len(corners)
+
+
+def _line(a, b, color, sw=1.0) -> str:
+    (x1, y1), (x2, y2) = P(*a), P(*b)
+    return f'<line x1="{x1:.1f}" y1="{y1:.1f}" x2="{x2:.1f}" y2="{y2:.1f}" stroke="{color}" stroke-width="{sw}"/>'
 
 
 def _guest(x, y) -> str:
@@ -270,8 +271,9 @@ def _num(x, y, n, occ) -> str:
     return f'<text x="{sx:.1f}" y="{sy + 3.5:.1f}" text-anchor="middle" font-size="10.5" font-weight="700" fill="{"#184f95" if occ else MUTED}">{n}</text>'
 
 
-def _callout(x, y, title, sub, px, py, color) -> str:
-    return (f'<line x1="{x + 4}" y1="{y + 19}" x2="{px:.1f}" y2="{py:.1f}" stroke="{color}" stroke-width="1" stroke-opacity=".75"/>'
+def _callout(x, y, title, sub, px, py, color, up=False) -> str:
+    ly = y - 14 if up else y + 19  # leave from above the title when the target is above it
+    return (f'<line x1="{x + 4}" y1="{ly}" x2="{px:.1f}" y2="{py:.1f}" stroke="{color}" stroke-width="1" stroke-opacity=".75"/>'
             f'<circle cx="{px:.1f}" cy="{py:.1f}" r="3" fill="{color}"/>'
             f'<text x="{x}" y="{y}" font-size="11.5" font-weight="700" fill="{color}">{title}</text>'
             f'<text x="{x}" y="{y + 14}" font-size="10.5" fill="{MUTED}">{sub}</text>')
@@ -279,75 +281,75 @@ def _callout(x, y, title, sub, px, py, color) -> str:
 
 def floorplan(w: int = 706, h: int = 418) -> str:
     """Ruang Utama Lt. 1 as CCTV 02 sees it. The long bench under the mirror runs down the
-    left wall; the counter starts where the bench ends and runs on to the display case. No
-    entrance: it is not in this camera's view."""
-    wall = 34
-    A, B = (0.0, -1.65), (0.0, 4.9)                  # the bench wall, from the far corner
-    D, C, E = ST(4.6, -1.3), ST(4.6, 4.6), ST(-1.8, 4.6)
-    t = ['<defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">'
-         '<line x1="0" y1="0" x2="0" y2="6" stroke="#d03b3b" stroke-opacity=".55" stroke-width="2"/></pattern></defs>']
-    t.append(shape([A, D, C, E, B], "#f1f0ea", AXIS, 1.4))
-    t.append(f'<polygon points="{_pts([P(*A), P(*B), P(*B, wall), P(*A, wall)])}" fill="#e6e4dd" stroke="{AXIS}" stroke-width="1.2" stroke-linejoin="round"/>')
-    t.append(f'<polygon points="{_pts([P(*A), P(*D), P(*D, wall), P(*A, wall)])}" fill="#ecebe5" stroke="{AXIS}" stroke-width="1.2" stroke-linejoin="round"/>')
+    left wall, the counter along the back wall, and meja 4 - three tables in one row - in
+    front of the counter. No entrance: it is not in this camera's view."""
+    W, H, wall = 5.6, 6.6, 34
+    t = []
+    t.append(shape(box(0, 0, W, H), "#f1f0ea", AXIS, 1.4))
+    t.append(f'<polygon points="{_pts([P(0, 0), P(0, H), P(0, H, wall), P(0, 0, wall)])}" fill="#e6e4dd" stroke="{AXIS}" stroke-width="1.2" stroke-linejoin="round"/>')
+    t.append(f'<polygon points="{_pts([P(0, 0), P(W, 0), P(W, 0, wall), P(0, 0, wall)])}" fill="#ecebe5" stroke="{AXIS}" stroke-width="1.2" stroke-linejoin="round"/>')
     # the mirror on the bench wall: what it shows are people already counted, so it is excluded
-    t.append(f'<polygon points="{_pts([P(0, 0.85, 9), P(0, 2.65, 9), P(0, 2.65, 28), P(0, 0.85, 28)])}" fill="url(#hatch)" stroke="#d03b3b" stroke-opacity=".6" stroke-width="1"/>')
+    # (hatched with clipped lines, not an SVG pattern: a pattern prints as a masked bitmap)
+    mirror = [P(0, 1.4, 9), P(0, 3.6, 9), P(0, 3.6, 28), P(0, 1.4, 28)]
+    mx0, mx1 = min(p[0] for p in mirror), max(p[0] for p in mirror)
+    my0, my1 = min(p[1] for p in mirror), max(p[1] for p in mirror)
+    span, hatch, x = my1 - my0, [], mx0 - (my1 - my0)
+    while x < mx1:
+        hatch.append(f'<line x1="{x:.1f}" y1="{my1:.1f}" x2="{x + span:.1f}" y2="{my0:.1f}"/>')
+        x += 8.5
+    t.append(f'<clipPath id="mirror"><polygon points="{_pts(mirror)}"/></clipPath>'
+             f'<g clip-path="url(#mirror)" stroke="#d03b3b" stroke-opacity=".55" stroke-width="2">{"".join(hatch)}</g>'
+             f'<polygon points="{_pts(mirror)}" fill="none" stroke="#d03b3b" stroke-opacity=".6" stroke-width="1"/>')
     # the long metal bench, six seats
-    t.append(shape(box_xy(0, -0.3, 0.45, 3.6), "#d9d7cf", AXIS, 1))
-    for yy in (0.35, 1.0, 1.65, 2.3, 2.95):
-        (a, b), (c, d) = P(0, yy), P(0.45, yy)
-        t.append(f'<line x1="{a:.1f}" y1="{b:.1f}" x2="{c:.1f}" y2="{d:.1f}" stroke="#b9b8b0" stroke-width="1"/>')
-    # the counter: coffee bar, till, display case
-    t.append(shape(box_st(0.69, -0.55, 3.05, 0.0), "#d3d1c8", AXIS, 1))
-    t.append(shape(box_st(0.95, -0.5, 1.5, -0.25), "#b9b7ae"))
-    t.append(shape(box_st(2.62, -0.42, 2.98, -0.12), "#6b6a64"))
-    t.append(shape(box_st(3.05, -0.6, 4.4, 0.2), "#e2e0d8", AXIS, 1))
-    # chairs, then tables: three along the bench, four wooden ones (meja 4 is two pushed together)
-    chairs = [box_xy(x, y, x + 0.3, y + 0.3) for x, y in
-              [(1.2, 2.55), (1.2, 3.05), (1.2, 1.6), (0.65, 1.1), (1.2, 0.3),       # meja 1, 2, 3
-               (1.75, 1.5), (1.75, 2.55),                                          # meja 6
-               (2.2, 2.6), (2.75, 1.55), (3.3, 2.05), (2.75, 2.6)]]                # meja 7
-    chairs += [box_st(s, tt, s + 0.3, tt + 0.3) for s, tt in
-               [(1.3, 0.55), (1.95, 0.55), (1.3, 1.7), (1.95, 1.7),               # meja 4
-                (2.5, 1.3), (3.5, 1.3), (3.0, 1.8)]]                               # meja 5
-    for c in chairs:
-        t.append(shape(c, "#e6e4dd", AXIS, 0.8))
-    occ = {"1": False, "2": True, "3": False, "4": False, "5": True, "6": False, "7": True}
-    tables = {"1": box_xy(0.5, 2.35, 1.1, 3.5), "2": box_xy(0.5, 1.45, 1.1, 2.05), "3": box_xy(0.5, 0.15, 1.1, 0.75),
-              "5": box_st(2.85, 1.15, 3.45, 1.75), "6": box_xy(1.6, 1.85, 2.2, 2.45), "7": box_xy(2.6, 1.9, 3.2, 2.5)}
+    t.append(shape(box(0, 0.5, 0.45, 4.4), "#d9d7cf", AXIS, 1))
+    for yy in (1.15, 1.8, 2.45, 3.1, 3.75):
+        t.append(_line((0, yy), (0.45, yy), "#b9b8b0"))
+    # the counter along the back wall: coffee bar, till, display case
+    t.append(shape(box(1.75, 0.7, 3.6, 1.25), "#d3d1c8", AXIS, 1))
+    t.append(shape(box(1.95, 0.75, 2.5, 1.0), "#b9b7ae"))
+    t.append(shape(box(3.25, 0.8, 3.55, 1.15), "#6b6a64"))
+    t.append(shape(box(3.6, 0.55, 5.4, 1.35), "#e2e0d8", AXIS, 1))
+    # chairs: meja 5 and 6 have two each, on the bench side and the camera side, none
+    # on the right; meja 4 has three a side, facing each other across the row
+    chairs = [(1.25, 0.95), (1.25, 2.25), (0.7, 1.72), (1.25, 3.35), (1.25, 3.8),     # meja 3, 2, 1
+              (1.6, 4.35), (2.15, 4.9),                                              # meja 5
+              (2.7, 4.55), (3.25, 5.1)]                                              # meja 6
+    chairs += [(x0 + 0.175, yy) for x0 in (2.0, 2.65, 3.3) for yy in (1.8, 2.95)]     # meja 4
+    for x, y in chairs:
+        t.append(shape(box(x, y, x + 0.3, y + 0.3), "#e6e4dd", AXIS, 0.8))
+    occ = {"1": False, "2": True, "3": False, "4": True, "5": False, "6": True}
+    tables = {"1": box(0.55, 3.2, 1.15, 4.2), "2": box(0.55, 2.1, 1.15, 2.7), "3": box(0.55, 0.8, 1.15, 1.4),
+              "5": box(2.0, 4.2, 2.6, 4.8), "6": box(3.1, 4.4, 3.7, 5.0)}
     for n, c in tables.items():
         on = occ[n]
         t.append(shape(c, "#cde2fb" if on else SURF, "#86b6ef" if on else AXIS, 1.2))
-    t.append(shape(box_st(1.15, 0.95, 2.45, 1.6), SURF, AXIS, 1.2))
-    for t0, t1 in ((0.95, 1.12), (1.43, 1.6)):  # the seam of the two tables, kept clear of the number
-        (a, b), (c, d) = P(*ST(1.8, t0)), P(*ST(1.8, t1))
-        t.append(f'<line x1="{a:.1f}" y1="{b:.1f}" x2="{c:.1f}" y2="{d:.1f}" stroke="{AXIS}" stroke-width="1.2"/>')
-    # zones. The queue zone runs along the till and the display case and overlaps the
-    # cashier zone at the counter's edge, which is where a queue meets the till.
-    cashier = [ST(0.62, 0.3), ST(4.45, 0.3), ST(4.45, -1.25), ST(0.98, -1.25), ST(0.62, -0.79)]
-    t.append(shape(cashier, ORANGE, ORANGE, 1.2, 'fill-opacity=".12" stroke-opacity=".6"'))
-    t.append(shape(box_st(2.3, 0.05, 4.4, 0.95), BLUE, BLUE, 1.2, 'fill-opacity=".08" stroke-opacity=".5"'))
+    t.append(shape(box(2.0, 2.2, 3.95, 2.85), "#cde2fb", "#86b6ef", 1.2))   # meja 4: one row of three tables
+    for xs in (2.65, 3.3):
+        t.append(_line((xs, 2.2), (xs, 2.85), "#86b6ef"))
+    # zones. The queue zone sits in front of the till: it overlaps the cashier zone at the
+    # counter, and reaches over the end of meja 4, where the man at that table is sitting.
+    t.append(shape(box(1.65, 0.0, 5.5, 1.6), ORANGE, ORANGE, 1.2, 'fill-opacity=".12" stroke-opacity=".6"'))
+    t.append(shape(box(3.1, 1.15, 4.65, 2.55), BLUE, BLUE, 1.2, 'fill-opacity=".08" stroke-opacity=".5"'))
     for n, c in tables.items():
         t.append(_num(*_mid(c), n, occ[n]))
-    t.append(_num(*ST(1.8, 1.275), "4", False))
-    qx, qy = P(*ST(3.4, 0.52))
-    t.append(f'<text x="{qx:.1f}" y="{qy - 2:.1f}" text-anchor="middle" font-size="11" font-weight="700" fill="#184f95">Area antre</text>'
-             f'<text x="{qx:.1f}" y="{qy + 11:.1f}" text-anchor="middle" font-size="10.5" fill="{INK2}">kosong · 0 orang</text>')
+    t.append(_num(2.975, 2.525, "4", True))
     # the people in the frame: four at meja 2 (two on the bench, one on a chair facing them,
-    # one at the end), one at meja 5, one at meja 7 in the foreground, one walking, and the
-    # one member of staff behind the counter
-    guests = [(0.24, 1.62), (0.24, 1.98), (1.35, 1.75), (0.8, 1.25), ST(2.65, 1.45), (2.35, 2.75), ST(2.05, 2.65)]
+    # one at the end), the man at the end of meja 4, the woman at meja 6, one person
+    # walking, and the one member of staff behind the counter
+    guests = [(0.24, 2.2), (0.24, 2.6), (1.4, 2.4), (0.85, 1.87), (3.625, 3.1), (2.85, 4.7), (4.25, 3.95)]
     for x, y in guests:
         t.append(_guest(x, y))
     wx, wy = P(*guests[-1])
     t.append(f'<text x="{wx + 13:.1f}" y="{wy + 4:.1f}" font-size="10.5" fill="{MUTED}">sedang berjalan</text>')
-    t.append(_staff(*ST(2.45, -0.9)))
+    t.append(_staff(2.9, 0.4))
     # labels
-    t.append(_callout(132, 24, "Cermin dinding", "pantulan tidak dihitung", *P(0, 1.75, 19), "#a42626"))
-    t.append(_callout(16, 150, "Bangku panjang", "6 kursi · meja 1–3", *P(0.22, 3.1), "#184f95"))
-    t.append(_callout(448, 24, "Area kasir", "1 staf bertugas", *P(*ST(1.9, -0.95)), "#9a3a14"))
-    t.append(_callout(590, 24, "Etalase", "kue &amp; minuman", *P(*ST(4.0, -0.2)), INK2))
-    # the camera this plan is drawn from
-    cx, cy = P(*ST(1.37, 4.6))
+    t.append(_callout(132, 26, "Cermin dinding", "pantulan tidak dihitung", *P(0, 2.5, 19), "#a42626"))
+    t.append(_callout(16, 150, "Bangku panjang", "6 kursi · meja 1–3", *P(0.22, 3.9), "#184f95"))
+    t.append(_callout(448, 26, "Area kasir", "1 staf bertugas", *P(2.4, 0.35), "#9a3a14"))
+    t.append(_callout(596, 26, "Etalase", "kue &amp; minuman", *P(4.7, 0.95), INK2))
+    t.append(_callout(560, 268, "Area antre", "kosong · 0 orang", *P(4.3, 1.9), "#184f95", up=True))
+    # the camera this plan is drawn from, on the near wall
+    cx, cy = P(4.4, H)
     t.append(f'<g transform="translate({cx - 9:.1f},{cy - 13:.1f})" style="color:{INK}">{ic("cctv", 18, 2)}</g>'
              f'<text x="{cx + 14:.1f}" y="{cy + 1:.1f}" font-size="11" font-weight="700" fill="{INK}">CCTV 02</text>')
     return f'<svg width="{w}" height="{h}" viewBox="0 0 {w} {h}">{"".join(t)}</svg>'
@@ -363,7 +365,7 @@ def live() -> str:
     big = 'style="font-size:28px;font-weight:600;letter-spacing:-.02em;line-height:1"'
     strip = "".join([
         tile("Di ruangan", f'<div class="row g8" style="align-items:baseline"><span {big}>8</span><span class="sm ink2">7 tamu · 1 staf</span></div>', basis("det")),
-        tile("Kursi terisi", f'<div class="row g10"><span {big}>25%</span><div class="grow"><div class="meter"><i style="width:25%"></i></div><div class="xs muted" style="margin-top:4px">6 dari 24 kursi</div></div></div>', basis("det")),
+        tile("Kursi terisi", f'<div class="row g10"><span {big}>{OCC}%</span><div class="grow"><div class="meter"><i style="width:{OCC}%"></i></div><div class="xs muted" style="margin-top:4px">{SEATED} dari {SEATS} kursi</div></div></div>', basis("det")),
         tile("Antrean", f'<div class="row g8" style="align-items:baseline"><span {big}>0</span><span class="sm ink2">tidak ada yang menunggu</span></div>', basis("det")),
         tile("Kasir", f'<div class="row g10">{chip("Ada staf", "good", "circle-check")}<span class="sm ink2">1 staf di area kasir</span></div>', basis("det")),
     ])
@@ -372,7 +374,8 @@ def live() -> str:
         return (f'<div style="border:1px solid var(--border);border-radius:10px;padding:8px 11px;background:#fff"><div class="row sp"><span class="sm b">{name}</span>'
                 f'<span class="b tnum sm">{val}</span></div><div class="xs muted" style="margin:1px 0 6px">{sub}</div><div class="meter"><i style="width:{pct}%"></i></div></div>')
 
-    zones = (ztile("Bangku panjang", "meja 1–3", "4 / 11", 36) + ztile("Meja kayu", "meja 4–7", "2 / 13", 15)
+    zones = (ztile("Bangku panjang", "meja 1–3", f"{SEATED_BENCH} / {BENCH_SEATS}", round(100 * SEATED_BENCH / BENCH_SEATS))
+             + ztile("Meja kayu", "meja 4–6", f"{SEATED_WOOD} / {WOOD_SEATS}", round(100 * SEATED_WOOD / WOOD_SEATS))
              + ztile("Area antre", "tidak ada antrean", "0", 0)
              + '<div style="border:1px solid var(--border);border-radius:10px;padding:8px 11px;background:#fff"><div class="row sp"><span class="sm b">Area kasir</span>'
                f'{chip("Ada staf", "good")}</div><div class="xs muted" style="margin-top:7px">1 staf · terakhir kosong 13.34</div></div>')
@@ -400,7 +403,7 @@ def live() -> str:
                 f'<div class="grow"><div class="b" style="font-size:12.5px">{title}</div><div class="xs muted">{sub}</div></div><span class="xs muted tnum">{time}</span></div>')
 
     events = f"""<div class="card grow" style="padding-bottom:4px"><div class="card-h" style="margin-bottom:4px"><h3>Kejadian terbaru</h3>{chip("Hari ini", "neutral")}</div>
- {al("info", "gauge", "Kursi terisi turun ke 25%", "jam makan siang sudah lewat", "15.09")}
+ {al("info", "gauge", f"Kursi terisi turun ke {OCC}%", "jam makan siang sudah lewat", "15.09")}
  {al("good", "circle-check", "Antrean kembali kosong", "setelah 25 menit ada antrean", "14.58")}
  {al("warn", "siren", "Kasir kosong 4 menit saat 5 orang antre", "WhatsApp terkirim ke Manager", "13.31")}
  {al("crit", "wifi-off", "CCTV 03 · Teras offline", "tim support otomatis diberi tahu", "09.42")}</div>"""
@@ -437,7 +440,7 @@ def gantt(w: int, h: int) -> str:
     x0, xr = 100, w - 34
     hr = (xr - x0) / 8  # px per hour, 08.00 - 16.00
     X = lambda t: x0 + (t - 8) * hr
-    rh, top = 30, 20
+    rh, top = 34, 20
     out = []
     for k in range(9):
         out.append(f'<line x1="{X(8 + k):.1f}" x2="{X(8 + k):.1f}" y1="{top - 4}" y2="{top + rh * len(TABLES)}" stroke="#e1e0d9" stroke-width="1"/>')
@@ -582,11 +585,12 @@ def setup() -> str:
     _, raw = ensure_assets()
     mirror = [(50, 0), (745, 0), (735, 185), (620, 225), (420, 252), (250, 246), (165, 196), (50, 110)]
     cashier = [(1050, 0), (1920, 0), (1920, 120), (1650, 200), (1500, 195), (1080, 150)]
-    # The queue zone being drawn: along the till and the display case, as on the floor
-    # plan, and deliberately overlapping the cashier zone at the counter's edge, which is
-    # where a queue meets the till. It stops short of the man standing in the aisle and
-    # the man seated at meja 5, neither of whom is queuing.
-    queue = [(1525, 186), (1650, 190), (1920, 110), (1920, 314), (1700, 298), (1528, 290)]
+    # The queue zone being drawn: in front of the till and the display case, as on the
+    # floor plan. It overlaps the cashier zone at the counter's edge, which is where a
+    # queue meets the till, and reaches over the far end of meja 4. It stops short of the
+    # man standing in the aisle, and above the middle of the man seated at meja 4, so
+    # neither is counted as queuing.
+    queue = [(1525, 186), (1650, 190), (1920, 110), (1920, 420), (1640, 405), (1528, 330)]
 
     def poly(pts, col, dashed=False):
         d = " ".join(f"{x},{y}" for x, y in pts)
@@ -977,7 +981,7 @@ def overview(thumbs: dict[str, str]) -> str:
     def card(name, num, title, desc, who, accent):
         chips = "".join(f'<span class="chip neutral" style="height:21px;font-size:11.5px;padding:0 8px">{w}</span>' for w in who)
         return (f'<div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:9px;display:flex;flex-direction:column;gap:6px;min-width:0">'
-                f'<div style="position:relative;border-radius:8px;overflow:hidden;box-shadow:0 0 0 1px rgba(11,11,11,.10)"><img src="{thumbs[name]}" style="width:100%;display:block">'
+                f'<div style="position:relative;border-radius:8px;overflow:hidden;outline:1px solid rgba(11,11,11,.10)"><img src="{thumbs[name]}" style="width:100%;display:block">'
                 f'<span style="position:absolute;left:7px;top:7px;width:22px;height:22px;border-radius:50%;background:{accent};color:#fff;font-size:11.5px;font-weight:700;display:grid;place-items:center">{num}</span></div>'
                 f'<div class="b" style="font-size:15px;margin-top:3px">{title}</div><div class="ink2" style="font-size:12.5px;line-height:1.45;min-height:37px">{desc}</div>'
                 f'<div class="row g4 wrap">{chips}</div></div>')

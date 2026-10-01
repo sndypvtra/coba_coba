@@ -89,6 +89,10 @@ Ikuti gaya mockup supaya deck dan gambarnya terasa satu kesatuan.
 | `09-superadmin-klien.png` | Panel internal, Klien & Paket: semua klien, status teknis, serta paket dan harga |
 | `10-superadmin-perangkat.png` | Panel internal, Perangkat AI & Update: kondisi perangkat dan update bertahap |
 
+Setiap gambar juga ada versi SVG-nya, dengan nama yang sama di folder `svg/`. Kalau
+kamu bisa memakai SVG, gunakan versi itu supaya gambar tetap tajam saat diperbesar
+atau dipotong.
+
 ## Alur slide
 
 Buat sekitar 16 slide dengan urutan di bawah. Judul di sini adalah arah pesannya;
@@ -114,7 +118,7 @@ boleh dipoles asal maknanya tetap sama.
 5. **Satu aplikasi, dua sisi.** Pakai `00-peta-halaman.png`. Aplikasi klien
    untuk Owner, Admin, dan Manager; panel internal untuk tim Outlytics.
 6. **Pantauan Live.** Pakai `02-pantauan-live.png`. Sorot hal-hal berikut:
-   - denah ruangan digambar dari CCTV;
+   - denah ruangan digambar dari CCTV, dilihat dari arah kamera yang sama;
    - ada 8 orang di ruangan: 7 tamu dan 1 staf;
    - antrean 0 dan kasir ada staf;
    - setiap angka diberi label Akurat atau Estimasi.
