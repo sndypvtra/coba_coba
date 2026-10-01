@@ -200,6 +200,7 @@ td.n,th.n{text-align:right}
 .stp{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:11.5px;font-weight:600;border:1.5px solid var(--axis);color:var(--muted);background:#fff;flex:none}
 .stp.on{border-color:var(--blue);color:var(--blue-d);background:var(--blue-t)}.stp.done{background:var(--blue);border-color:var(--blue);color:#fff}
 .roomy td,.rm td{padding-top:11px;padding-bottom:11px}.lgt td{padding-top:9px;padding-bottom:9px}
+.cmp td{padding-top:6px;padding-bottom:6px}
 .tool{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;color:var(--ink2);border:1px solid transparent}
 .tool.on{background:var(--blue-t);color:var(--blue-d);border-color:#bcd3f3}
 .field{display:flex;align-items:center;justify-content:space-between;gap:8px;height:32px;padding:0 10px;border-radius:8px;border:1px solid var(--border);background:#fff;font-size:13px}
@@ -217,19 +218,26 @@ def _nav(groups, active: str) -> str:
     return '<div class="nav">' + "".join(out) + "</div>"
 
 
+BRAND = "Tilik"
+
+
+def logo(size: int = 18) -> str:
+    return ic("scan-eye", size, 2.1, color="#fff")
+
+
 def sidebar_tenant(active: str) -> str:
     groups = [
-        ("Operasional", [("home", "layout-dashboard", "Hari ini", ""),
-                         ("live", "radio", "Live Ops", '<span class="live"></span>')]),
-        ("Analitik", [("analytics", "chart-column", "Analytics", ""),
-                      ("hq", "building-2", "Banding Outlet", '<span class="tag">HQ</span>')]),
-        ("Otomasi", [("alert", "bell-ring", "Alert &amp; Laporan", "")]),
-        ("Pengaturan", [("setup", "video", "Kamera &amp; Zona", ""),
-                        ("users", "users", "Pengguna &amp; Role", ""),
-                        ("privacy", "shield-check", "Privasi &amp; Audit", "")]),
+        ("Operasional", [("home", "layout-dashboard", "Ringkasan Hari Ini", ""),
+                         ("live", "radio", "Pantauan Live", '<span class="live"></span>')]),
+        ("Laporan", [("analytics", "chart-column", "Analitik", ""),
+                     ("hq", "building-2", "Perbandingan Outlet", "")]),
+        ("Otomatis", [("alert", "bell-ring", "Notifikasi &amp; Laporan", "")]),
+        ("Pengaturan", [("setup", "video", "CCTV &amp; Area", ""),
+                        ("users", "users", "Tim &amp; Hak Akses", ""),
+                        ("privacy", "shield-check", "Privasi &amp; Keamanan", "")]),
     ]
     return f"""<aside class="side">
-  <div class="brand"><span class="logo">{PULSE}</span>Denyut</div>
+  <div class="brand"><span class="logo">{logo()}</span>{BRAND}</div>
   <div class="outlet"><span class="ibox info" style="width:28px;height:28px">{ic('store', 15)}</span>
     <div class="grow"><div class="t">Senopati</div><div class="s">Kedai Pagi · Jakarta</div></div>{ic('chevrons-up-down', 15, color=MUTED)}</div>
   {_nav(groups, active)}
@@ -239,23 +247,19 @@ def sidebar_tenant(active: str) -> str:
 
 def sidebar_platform(active: str) -> str:
     groups = [
-        ("Platform", [("tenant", "building", "Tenant &amp; Paket", ""),
-                      ("fleet", "server", "Armada Edge &amp; Model", ""),
-                      ("billing", "credit-card", "Tagihan &amp; Pemakaian", "")]),
-        ("Operasi", [("support", "life-buoy", "Dukungan", '<span class="tag">izin</span>'),
-                     ("flags", "flag", "Feature Flags", ""),
-                     ("audit", "scroll-text", "Audit Platform", "")]),
+        ("Panel internal", [("tenant", "building", "Klien &amp; Paket", ""),
+                            ("fleet", "server", "Perangkat AI", ""),
+                            ("billing", "credit-card", "Tagihan", "")]),
+        ("Operasional", [("support", "life-buoy", "Support", '<span class="tag">izin</span>'),
+                         ("flags", "flag", "Fitur Khusus", ""),
+                         ("audit", "scroll-text", "Riwayat Internal", "")]),
     ]
     return f"""<aside class="side dark">
-  <div class="brand"><span class="logo">{PULSE}</span>Denyut</div>
-  <div class="outlet"><span class="envtag">PLATFORM</span><div class="grow"><div class="s" style="color:#c3c2b7">Konsol internal</div></div></div>
+  <div class="brand"><span class="logo">{logo()}</span>{BRAND}</div>
+  <div class="outlet"><span class="envtag">INTERNAL</span><div class="grow"><div class="s" style="color:#c3c2b7">Khusus tim {BRAND}</div></div></div>
   {_nav(groups, active)}
   <div class="me"><div class="av">BS</div><div class="grow"><div class="n">Bima Saputra</div><div class="r">Super Admin</div></div>{ic('chevron-down', 15, color='#898781')}</div>
 </aside>"""
-
-
-PULSE = ('<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" '
-         'stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h4l2.5-7 4 14 3-9 1.5 2H22"/></svg>')
 
 
 def page(*, plane: str, active: str, url: str, title: str, sub: str, actions: str, body: str,
@@ -270,7 +274,7 @@ def page(*, plane: str, active: str, url: str, title: str, sub: str, actions: st
    <div class="head"><div><h1>{title}</h1><div class="sub">{sub}</div></div><div class="row g8">{actions}</div></div>
    {ban}{body}
  </main></div></div>
- <div class="mocktag">MOCKUP · data ilustrasi · bukan data pelanggan</div></div></body></html>"""
+ <div class="mocktag">MOCKUP · contoh data, bukan data asli</div></div></body></html>"""
 
 
 # ------------------------------------------------------------ components ---
@@ -281,11 +285,9 @@ def chip(text: str, kind: str = "neutral", icon: str | None = None, sq: bool = F
 
 def basis(kind: str) -> str:
     """The reliability badge - the product's signature element."""
-    if kind == "det":
-        return f'<span class="basis good">{ic("circle-check", 12, 2.2)}Deteksi · Andal</span>'
-    if kind == "line":
-        return f'<span class="basis good">{ic("circle-check", 12, 2.2)}Hitung pintu · Andal</span>'
-    return f'<span class="basis warn">{ic("circle-alert", 12, 2.2)}Tracking · Sedang</span>'
+    if kind in ("det", "line"):
+        return f'<span class="basis good">{ic("circle-check", 12, 2.2)}Akurat</span>'
+    return f'<span class="basis warn">{ic("circle-alert", 12, 2.2)}Estimasi</span>'
 
 
 def kpi(label: str, value: str, unit: str, delta: str, dkind: str, dtxt: str, bas: str,
