@@ -17,8 +17,8 @@ from __future__ import annotations
 import math
 from pathlib import Path
 
-from kit import (AXIS, BLUE, BRAND, INK, INK2, MUTED, ORANGE, ORDINAL, SURF, basis, chip, columns, data_uri,
-                 heatmap, ic, kpi, line_chart, logo, page, scale_bar, spark, toggle)
+from kit import (AXIS, BLUE, BRAND, INK, INK2, MUTED, ORANGE, ORDINAL, RAMP, SURF, band_bar, basis, chip, columns,
+                 data_uri, heatmap, ic, kpi, line_chart, logo, page, scale_bar, spark, stacked_columns, toggle)
 
 ROOT = Path(__file__).resolve().parents[2]
 CLIP_STILL = ROOT / "projects/05_cafe_dwell_time/docs/scene5-dwell.jpg"
@@ -53,6 +53,7 @@ SEATED_BENCH, SEATED_WOOD = 4, 2                           # who is sitting wher
 SEATED = SEATED_BENCH + SEATED_WOOD
 OCC = round(100 * SEATED / SEATS)                          # % of seats taken now
 LONG_H = 2.0  # a stay this long counts as a long stay
+TODAY_AUDIT = (98, 94, 2, 2, 104)  # until 15.00: served at the till, matched, explained, to check, estimate (Rp rb)
 
 
 def _seat_hours(w0: float, w1: float) -> tuple[float, float]:
@@ -186,15 +187,19 @@ def home() -> str:
                 f'<div class="meter grow"><i style="width:{100 * v / vmax:.0f}%"></i></div>'
                 f'<span class="sm b tnum" style="width:54px;text-align:right">{txt or f"{v}/{vmax}"}</span></div>')
 
+    served, matched, explained, flagged, est = TODAY_AUDIT
+    seg = "".join(f'<div style="flex:{v};height:10px;background:{c};border-radius:{e}"></div>'
+                  for v, c, e in ((matched, BLUE, "5px 0 0 5px"), (explained, AXIS, "0"), (flagged, FLAG, "0 5px 5px 0")))
     bottom = f"""<div class="grid" style="grid-template-columns:1.1fr 1fr 1fr;gap:12px;height:122px;flex:none">
  <div class="card" style="padding:12px 16px"><div class="card-h" style="margin-bottom:8px"><h3>Area saat ini</h3>{basis('det')}</div>
    <div class="col g8">{zone('Bangku panjang', SEATED_BENCH, BENCH_SEATS)}{zone('Meja kayu', SEATED_WOOD, WOOD_SEATS)}{zone('Antrean', 0, 6, '0 orang')}</div></div>
- <div class="card" style="padding:12px 16px"><div class="card-h" style="margin-bottom:6px"><h3>Laporan WhatsApp 08.00</h3>{chip('Terkirim', 'good', 'check')}</div>
-   <div class="ink2 sm" style="margin-bottom:8px">Ringkasan kemarin untuk 3 orang</div>
-   <div class="row g6 wrap">{chip('Lucky · Owner', 'neutral')}{chip('Bagas · Admin', 'neutral')}{chip('Sari · Manager', 'neutral')}</div></div>
+ <div class="card" style="padding:12px 16px"><div class="card-h" style="margin-bottom:8px"><h3>Kasir vs struk hari ini</h3>{basis('trk')}</div>
+   <div class="row" style="gap:2px">{seg}</div>
+   <div class="sm ink2" style="margin-top:7px"><b class="tnum" style="color:var(--ink)">{matched} dari {served}</b> rombongan cocok dengan struk · s.d. 15.00</div>
+   <div class="row sp" style="margin-top:5px"><span class="sm ink2"><b style="color:var(--ink)">{flagged} perlu dicek</b> · ±Rp {est} rb</span><span class="btn sm">Buka audit{ic("arrow-right", 13)}</span></div></div>
  <div class="card" style="padding:12px 16px"><div class="card-h" style="margin-bottom:8px"><h3>Status sistem</h3>{chip('1 perlu dicek', 'warn', 'circle-alert')}</div>
    <div class="col g6 sm"><div class="row sp"><span class="ink2">CCTV online</span><span class="b">3 dari 4</span></div>
-   <div class="row sp"><span class="ink2">Data terakhir masuk</span><span class="b">3 detik lalu</span></div>
+   <div class="row sp"><span class="ink2">Aplikasi kasir</span><span class="b">Moka · data 15.08</span></div>
    <div class="row sp"><span class="ink2">Versi AI</span><span class="b">2.4 (terbaru)</span></div></div></div></div>"""
 
     body = f"""<div class="grid" style="grid-template-columns:repeat(5,1fr);gap:12px;flex:none">{kpis}</div>
@@ -532,6 +537,12 @@ OUTLETS = [  # outlet, kota, pengunjung/hari, perubahan, kursi terisi saat ramai
 ]
 
 
+# Share of the parties served at the till that have no receipt, 30 days. Bekasi is
+# the outlet the audit points at; the rest sit around two percent.
+NO_RECEIPT = {"Seminyak": 1.2, "PIK": 1.5, "Ubud": 1.1, "Dago": 1.8, "Kemang": 1.6, "Senopati": 2.1,
+              "Tunjungan": 1.9, "Malioboro": 1.4, "Depok": 2.2, "BSD City": 2.4, "Bekasi": 8.7, "Braga": 2.0}
+
+
 def _network_kpis() -> tuple[str, str, str]:
     """The tiles above the table, computed from its rows so the two always agree."""
     visitors = f"{sum(o[2] for o in OUTLETS) * 30:,}".replace(",", ".")
@@ -547,29 +558,35 @@ def hq() -> str:
             return chip("Sangat baik", "good", "circle-check")
         return chip("Cukup", "warn", "circle-alert") if sc >= 65 else chip("Kritis", "crit", "siren")
 
+    worst = max(NO_RECEIPT, key=NO_RECEIPT.get)
+    others = sum(v for n, v in NO_RECEIPT.items() if n != worst) / (len(NO_RECEIPT) - 1)
+
+    def no_receipt(n):
+        v = NO_RECEIPT[n]
+        return chip(f"{idn(v)}%", "warn", "circle-alert") if n == worst else f"{idn(v)}%"
+
     trs = ""
     for i, (n, k, m, d, op, tw, ck, sc) in enumerate(OUTLETS, 1):
-        series = [60 + 30 * math.sin(i * 1.3 + j * 0.8) + (sc - 70) * 0.8 + j * (1.5 if d.startswith("+") else -1.5) for j in range(12)]
         dcol = "var(--good-x)" if d.startswith("+") else "var(--crit-x)"
         trs += (f'<tr><td class="muted">{i}</td><td style="line-height:1.2"><div class="b">{n}</div><div class="xs muted">{k}</div></td>'
                 f'<td class="n"><span class="b">{m}</span> <span class="xs b" style="color:{dcol}">{d}</span></td>'
                 f'<td class="n">{op}%</td><td class="n">{tw}</td><td class="n">{ck} mnt</td>'
                 f'<td><div class="row g8"><div class="meter" style="width:64px"><i style="width:{sc}%"></i></div><span class="b tnum">{sc}</span></div></td>'
-                f'<td>{spark(series, 58, 22)}</td><td>{status(sc)}</td></tr>')
+                f'<td class="n">{no_receipt(n)}</td><td>{status(sc)}</td></tr>')
 
-    cols = "".join(f'<col style="width:{w}px">' for w in (28, 132, 98, 94, 67, 112, 104, 64)) + "<col>"
+    cols = "".join(f'<col style="width:{w}px">' for w in (28, 122, 96, 90, 64, 106, 100, 102)) + "<col>"
     table = f"""<div class="card" style="flex:0 0 68%">{cardh("Peringkat outlet · 30 hari", "Skor 0–100 dari keramaian, waktu tunggu, dan kasir yang selalu ada staf", basis("trk"))}
  <table class="cmp" style="table-layout:fixed"><colgroup>{cols}</colgroup>
- <thead><tr><th></th><th>Outlet</th><th class="n">Pengunjung</th><th class="n">Saat ramai</th><th class="n">Tunggu</th><th class="n">Kasir kosong</th><th>Skor</th><th>Tren</th><th>Status</th></tr></thead>
+ <thead><tr><th></th><th>Outlet</th><th class="n">Pengunjung</th><th class="n">Saat ramai</th><th class="n">Tunggu</th><th class="n">Kasir kosong</th><th>Skor</th><th class="n">Tanpa struk</th><th>Status</th></tr></thead>
  <tbody>{trs}</tbody></table>
- <div class="row sp" style="margin-top:auto;padding-top:8px"><span class="xs muted">Pengunjung per hari · Saat ramai = kursi terisi saat paling ramai · Tunggu = menit:detik · Kasir kosong per hari</span>
+ <div class="row sp" style="margin-top:auto;padding-top:8px"><span class="xs muted">Saat ramai = kursi terisi saat paling ramai · Tunggu = menit:detik · Tanpa struk = rombongan dilayani di kasir tanpa struk</span>
  <span class="btn sm">Detail outlet{ic("arrow-right", 13)}</span></div></div>"""
 
     scores = [o[7] for o in OUTLETS]
     side = f"""<div class="card grow">{cardh("Perlu dicek minggu ini", "", chip("3 outlet", "neutral"))}
  {item("crit", "trending-up", "Braga · waktu tunggu naik 38%", "Rata-rata 3:25, minggu lalu 2:29. Terjadi 4 dari 7 hari. Kasir kosong 12 menit per hari.")}
  {item("warn", "siren", "BSD City · kasir kosong 22 menit/hari", "Hampir 3× rata-rata outlet lain. Paling sering pukul 12.00–14.00.")}
- {item("info", "armchair", "Seminyak · hampir selalu penuh", "98% kursi terisi saat ramai, penuh 41 menit di akhir pekan. Pertimbangkan tambah kursi atau staf.")}
+ {item("warn", "receipt-text", f"{worst} · {idn(NO_RECEIPT[worst])}% rombongan tanpa struk", f"{round(NO_RECEIPT[worst] / others)}× rata-rata outlet lain ({idn(others)}%). Paling sering shift malam. Cek klipnya di Audit Kasir.")}
  <div style="margin-top:auto"><div class="row sp" style="margin-top:6px"><span class="sm b">Skor semua outlet</span><span class="xs muted">terang = sangat baik (80 ke atas)</span></div>
  {columns(364, 250, scores, [str(i) for i in range(1, len(scores) + 1)], 100, {i for i, v in enumerate(scores) if v < 80}, {len(scores) - 1: str(scores[-1])})}</div>
  <div class="row g8" style="padding-top:2px;align-items:flex-start">{ic("info", 14, color=MUTED)}<span class="xs muted">Angka sudah disesuaikan dengan jumlah kursi dan jam buka, jadi outlet besar dan kecil bisa dibandingkan adil.</span></div></div>"""
@@ -643,9 +660,10 @@ def setup() -> str:
  <div class="col g6 sm"><div class="row sp"><span class="ink2">Alamat IP</span><span class="b tnum">192.168.1.21</span></div>
  <div class="row sp"><span class="ink2">Kualitas gambar</span><span class="b">Full HD</span></div>
  <div class="row sp"><span class="ink2">Diproses</span><span class="b">5 gambar per detik</span></div></div></div>"""
-    zones = f"""<div class="card grow" style="padding-bottom:6px">{cardh("Area di CCTV ini", "", chip("4", "neutral"))}
+    zones = f"""<div class="card grow" style="padding-bottom:6px">{cardh("Area di CCTV ini", "", chip("5", "neutral"))}
  {zrow("#eb6834", "Area kasir", chip("Area staf", "orange"), "untuk menghitung waktu layanan, bukan tamu")}
- {zrow("#2a78d6", "Area antre", chip("Draft", "info"), "menempel ke area kasir · untuk menghitung waktu tunggu", True)}
+ {zrow("#2a78d6", "Area antre", chip("Draft", "info"), "menempel ke area kasir · untuk waktu tunggu", True)}
+ {zrow("#898781", "Titik pesan", chip("Berikutnya", "neutral"), "di depan mesin kasir · dicocokkan dengan struk", True)}
  {zrow("#d03b3b", "Cermin dinding", chip("Tidak dihitung", "crit"), "pantulan orang di cermin tidak ikut dihitung")}
  {zrow("#898781", "Ruang utama", chip("Dihitung", "neutral"), "seluruh gambar · semua orang dihitung")}</div>"""
     valid = f"""<div class="card" style="flex:none">{cardh("Cek akurasi cepat", "Bandingkan hitungan AI dengan hitungan Anda")}
@@ -655,11 +673,11 @@ def setup() -> str:
  <div class="meter"><i style="width:20%"></i></div>
  <div class="xs muted" style="margin-top:8px">Hasil dari 5 foto masuk ke laporan akurasi CCTV ini.</div></div>"""
 
-    body = f"""{steps(["Sambungkan CCTV", "Tandai area", "Cek akurasi", "Aktifkan"], 2)}
+    body = f"""{steps(["Sambungkan CCTV", "Tandai area", "Sambungkan kasir", "Cek akurasi", "Aktifkan"], 2)}
 <div class="row g12" style="flex:1;min-height:0;align-items:stretch">{editor}<div class="col g12" style="flex:0 0 346px">{cam}{zones}{valid}</div></div>"""
     return page(plane="tenant", active="setup", url=f"{APP}/senopati/cctv/02/area",
                 title="CCTV &amp; Area", sub="Outlet Senopati · tambah CCTV baru dalam beberapa menit, tanpa teknisi khusus",
-                actions=btn("Simpan draft") + btn("Lanjut: cek akurasi", "arrow-right", "pri"), body=body)
+                actions=btn("Simpan draft") + btn("Lanjut: sambungkan kasir", "arrow-right", "pri"), body=body)
 
 
 # ======================================================== 06 notifikasi & laporan
@@ -678,9 +696,9 @@ def alerts() -> str:
                 f'<div class="xs muted tnum" style="width:96px;text-align:right;flex:none">{last}</div></div>')
 
     rules = f"""<div class="card" style="flex:none;padding-bottom:4px">{cardh("Aturan aktif", "Berlaku selama jam buka", chip("5 aturan", "neutral"))}
+ {rule("<b>Struk dibatalkan</b> saat tidak ada pelanggan di depan kasir", "Dikirim ke: Lucky (Owner), dengan klip bukti", ["wa"], "kemarin 20.15")}
  {rule("<b>Kasir kosong</b> 3 menit atau lebih <b>saat</b> 3 orang atau lebih antre", "Dikirim ke: Manager Senopati", ["wa"], "terakhir 13.31")}
  {rule("<b>Kursi terisi</b> 90% atau lebih selama 15 menit", "Dikirim ke: Manager Senopati", ["wa", "push"], "terakhir 13.05")}
- {rule("<b>Antrean</b> 6 orang atau lebih", "Dikirim ke: Supervisor", ["push"], "terakhir 12.58")}
  {rule("<b>CCTV offline</b> 5 menit atau lebih", "Dikirim ke: Admin · tim support otomatis diberi tahu", ["mail"], "terakhir 09.42")}
  {rule("<b>Meja dipakai</b> 3 jam atau lebih", "Tanpa notifikasi, cukup masuk laporan harian", ["rep"], "&mdash;")}</div>"""
 
@@ -699,9 +717,13 @@ def alerts() -> str:
     schedule = f"""<div class="card grow" style="padding-bottom:4px">{cardh("Laporan otomatis", "Dikirim ke: Lucky (Owner), Bagas (Admin), Sari (Manager)")}
  {sch("Harian", "setiap hari 08.00")}{sch("Mingguan", "setiap Senin 07.00")}{sch("Bulanan", "tanggal 1, 07.00")}</div>"""
 
+    _, t = _audit()
     msg1 = ("<b>Laporan harian · Kedai Pagi Senopati</b><br>Rabu, 30 Sep 2026<br><br>"
             "• Pengunjung: <b>241 orang</b> (+3% dari Rabu lalu)<br>• Paling ramai: <b>88%</b> kursi terisi, pukul 12.40<br>"
-            "• Kasir kosong: <b>5 menit</b><br>• Rata-rata lama berkunjung: <b>41 menit</b> <i>(estimasi)</i><br><br>"
+            "• Kasir kosong: <b>5 menit</b><br>• Rata-rata lama berkunjung: <b>41 menit</b> <i>(estimasi)</i><br>"
+            f"• Kasir vs struk: <b>{t['matched']} dari {t['served']}</b> rombongan cocok<br>"
+            f"• Perlu dicek: <b>{len(FINDINGS)} temuan</b> (±Rp {t['est']} rb)<br>"
+            f"• Antre lalu pergi: <b>{QUEUE_LEFT} rombongan</b> (±Rp {t['queue_loss']} rb)<br><br>"
             f"Catatan: 2 meja dipakai lebih dari 3 jam.<br><span style='color:#2a78d6'>{APP}/senopati</span>")
     msg2 = ("<b>Kasir kosong</b> 4 menit, 5 orang sedang antre.<br>Saran: minta 1 staf ke kasir.<br>"
             f"<span style='color:#2a78d6'>{APP}/senopati/live</span>")
@@ -762,6 +784,7 @@ def users() -> str:
     caps = [("Pantauan live", [True, True, "outletnya", False, "outletnya", False]),
             ("Analitik & perbandingan", [True, True, "outletnya", True, False, False]),
             ("Download data", [True, True, "outletnya", True, False, False]),
+            ("Audit kasir & klip", [True, "ringkasan", False, False, False, False]),
             ("Notifikasi & laporan", [True, True, "outletnya", False, False, False]),
             ("CCTV & area", [True, True, False, False, False, "sementara"]),
             ("Tim & hak akses", [True, "terbatas", False, False, False, False]),
@@ -778,7 +801,7 @@ def users() -> str:
   <div class="row g12" style="padding:9px 0;border-bottom:1px solid #eceae4">{toggle(True)}<div class="grow sm">Wajib verifikasi 2 langkah untuk Owner dan Admin</div></div>
   <div class="row g12" style="padding:9px 0;border-bottom:1px solid #eceae4">{toggle(False)}<div class="grow sm">Login dengan akun Google / Microsoft</div>{chip("Enterprise", "info")}</div>
   <div class="row g12" style="padding:9px 0">{toggle(True)}<div class="grow sm">Otomatis logout setelah 12 jam tidak aktif</div></div></div>
- <div class="row g14 xs muted wrap" style="margin-top:auto;padding-top:8px;row-gap:3px"><span><b>outletnya</b> = hanya outlet yang ditugaskan</span><span><b>sementara</b> = ada batas waktunya</span><span><b>terbatas</b> = tidak bisa mengubah Owner</span></div></div>"""
+ <div class="row g14 xs muted wrap" style="margin-top:auto;padding-top:8px;row-gap:3px"><span><b>outletnya</b> = hanya outlet yang ditugaskan</span><span><b>sementara</b> = ada batas waktunya</span><span><b>terbatas</b> = tidak bisa mengubah Owner</span><span><b>ringkasan</b> = angka saja, tanpa klip</span></div></div>"""
     body = f'<div class="row g12" style="flex:1;min-height:0;align-items:stretch">{left}{right}</div>'
     return page(plane="tenant", active="users", url=f"{APP}/kedai-pagi/tim",
                 title="Tim &amp; Hak Akses", sub="Kedai Pagi · 7 orang · 12 outlet · hanya Owner dan Admin",
@@ -792,20 +815,21 @@ def privacy() -> str:
                 f'<div class="xs muted" style="margin-top:2px;line-height:1.4">{sub}</div></div>{ctl}</div>')
 
     left = f"""<div class="card" style="flex:0 0 45%;padding-bottom:6px">{cardh("Pengaturan privasi", "Hanya menyimpan data yang benar-benar perlu")}
- {pr("Video tidak keluar dari outlet", "Yang dikirim ke cloud hanya angka dan titik tanpa identitas, bukan gambar.", toggle(lock=True))}
+ {pr("Video tidak disimpan di cloud", "Rekaman tetap di outlet. Yang dikirim ke cloud hanya angka dan titik tanpa identitas.", toggle(lock=True))}
  {pr("Tanpa wajah, tanpa nama", "Sistem tidak mengenali wajah dan tidak tahu siapa orangnya.", toggle(lock=True))}
  {pr("Buka video CCTV dari aplikasi", "Hanya Owner dan Admin, dan hanya dari jaringan outlet.", toggle(True))}
- {pr("Laporan per staf", "Mati. Waktu layanan hanya dilaporkan per area kasir. Menyalakan butuh persetujuan Owner dan pemberitahuan ke tim.", toggle(False))}
+ {pr("Klip bukti audit kasir", "30 detik per temuan, hanya Owner, diputar dari perangkat outlet, terhapus setelah 30 hari.", toggle(True))}
+ {pr("Laporan per staf", "Mati: audit dan layanan dilaporkan per shift. Menyalakan butuh izin Owner dan pemberitahuan ke tim.", toggle(False))}
+ {pr("Ikut Rapor Kafe, tanpa nama", "Angka outlet ikut dihitung bersama minimal 5 brand lain. Syarat untuk bisa melihat Rapor Kafe.", toggle(True))}
  {pr("Lama penyimpanan data detail", "Setelah itu hanya ringkasan harian yang disimpan.", '<span class="sel" style="height:28px">13 bulan' + ic("chevron-down", 14, color=MUTED) + "</span>")}
  {pr("Download tanpa data per orang", "File yang di-download hanya berisi ringkasan.", toggle(True))}
- {pr("Area yang tidak dihitung", "1 aktif: cermin dinding (Senopati, CCTV 02).", '<span class="btn sm">Kelola</span>')}
  {pr("Permintaan data dari pelanggan", "Tanggapi permintaan lihat atau hapus data; semuanya tercatat.", '<span class="btn sm">Buka</span>')}
  <div style="margin-top:auto;padding-top:12px"><div class="sm b" style="margin-bottom:8px">Data apa yang disimpan</div>
  <div class="grid" style="grid-template-columns:1fr 1fr;gap:10px">
   <div style="border:1px solid var(--border);border-radius:10px;padding:10px 12px;background:#fff"><div class="row g6 b sm" style="color:var(--good-x)">{ic("circle-check", 15, 2.2)}Disimpan</div>
-   <div class="xs ink2" style="margin-top:6px;line-height:1.65">Jumlah orang per menit<br>Lama berada di tiap area (tanpa identitas)<br>Kejadian: antrean, kasir, notifikasi</div></div>
+   <div class="xs ink2" style="margin-top:6px;line-height:1.65">Jumlah orang per menit<br>Lama berada di tiap area (tanpa identitas)<br>Struk dari kasir: jam, total, kanal</div></div>
   <div style="border:1px solid var(--border);border-radius:10px;padding:10px 12px;background:#fff"><div class="row g6 b sm" style="color:var(--crit-x)">{ic("ban", 15, 2.2)}Tidak pernah disimpan</div>
-   <div class="xs ink2" style="margin-top:6px;line-height:1.65">Video dan foto<br>Wajah atau ciri tubuh<br>Nama atau identitas tamu</div></div></div></div></div>"""
+   <div class="xs ink2" style="margin-top:6px;line-height:1.65">Video dan foto di cloud<br>Wajah atau ciri tubuh<br>Nama atau nomor HP pembeli</div></div></div></div></div>"""
 
     req = f"""<div class="card" style="flex:none;border-color:#f3c5ad;background:#fffaf7">{cardh("Permintaan akses dari tim support", "", chip("menunggu persetujuan", "orange", "clock"))}
  <div class="row g12" style="align-items:flex-start"><div class="av" style="background:#fdeae1;color:#9a3a14">DS</div>
@@ -819,6 +843,7 @@ def privacy() -> str:
     log = f"""<div class="card grow" style="padding-bottom:6px">{cardh("Riwayat aktivitas", "Semua aksi penting tercatat dan tidak bisa diubah", chip("hari ini", "neutral"))}
  <table class="lgt"><thead><tr><th>Waktu</th><th>Siapa</th><th>Melakukan</th><th>Detail</th></tr></thead><tbody>
  {lg("15.04", "Sari W. · Manager", "Download data", "Analitik · 7 hari")}
+ {lg("14.52", "Lucky · Owner", "Memutar klip bukti", "Audit kasir · temuan 19.42 kemarin")}
  {lg("14.31", "Bagas P. · Admin", "Mengubah area", "Senopati · CCTV 02 · area kasir")}
  {lg("13.31", "Sistem", "Kirim notifikasi", "Kasir kosong &rarr; WhatsApp")}
  {lg("11.02", "Lucky · Owner", "Mengubah aturan", "Kasir kosong · 3 menit")}
@@ -828,12 +853,299 @@ def privacy() -> str:
  {lg("kemarin", "Teknisi CCTV", "Menambah CCTV", "Senopati · CCTV 03 Teras")}
  {lg("kemarin", "Putri L. · Analis", "Membuka analitik", "Perbandingan outlet · 30 hari")}
  {lg("kemarin", "Sistem", "Update AI", "Perangkat Senopati · versi 2.3 &rarr; 2.4")}
- {lg("kemarin", "Bagas P. · Admin", "Mengundang anggota", "laras@kedaipagi.id · Analis")}
- {lg("2 hari lalu", "Bagas P. · Admin", "Mengundang anggota", "anton@kedaipagi.id · Manager Braga")}</tbody></table></div>"""
+ {lg("kemarin", "Bagas P. · Admin", "Mengundang anggota", "laras@kedaipagi.id · Analis")}</tbody></table></div>"""
     body = f'<div class="row g12" style="flex:1;min-height:0;align-items:stretch">{left}<div class="col g12 grow">{req}{log}</div></div>'
     return page(plane="tenant", active="privacy", url=f"{APP}/kedai-pagi/privasi",
                 title="Privasi &amp; Keamanan", sub="Kedai Pagi · atur data yang disimpan dan lihat siapa melakukan apa · khusus Owner",
                 actions=btn("Download riwayat", "download"), body=body)
+
+
+# ================================================================ 11 audit kasir
+# Yesterday at Senopati, Wednesday 30 Sep: the day the 08.00 WhatsApp report on
+# page 06 sums up. Every party served at the till is matched to a receipt from the
+# cashier app. What is left over is either explained - a driver collecting an online
+# order, someone who only asked - or goes to the owner as a finding with a clip.
+# The tiles, the chart, the shift tiles and the list are all computed from these
+# rows, so the page cannot contradict itself or page 06.
+AUDIT_HOURS = list(range(8, 22))                                    # 08.00-21.59
+SERVED = [6, 9, 10, 12, 16, 15, 10, 8, 9, 11, 13, 14, 11, 8]        # parties served at the till
+EXPLAINED = {10: "tanya", 12: "ojol", 13: "ojol", 16: "tanya",       # one explained party in each of these
+             18: "ojol", 19: "ojol", 20: "tanya"}                  # hours: a driver pickup, or a question
+FINDINGS = [  # time, kind, people, seconds at the order point, estimate (Rp rb), score
+    ("19.42", "nostruk", 2, 55, 104, "tinggi"),
+    ("20.15", "void", 0, 0, 74, "tinggi"),
+    ("19.58", "nostruk", 1, 41, 52, "sedang"),
+    ("21.06", "nostruk", 1, 35, 52, "sedang"),
+    ("13.12", "nostruk", 1, 24, 52, "rendah"),
+]
+ENTERED, QUEUE_LEFT = 168, 9     # parties through the door; parties who queued and left unserved
+AOV, AOV_ONLINE = 58, 61         # average receipt, Rp rb
+ONLINE, SPLIT = 38, 5            # online-order receipts, kept apart; extra receipts from split bills
+SHIFTS = [("Pagi", 8, 12, 1.0), ("Siang", 12, 17, 2.0), ("Malam", 17, 22, 2.0)]  # usual % of parties flagged
+FLAG = "#d03b3b"                 # the status colour for "perlu dicek"
+
+
+def idn(x: float, nd: int = 1) -> str:
+    """An Indonesian number: decimal comma, thousands dot."""
+    return f"{x:,.{nd}f}".replace(",", "_").replace(".", ",").replace("_", ".")
+
+
+def _audit():
+    """Per-hour rows (hour, matched, explained, flagged) and the day's totals."""
+    flagged: dict[int, int] = {}
+    for tm, kind, *_ in FINDINGS:
+        if kind == "nostruk":
+            flagged[int(tm[:2])] = flagged.get(int(tm[:2]), 0) + 1
+    rows = [(hr, s - (hr in EXPLAINED) - flagged.get(hr, 0), int(hr in EXPLAINED), flagged.get(hr, 0))
+            for hr, s in zip(AUDIT_HOURS, SERVED)]
+    matched = sum(r[1] for r in rows)
+    walkin = matched + SPLIT
+    return rows, dict(served=sum(SERVED), matched=matched, explained=sum(r[2] for r in rows),
+                      flagged=sum(r[3] for r in rows), est=sum(f[4] for f in FINDINGS), walkin=walkin,
+                      receipts=walkin + ONLINE, revenue=walkin * AOV + ONLINE * AOV_ONLINE,
+                      queue_loss=QUEUE_LEFT * AOV, conv=round(100 * matched / ENTERED))
+
+
+def _sec(t: str) -> int:
+    h, m, s = (int(v) for v in t.split("."))
+    return h * 3600 + m * 60 + s
+
+
+def _privacy_view(w: int, h: int) -> str:
+    """The finding as the cameras' dots see it - where people stood, no faces. Drawn,
+    not cut from a frame: the clip it stands for does not exist in a mockup, and no
+    real person should be shown as a finding."""
+    bg, lab = "#1c1c1b", "#a8a69c"
+    o = [f'<rect width="{w}" height="{h}" rx="9" fill="{bg}"/>',
+         '<rect x="12" y="26" width="118" height="13" rx="3" fill="#3b3b37"/>',          # counter
+         '<rect x="96" y="28" width="16" height="9" rx="2" fill="#6b6a64"/>',            # till
+         f'<rect x="{w - 54}" y="22" width="44" height="19" rx="3" fill="#2c2c29" stroke="#3b3b37"/>',  # display case
+         f'<rect x="99" y="9" width="11" height="11" rx="3" fill="{ORANGE}" stroke="{bg}" stroke-width="2"/>',
+         f'<text x="94" y="18" text-anchor="end" font-size="9.5" fill="{lab}">staf</text>',
+         f'<rect x="80" y="46" width="56" height="30" rx="6" fill="{BLUE}" fill-opacity=".16" stroke="{BLUE}" stroke-width="1.2" stroke-dasharray="4 3"/>',
+         f'<text x="80" y="89" font-size="9.5" fill="{lab}">titik pesan</text>',
+         f'<path d="M{w - 6},{h - 8} C{w - 24},{h - 22} 150,78 126,64" fill="none" stroke="{BLUE}" stroke-opacity=".45" stroke-width="1.5" stroke-linecap="round"/>',
+         f'<path d="M90,66 C70,80 44,92 14,{h - 10}" fill="none" stroke="{BLUE}" stroke-opacity=".45" stroke-width="1.5" stroke-linecap="round"/>',
+         f'<circle cx="99" cy="60" r="5.5" fill="{BLUE}" stroke="{bg}" stroke-width="2"/>',
+         f'<circle cx="117" cy="62" r="5.5" fill="{BLUE}" stroke="{bg}" stroke-width="2"/>',
+         f'<text x="10" y="15" font-size="10" font-weight="600" fill="#e1e0d9" style="font-variant-numeric:tabular-nums">19.42.31</text>',
+         f'<text x="{w - 10}" y="15" text-anchor="end" font-size="9.5" fill="{lab}">tanpa wajah</text>']
+    return f'<svg width="{w}" height="{h}" viewBox="0 0 {w} {h}" style="flex:none">{"".join(o)}</svg>'
+
+
+def _receipt_timeline(w: int, h: int = 78) -> str:
+    """Six minutes either side of the finding: parties at the order point, receipts from
+    the cashier app, staff at the till. The shaded window - a minute before the party
+    reached the till to three minutes after it left - is where its receipt had to fall."""
+    L, R = 82, 18
+    t0, t1 = _sec("19.38.00"), _sec("19.50.00")
+    X = lambda t: L + (_sec(t) - t0) / (t1 - t0) * (w - L - R)
+    w0, w1 = X("19.41.10"), X("19.46.05")
+    o = [f'<rect x="{w0:.1f}" y="0" width="{w1 - w0:.1f}" height="62" rx="5" fill="{FLAG}" fill-opacity=".08"/>',
+         f'<text x="{(w0 + w1) / 2:.1f}" y="38" text-anchor="middle" font-size="10.5" font-weight="600" fill="#a42626">tidak ada struk di jendela ini</text>']
+    for y, txt in ((16, "Rombongan"), (38, "Struk"), (58, "Staf di kasir")):
+        o.append(f'<text x="0" y="{y}" font-size="10.5" fill="{MUTED}">{txt}</text>')
+    o.append(f'<line x1="{L}" x2="{w - R}" y1="54" y2="54" stroke="{ORANGE}" stroke-width="2" stroke-linecap="round"/>')
+    for a, b, col in (("19.39.20", "19.40.05", RAMP[3]), ("19.42.10", "19.43.05", FLAG), ("19.46.40", "19.47.25", RAMP[3])):
+        o.append(f'<rect x="{X(a):.1f}" y="6" width="{X(b) - X(a):.1f}" height="12" rx="3" fill="{col}"/>')
+    for r in ("19.39.52", "19.47.31"):
+        x = X(r)
+        o.append(f'<line x1="{x:.1f}" x2="{x:.1f}" y1="18" y2="28" stroke="{AXIS}" stroke-width="1"/>'
+                 f'<rect x="{x - 1.5:.1f}" y="28" width="3" height="12" rx="1.5" fill="{INK2}"/>')
+    for m in range(38, 51, 2):
+        o.append(f'<text x="{X(f"19.{m:02d}.00"):.1f}" y="{h - 3}" text-anchor="middle" font-size="10" fill="{MUTED}" style="font-variant-numeric:tabular-nums">19.{m:02d}</text>')
+    return f'<svg width="{w}" height="{h}" viewBox="0 0 {w} {h}" style="flex:none">{"".join(o)}</svg>'
+
+
+def audit() -> str:
+    rows, t = _audit()
+    parts = [(t["matched"], BLUE, "cocok dengan struk"), (t["explained"], AXIS, "wajar"), (t["flagged"], FLAG, "tanpa struk, perlu dicek")]
+    ends = ["6px 0 0 6px", "0", "0 6px 6px 0"]
+    bar = "".join(f'<div style="flex:{v};height:12px;background:{c};border-radius:{e}"></div>' for (v, c, _), e in zip(parts, ends))
+    keys = "".join(f'<span class="row g6"><i class="dot" style="background:{c}"></i><span><b class="tnum">{v}</b> {lab}</span></span>'
+                   for v, c, lab in parts)
+    flow = f"""<div class="card" style="padding:13px 16px 12px">
+ <div class="row sp"><span class="sm ink2 b">Rombongan dilayani di kasir</span>{basis("trk")}</div>
+ <div class="row g10" style="align-items:baseline;margin:6px 0 10px"><span style="font-size:31px;font-weight:600;letter-spacing:-.022em;line-height:1.1">{t["served"]}</span>
+  <span class="sm ink2">dari {ENTERED} rombongan yang masuk · konversi {t["conv"]}%</span></div>
+ <div class="row" style="gap:2px">{bar}</div>
+ <div class="row g14 sm ink2 wrap" style="margin-top:9px;row-gap:4px">{keys}</div></div>"""
+
+    def tile(label, value, sub, bas, icon_):
+        return (f'<div class="card kpi"><div class="l"><span>{label}</span>{ic(icon_, 15, color=MUTED)}</div>'
+                f'<div class="v" style="margin:7px 0 3px">{value}</div><div class="d muted">{sub}</div>'
+                f'<div style="margin-top:auto;padding-top:9px">{bas}</div></div>')
+
+    voids = sum(1 for f in FINDINGS if f[1] == "void")
+    tiles = (tile("Potensi tak tercatat", f"±Rp {t['est']} rb", f"{len(FINDINGS)} temuan · {len(FINDINGS) - voids} tanpa struk, {voids} void",
+                  basis("trk"), "triangle-alert")
+             + tile("Omzet hilang karena antre", f"±Rp {t['queue_loss']} rb", f"{QUEUE_LEFT} rombongan pergi sebelum dilayani", basis("trk"), "log-out")
+             + tile("Omzet tercatat", f"Rp {idn(t['revenue'] / 1000)} jt", f"{t['receipts']} struk · {ONLINE} pesanan online", basis("pos"), "receipt-text"))
+    top = f'<div class="grid" style="grid-template-columns:2fr 1fr 1fr 1fr;gap:12px;flex:none">{flow}{tiles}</div>'
+
+    def shift_band(name, a, b, usual):
+        """A shift as a band over its hours: what it found, against what it usually finds."""
+        served = sum(s for hr, s in zip(AUDIT_HOURS, SERVED) if a <= hr < b)
+        found = sum(1 for f in FINDINGS if a <= int(f[0][:2]) < b)
+        ratio = 100 * found / served / usual
+        i0, i1 = AUDIT_HOURS.index(a), AUDIT_HOURS.index(b - 1) + 1
+        if ratio >= 2:
+            return i0, i1, f"{name} · {found} perlu dicek · {idn(ratio)}× biasanya", True
+        return i0, i1, f"{name} · {found} perlu dicek", False
+
+    stacks = [[m, e, f] for _, m, e, f in rows]
+    chart = stacked_columns(700, 196, stacks, [f"{hr:02d}.00" for hr in AUDIT_HOURS], [BLUE, AXIS, FLAG], 20, 5,
+                            bands=[shift_band(*s) for s in SHIFTS])
+    legend = (f'<div class="lg" style="margin-bottom:6px"><span><i class="sq" style="background:{BLUE}"></i>Cocok dengan struk</span>'
+              f'<span><i class="sq" style="background:{AXIS}"></i>Wajar</span><span><i class="sq" style="background:{FLAG}"></i>Perlu dicek</span></div>')
+    chart_card = f"""<div class="card" style="flex:none">{cardh("Rombongan dilayani per jam", "Tiap rombongan di titik pesan dicocokkan dengan struk dari aplikasi kasir", basis("trk"))}
+ {legend}{chart}
+ <div class="row g8 xs muted" style="margin-top:8px">{ic("info", 14, color=MUTED)}<span>Dibandingkan per shift dengan kebiasaan outlet ini, bukan per kasir. Laporan per kasir mati, lihat Privasi &amp; Keamanan.</span></div></div>"""
+
+    def kv(k, v):
+        return f'<div><div class="xs muted">{k}</div><div class="sm b" style="margin-top:1px">{v}</div></div>'
+
+    src = f"""<div class="card grow">{cardh("Sumber data kasir", "", chip("Tersambung", "good", "circle-check"))}
+ <div class="grid" style="grid-template-columns:1fr 1fr;gap:9px 18px">{kv("Aplikasi kasir", "Moka · akun Senopati")}{kv("Data masuk", "tiap 5 menit · terakhir 15.08")}
+ {kv("Jam kasir vs jam CCTV", "selisih 4 detik, sudah disesuaikan")}{kv("Struk kemarin", f"{t['walkin']} di kasir · {ONLINE} online, dipisahkan")}</div>
+ <div class="row g8" style="margin-top:auto;padding-top:9px;border-top:1px solid var(--grid);align-items:flex-start">{ic("lock", 14, color=MUTED)}
+  <span class="xs muted">Yang diambil hanya jam, total, kanal, dan status struk, tanpa nama atau nomor HP pembeli. Bisa juga dari Majoo, ESB, Pawoon, atau upload Excel.</span></div></div>"""
+
+    score = {"tinggi": ("crit", "Skor tinggi"), "sedang": ("warn", "Skor sedang"), "rendah": ("neutral", "Skor rendah")}
+
+    def frow(tm, kind, ppl, secs, rp, sc, on=False):
+        k, lab = score[sc]
+        if kind == "nostruk":
+            title, sub, icon_, amt = "Dilayani tanpa struk", f"{ppl} orang · {secs} detik di titik pesan", "receipt-text", f"±Rp {rp} rb"
+        else:
+            title, sub, icon_, amt = "Struk dibatalkan", "tidak ada pelanggan di depan kasir", "ticket-x", f"Rp {rp} rb"
+        bg = "background:var(--blue-t);" if on else ""
+        return (f'<div class="row g10" style="padding:6px 9px;border-radius:9px;{bg}">'
+                f'<div class="ibox {k}" style="width:28px;height:28px;border-radius:8px">{ic(icon_, 15)}</div>'
+                f'<div class="grow"><div class="row g8"><span class="b tnum" style="font-size:13px">{tm}</span><span style="font-size:13px">{title}</span></div>'
+                f'<div class="xs muted">{sub}</div></div>'
+                f'<span class="b tnum sm" style="width:80px;text-align:right">{amt}</span>'
+                f'<span style="width:100px;display:flex;justify-content:flex-end">{chip(lab, k)}</span></div>')
+
+    pickups = sum(1 for why in EXPLAINED.values() if why == "ojol")
+    lst = f"""<div class="card" style="flex:none;padding-bottom:10px">{cardh("Perlu dicek", "Urut dari skor · belum ada yang ditinjau", chip(f"{len(FINDINGS)} temuan", "warn"))}
+ <div class="col" style="gap:1px;margin:-4px -9px 0">{"".join(frow(*f, on=(i == 0)) for i, f in enumerate(FINDINGS))}</div>
+ <div class="row g8" style="margin-top:9px;padding:9px 11px;border-radius:10px;background:#f3f2ee;align-items:flex-start">{ic("circle-check", 15, color="#006300")}
+  <span class="xs ink2"><b style="color:var(--ink)">{t["explained"]} lainnya dijelaskan otomatis</b> dan tidak dikirim ke Anda: {pickups} pengemudi ojol mengambil pesanan online,
+  {t["explained"] - pickups} orang hanya bertanya tanpa memesan.</span></div></div>"""
+
+    detail = f"""<div class="card grow" style="min-height:0">{cardh("19.42 · Dilayani tanpa struk", "2 orang datang bersama · 55 detik di titik pesan · staf ada di kasir · perkiraan ±Rp 104 rb", chip("Skor tinggi", "crit", "circle-alert"))}
+ <div class="row g14" style="align-items:flex-start">{_privacy_view(180, 96)}{_receipt_timeline(506)}</div>
+ <div class="row g8" style="margin-top:auto;padding-top:10px">{btn("Benar ada masalah", "circle-alert", "pri sm")}{btn("Wajar", None, "sm")}{btn("Kamera salah", None, "sm")}
+  <span class="grow"></span>{btn("Putar klip 30 detik", "play", "sm")}</div>
+ <div class="row g6 xs muted" style="margin-top:7px">{ic("lock", 13, color=MUTED)}<span>Klip diputar langsung dari perangkat outlet, tidak disimpan di cloud, dan terhapus otomatis 30 Okt. Setiap pemutaran tercatat.</span></div></div>"""
+
+    body = f"""{top}<div class="row g12" style="flex:1;min-height:0;align-items:stretch">
+ <div class="col g12" style="flex:0 0 57%">{chart_card}{detail}</div><div class="col g12 grow">{lst}{src}</div></div>"""
+    return page(plane="tenant", active="audit", url=f"{APP}/senopati/audit-kasir",
+                title="Audit Kasir", sub="Outlet Senopati · kemarin, Rabu 30 Sep 2026 · setiap rombongan yang dilayani di kasir dicocokkan dengan struk",
+                actions=sel("Periode", "Kemarin") + sel("Shift", "Semua shift") + btn("Download", "download"), body=body)
+
+
+# ================================================================= 12 rapor kafe
+# Senopati against cafes like it - coffee, mid-price, Jabodetabek - drawn from the
+# outlets that agreed to share, anonymously. Only the group's percentiles are ever
+# shown, never another outlet's figure, and a group is shown only with at least five
+# brands and no brand above 40% of it. Senopati's own figures follow from the rest of
+# the deck: 262 visitors a day (page 04), 35 seats (the 21 in the main room and 14 on
+# the terrace), open 14 hours, about Rp 10,4 jt a day.
+R_SEATS, R_HOURS, R_VISITS, R_REV, R_DWELL = 35, 14, 262, 10_400, 40
+G_VPSH, G_DWELL, G_SPEND = 0.61, 34, 41          # the group's middle values
+R_QUEUED = 165                                    # parties a day who join the queue
+COHORT = (41, 13)                                 # outlets, brands
+R_LEFT, G_LEFT, R_LONG, G_LONG, R_CONV, G_CONV = 6.5, 3.1, 37, 18, 80, 84
+
+
+def _rapor_rows():
+    vpsh = R_VISITS / (R_SEATS * R_HOURS)
+    spend = R_REV / R_VISITS
+    occ, g_occ = 100 * vpsh * R_DWELL / 60, 100 * G_VPSH * G_DWELL / 60
+    rev, g_rev = vpsh * spend, G_VPSH * G_SPEND
+    C, P = "cctv", "pos"
+    pct = lambda v: f"{v:.0f}%"
+    return [  # label, from, you, group, lo, hi, p25, p75, format, verdict
+        ("Pengunjung per kursi per jam", [C], vpsh, G_VPSH, 0.40, 0.80, 0.52, 0.70, lambda v: idn(v, 2), ("warn", "di bawah")),
+        ("Lama berkunjung", [C], R_DWELL, G_DWELL, 20, 50, 29, 38, lambda v: f"{v:.0f} mnt", ("warn", "lebih lama")),
+        ("Kursi terisi rata-rata", [C], occ, g_occ, 20, 50, 29, 42, pct, ("neutral", "sama")),
+        ("Meja 2 jam+ saat makan siang", [C], R_LONG, G_LONG, 0, 45, 12, 26, pct, ("crit", "jauh di atas")),
+        ("Antre lalu pergi", [C], R_LEFT, G_LEFT, 0, 8, 2.0, 4.4, lambda v: f"{idn(v)}%", ("crit", "10% terburuk")),
+        ("Konversi masuk → beli", [C, P], R_CONV, G_CONV, 70, 95, 79, 88, pct, ("warn", "di bawah")),
+        ("Belanja per pengunjung", [P], spend, G_SPEND, 25, 55, 35, 47, lambda v: f"Rp {v:.0f} rb", ("neutral", "sama")),
+        ("Omzet per kursi per jam", [C, P], rev, g_rev, 15, 35, 21.5, 30, lambda v: f"Rp {v:.0f} rb", ("warn", "25% terbawah")),
+    ], dict(vpsh=vpsh, spend=spend, rev=rev, g_rev=g_rev)
+
+
+def rapor() -> str:
+    rows, v = _rapor_rows()
+    src = {"cctv": ic("video", 14, color=MUTED), "pos": ic("receipt-text", 14, color=MUTED)}
+    trs = "".join(
+        f'<tr><td><span class="b" style="font-size:12.5px">{lab}</span></td><td><span class="row" style="gap:4px">{"".join(src[s] for s in frm)}</span></td>'
+        f'<td class="n b">{fmt(you)}</td><td class="n ink2">{fmt(grp)}</td><td>{band_bar(176, lo, hi, p25, p75, grp, you)}</td>'
+        f'<td>{chip(vt, vk)}</td></tr>'
+        for lab, frm, you, grp, lo, hi, p25, p75, fmt, (vk, vt) in rows)
+    cols = "".join(f'<col style="width:{w}px">' for w in (200, 56, 70, 104, 192)) + "<col>"
+    dot = f'<svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.5" fill="{BLUE}"/></svg>'
+    tick = f'<svg width="6" height="14" viewBox="0 0 6 14"><line x1="3" x2="3" y1="2" y2="12" stroke="{INK2}" stroke-width="2" stroke-linecap="round"/></svg>'
+    band = f'<svg width="22" height="10" viewBox="0 0 22 10"><rect width="22" height="10" rx="5" fill="{RAMP[1]}"/></svg>'
+    table = f"""<div class="card" style="flex:0 0 61%">{cardh("Rapor September", "Angka outlet Anda di samping nilai tengah kafe sejenis", basis("trk"))}
+ <table class="roomy" style="table-layout:fixed"><colgroup>{cols}</colgroup>
+ <thead><tr><th>Angka</th><th>Dari</th><th class="n">Anda</th><th class="n">Nilai tengah</th><th>Sebaran kafe sejenis</th><th>Posisi Anda</th></tr></thead><tbody>{trs}</tbody></table>
+ <div style="margin-top:auto">
+  <div class="lg wrap" style="gap:16px;row-gap:5px;padding:10px 0 8px;border-bottom:1px solid var(--grid)"><span class="row g6">{dot}Anda</span><span class="row g6">{tick}nilai tengah kafe sejenis</span>
+   <span class="row g6">{band}separuh kafe sejenis ada di rentang ini</span><span class="row g6">{src["cctv"]}dari CCTV</span><span class="row g6">{src["pos"]}dari aplikasi kasir</span></div>
+  <div class="row g8" style="padding-top:8px;align-items:flex-start">{ic("lock", 14, color=MUTED)}<span class="xs muted">Angka kafe lain tidak pernah ditampilkan satu per satu, hanya nilai tengah dan sebarannya. Kelompok baru tampil kalau berisi minimal 5 brand dan tidak ada brand yang mengisi lebih dari 40%.</span></div></div></div>"""
+
+    def node(x, y, w, title, you, grp, delta, kind):
+        line = {"warn": "#f1d28a", "crit": "#efb4b4", "neutral": "var(--border)"}[kind]
+        fill = {"warn": "#fffaf0", "crit": "#fff6f6", "neutral": "#fff"}[kind]
+        return (f'<div style="position:absolute;left:{x}px;top:{y}px;width:{w}px;height:58px;border:1px solid {line};background:{fill};border-radius:10px;padding:8px 11px">'
+                f'<div class="b" style="font-size:12.5px">{title}</div>'
+                f'<div class="row sp" style="margin-top:5px"><span class="sm ink2"><b style="color:var(--ink)">{you}</b> vs {grp}</span>{chip(delta, kind)}</div></div>')
+
+    pct = lambda a, b: f"−{round(100 * (1 - a / b))}%"
+    W = 454
+    wires = (f'<svg width="{W}" height="164" viewBox="0 0 {W} 164" style="position:absolute;left:0;top:0">'
+             f'<path d="M227,58 V70 M110,82 V70 H344 V82 M110,140 V164" fill="none" stroke="{AXIS}" stroke-width="1.5"/></svg>')
+    tree = (f'<div style="position:relative;width:{W}px;height:244px;flex:none">{wires}'
+            + node(102, 0, 250, "Omzet per kursi per jam", f"Rp {v['rev']:.0f} rb", f"Rp {v['g_rev']:.0f} rb", pct(v["rev"], v["g_rev"]), "warn")
+            + node(0, 82, 220, "Pengunjung per kursi per jam", idn(v["vpsh"], 2), idn(G_VPSH, 2), pct(v["vpsh"], G_VPSH), "warn")
+            + f'<span class="b ink2" style="position:absolute;left:222px;top:100px;font-size:15px">×</span>'
+            + node(234, 82, 220, "Belanja per pengunjung", f"Rp {v['spend']:.0f} rb", f"Rp {G_SPEND} rb", pct(v["spend"], G_SPEND), "neutral")
+            + f'<div style="position:absolute;left:0;top:164px;width:{W}px;border:1px solid #efb4b4;background:#fff6f6;border-radius:10px;padding:8px 11px">'
+              f'<div class="b" style="font-size:12.5px;margin-bottom:3px">Kenapa pengunjung per kursi lebih sedikit?</div>'
+              + "".join(f'<div class="row sp" style="height:24px"><span style="font-size:12.5px">{a}</span><span class="row g8"><span class="sm ink2"><b style="color:var(--ink)">{b}</b> vs {c}</span>{chip("2× lipat", "crit")}</span></div>'
+                        for a, b, c in (("Meja 2 jam+ saat makan siang", f"{R_LONG}%", f"{G_LONG}%"),
+                                        ("Antre lalu pergi", f"{idn(R_LEFT)}%", f"{idn(G_LEFT)}%")))
+            + "</div></div>")
+    why = f"""<div class="card" style="flex:none">{cardh("Kenapa omzet per kursi lebih rendah?", "Tebal = outlet Anda · biasa = nilai tengah kafe sejenis", basis("trk"))}
+ {tree}<div class="row g8" style="margin-top:9px;align-items:flex-start">{ic("info", 14, color=MUTED)}<span class="xs ink2">Selisihnya datang dari jumlah pengunjung, bukan dari belanja.</span></div></div>"""
+
+    gain_parties = R_QUEUED * (R_LEFT - G_LEFT) / 100
+    gain = gain_parties * AOV * 30 / 1000
+
+    def act(icon_, title, text, foot=""):
+        return item("info", icon_, title, text, foot)
+
+    acts = f"""<div class="card grow" style="padding-bottom:4px">{cardh("Yang bisa dilakukan", "", chip("2 saran", "neutral"))}
+ {act("users", "Tambah 1 staf di kasir pukul 12.30–14.00", f"Antre lalu pergi bisa turun mendekati kafe sejenis: ±{round(gain_parties)} rombongan per hari, potensi ±Rp {idn(gain)} jt per bulan.", btn("Atur jadwal staf", "arrow-right", "sm") + basis("trk"))}
+ {act("coffee", "Tawarkan menu kedua ke tamu yang duduk lebih dari 45 menit", "Kursi yang tertahan saat makan siang tetap menghasilkan. Coba 2 minggu, lalu lihat lagi di rapor ini.")}</div>"""
+
+    cohort = f"""<div class="card" style="flex:none;flex-direction:row;align-items:center;gap:14px;padding:11px 16px">
+ <span class="ibox info" style="width:36px;height:36px;border-radius:10px">{ic("users", 18)}</span>
+ <div class="grow"><div class="b" style="font-size:14px">Dibandingkan dengan {COHORT[0]} kafe sejenis dari {COHORT[1]} brand</div>
+  <div class="row g6" style="margin-top:5px">{chip("Kafe kopi")}{chip("Harga menengah · Rp 40–70 rb per struk")}{chip("Jabodetabek")}{chip("Data September")}</div></div>
+ <div class="col g6" style="flex:none;align-items:flex-end"><span class="row g6 xs ink2">{ic("lock", 13, color=MUTED)}Tanpa nama · minimal 5 brand · tidak ada brand di atas 40%</span>
+  <span class="row g8 sm ink2">Data Senopati ikut dihitung, tanpa nama{toggle(True)}</span></div></div>"""
+
+    body = f"""{cohort}<div class="row g12" style="flex:1;min-height:0;align-items:stretch">{table}<div class="col g12 grow">{why}{acts}</div></div>"""
+    return page(plane="tenant", active="rapor", url=f"{APP}/senopati/rapor",
+                title="Rapor Kafe", sub="Outlet Senopati · September 2026 · posisi Anda dibanding kafe sejenis, tanpa nama",
+                actions=sel("Bulan", "September 2026") + sel("Outlet", "Senopati") + btn("Download PDF", "download"), body=body)
 
 
 # ================================================================ panel internal
@@ -900,7 +1212,8 @@ def sa_tenants() -> str:
              ("CCTV per outlet", ["maks. 2", "maks. 4", "bebas"]),
              ("Pantauan live", [True, True, True]), ("Riwayat analitik", ["30 hari", "13 bulan", "bebas"]),
              ("Antrean &amp; kasir", [False, True, True]), ("Notifikasi WhatsApp", ["email saja", True, True]),
-             ("Perbandingan outlet", [False, False, True]), ("Sambung ke mesin kasir", [False, False, True]),
+             ("Audit kasir (CCTV × struk)", [False, True, True]), ("Perbandingan outlet", [False, False, True]),
+             ("Rapor Kafe, jika ikut berbagi", [True, True, True]),
              ("Login Google &amp; peran khusus", [False, False, True]), ("Garansi layanan (SLA)", [False, False, True])]
     frows = "".join(f'<tr><td style="padding:9px 6px;font-size:12.5px">{n}</td>' + "".join(f'<td class="center" style="padding:9px 2px">{v(x)}</td>' for x in xs) + "</tr>" for n, xs in feats)
     right = f"""<div class="card grow">{cardh("Paket &amp; fitur", "Atur fitur yang didapat tiap paket", '<span class="btn sm org">Ubah paket</span>')}
@@ -997,37 +1310,40 @@ def overview(thumbs: dict[str, str]) -> str:
             ("06-notifikasi-laporan", 6, "Notifikasi &amp; Laporan", "Aturan otomatis dan laporan rutin lewat WhatsApp.", ["Owner", "Admin", "Manager"]),
             ("07-tim-hak-akses", 7, "Tim &amp; Hak Akses", "Undang anggota tim dan atur siapa bisa apa.", ["Owner", "Admin"]),
             ("08-privasi-keamanan", 8, "Privasi &amp; Keamanan", "Data yang disimpan, izin support, riwayat aktivitas.", ["Owner"])]
+    edge = [("11-audit-kasir", 11, "Audit Kasir", "Rombongan di kasir dicocokkan dengan struk, dalam rupiah.", ["Owner"]),
+            ("12-rapor-kafe", 12, "Rapor Kafe", "Posisi outlet dibanding kafe sejenis, tanpa nama.", ["Owner", "Admin"])]
     plat = [("09-superadmin-klien", 9, "Klien &amp; Paket", "Semua klien, paket, fitur, dan permintaan akses.", ["Super Admin", "Support"]),
             ("10-superadmin-perangkat", 10, "Perangkat AI &amp; Update", "Perangkat AI di outlet dan update bertahap.", ["Super Admin"])]
-    later = ["Tagihan &amp; pembayaran", "Support (izin sementara)", "Fitur khusus per klien", "Riwayat internal"]
 
     def principle(icon_, title, text):
         return (f'<div class="row g12" style="flex:1;background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px 18px">'
                 f'<span class="ibox info" style="width:36px;height:36px;border-radius:11px">{ic(icon_, 19)}</span><div><div class="b" style="font-size:15px">{title}</div>'
                 f'<div class="ink2" style="font-size:12.5px;margin-top:3px;line-height:1.45">{text}</div></div></div>')
 
+    def panel(title, sub, color, bg, line, cards, ncol, accent, icon_=""):
+        mark = ic(icon_, 15, 2.2, color=color) if icon_ else ""
+        return (f'<div style="flex:none;background:{bg};border:1px solid {line};border-radius:16px;padding:13px 16px 16px">'
+                f'<div style="margin-bottom:10px"><div class="row g6 b" style="font-size:13px;letter-spacing:.09em;color:{color}">{mark}{title}</div>'
+                f'<div class="xs ink2" style="margin-top:3px">{sub}</div></div>'
+                f'<div class="grid" style="grid-template-columns:repeat({ncol},226px);gap:12px">{"".join(card(n, i, t, d, w, accent) for n, i, t, d, w in cards)}</div></div>')
+
     return f"""<!doctype html><html lang="id"><head><meta charset="utf-8"><style>{font_css()}{CSS}</style></head>
 <body><div class="stage" style="background:var(--page);padding:34px 36px 44px;display:flex;flex-direction:column;justify-content:space-between">
  <div class="row sp" style="flex:none"><div><div class="row g10"><span class="logo">{logo()}</span><h1 style="font-size:26px">{BRAND} · Peta Halaman</h1></div>
-  <div class="sub" style="margin-top:4px">Satu aplikasi, dua sisi: untuk klien dan untuk tim internal · 10 halaman utama</div></div>
-  <div class="row g8 sm ink2"><span class="chip info">Aplikasi klien</span><span class="chip orange">Panel internal</span></div></div>
- <div class="row g14" style="align-items:flex-start;flex:none">
-  <div style="flex:0 0 1010px;background:#eef3fb;border:1px solid #cfdcf1;border-radius:16px;padding:14px 16px 16px">
-   <div class="row sp" style="margin-bottom:11px"><div class="b" style="font-size:13px;letter-spacing:.09em;color:var(--blue-d)">APLIKASI KLIEN</div>
-    <div class="xs ink2">Owner · Admin · Manager · Analis · Layar TV · Teknisi</div></div>
-   <div class="grid" style="grid-template-columns:repeat(4,1fr);gap:12px">{"".join(card(n, i, t, d, w, "#2a78d6") for n, i, t, d, w in cust)}</div></div>
-  <div style="flex:1;background:#fdf1ea;border:1px solid #f3cfba;border-radius:16px;padding:14px 16px 16px">
-   <div class="row sp" style="margin-bottom:11px"><div class="b" style="font-size:13px;letter-spacing:.09em;color:var(--orange-d)">PANEL INTERNAL</div><div class="xs ink2">khusus tim {BRAND}</div></div>
-   <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">{"".join(card(n, i, t, d, w, "#eb6834") for n, i, t, d, w in plat)}</div>
-   <div class="xs b muted" style="letter-spacing:.06em;margin:14px 0 8px">BERIKUTNYA</div>
-   <div class="grid" style="grid-template-columns:1fr 1fr;gap:8px">{"".join(f'<div style="border:1.5px dashed #e2b9a1;border-radius:10px;padding:11px 12px;font-size:12.5px;color:#7a2f0f">{t}</div>' for t in later)}</div></div></div>
+  <div class="sub" style="margin-top:4px">Satu aplikasi, dua sisi: untuk klien dan untuk tim internal · {len(cust) + len(edge) + len(plat)} halaman utama</div></div>
+  <div class="row g8 sm ink2"><span class="chip info">Aplikasi klien</span><span class="chip" style="background:#d6e6fa;color:#104281">Pembeda utama</span><span class="chip orange">Panel internal</span></div></div>
+ <div class="row" style="gap:14px;align-items:stretch;flex:none">
+  {panel("APLIKASI KLIEN", "Owner · Admin · Manager · Analis · Layar TV · Teknisi", "var(--blue-d)", "#eef3fb", "#cfdcf1", cust, 4, "#2a78d6")}
+  {panel("PEMBEDA UTAMA", "CCTV × aplikasi kasir", "#104281", "#e1ecfa", "#a8c6ee", edge, 1, "#184f95", "sparkles")}
+  {panel("PANEL INTERNAL", f"khusus tim {BRAND}", "var(--orange-d)", "#fdf1ea", "#f3cfba", plat, 1, "#eb6834")}</div>
  <div class="row g12" style="flex:none">{principle("database", "Data tiap klien terpisah", "Data setiap klien disimpan terpisah dan tidak bisa saling melihat.")}
   {principle("key-round", "Akses hanya dengan izin", "Tim internal hanya bisa membuka data klien setelah disetujui Owner, dan hanya untuk waktu terbatas.")}
-  {principle("video", "Video tetap di outlet", "Yang dikirim ke cloud hanya angka, bukan gambar atau video.")}</div>
+  {principle("video", "Video tidak disimpan di cloud", "Rekaman tetap di outlet; ke cloud hanya angka. Klip bukti audit diputar langsung dari outlet.")}</div>
  <div class="mocktag">MOCKUP · contoh data, bukan data asli</div></div></body></html>"""
 
 
 PAGES = [("01-ringkasan", home), ("02-pantauan-live", live), ("03-analitik", analytics),
          ("04-perbandingan-outlet", hq), ("05-cctv-area", setup), ("06-notifikasi-laporan", alerts),
          ("07-tim-hak-akses", users), ("08-privasi-keamanan", privacy),
-         ("09-superadmin-klien", sa_tenants), ("10-superadmin-perangkat", sa_fleet)]
+         ("09-superadmin-klien", sa_tenants), ("10-superadmin-perangkat", sa_fleet),
+         ("11-audit-kasir", audit), ("12-rapor-kafe", rapor)]

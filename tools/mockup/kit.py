@@ -122,6 +122,7 @@ svg text{font-family:inherit}
 .nav a.on{background:var(--blue-t);color:var(--blue-d);font-weight:600}
 .nav a .live{width:7px;height:7px;border-radius:50%;background:var(--crit);margin-left:auto}
 .nav a .tag{margin-left:auto;font-size:10px;font-weight:600;color:var(--muted);border:1px solid var(--grid);border-radius:5px;padding:0 5px}
+.nav a .cnt{margin-left:auto;font-size:10.5px;font-weight:700;color:var(--warn-x);background:var(--warn-t);border-radius:999px;padding:0 7px;line-height:18px}
 .me{margin-top:auto;border-top:1px solid var(--grid);padding:11px 6px 0;display:flex;align-items:center;gap:9px}
 .av{width:30px;height:30px;border-radius:50%;background:#dfe9f8;color:var(--blue-d);display:grid;place-items:center;font-weight:600;font-size:11.5px;flex:none}
 .me .n{font-weight:600;font-size:12.5px;line-height:1.2}.me .r{font-size:11.5px;color:var(--muted)}
@@ -176,6 +177,7 @@ h1{font-size:22px;font-weight:700;letter-spacing:-.018em;line-height:1.15}
 .delta{font-weight:600}.delta.g{color:var(--good-x)}.delta.r{color:var(--crit-x)}
 .basis{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:500;height:20px;padding:0 7px;border-radius:6px}
 .basis.good{background:var(--good-t);color:var(--good-x)}.basis.warn{background:var(--warn-t);color:var(--warn-x)}
+.basis.pos{background:var(--blue-t);color:var(--blue-d)}
 
 /* tables */
 table{border-collapse:collapse;width:100%;font-size:13px}
@@ -233,9 +235,12 @@ def sidebar_tenant(active: str) -> str:
         ("Operasional", [("home", "layout-dashboard", "Ringkasan Hari Ini", ""),
                          ("live", "radio", "Pantauan Live", '<span class="live"></span>')]),
         ("Laporan", [("analytics", "chart-column", "Analitik", ""),
-                     ("hq", "building-2", "Perbandingan Outlet", "")]),
+                     ("audit", "receipt-text", "Audit Kasir", '<span class="cnt">7</span>'),
+                     ("hq", "building-2", "Perbandingan Outlet", ""),
+                     ("rapor", "award", "Rapor Kafe", "")]),
         ("Otomatis", [("alert", "bell-ring", "Notifikasi &amp; Laporan", "")]),
         ("Pengaturan", [("setup", "video", "CCTV &amp; Area", ""),
+                        ("pos", "plug", "Aplikasi Kasir", ""),
                         ("users", "users", "Tim &amp; Hak Akses", ""),
                         ("privacy", "shield-check", "Privasi &amp; Keamanan", "")]),
     ]
@@ -287,9 +292,12 @@ def chip(text: str, kind: str = "neutral", icon: str | None = None, sq: bool = F
 
 
 def basis(kind: str) -> str:
-    """The reliability badge - the product's signature element."""
+    """The reliability badge - the product's signature element. A third source joins
+    the two the cameras give: figures read straight from the cashier app's receipts."""
     if kind in ("det", "line"):
         return f'<span class="basis good">{ic("circle-check", 12, 2.2)}Akurat</span>'
+    if kind == "pos":
+        return f'<span class="basis pos">{ic("receipt-text", 12, 2.2)}Data kasir</span>'
     return f'<span class="basis warn">{ic("circle-alert", 12, 2.2)}Estimasi</span>'
 
 
@@ -441,6 +449,73 @@ def columns(w: int, h: int, vals: list[float], labels: list[str], ymax: float, h
         if label_idx and i in label_idx:
             out.append(f'<text x="{x + bw / 2:.1f}" y="{y - 6:.1f}" text-anchor="middle" font-size="11.5" font-weight="600" fill="{INK}">{label_idx[i]}</text>')
     return f'<svg width="{w}" height="{h}" viewBox="0 0 {w} {h}">{"".join(out)}</svg>'
+
+
+def _capped(x: float, y: float, bw: float, yb: float, r: float = 4) -> str:
+    """A column segment with the 4 px rounded cap on top, square at its bottom."""
+    r = min(r, (yb - y) / 2, bw / 2)
+    return (f'M{x:.1f},{yb:.1f} V{y + r:.1f} Q{x:.1f},{y:.1f} {x + r:.1f},{y:.1f} H{x + bw - r:.1f} '
+            f'Q{x + bw:.1f},{y:.1f} {x + bw:.1f},{y + r:.1f} V{yb:.1f} Z')
+
+
+def stacked_columns(w: int, h: int, stacks: list[list[float]], labels: list[str], colors: list[str],
+                    ymax: float, ystep: float, notes: dict[int, str] | None = None,
+                    bands: list[tuple[int, int, str, bool]] | None = None) -> str:
+    """Stacked columns, bottom segment first: <=22 px wide, a 2 px surface gap between
+    segments, the rounded cap on the top segment only, square at the baseline. A few
+    columns may carry one short note above them; the rest is left to the axis.
+
+    `bands` groups runs of columns - (first, end, label, alert) - under a light panel
+    with its label on top; an alert band takes the warning tint and text colour."""
+    L, R, T, B = 30, 6, (36 if bands else 20), 22
+    pw, ph = w - L - R, h - T - B
+    slot = pw / len(stacks)
+    bw = min(22, slot - 8)
+    base = T + ph
+    Y = lambda v: base - ph * v / ymax
+    out = []
+    for i0, i1, label, alert in bands or []:
+        x0, x1 = L + i0 * slot + 1, L + i1 * slot - 1
+        out.append(f'<rect x="{x0:.1f}" y="{T - 30}" width="{x1 - x0:.1f}" height="{base - T + 30:.1f}" rx="7" '
+                   f'fill="{"#fdf1d3" if alert else "#f3f2ee"}"/>')
+        out.append(f'<text x="{x0 + 9:.1f}" y="{T - 13}" font-size="11" font-weight="600" fill="{"#7a5200" if alert else INK2}">{label}</text>')
+    v = 0.0
+    while v <= ymax + 1e-9:
+        out.append(f'<line x1="{L}" x2="{w - R}" y1="{Y(v):.1f}" y2="{Y(v):.1f}" stroke="{AXIS if v == 0 else GRID}" stroke-width="1"/>')
+        out.append(f'<text x="{L - 8}" y="{Y(v) + 4:.1f}" text-anchor="end" font-size="10.5" fill="{MUTED}" style="font-variant-numeric:tabular-nums">{v:g}</text>')
+        v += ystep
+    for i, segs in enumerate(stacks):
+        x = L + i * slot + (slot - bw) / 2
+        top_k = max((k for k, s in enumerate(segs) if s > 0), default=-1)
+        acc, first = 0.0, True
+        for k, s in enumerate(segs):
+            if s <= 0:
+                continue
+            yb, yt = Y(acc), Y(acc + s)
+            if not first:
+                yb -= 2  # the surface gap between touching segments
+            if k == top_k:
+                out.append(f'<path d="{_capped(x, yt, bw, yb)}" fill="{colors[k]}"/>')
+            else:
+                out.append(f'<rect x="{x:.1f}" y="{yt:.1f}" width="{bw:.1f}" height="{max(0.5, yb - yt):.1f}" fill="{colors[k]}"/>')
+            acc += s
+            first = False
+        out.append(f'<text x="{x + bw / 2:.1f}" y="{h - 6}" text-anchor="middle" font-size="10.5" fill="{MUTED}" style="font-variant-numeric:tabular-nums">{labels[i]}</text>')
+        if notes and i in notes:
+            out.append(f'<text x="{x + bw / 2:.1f}" y="{Y(sum(segs)) - 7:.1f}" text-anchor="middle" font-size="11" font-weight="600" fill="{INK}">{notes[i]}</text>')
+    return f'<svg width="{w}" height="{h}" viewBox="0 0 {w} {h}">{"".join(out)}</svg>'
+
+
+def band_bar(w: int, lo: float, hi: float, p25: float, p75: float, med: float, you: float, h: int = 24) -> str:
+    """One benchmark row on its own scale: the middle half of the group as a light band,
+    the group's middle as a dark tick, this outlet as the accent dot with a surface ring."""
+    X = lambda v: 7 + (min(max(v, lo), hi) - lo) / (hi - lo) * (w - 14)
+    c = h / 2
+    return (f'<svg width="{w}" height="{h}" viewBox="0 0 {w} {h}" style="flex:none">'
+            f'<rect x="2" y="{c - 3}" width="{w - 4}" height="6" rx="3" fill="#efeee9"/>'
+            f'<rect x="{X(p25):.1f}" y="{c - 5}" width="{X(p75) - X(p25):.1f}" height="10" rx="5" fill="{RAMP[1]}"/>'
+            f'<line x1="{X(med):.1f}" x2="{X(med):.1f}" y1="{c - 8}" y2="{c + 8}" stroke="{INK2}" stroke-width="2" stroke-linecap="round"/>'
+            f'<circle cx="{X(you):.1f}" cy="{c}" r="5.5" fill="{BLUE}" stroke="{SURF}" stroke-width="2"/></svg>')
 
 
 def hbar(label: str, value: float, vmax: float, color: str, w: int, text: str, sub: str = "") -> str:
