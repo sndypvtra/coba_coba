@@ -17,7 +17,7 @@ from __future__ import annotations
 import math
 from pathlib import Path
 
-from kit import (AXIS, BLUE, BRAND, INK, INK2, MUTED, ORANGE, ORDINAL, RAMP, SURF, band_bar, basis, chip, columns,
+from kit import (AXIS, BLUE, BRAND, INK, INK2, MUTED, ORANGE, ORDINAL, RAMP, SURF, basis, chip, columns,
                  data_uri, heatmap, ic, kpi, line_chart, logo, page, scale_bar, spark, stacked_columns, toggle)
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -820,9 +820,9 @@ def privacy() -> str:
  {pr("Buka video CCTV dari aplikasi", "Hanya Owner dan Admin, dan hanya dari jaringan outlet.", toggle(True))}
  {pr("Klip bukti audit kasir", "30 detik per temuan, hanya Owner, diputar dari perangkat outlet, terhapus setelah 30 hari.", toggle(True))}
  {pr("Laporan per staf", "Mati: audit dan layanan dilaporkan per shift. Menyalakan butuh izin Owner dan pemberitahuan ke tim.", toggle(False))}
- {pr("Ikut Rapor Kafe, tanpa nama", "Angka outlet ikut dihitung bersama minimal 5 brand lain. Syarat untuk bisa melihat Rapor Kafe.", toggle(True))}
  {pr("Lama penyimpanan data detail", "Setelah itu hanya ringkasan harian yang disimpan.", '<span class="sel" style="height:28px">13 bulan' + ic("chevron-down", 14, color=MUTED) + "</span>")}
  {pr("Download tanpa data per orang", "File yang di-download hanya berisi ringkasan.", toggle(True))}
+ {pr("Area yang tidak dihitung", "1 aktif: cermin dinding (Senopati, CCTV 02).", '<span class="btn sm">Kelola</span>')}
  {pr("Permintaan data dari pelanggan", "Tanggapi permintaan lihat atau hapus data; semuanya tercatat.", '<span class="btn sm">Buka</span>')}
  <div style="margin-top:auto;padding-top:12px"><div class="sm b" style="margin-bottom:8px">Data apa yang disimpan</div>
  <div class="grid" style="grid-template-columns:1fr 1fr;gap:10px">
@@ -1047,107 +1047,6 @@ def audit() -> str:
                 actions=sel("Periode", "Kemarin") + sel("Shift", "Semua shift") + btn("Download", "download"), body=body)
 
 
-# ================================================================= 12 rapor kafe
-# Senopati against cafes like it - coffee, mid-price, Jabodetabek - drawn from the
-# outlets that agreed to share, anonymously. Only the group's percentiles are ever
-# shown, never another outlet's figure, and a group is shown only with at least five
-# brands and no brand above 40% of it. Senopati's own figures follow from the rest of
-# the deck: 262 visitors a day (page 04), 35 seats (the 21 in the main room and 14 on
-# the terrace), open 14 hours, about Rp 10,4 jt a day.
-R_SEATS, R_HOURS, R_VISITS, R_REV, R_DWELL = 35, 14, 262, 10_400, 40
-G_VPSH, G_DWELL, G_SPEND = 0.61, 34, 41          # the group's middle values
-R_QUEUED = 165                                    # parties a day who join the queue
-COHORT = (41, 13)                                 # outlets, brands
-R_LEFT, G_LEFT, R_LONG, G_LONG, R_CONV, G_CONV = 6.5, 3.1, 37, 18, 80, 84
-
-
-def _rapor_rows():
-    vpsh = R_VISITS / (R_SEATS * R_HOURS)
-    spend = R_REV / R_VISITS
-    occ, g_occ = 100 * vpsh * R_DWELL / 60, 100 * G_VPSH * G_DWELL / 60
-    rev, g_rev = vpsh * spend, G_VPSH * G_SPEND
-    C, P = "cctv", "pos"
-    pct = lambda v: f"{v:.0f}%"
-    return [  # label, from, you, group, lo, hi, p25, p75, format, verdict
-        ("Pengunjung per kursi per jam", [C], vpsh, G_VPSH, 0.40, 0.80, 0.52, 0.70, lambda v: idn(v, 2), ("warn", "di bawah")),
-        ("Lama berkunjung", [C], R_DWELL, G_DWELL, 20, 50, 29, 38, lambda v: f"{v:.0f} mnt", ("warn", "lebih lama")),
-        ("Kursi terisi rata-rata", [C], occ, g_occ, 20, 50, 29, 42, pct, ("neutral", "sama")),
-        ("Meja 2 jam+ saat makan siang", [C], R_LONG, G_LONG, 0, 45, 12, 26, pct, ("crit", "jauh di atas")),
-        ("Antre lalu pergi", [C], R_LEFT, G_LEFT, 0, 8, 2.0, 4.4, lambda v: f"{idn(v)}%", ("crit", "10% terburuk")),
-        ("Konversi masuk → beli", [C, P], R_CONV, G_CONV, 70, 95, 79, 88, pct, ("warn", "di bawah")),
-        ("Belanja per pengunjung", [P], spend, G_SPEND, 25, 55, 35, 47, lambda v: f"Rp {v:.0f} rb", ("neutral", "sama")),
-        ("Omzet per kursi per jam", [C, P], rev, g_rev, 15, 35, 21.5, 30, lambda v: f"Rp {v:.0f} rb", ("warn", "25% terbawah")),
-    ], dict(vpsh=vpsh, spend=spend, rev=rev, g_rev=g_rev)
-
-
-def rapor() -> str:
-    rows, v = _rapor_rows()
-    src = {"cctv": ic("video", 14, color=MUTED), "pos": ic("receipt-text", 14, color=MUTED)}
-    trs = "".join(
-        f'<tr><td><span class="b" style="font-size:12.5px">{lab}</span></td><td><span class="row" style="gap:4px">{"".join(src[s] for s in frm)}</span></td>'
-        f'<td class="n b">{fmt(you)}</td><td class="n ink2">{fmt(grp)}</td><td>{band_bar(176, lo, hi, p25, p75, grp, you)}</td>'
-        f'<td>{chip(vt, vk)}</td></tr>'
-        for lab, frm, you, grp, lo, hi, p25, p75, fmt, (vk, vt) in rows)
-    cols = "".join(f'<col style="width:{w}px">' for w in (200, 56, 70, 104, 192)) + "<col>"
-    dot = f'<svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.5" fill="{BLUE}"/></svg>'
-    tick = f'<svg width="6" height="14" viewBox="0 0 6 14"><line x1="3" x2="3" y1="2" y2="12" stroke="{INK2}" stroke-width="2" stroke-linecap="round"/></svg>'
-    band = f'<svg width="22" height="10" viewBox="0 0 22 10"><rect width="22" height="10" rx="5" fill="{RAMP[1]}"/></svg>'
-    table = f"""<div class="card" style="flex:0 0 61%">{cardh("Rapor September", "Angka outlet Anda di samping nilai tengah kafe sejenis", basis("trk"))}
- <table class="roomy" style="table-layout:fixed"><colgroup>{cols}</colgroup>
- <thead><tr><th>Angka</th><th>Dari</th><th class="n">Anda</th><th class="n">Nilai tengah</th><th>Sebaran kafe sejenis</th><th>Posisi Anda</th></tr></thead><tbody>{trs}</tbody></table>
- <div style="margin-top:auto">
-  <div class="lg wrap" style="gap:16px;row-gap:5px;padding:10px 0 8px;border-bottom:1px solid var(--grid)"><span class="row g6">{dot}Anda</span><span class="row g6">{tick}nilai tengah kafe sejenis</span>
-   <span class="row g6">{band}separuh kafe sejenis ada di rentang ini</span><span class="row g6">{src["cctv"]}dari CCTV</span><span class="row g6">{src["pos"]}dari aplikasi kasir</span></div>
-  <div class="row g8" style="padding-top:8px;align-items:flex-start">{ic("lock", 14, color=MUTED)}<span class="xs muted">Angka kafe lain tidak pernah ditampilkan satu per satu, hanya nilai tengah dan sebarannya. Kelompok baru tampil kalau berisi minimal 5 brand dan tidak ada brand yang mengisi lebih dari 40%.</span></div></div></div>"""
-
-    def node(x, y, w, title, you, grp, delta, kind):
-        line = {"warn": "#f1d28a", "crit": "#efb4b4", "neutral": "var(--border)"}[kind]
-        fill = {"warn": "#fffaf0", "crit": "#fff6f6", "neutral": "#fff"}[kind]
-        return (f'<div style="position:absolute;left:{x}px;top:{y}px;width:{w}px;height:58px;border:1px solid {line};background:{fill};border-radius:10px;padding:8px 11px">'
-                f'<div class="b" style="font-size:12.5px">{title}</div>'
-                f'<div class="row sp" style="margin-top:5px"><span class="sm ink2"><b style="color:var(--ink)">{you}</b> vs {grp}</span>{chip(delta, kind)}</div></div>')
-
-    pct = lambda a, b: f"−{round(100 * (1 - a / b))}%"
-    W = 454
-    wires = (f'<svg width="{W}" height="164" viewBox="0 0 {W} 164" style="position:absolute;left:0;top:0">'
-             f'<path d="M227,58 V70 M110,82 V70 H344 V82 M110,140 V164" fill="none" stroke="{AXIS}" stroke-width="1.5"/></svg>')
-    tree = (f'<div style="position:relative;width:{W}px;height:244px;flex:none">{wires}'
-            + node(102, 0, 250, "Omzet per kursi per jam", f"Rp {v['rev']:.0f} rb", f"Rp {v['g_rev']:.0f} rb", pct(v["rev"], v["g_rev"]), "warn")
-            + node(0, 82, 220, "Pengunjung per kursi per jam", idn(v["vpsh"], 2), idn(G_VPSH, 2), pct(v["vpsh"], G_VPSH), "warn")
-            + f'<span class="b ink2" style="position:absolute;left:222px;top:100px;font-size:15px">×</span>'
-            + node(234, 82, 220, "Belanja per pengunjung", f"Rp {v['spend']:.0f} rb", f"Rp {G_SPEND} rb", pct(v["spend"], G_SPEND), "neutral")
-            + f'<div style="position:absolute;left:0;top:164px;width:{W}px;border:1px solid #efb4b4;background:#fff6f6;border-radius:10px;padding:8px 11px">'
-              f'<div class="b" style="font-size:12.5px;margin-bottom:3px">Kenapa pengunjung per kursi lebih sedikit?</div>'
-              + "".join(f'<div class="row sp" style="height:24px"><span style="font-size:12.5px">{a}</span><span class="row g8"><span class="sm ink2"><b style="color:var(--ink)">{b}</b> vs {c}</span>{chip("2× lipat", "crit")}</span></div>'
-                        for a, b, c in (("Meja 2 jam+ saat makan siang", f"{R_LONG}%", f"{G_LONG}%"),
-                                        ("Antre lalu pergi", f"{idn(R_LEFT)}%", f"{idn(G_LEFT)}%")))
-            + "</div></div>")
-    why = f"""<div class="card" style="flex:none">{cardh("Kenapa omzet per kursi lebih rendah?", "Tebal = outlet Anda · biasa = nilai tengah kafe sejenis", basis("trk"))}
- {tree}<div class="row g8" style="margin-top:9px;align-items:flex-start">{ic("info", 14, color=MUTED)}<span class="xs ink2">Selisihnya datang dari jumlah pengunjung, bukan dari belanja.</span></div></div>"""
-
-    gain_parties = R_QUEUED * (R_LEFT - G_LEFT) / 100
-    gain = gain_parties * AOV * 30 / 1000
-
-    def act(icon_, title, text, foot=""):
-        return item("info", icon_, title, text, foot)
-
-    acts = f"""<div class="card grow" style="padding-bottom:4px">{cardh("Yang bisa dilakukan", "", chip("2 saran", "neutral"))}
- {act("users", "Tambah 1 staf di kasir pukul 12.30–14.00", f"Antre lalu pergi bisa turun mendekati kafe sejenis: ±{round(gain_parties)} rombongan per hari, potensi ±Rp {idn(gain)} jt per bulan.", btn("Atur jadwal staf", "arrow-right", "sm") + basis("trk"))}
- {act("coffee", "Tawarkan menu kedua ke tamu yang duduk lebih dari 45 menit", "Kursi yang tertahan saat makan siang tetap menghasilkan. Coba 2 minggu, lalu lihat lagi di rapor ini.")}</div>"""
-
-    cohort = f"""<div class="card" style="flex:none;flex-direction:row;align-items:center;gap:14px;padding:11px 16px">
- <span class="ibox info" style="width:36px;height:36px;border-radius:10px">{ic("users", 18)}</span>
- <div class="grow"><div class="b" style="font-size:14px">Dibandingkan dengan {COHORT[0]} kafe sejenis dari {COHORT[1]} brand</div>
-  <div class="row g6" style="margin-top:5px">{chip("Kafe kopi")}{chip("Harga menengah · Rp 40–70 rb per struk")}{chip("Jabodetabek")}{chip("Data September")}</div></div>
- <div class="col g6" style="flex:none;align-items:flex-end"><span class="row g6 xs ink2">{ic("lock", 13, color=MUTED)}Tanpa nama · minimal 5 brand · tidak ada brand di atas 40%</span>
-  <span class="row g8 sm ink2">Data Senopati ikut dihitung, tanpa nama{toggle(True)}</span></div></div>"""
-
-    body = f"""{cohort}<div class="row g12" style="flex:1;min-height:0;align-items:stretch">{table}<div class="col g12 grow">{why}{acts}</div></div>"""
-    return page(plane="tenant", active="rapor", url=f"{APP}/senopati/rapor",
-                title="Rapor Kafe", sub="Outlet Senopati · September 2026 · posisi Anda dibanding kafe sejenis, tanpa nama",
-                actions=sel("Bulan", "September 2026") + sel("Outlet", "Senopati") + btn("Download PDF", "download"), body=body)
-
-
 # ================================================================ panel internal
 PLATFORM_NOTE = (f'{ic("lock", 15)}<span>Anda hanya melihat <b>data teknis</b> (status perangkat dan CCTV). Data bisnis klien hanya bisa dibuka '
                  'dengan izin Owner: sementara dan tercatat.</span>')
@@ -1213,7 +1112,6 @@ def sa_tenants() -> str:
              ("Pantauan live", [True, True, True]), ("Riwayat analitik", ["30 hari", "13 bulan", "bebas"]),
              ("Antrean &amp; kasir", [False, True, True]), ("Notifikasi WhatsApp", ["email saja", True, True]),
              ("Audit kasir (CCTV × struk)", [False, True, True]), ("Perbandingan outlet", [False, False, True]),
-             ("Rapor Kafe, jika ikut berbagi", [True, True, True]),
              ("Login Google &amp; peran khusus", [False, False, True]), ("Garansi layanan (SLA)", [False, False, True])]
     frows = "".join(f'<tr><td style="padding:9px 6px;font-size:12.5px">{n}</td>' + "".join(f'<td class="center" style="padding:9px 2px">{v(x)}</td>' for x in xs) + "</tr>" for n, xs in feats)
     right = f"""<div class="card grow">{cardh("Paket &amp; fitur", "Atur fitur yang didapat tiap paket", '<span class="btn sm org">Ubah paket</span>')}
@@ -1310,8 +1208,15 @@ def overview(thumbs: dict[str, str]) -> str:
             ("06-notifikasi-laporan", 6, "Notifikasi &amp; Laporan", "Aturan otomatis dan laporan rutin lewat WhatsApp.", ["Owner", "Admin", "Manager"]),
             ("07-tim-hak-akses", 7, "Tim &amp; Hak Akses", "Undang anggota tim dan atur siapa bisa apa.", ["Owner", "Admin"]),
             ("08-privasi-keamanan", 8, "Privasi &amp; Keamanan", "Data yang disimpan, izin support, riwayat aktivitas.", ["Owner"])]
-    edge = [("11-audit-kasir", 11, "Audit Kasir", "Rombongan di kasir dicocokkan dengan struk, dalam rupiah.", ["Owner"]),
-            ("12-rapor-kafe", 12, "Rapor Kafe", "Posisi outlet dibanding kafe sejenis, tanpa nama.", ["Owner", "Admin"])]
+    edge = [("11-audit-kasir", 11, "Audit Kasir", "Rombongan di kasir dicocokkan dengan struk, dalam rupiah.", ["Owner"])]
+    how = "".join(
+        f'<div class="row g8" style="align-items:flex-start;margin-top:9px"><span class="stp done" style="width:20px;height:20px;font-size:11px">{i}</span>'
+        f'<span class="ink2" style="font-size:12.5px;line-height:1.4">{t}</span></div>'
+        for i, t in enumerate(("CCTV melihat rombongan yang dilayani di titik pesan.",
+                               "Aplikasi kasir mencatat setiap struk.",
+                               "Yang tidak cocok jadi temuan dalam rupiah, dengan klip bukti."), 1))
+    edge_how = (f'<div style="flex:1;width:226px;margin-top:12px;background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px 12px 10px">'
+                f'<div class="b" style="font-size:14px">Cara kerjanya</div>{how}</div>')
     plat = [("09-superadmin-klien", 9, "Klien &amp; Paket", "Semua klien, paket, fitur, dan permintaan akses.", ["Super Admin", "Support"]),
             ("10-superadmin-perangkat", 10, "Perangkat AI &amp; Update", "Perangkat AI di outlet dan update bertahap.", ["Super Admin"])]
 
@@ -1320,12 +1225,12 @@ def overview(thumbs: dict[str, str]) -> str:
                 f'<span class="ibox info" style="width:36px;height:36px;border-radius:11px">{ic(icon_, 19)}</span><div><div class="b" style="font-size:15px">{title}</div>'
                 f'<div class="ink2" style="font-size:12.5px;margin-top:3px;line-height:1.45">{text}</div></div></div>')
 
-    def panel(title, sub, color, bg, line, cards, ncol, accent, icon_=""):
+    def panel(title, sub, color, bg, line, cards, ncol, accent, icon_="", extra=""):
         mark = ic(icon_, 15, 2.2, color=color) if icon_ else ""
-        return (f'<div style="flex:none;background:{bg};border:1px solid {line};border-radius:16px;padding:13px 16px 16px">'
+        return (f'<div style="flex:none;background:{bg};border:1px solid {line};border-radius:16px;padding:13px 16px 16px;display:flex;flex-direction:column">'
                 f'<div style="margin-bottom:10px"><div class="row g6 b" style="font-size:13px;letter-spacing:.09em;color:{color}">{mark}{title}</div>'
                 f'<div class="xs ink2" style="margin-top:3px">{sub}</div></div>'
-                f'<div class="grid" style="grid-template-columns:repeat({ncol},226px);gap:12px">{"".join(card(n, i, t, d, w, accent) for n, i, t, d, w in cards)}</div></div>')
+                f'<div class="grid" style="grid-template-columns:repeat({ncol},226px);gap:12px">{"".join(card(n, i, t, d, w, accent) for n, i, t, d, w in cards)}</div>{extra}</div>')
 
     return f"""<!doctype html><html lang="id"><head><meta charset="utf-8"><style>{font_css()}{CSS}</style></head>
 <body><div class="stage" style="background:var(--page);padding:34px 36px 44px;display:flex;flex-direction:column;justify-content:space-between">
@@ -1334,7 +1239,7 @@ def overview(thumbs: dict[str, str]) -> str:
   <div class="row g8 sm ink2"><span class="chip info">Aplikasi klien</span><span class="chip" style="background:#d6e6fa;color:#104281">Pembeda utama</span><span class="chip orange">Panel internal</span></div></div>
  <div class="row" style="gap:14px;align-items:stretch;flex:none">
   {panel("APLIKASI KLIEN", "Owner · Admin · Manager · Analis · Layar TV · Teknisi", "var(--blue-d)", "#eef3fb", "#cfdcf1", cust, 4, "#2a78d6")}
-  {panel("PEMBEDA UTAMA", "CCTV × aplikasi kasir", "#104281", "#e1ecfa", "#a8c6ee", edge, 1, "#184f95", "sparkles")}
+  {panel("PEMBEDA UTAMA", "CCTV × aplikasi kasir", "#104281", "#e1ecfa", "#a8c6ee", edge, 1, "#184f95", "sparkles", edge_how)}
   {panel("PANEL INTERNAL", f"khusus tim {BRAND}", "var(--orange-d)", "#fdf1ea", "#f3cfba", plat, 1, "#eb6834")}</div>
  <div class="row g12" style="flex:none">{principle("database", "Data tiap klien terpisah", "Data setiap klien disimpan terpisah dan tidak bisa saling melihat.")}
   {principle("key-round", "Akses hanya dengan izin", "Tim internal hanya bisa membuka data klien setelah disetujui Owner, dan hanya untuk waktu terbatas.")}
@@ -1346,4 +1251,4 @@ PAGES = [("01-ringkasan", home), ("02-pantauan-live", live), ("03-analitik", ana
          ("04-perbandingan-outlet", hq), ("05-cctv-area", setup), ("06-notifikasi-laporan", alerts),
          ("07-tim-hak-akses", users), ("08-privasi-keamanan", privacy),
          ("09-superadmin-klien", sa_tenants), ("10-superadmin-perangkat", sa_fleet),
-         ("11-audit-kasir", audit), ("12-rapor-kafe", rapor)]
+         ("11-audit-kasir", audit)]

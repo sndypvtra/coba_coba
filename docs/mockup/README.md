@@ -1,9 +1,9 @@
 # Mockup webapp Outlytics — gambaran halaman untuk presentasi
 
-Tiga belas gambar 16:9 tentang **Outlytics**, webapp yang membungkus pipeline
+Dua belas gambar 16:9 tentang **Outlytics**, webapp yang membungkus pipeline
 dwell time (project 05) menjadi produk: pantauan live per CCTV, analitik, perbandingan
 outlet, pengaturan CCTV, notifikasi WhatsApp, dua sisi akses (aplikasi klien dan
-panel internal), serta dua pembeda utama: **Audit Kasir** dan **Rapor Kafe**.
+panel internal), serta pembeda utamanya: **Audit Kasir**.
 Nama "Outlytics" berasal dari *outlet* + *analytics*. Per 1 Okt 2026 belum ditemukan
 perusahaan atau aplikasi dengan nama itu, dan outlytics.ai, .io, serta .id belum
 terdaftar (outlytics.com diparkir dan dijual). Merek di DJKI belum dicek; alamat
@@ -26,7 +26,7 @@ Setiap halaman tersedia dalam dua bentuk:
   dan 05. Di versi SVG, bayangan lembut di sekeliling jendela diganti garis tepi tipis,
   karena efek bayangan sering tidak tergambar saat SVG diimpor ke aplikasi slide.
 
-Untuk membuat deck investor dari gambar-gambar ini di Claude Design, lampirkan ke-13
+Untuk membuat deck investor dari gambar-gambar ini di Claude Design, lampirkan ke-12
 gambar bersama [`prompt-claude-design.md`](prompt-claude-design.md).
 
 Gambar-gambarnya statis. Ini bukan prototipe yang bisa diklik.
@@ -41,41 +41,31 @@ Gambar-gambarnya statis. Ini bukan prototipe yang bisa diklik.
 | `05-cctv-area` | CCTV & Area | Admin, Teknisi | sambungkan CCTV, tandai area di foto CCTV (termasuk titik pesan untuk audit kasir), sambungkan aplikasi kasir, cek akurasi |
 | `06-notifikasi-laporan` | Notifikasi & Laporan | Owner, Admin, Manager | aturan otomatis (termasuk struk dibatalkan tanpa pelanggan), pesan WhatsApp dengan ringkasan audit, jadwal laporan |
 | `07-tim-hak-akses` | Tim & Hak Akses | Owner, Admin | undang anggota, hak akses per peran dan per outlet (termasuk siapa boleh membuka audit dan klip), keamanan akun |
-| `08-privasi-keamanan` | Privasi & Keamanan | Owner | pengaturan data (klip bukti, laporan per shift, ikut Rapor Kafe), izin akses tim support, riwayat aktivitas |
+| `08-privasi-keamanan` | Privasi & Keamanan | Owner | pengaturan data (klip bukti, laporan per shift), izin akses tim support, riwayat aktivitas |
 | `09-superadmin-klien` | Klien & Paket | Super Admin, Support | semua klien, status teknis, paket dan harga, permintaan akses |
 | `10-superadmin-perangkat` | Perangkat AI & Update | Super Admin | perangkat AI di tiap outlet, update bertahap dengan syarat lanjut |
 | `11-audit-kasir` | Audit Kasir | Owner | setiap rombongan yang dilayani di kasir dicocokkan dengan struk dari aplikasi kasir; selisihnya dalam rupiah, pola per shift, temuan yang perlu dicek, dan klip bukti |
-| `12-rapor-kafe` | Rapor Kafe | Owner, Admin | posisi outlet dibanding kafe sejenis (anonim), alasan di balik angkanya, dan saran tindakan |
 
-Nomor 11 dan 12 ditambahkan di belakang supaya nama file lama tidak berubah.
+Nomor 11 ditambahkan di belakang supaya nama file lama tidak berubah.
 
-## Dua pembeda: Audit Kasir dan Rapor Kafe
+## Pembeda utama: Audit Kasir
 
 **POS** (*point of sale*) adalah aplikasi kasir, misalnya Moka, Majoo, ESB, atau Pawoon.
 POS mencatat setiap struk: jam, total, cara bayar, kanal (di kasir atau pesanan
 online), dan pembatalan. CCTV melihat siapa yang benar-benar datang dan dilayani.
-Kedua halaman baru lahir dari menggabungkan keduanya:
+**Audit Kasir (`11`)** menggabungkan keduanya. Rombongan yang dilayani di titik pesan
+dicocokkan dengan struk. Halaman ini menampilkan:
 
-- **Audit Kasir (`11`)**. Rombongan yang dilayani di titik pesan dicocokkan dengan
-  struk. Halaman ini menampilkan:
-  - kasus yang wajar (pengemudi ojol mengambil pesanan online, orang yang hanya
-    bertanya) dijelaskan otomatis;
-  - sisanya menjadi temuan yang perlu dicek, dengan perkiraan rupiah;
-  - pola dibandingkan per shift dengan kebiasaan outlet itu sendiri, bukan per kasir;
-  - garis waktu yang menunjukkan kenapa sebuah temuan muncul;
-  - klip bukti 30 detik.
-- **Rapor Kafe (`12`)**. Angka outlet dibandingkan dengan nilai tengah kafe sejenis.
-  Halaman ini menampilkan:
-  - omzet per kursi per jam dipecah menjadi pengunjung per kursi (dari CCTV) ×
-    belanja per pengunjung (dari kasir), jadi rapor bisa menjelaskan *kenapa* angkanya
-    rendah;
-  - angka kafe lain tidak pernah ditampilkan satu per satu;
-  - kelompok hanya tampil kalau berisi minimal 5 brand dan tidak ada brand di atas 40%.
+- kasus yang wajar (pengemudi ojol mengambil pesanan online, orang yang hanya
+  bertanya) dijelaskan otomatis;
+- sisanya menjadi temuan yang perlu dicek, dengan perkiraan rupiah;
+- pola dibandingkan per shift dengan kebiasaan outlet itu sendiri, bukan per kasir;
+- garis waktu yang menunjukkan kenapa sebuah temuan muncul;
+- klip bukti 30 detik.
 
-Supaya kedua fitur ini masuk akal di seluruh aplikasi, halaman lain ikut diubah:
+Supaya fitur ini masuk akal di seluruh aplikasi, halaman lain ikut diubah:
 
-- **Menu samping**: tambah Audit Kasir (dengan jumlah temuan terbuka), Rapor Kafe, dan
-  Aplikasi Kasir.
+- **Menu samping**: tambah Audit Kasir (dengan jumlah temuan terbuka) dan Aplikasi Kasir.
 - **`01`**: kartu "Laporan WhatsApp" diganti "Kasir vs struk hari ini", dan status
   aplikasi kasir masuk ke Status sistem.
 - **`04`**: kolom tren diganti kolom "tanpa struk". Bekasi menggantikan Seminyak di
@@ -90,15 +80,16 @@ Supaya kedua fitur ini masuk akal di seluruh aplikasi, halaman lain ikut diubah:
 - **`07`**: baris "Audit kasir & klip". Owner melihat semua; Admin hanya ringkasan.
 - **`08`**: lihat perubahan janji privasi di bawah. Tambahan lainnya:
   - pengaturan "Klip bukti audit kasir";
-  - pengaturan "Ikut Rapor Kafe, tanpa nama";
   - laporan per shift, bukan per orang;
   - struk dari kasir masuk daftar data yang disimpan;
   - riwayat yang mencatat setiap klip yang diputar.
-- **`09`**:
-  - Audit kasir masuk paket Growth (sebelumnya "sambung ke mesin kasir" hanya untuk
-    Enterprise);
-  - Rapor Kafe untuk semua paket yang ikut berbagi data.
-- **`00`**: kelompok baru "Pembeda utama".
+- **`09`**: Audit kasir masuk paket Growth (sebelumnya "sambung ke mesin kasir" hanya
+  untuk Enterprise).
+- **`00`**: kelompok baru "Pembeda utama", dengan cara kerjanya dalam tiga langkah.
+
+**Rapor Kafe ditunda.** Pembanding antar-kafe sempat dirancang sebagai halaman `12`,
+lalu ditunda karena belum dibutuhkan. Fitur ini baru berguna kalau sudah ada banyak
+outlet lintas brand. Desain dan kodenya tersimpan di riwayat git (commit `2214dcf`).
 
 **Perubahan janji privasi.** Janji lama "Video tidak keluar dari outlet" bertabrakan
 dengan klip bukti: Owner perlu memutar klip dari mana saja. Janjinya diganti menjadi
@@ -145,14 +136,12 @@ sudut kanan bawah. Jangan menyajikan angka di gambar sebagai traksi atau hasil p
 
 Hal lain yang juga ilustrasi:
 
-- **Pencocokan dengan struk dan Rapor Kafe belum dibangun.** Engine hari ini menghitung
-  orang dan memisahkan staf dari tamu. Pencocokan, konektor aplikasi kasir, dan rapor
-  adalah rencana produk.
-- **Besar kebocoran belum diukur.** Angka rupiah di `11` dan `12` adalah contoh. Berapa
-  yang benar-benar ditemukan, dan seberapa sering temuan itu benar, baru diketahui lewat
+- **Pencocokan dengan struk belum dibangun.** Engine hari ini menghitung orang dan
+  memisahkan staf dari tamu. Pencocokan dan konektor aplikasi kasir adalah rencana
+  produk.
+- **Besar kebocoran belum diukur.** Angka rupiah di `11` adalah contoh. Berapa yang
+  benar-benar ditemukan, dan seberapa sering temuan itu benar, baru diketahui lewat
   pilot.
-- **Rapor Kafe butuh banyak outlet.** "41 kafe sejenis dari 13 brand" menggambarkan
-  kondisi target, bukan data yang sudah ada.
 - **Nama aplikasi kasir hanya contoh.** Moka, Majoo, ESB, dan Pawoon disebut karena
   masing-masing menyediakan Open API. Belum ada integrasi atau kerja sama dengan
   mereka.
@@ -178,12 +167,6 @@ dibandingkan:
   - angka 98 sesuai dengan 140 orang yang membayar di kasir di corong `03`;
   - lencana "7" di menu Audit Kasir adalah 5 temuan kemarin + 2 hari ini yang belum
     ditinjau.
-- **Rapor Kafe `12`** diturunkan dari angka lain:
-  - asumsi: 262 pengunjung per hari (`04`), 35 kursi (21 di ruang utama + 14 di teras),
-    buka 14 jam, dan omzet ±Rp 10,4 jt per hari;
-  - hasil: 0,53 pengunjung per kursi per jam, belanja Rp 40 rb per pengunjung, dan omzet
-    Rp 21 rb per kursi per jam (−15% dari kafe sejenis);
-  - meja 2 jam+ saat makan siang 37%, sama dengan angka di `01`.
 
 Harga paket (Rp 500 rb dan Rp 1,5 jt per outlet per bulan, Enterprise sesuai kontrak)
 adalah hipotesis dari konsep bisnis dan belum divalidasi.

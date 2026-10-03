@@ -236,8 +236,7 @@ def sidebar_tenant(active: str) -> str:
                          ("live", "radio", "Pantauan Live", '<span class="live"></span>')]),
         ("Laporan", [("analytics", "chart-column", "Analitik", ""),
                      ("audit", "receipt-text", "Audit Kasir", '<span class="cnt">7</span>'),
-                     ("hq", "building-2", "Perbandingan Outlet", ""),
-                     ("rapor", "award", "Rapor Kafe", "")]),
+                     ("hq", "building-2", "Perbandingan Outlet", "")]),
         ("Otomatis", [("alert", "bell-ring", "Notifikasi &amp; Laporan", "")]),
         ("Pengaturan", [("setup", "video", "CCTV &amp; Area", ""),
                         ("pos", "plug", "Aplikasi Kasir", ""),
@@ -504,18 +503,6 @@ def stacked_columns(w: int, h: int, stacks: list[list[float]], labels: list[str]
         if notes and i in notes:
             out.append(f'<text x="{x + bw / 2:.1f}" y="{Y(sum(segs)) - 7:.1f}" text-anchor="middle" font-size="11" font-weight="600" fill="{INK}">{notes[i]}</text>')
     return f'<svg width="{w}" height="{h}" viewBox="0 0 {w} {h}">{"".join(out)}</svg>'
-
-
-def band_bar(w: int, lo: float, hi: float, p25: float, p75: float, med: float, you: float, h: int = 24) -> str:
-    """One benchmark row on its own scale: the middle half of the group as a light band,
-    the group's middle as a dark tick, this outlet as the accent dot with a surface ring."""
-    X = lambda v: 7 + (min(max(v, lo), hi) - lo) / (hi - lo) * (w - 14)
-    c = h / 2
-    return (f'<svg width="{w}" height="{h}" viewBox="0 0 {w} {h}" style="flex:none">'
-            f'<rect x="2" y="{c - 3}" width="{w - 4}" height="6" rx="3" fill="#efeee9"/>'
-            f'<rect x="{X(p25):.1f}" y="{c - 5}" width="{X(p75) - X(p25):.1f}" height="10" rx="5" fill="{RAMP[1]}"/>'
-            f'<line x1="{X(med):.1f}" x2="{X(med):.1f}" y1="{c - 8}" y2="{c + 8}" stroke="{INK2}" stroke-width="2" stroke-linecap="round"/>'
-            f'<circle cx="{X(you):.1f}" cy="{c}" r="5.5" fill="{BLUE}" stroke="{SURF}" stroke-width="2"/></svg>')
 
 
 def hbar(label: str, value: float, vmax: float, color: str, w: int, text: str, sub: str = "") -> str:
