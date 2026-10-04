@@ -396,15 +396,15 @@ def live() -> str:
               '<path d="M-5 5L5-5M-2 10L10-2M3 13L13 3" stroke="#e9aaaa" stroke-width="2"/></g></svg>Tidak dihitung</span>'
               '<span class="muted" style="margin-left:auto">angka = nomor meja</span></div>')
 
-    left = f"""<div class="card" style="flex:0 0 58%">{cardh(LIVE_ROOM, f"{LIVE_CAM} · setiap titik = 1 orang, tanpa wajah dan tanpa video", chip("Diperbarui 2 detik lalu", "neutral", "refresh-cw"))}
+    left = f"""<div class="card" style="flex:0 0 58%">{cardh(LIVE_ROOM, f"{LIVE_CAM} · setiap titik = 1 orang", chip("Diperbarui 2 detik lalu", "neutral", "refresh-cw"))}
  {floorplan()}{legend}<div class="grid" style="grid-template-columns:repeat(4,1fr);gap:10px">{zones}</div></div>"""
 
-    video = f"""<div class="card" style="flex:none;height:372px">{cardh(f"Video {LIVE_CAM}", "", chip("Hanya di jaringan outlet", "neutral", "lock"))}
+    video = f"""<div class="card" style="flex:none;height:372px">{cardh(f"Video {LIVE_CAM}", "", chip("Hanya Owner dan Admin", "neutral", "lock"))}
  <div style="position:relative;height:270px;border-radius:9px;overflow:hidden;background:#111">
   <img src="{data_uri(still)}" style="width:100%;height:100%;object-fit:cover;object-position:50% 40%">
   <span class="chip" style="position:absolute;left:10px;top:10px;background:rgba(11,11,11,.72);color:#fff">{ic("video", 12, 2.2)}{LIVE_CAM} · {LIVE_ROOM}</span>
   <span class="chip" style="position:absolute;right:10px;top:10px;background:rgba(11,11,11,.72);color:#fff"><i class="dot" style="background:#ff6b6b;width:7px;height:7px"></i>LIVE</span></div>
- <div class="xs muted" style="margin-top:8px">Contoh hasil AI pada rekaman uji. Video hanya bisa dibuka dari jaringan outlet dan tidak dikirim ke internet.</div></div>"""
+ <div class="xs muted" style="margin-top:8px">Contoh hasil AI pada rekaman uji.</div></div>"""
 
     def al(kind, icon_, title, sub, time):
         return (f'<div class="row g10" style="padding:5px 0;border-bottom:1px solid #eceae4"><div class="ibox {kind}" style="width:26px;height:26px;border-radius:8px">{ic(icon_, 14)}</div>'
@@ -815,21 +815,21 @@ def privacy() -> str:
                 f'<div class="xs muted" style="margin-top:2px;line-height:1.4">{sub}</div></div>{ctl}</div>')
 
     left = f"""<div class="card" style="flex:0 0 45%;padding-bottom:6px">{cardh("Pengaturan privasi", "Hanya menyimpan data yang benar-benar perlu")}
- {pr("Video tidak disimpan di cloud", "Rekaman tetap di outlet. Yang dikirim ke cloud hanya angka dan titik tanpa identitas.", toggle(lock=True))}
- {pr("Tanpa wajah, tanpa nama", "Sistem tidak mengenali wajah dan tidak tahu siapa orangnya.", toggle(lock=True))}
- {pr("Buka video CCTV dari aplikasi", "Hanya Owner dan Admin, dan hanya dari jaringan outlet.", toggle(True))}
- {pr("Klip bukti audit kasir", "30 detik per temuan, hanya Owner, diputar dari perangkat outlet, terhapus setelah 30 hari.", toggle(True))}
- {pr("Laporan per staf", "Mati: audit dan layanan dilaporkan per shift. Menyalakan butuh izin Owner dan pemberitahuan ke tim.", toggle(False))}
+ {pr("Buka video CCTV dari aplikasi", "Hanya Owner dan Admin.", toggle(True))}
+ {pr("Klip bukti audit kasir", "30 detik per temuan, hanya bisa diputar Owner. Setiap pemutaran tercatat.", toggle(True))}
+ {pr("Lama penyimpanan klip bukti", "Setelah itu klip terhapus otomatis.", '<span class="sel" style="height:28px">30 hari' + ic("chevron-down", 14, color=MUTED) + "</span>")}
+ {pr("Laporan per staf", "Mati: dilaporkan per shift. Menyalakan butuh izin Owner dan pemberitahuan ke tim.", toggle(False))}
  {pr("Lama penyimpanan data detail", "Setelah itu hanya ringkasan harian yang disimpan.", '<span class="sel" style="height:28px">13 bulan' + ic("chevron-down", 14, color=MUTED) + "</span>")}
  {pr("Download tanpa data per orang", "File yang di-download hanya berisi ringkasan.", toggle(True))}
+ {pr("Pemberitahuan untuk tim", "Papan informasi dan pesan untuk karyawan, siap dicetak dan dibagikan.", '<span class="btn sm">Unduh</span>')}
  {pr("Area yang tidak dihitung", "1 aktif: cermin dinding (Senopati, CCTV 02).", '<span class="btn sm">Kelola</span>')}
  {pr("Permintaan data dari pelanggan", "Tanggapi permintaan lihat atau hapus data; semuanya tercatat.", '<span class="btn sm">Buka</span>')}
  <div style="margin-top:auto;padding-top:12px"><div class="sm b" style="margin-bottom:8px">Data apa yang disimpan</div>
  <div class="grid" style="grid-template-columns:1fr 1fr;gap:10px">
   <div style="border:1px solid var(--border);border-radius:10px;padding:10px 12px;background:#fff"><div class="row g6 b sm" style="color:var(--good-x)">{ic("circle-check", 15, 2.2)}Disimpan</div>
-   <div class="xs ink2" style="margin-top:6px;line-height:1.65">Jumlah orang per menit<br>Lama berada di tiap area (tanpa identitas)<br>Struk dari kasir: jam, total, kanal</div></div>
-  <div style="border:1px solid var(--border);border-radius:10px;padding:10px 12px;background:#fff"><div class="row g6 b sm" style="color:var(--crit-x)">{ic("ban", 15, 2.2)}Tidak pernah disimpan</div>
-   <div class="xs ink2" style="margin-top:6px;line-height:1.65">Video dan foto di cloud<br>Wajah atau ciri tubuh<br>Nama atau nomor HP pembeli</div></div></div></div></div>"""
+   <div class="xs ink2" style="margin-top:6px;line-height:1.65">Jumlah orang per menit<br>Lama berada di tiap area (tanpa identitas)<br>Struk dari kasir: jam, total, kanal<br>Klip bukti 30 detik, hanya untuk temuan</div></div>
+  <div style="border:1px solid var(--border);border-radius:10px;padding:10px 12px;background:#fff"><div class="row g6 b sm" style="color:var(--crit-x)">{ic("ban", 15, 2.2)}Tidak diambil</div>
+   <div class="xs ink2" style="margin-top:6px;line-height:1.65">Nama atau nomor HP pembeli<br>Data member dari aplikasi kasir</div></div></div></div></div>"""
 
     req = f"""<div class="card" style="flex:none;border-color:#f3c5ad;background:#fffaf7">{cardh("Permintaan akses dari tim support", "", chip("menunggu persetujuan", "orange", "clock"))}
  <div class="row g12" style="align-items:flex-start"><div class="av" style="background:#fdeae1;color:#9a3a14">DS</div>
@@ -928,8 +928,7 @@ def _privacy_view(w: int, h: int) -> str:
          f'<path d="M90,66 C70,80 44,92 14,{h - 10}" fill="none" stroke="{BLUE}" stroke-opacity=".45" stroke-width="1.5" stroke-linecap="round"/>',
          f'<circle cx="99" cy="60" r="5.5" fill="{BLUE}" stroke="{bg}" stroke-width="2"/>',
          f'<circle cx="117" cy="62" r="5.5" fill="{BLUE}" stroke="{bg}" stroke-width="2"/>',
-         f'<text x="10" y="15" font-size="10" font-weight="600" fill="#e1e0d9" style="font-variant-numeric:tabular-nums">19.42.31</text>',
-         f'<text x="{w - 10}" y="15" text-anchor="end" font-size="9.5" fill="{lab}">tanpa wajah</text>']
+         f'<text x="10" y="15" font-size="10" font-weight="600" fill="#e1e0d9" style="font-variant-numeric:tabular-nums">19.42.31</text>']
     return f'<svg width="{w}" height="{h}" viewBox="0 0 {w} {h}" style="flex:none">{"".join(o)}</svg>'
 
 
@@ -1038,7 +1037,7 @@ def audit() -> str:
  <div class="row g14" style="align-items:flex-start">{_privacy_view(180, 96)}{_receipt_timeline(506)}</div>
  <div class="row g8" style="margin-top:auto;padding-top:10px">{btn("Benar ada masalah", "circle-alert", "pri sm")}{btn("Wajar", None, "sm")}{btn("Kamera salah", None, "sm")}
   <span class="grow"></span>{btn("Putar klip 30 detik", "play", "sm")}</div>
- <div class="row g6 xs muted" style="margin-top:7px">{ic("lock", 13, color=MUTED)}<span>Klip diputar langsung dari perangkat outlet, tidak disimpan di cloud, dan terhapus otomatis 30 Okt. Setiap pemutaran tercatat.</span></div></div>"""
+ <div class="row g6 xs muted" style="margin-top:7px">{ic("lock", 13, color=MUTED)}<span>Klip hanya bisa diputar Owner dan terhapus otomatis 30 Okt. Setiap pemutaran tercatat.</span></div></div>"""
 
     body = f"""{top}<div class="row g12" style="flex:1;min-height:0;align-items:stretch">
  <div class="col g12" style="flex:0 0 57%">{chart_card}{detail}</div><div class="col g12 grow">{lst}{src}</div></div>"""
@@ -1148,12 +1147,12 @@ def _lp_phone(t: dict) -> str:
 def _lp_hero(t: dict, pad: int = 34) -> str:
     shot = _lp_shot((26, 20, 1574, 872), 1240)
     trust = "".join(f'<div><span class="lp-ti">{ic(i, 19)}</span><span>{a}<br><span style="font-weight:500;color:var(--ink2)">{b}</span></span></div>'
-                    for i, a, b in (("cctv", "Tanpa kamera baru", "pakai CCTV yang ada"),
-                                    ("eye-off", "Tanpa wajah", "tanpa nama"),
-                                    ("cloud-off", "Video tidak", "disimpan di cloud")))
+                    for i, a, b in (("receipt-text", "Selisih dalam rupiah", "dengan klip bukti"),
+                                    ("message-circle", "Laporan setiap pagi", "di WhatsApp"),
+                                    ("building-2", "Semua outlet", "satu layar")))
     left = f"""<div style="width:600px;flex:none;padding-top:8px">
  <span class="lp-eyebrow">{ic("store", 15)}Untuk pemilik kafe, resto, dan toko dengan banyak outlet</span>
- <h1 class="lp-h1">Temukan omzet yang <span class="hl">bocor di kasir</span>, dari CCTV yang sudah ada.</h1>
+ <h1 class="lp-h1">Temukan omzet yang <span class="hl">bocor di kasir</span>, langsung dari CCTV.</h1>
  <p class="lp-lead">Outlytics mencocokkan setiap pelanggan yang dilayani di kasir dengan struk di aplikasi kasir Anda.
  Selisihnya dikirim ke WhatsApp setiap pagi, lengkap dengan perkiraan rupiah dan klip buktinya.</p>
  <div class="row g12" style="margin-top:30px"><span class="lp-btn pri">Coba gratis 30 hari{ic("arrow-right", 18, 2.2)}</span>
@@ -1213,10 +1212,10 @@ def landing_full() -> str:
                 f'<h4>{title}</h4><p>{text}</p></div>')
 
     how = f"""<div class="lp-sec tint"><div class="lp-wrap">
- <div class="lp-center"><div class="lp-kicker">Cara kerja</div><h2 class="lp-h2">Tiga langkah. Tanpa kamera baru.</h2>
+ <div class="lp-center"><div class="lp-kicker">Cara kerja</div><h2 class="lp-h2">Tiga langkah sampai laporan pertama.</h2>
   <p class="lp-sub">Tim kami memasang semuanya dalam satu kunjungan. Laporan pertama datang ke WhatsApp Anda keesokan paginya.</p></div>
  <div class="grid" style="grid-template-columns:repeat(3,1fr);gap:24px;margin-top:48px">
-  {step(1, "cctv", "Sambungkan CCTV yang sudah ada", "Perangkat kecil di outlet membaca CCTV Anda dan menghitung orang. Videonya tetap di outlet.")}
+  {step(1, "cctv", "Sambungkan CCTV", "Tim kami menyambungkan CCTV di area kasir dan pintu masuk, lalu mengecek gambarnya cukup jelas.")}
   {step(2, "plug", "Sambungkan aplikasi kasir", "Lewat sambungan resmi aplikasi kasir Anda, atau cukup upload file Excel penjualan harian.")}
   {step(3, "message-circle", "Terima laporan di WhatsApp", "Setiap pagi: berapa pelanggan yang cocok dengan struk, berapa yang perlu dicek, dan perkiraan rupiahnya.")}</div></div></div>"""
 
@@ -1224,7 +1223,7 @@ def landing_full() -> str:
     checks = "".join(f'<div class="lp-check"><span style="color:var(--good-x);margin-top:2px">{ic("circle-check", 20, 2.2)}</span><span>{x}</span></div>' for x in (
         "<b>Pelanggan tanpa struk langsung terlihat</b>, lengkap dengan jam dan berapa lama ia dilayani.",
         "<b>Kasus wajar disaring otomatis</b>, misalnya pengemudi ojol yang mengambil pesanan online, atau orang yang hanya bertanya.",
-        "<b>Selisihnya dalam rupiah</b>, dengan klip bukti 30 detik yang diputar langsung dari perangkat di outlet.",
+        "<b>Selisihnya dalam rupiah</b>, dengan klip bukti 30 detik untuk Anda cek sendiri.",
         "<b>Dibandingkan per shift, bukan per orang</b>, supaya adil untuk tim Anda."))
     spotlight = f"""<div class="lp-sec"><div class="lp-wrap row" style="gap:64px;align-items:center">
  <div style="width:500px;flex:none"><div class="lp-kicker">Audit Kasir</div><h2 class="lp-h2">Setiap pelanggan dicocokkan dengan struknya.</h2>
@@ -1283,11 +1282,8 @@ def landing_full() -> str:
                 f'<div><div class="b" style="font-size:17px">{title}</div><div style="font-size:15px;line-height:1.5;color:var(--ink2);margin-top:5px">{text}</div></div></div>')
 
     privacy = f"""<div class="lp-sec tint"><div class="lp-wrap">
- <div class="lp-center"><div class="lp-kicker">Privasi</div><h2 class="lp-h2">Aman untuk pelanggan, adil untuk karyawan.</h2></div>
+ <div class="lp-center"><div class="lp-kicker">Privasi</div><h2 class="lp-h2">Adil untuk karyawan, aman untuk data Anda.</h2></div>
  <div class="grid" style="grid-template-columns:repeat(3,1fr);gap:34px 40px;margin-top:48px">
-  {trust_item("cctv", "Tanpa kamera baru", "Memakai CCTV yang sudah terpasang di outlet Anda.")}
-  {trust_item("eye-off", "Tanpa wajah, tanpa nama", "Sistem hanya menghitung orang, tidak mengenali siapa orangnya.")}
-  {trust_item("cloud-off", "Video tidak disimpan di cloud", "Rekaman tetap di outlet. Yang dikirim hanya angka.")}
   {trust_item("lock", "Klip bukti hanya untuk Owner", "30 detik per temuan, terhapus otomatis setelah 30 hari, setiap pemutaran tercatat.")}
   {trust_item("users", "Per shift, bukan per orang", "Laporan per kasir hanya menyala kalau Owner mengizinkan dan tim diberi tahu.")}
   {trust_item("key-round", "Akses tim kami dengan izin Anda", "Tim Outlytics hanya bisa melihat data Anda dengan izin sementara yang tercatat.")}</div></div></div>"""
@@ -1309,12 +1305,12 @@ def landing_full() -> str:
   {plan("Growth", "Rp 1,5 jt", "/outlet/bulan", ["Maksimal 4 CCTV", "<b style='color:var(--ink)'>Audit Kasir</b>", "Antrean dan kasir kosong", "Laporan dan notifikasi WhatsApp", "Riwayat 13 bulan"], True)}
   {plan("Enterprise", "Hubungi kami", "", ["CCTV tanpa batas", "Perbandingan semua outlet", "Login Google dan peran khusus", "Garansi layanan (SLA)"])}</div></div></div>"""
 
-    qa = [("Apakah saya harus membeli kamera baru?", "Tidak. Outlytics memakai CCTV yang sudah ada, selama gambarnya cukup jelas. Tim kami mengeceknya saat pemasangan."),
-          ("Apakah karyawan saya akan merasa diawasi?", "Laporan dibuat per shift, bukan per orang, dan sistem tidak mengenali wajah. Kami juga menyiapkan pemberitahuan untuk tim Anda."),
+    qa = [("Apa yang dibutuhkan di outlet?", "CCTV yang melihat area kasir dan pintu masuk, internet, dan aplikasi kasir atau file Excel penjualan. Tim kami mengecek semuanya saat survei."),
+          ("Apakah karyawan saya akan merasa diawasi?", "Laporan dibuat per shift, bukan per orang. Kami juga menyiapkan pemberitahuan untuk tim Anda."),
           ("Aplikasi kasir apa yang bisa disambungkan?", "Aplikasi kasir yang menyediakan sambungan resmi (Open API). Kalau belum ada, cukup upload file Excel penjualan harian."),
-          ("Apakah video saya dikirim ke internet?", "Video tidak disimpan di cloud; yang dikirim hanya angka. Klip bukti 30 detik hanya bisa diputar Owner, langsung dari perangkat di outlet."),
+          ("Bisakah dicoba di satu outlet dulu?", "Bisa. Mulai dari satu outlet selama 30 hari gratis, lalu putuskan sendiri apakah mau lanjut dan menambah outlet."),
           ("Berapa lama pemasangannya?", "Biasanya selesai dalam satu kunjungan. Laporan pertama datang ke WhatsApp Anda keesokan paginya."),
-          ("Bagaimana kalau internet outlet mati?", "Perangkat di outlet tetap menghitung, lalu mengirim datanya begitu internet kembali.")]
+          ("Bagaimana kalau ternyata tidak cocok untuk saya?", "Anda tidak perlu lanjut. Masa coba 30 hari gratis, tanpa kontrak dan tanpa kartu kredit.")]
     faq = f"""<div class="lp-sec tint"><div class="lp-wrap">
  <div class="lp-center"><div class="lp-kicker">Tanya jawab</div><h2 class="lp-h2">Yang paling sering ditanyakan.</h2></div>
  <div class="grid" style="grid-template-columns:1fr 1fr;gap:20px;margin-top:44px">{"".join(f'<div class="lp-card" style="padding:26px"><div class="lp-q">{q}</div><div class="lp-a">{a}</div></div>' for q, a in qa)}</div></div></div>"""
@@ -1441,7 +1437,7 @@ def sa_fleet() -> str:
     rows = "".join(f'<tr><td class="b">{dev}</td><td class="ink2">{cl}</td><td>{st(k)}</td><td>{ver}</td><td class="n">{cams}</td>'
                    f'<td class="n">{temp}</td><td class="muted">{seen}</td></tr>' for dev, cl, k, ver, cams, temp, seen in devices)
     fcols = "".join(f'<col style="width:{w}px">' for w in (92, 200, 136, 84, 62, 66)) + "<col>"
-    left = f"""<div class="card" style="flex:0 0 62.5%">{cardh("Perangkat AI di outlet", "Satu perangkat per outlet: membaca CCTV, menghitung orang, lalu mengirim angkanya saja", chip(f"{len(devices)} dari {DEVICES}", "neutral"))}
+    left = f"""<div class="card" style="flex:0 0 62.5%">{cardh("Perangkat AI di outlet", "Satu perangkat per outlet: membaca CCTV dan menghitung orang", chip(f"{len(devices)} dari {DEVICES}", "neutral"))}
  <table class="roomy" style="table-layout:fixed"><colgroup>{fcols}</colgroup><thead><tr><th>Perangkat</th><th>Klien · outlet</th><th>Status</th><th>Versi AI</th><th class="n">CCTV</th><th class="n">Suhu</th><th>Terakhir aktif</th></tr></thead><tbody>{rows}</tbody></table>
  <div class="row g8" style="margin-top:auto;padding-top:10px">{ic("info", 14, color=MUTED)}<span class="xs muted">Setiap versi AI diuji dulu di sebagian kecil perangkat sebelum dikirim ke semua.</span></div></div>"""
 
@@ -1533,7 +1529,7 @@ def overview(thumbs: dict[str, str]) -> str:
   {panel("PANEL INTERNAL", f"khusus tim {BRAND}", "var(--orange-d)", "#fdf1ea", "#f3cfba", plat, 1, "#eb6834")}</div>
  <div class="row g12" style="flex:none">{principle("database", "Data tiap klien terpisah", "Data setiap klien disimpan terpisah dan tidak bisa saling melihat.")}
   {principle("key-round", "Akses hanya dengan izin", "Tim internal hanya bisa membuka data klien setelah disetujui Owner, dan hanya untuk waktu terbatas.")}
-  {principle("video", "Video tidak disimpan di cloud", "Rekaman tetap di outlet; ke cloud hanya angka. Klip bukti audit diputar langsung dari outlet.")}</div>
+  {principle("lock", "Klip bukti hanya untuk Owner", "30 detik per temuan, terhapus otomatis setelah 30 hari, dan setiap pemutaran tercatat.")}</div>
  <div class="mocktag">MOCKUP · contoh data, bukan data asli</div></div></body></html>"""
 
 

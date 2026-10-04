@@ -7,7 +7,7 @@ kami ke investor, jadi deck harus jelas, meyakinkan, dan jujur.
 
 ## Tentang Outlytics
 
-Outlytics mengubah CCTV yang sudah terpasang di kafe dan toko menjadi angka bisnis
+Outlytics mengubah rekaman CCTV di kafe dan toko menjadi angka bisnis
 yang bisa langsung dipakai:
 
 - berapa orang ada di outlet dan berapa kursi terisi, saat ini;
@@ -16,20 +16,12 @@ yang bisa langsung dipakai:
 - perbandingan semua outlet dalam satu layar;
 - notifikasi dan laporan otomatis lewat WhatsApp.
 
-Tiga janji utama:
-
-1. **Tanpa kamera baru.** Outlytics memakai CCTV yang sudah ada.
-2. **Tanpa wajah, tanpa nama.** Sistem hanya menghitung orang, tidak mengenali siapa orangnya.
-3. **Video tidak disimpan di cloud.** Rekaman tetap di outlet; yang dikirim ke cloud
-   hanya angka. Klip bukti 30 detik untuk audit kasir hanya bisa diputar Owner,
-   langsung dari perangkat outlet, dan terhapus otomatis setelah 30 hari.
-
 Pembelinya adalah pemilik dan pengelola bisnis dengan banyak outlet: kafe,
 restoran, toko roti, toko ritel, apotek, klinik, dan gym. Klien contoh di mockup
 adalah Kedai Pagi, jaringan kafe dengan 12 outlet.
 
 Kalimat satu napas: *Outlytics membantu pemilik bisnis dengan banyak outlet tahu
-apa yang terjadi di setiap cabang, langsung dari CCTV yang sudah mereka punya.*
+apa yang terjadi di setiap cabang, langsung dari CCTV di outlet mereka.*
 
 ## Pembeda utama: Audit Kasir
 
@@ -122,7 +114,7 @@ Ikuti gaya mockup supaya deck dan gambarnya terasa satu kesatuan.
 | `09-superadmin-klien.png` | Panel internal, Klien & Paket: semua klien, status teknis, serta paket dan harga |
 | `10-superadmin-perangkat.png` | Panel internal, Perangkat AI & Update: kondisi perangkat dan update bertahap |
 | `11-audit-kasir.png` | Audit Kasir: rombongan vs struk, temuan yang perlu dicek, pola per shift, garis waktu satu temuan, dan sumber data kasir |
-| `12-landing-page.png` | Landing page `outlytics.ai`: janji utama, bukti di sampingnya (halaman audit dan laporan WhatsApp), ajakan coba gratis 30 hari, dan tiga janji privasi |
+| `12-landing-page.png` | Landing page `outlytics.ai`: janji utama, bukti di sampingnya (halaman audit dan laporan WhatsApp), ajakan coba gratis 30 hari, dan tiga manfaat utama |
 
 Setiap gambar juga ada versi SVG-nya, dengan nama yang sama di folder `svg/`. Kalau
 kamu bisa memakai SVG, gunakan versi itu supaya gambar tetap tajam saat diperbesar
@@ -142,16 +134,14 @@ boleh dipoles asal maknanya tetap sama.
    - kasir kosong saat antrean panjang baru ketahuan dari komplain;
    - aplikasi kasir hanya tahu apa yang diketik, bukan siapa yang benar-benar dilayani;
    - rekaman CCTV hanya dibuka kalau ada masalah.
-3. **Solusi.** "Outlytics mengubah CCTV yang sudah ada menjadi angka bisnis,
-   langsung." Tampilkan tiga janji utama.
+3. **Solusi.** "Outlytics mengubah rekaman CCTV menjadi angka bisnis, langsung."
+   Tampilkan tiga hal yang didapat Owner: selisih di kasir dalam rupiah, laporan setiap
+   pagi di WhatsApp, dan semua outlet dalam satu layar.
 4. **Cara kerja.** Diagram empat langkah sederhana:
    1. CCTV di outlet.
-   2. Perangkat AI di outlet menghitung orang.
-   3. Hanya angka yang dikirim ke cloud, lalu dicocokkan dengan struk dari aplikasi
-      kasir.
+   2. AI menghitung orang yang dilayani di kasir.
+   3. Hasilnya dicocokkan dengan struk dari aplikasi kasir.
    4. Hasilnya tampil di dashboard dan WhatsApp.
-
-   Tekankan bahwa video tidak disimpan di cloud.
 5. **Satu aplikasi, dua sisi.** Pakai `00-peta-halaman.png`. Aplikasi klien
    untuk Owner, Admin, dan Manager; panel internal untuk tim Outlytics. Tunjuk
    kelompok "Pembeda utama" dan tiga langkah cara kerjanya.
@@ -196,7 +186,7 @@ boleh dipoles asal maknanya tetap sama.
 14. **Privasi dan kepercayaan.** Pakai `07-tim-hak-akses.png` dan
     `08-privasi-keamanan.png`. Poinnya:
     - hak akses diatur per peran dan per outlet;
-    - klip bukti hanya untuk Owner, diputar dari perangkat outlet, dan setiap
+    - klip bukti hanya untuk Owner, terhapus otomatis setelah 30 hari, dan setiap
       pemutaran tercatat;
     - laporan dibuat per shift, bukan per orang;
     - tim internal hanya bisa membuka data dengan izin Owner.
@@ -205,8 +195,7 @@ boleh dipoles asal maknanya tetap sama.
     update AI dikirim bertahap serta otomatis berhenti kalau ada masalah.
 16. **Cara kami menjual ke pemilik outlet.** Pakai `12-landing-page.png`. Judul:
     "Satu janji, satu bukti, satu ajakan." Sorot hal-hal berikut:
-    - judulnya bicara uang: *"Temukan omzet yang bocor di kasir, dari CCTV yang sudah
-      ada"*;
+    - judulnya bicara uang: *"Temukan omzet yang bocor di kasir, langsung dari CCTV"*;
     - buktinya ada tepat di samping judul: halaman Audit Kasir dan laporan WhatsApp pagi;
     - ajakannya satu: coba gratis 30 hari, dengan WhatsApp sebagai pilihan kedua;
     - program pilot untuk 10 outlet pertama di Jabodetabek.
@@ -243,6 +232,10 @@ boleh dipoles asal maknanya tetap sama.
 - Jangan menulis bahwa produk sudah sesuai UU PDP. Tulis "dirancang mengikuti
   prinsip UU PDP; akan ditinjau konsultan hukum".
 - Harga paket masih hipotesis.
+- Jangan menulis "tanpa kamera baru", "tanpa wajah", atau "video tidak disimpan di
+  cloud" di slide mana pun. Ketiganya belum tentu benar: titik pesan mungkin butuh
+  kamera tambahan, klip bukti memperlihatkan orang apa adanya, dan pemrosesan video
+  bisa berjalan di cloud.
 - Landing page belum dipakai sungguhan. Program pilot 10 outlet, gratis 30 hari, dan
   pemasangan dalam satu kunjungan adalah rencana. Tulis sebagai rencana, bukan sebagai
   hasil.

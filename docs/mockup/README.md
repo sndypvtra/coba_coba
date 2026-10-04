@@ -81,7 +81,7 @@ Supaya fitur ini masuk akal di seluruh aplikasi, halaman lain ikut diubah:
   - aturan baru: struk dibatalkan saat tidak ada pelanggan di depan kasir;
   - aturan "antrean 6 orang" dilepas supaya halaman tetap muat.
 - **`07`**: baris "Audit kasir & klip". Owner melihat semua; Admin hanya ringkasan.
-- **`08`**: lihat perubahan janji privasi di bawah. Tambahan lainnya:
+- **`08`**:
   - pengaturan "Klip bukti audit kasir";
   - laporan per shift, bukan per orang;
   - struk dari kasir masuk daftar data yang disimpan;
@@ -100,19 +100,20 @@ Landing page ditulis untuk orang yang membayar, yaitu pemilik outlet, bukan untu
 orang teknis. Bahasanya bahasa bisnis sehari-hari, dan istilah "POS" diganti
 "aplikasi kasir". Urutannya mengikuti pertanyaan calon pembeli:
 
-1. **Apa untungnya?** Judul: *"Temukan omzet yang bocor di kasir, dari CCTV yang sudah
-   ada."* Di sampingnya ada buktinya: halaman Audit Kasir dan laporan WhatsApp pagi.
+1. **Apa untungnya?** Judul: *"Temukan omzet yang bocor di kasir, langsung dari
+   CCTV."* Di sampingnya ada buktinya: halaman Audit Kasir dan laporan WhatsApp pagi.
    Ajakannya satu: **Coba gratis 30 hari**, dengan WhatsApp sebagai pilihan kedua.
 2. **Masalah apa?** Transaksi yang tidak diketik, pembeli yang pergi karena antre, dan
    cabang yang tidak bisa ditunggui.
-3. **Repot tidak?** Tiga langkah tanpa kamera baru: sambungkan CCTV, sambungkan
+3. **Repot tidak?** Tiga langkah sampai laporan pertama: sambungkan CCTV, sambungkan
    aplikasi kasir (atau upload Excel), lalu terima laporan di WhatsApp.
 4. **Seperti apa hasilnya?** Contoh audit satu hari dengan angka yang sama dengan
    halaman `11`.
 5. **Sepadan tidak?** Hitungan contoh: omzet Rp 150 jt dan struk Rp 60 rb. Kalau 1%
    transaksi tidak tercatat dan 3% pembeli pergi karena antre, potensinya ±Rp 6 jt
    per bulan, 4× biaya paket Growth.
-6. **Aman tidak?** Enam janji privasi yang sama dengan halaman `08`.
+6. **Aman tidak?** Tiga janji: klip bukti hanya untuk Owner, laporan per shift (bukan
+   per orang), dan tim internal hanya bisa melihat data dengan izin Owner.
 7. **Berapa harganya, dan apa yang sering ditanyakan?** Tiga paket (sama dengan `09`)
    dan enam tanya jawab. Penutupnya formulir singkat: nama, nomor WhatsApp, dan
    jumlah outlet.
@@ -132,16 +133,14 @@ bisnis di dalamnya:
 
 Gambar ini adalah desain, belum situs yang responsif untuk HP.
 
-**Perubahan janji privasi.** Janji lama "Video tidak keluar dari outlet" bertabrakan
-dengan klip bukti: Owner perlu memutar klip dari mana saja. Janjinya diganti menjadi
-**"Video tidak disimpan di cloud"**:
+**Klaim yang dihapus.** "Tanpa kamera baru", "tanpa wajah", dan "video tidak disimpan di
+cloud" tidak lagi ditulis di halaman mana pun, karena belum tentu benar:
 
-- rekaman tetap di perangkat outlet;
-- klip 30 detik hanya untuk temuan, hanya untuk Owner, dan diputar langsung dari
-  perangkat outlet;
-- klip terhapus otomatis setelah 30 hari, dan setiap pemutaran tercatat.
+- titik pesan mungkin butuh kamera tambahan atau posisi baru;
+- klip bukti memperlihatkan orang apa adanya;
+- pemrosesan video bisa berjalan di cloud.
 
-Video live tetap hanya bisa dibuka dari jaringan outlet.
+Prinsip ketiga di `00` diganti "Klip bukti hanya untuk Owner".
 
 ## Apa yang nyata, apa yang ilustrasi
 
