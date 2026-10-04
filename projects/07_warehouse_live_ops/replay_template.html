@@ -1,0 +1,524 @@
+<title>Replay 3D Gudang</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a control-room screen. The floor in 3D fills the stage; a narrow rail
+   on the right holds the views, the live counts and the event log; the transport
+   bar with the event-marked timeline runs under the stage. One deliberate dark
+   world (a monitoring screen), so every colour is set here, once. */
+:root {
+  color-scheme: dark;
+  --ground: #0e1316;        /* the screen */
+  --rail: #151c20;          /* side rail and transport */
+  --line: #26323a;          /* hairlines */
+  --ink: #e6ecef;
+  --dim: #8d9aa2;
+  --signal: #f3c623;        /* floor-marking yellow: the one accent */
+  --person: #38bdf8;
+  --person-still: #f1f5f9;
+  --forklift: #f97316;
+  --pallet: #facc15;
+  --bad: #ef4444;
+  --lane: #fb923c;
+  --wrong: #f472b6;
+  --idle: #fab219;
+  --crowd: #f87171;
+  --cross: #a3b3bd;
+  --display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+html, body { height: 100%; }
+body { background: var(--ground); color: var(--ink); font-family: var(--body); font-size: 14px; }
+.app { display: grid; grid-template-columns: minmax(0, 1fr) 320px; grid-template-rows: auto minmax(0, 1fr) auto;
+       height: 100%; gap: 0; }
+header { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px;
+         padding: 10px 16px; border-bottom: 1px solid var(--line); }
+header h1 { margin: 0; font-family: var(--display); font-weight: 700; font-size: 24px; letter-spacing: .04em;
+            text-transform: uppercase; text-wrap: balance; }
+header h1 b { color: var(--signal); font-weight: 700; }
+header .src { color: var(--dim); font-size: 12.5px; min-width: 0; }
+header .clock { margin-left: auto; font-family: var(--mono); font-size: 20px; font-variant-numeric: tabular-nums; }
+.stage { position: relative; min-height: 0; min-width: 0; overflow: hidden; }
+#gl { display: block; width: 100%; height: 100%; touch-action: none; }
+.hint { position: absolute; left: 12px; bottom: 10px; color: var(--dim); font-size: 12px; pointer-events: none;
+        background: color-mix(in srgb, var(--ground) 70%, transparent); padding: 2px 6px; border-radius: 3px; }
+.viewname { position: absolute; left: 12px; top: 10px; font-family: var(--display); font-size: 17px; font-weight: 600;
+            letter-spacing: .05em; text-transform: uppercase; padding: 2px 8px; border-radius: 3px;
+            background: color-mix(in srgb, var(--ground) 75%, transparent); }
+aside { grid-row: 2 / 4; grid-column: 2; border-left: 1px solid var(--line); background: var(--rail);
+        overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+aside h2 { margin: 0 0 8px; font-family: var(--display); font-weight: 600; font-size: 14px; letter-spacing: .12em;
+           text-transform: uppercase; color: var(--dim); }
+.views { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+button, .chip { font: inherit; color: var(--ink); background: transparent; border: 1px solid var(--line);
+                border-radius: 4px; padding: 6px 8px; cursor: pointer; text-align: left; }
+button:hover { border-color: var(--dim); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--signal); outline-offset: 1px; }
+button[aria-pressed="true"] { border-color: var(--signal); color: var(--signal); }
+.views button .sw { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px;
+                    vertical-align: 0; }
+.views button small { display: block; color: var(--dim); font-size: 11px; font-family: var(--mono); }
+.toggles { display: flex; flex-wrap: wrap; gap: 6px; }
+.counts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+.count .v { font-family: var(--display); font-weight: 700; font-size: 30px; line-height: 1; font-variant-numeric: tabular-nums; }
+.count .k { color: var(--dim); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; }
+.legend { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; font-size: 12px; color: var(--dim); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+.legend i.sq { border-radius: 2px; }
+.events { display: flex; flex-direction: column; gap: 2px; }
+.ev { display: grid; grid-template-columns: 44px 1fr; gap: 8px; align-items: baseline; padding: 5px 6px;
+      border: 1px solid transparent; border-radius: 4px; }
+.ev:hover { border-color: var(--line); }
+.ev.past { opacity: .55; }
+.ev .t { font-family: var(--mono); font-size: 12px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.ev .d { min-width: 0; }
+.ev .d b { font-weight: 600; }
+.ev .d span { color: var(--dim); font-size: 12px; }
+.ev .d .tag { display: inline-block; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase;
+              padding: 1px 5px; border-radius: 2px; margin-right: 6px; color: var(--ground); font-weight: 700; }
+.transport { grid-column: 1; display: flex; align-items: center; gap: 12px; padding: 10px 16px 12px;
+             border-top: 1px solid var(--line); background: var(--rail); }
+.transport .play { width: 42px; height: 34px; text-align: center; font-size: 16px; }
+.track { position: relative; flex: 1; min-width: 0; padding-top: 12px; }
+.ticks { position: absolute; left: 0; right: 0; top: 0; height: 10px; }
+.ticks i { position: absolute; top: 0; width: 3px; height: 10px; border-radius: 1px; transform: translateX(-1px); }
+input[type=range] { width: 100%; accent-color: var(--signal); margin: 0; }
+.speed { display: flex; gap: 4px; }
+.speed button { padding: 4px 7px; font-family: var(--mono); font-size: 12px; }
+.note { color: var(--dim); font-size: 12px; line-height: 1.45; max-width: 65ch; }
+@media (max-width: 860px) {
+  .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 58vh auto auto; height: auto; }
+  aside { grid-row: 4; grid-column: 1; border-left: 0; border-top: 1px solid var(--line); overflow: visible; }
+  .transport { grid-row: 3; }
+  header .clock { font-size: 17px; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
+</style>
+
+<div class="app">
+  <header>
+    <h1>Replay 3D <b>Gudang</b></h1>
+    <div class="src" id="src"></div>
+    <div class="clock" id="clock">00:00,0</div>
+  </header>
+  <div class="stage">
+    <canvas id="gl" aria-label="Lantai gudang dalam 3D: orang, forklift dan CCTV"></canvas>
+    <div class="viewname" id="viewname">Miring</div>
+    <div class="hint" id="hint">seret untuk memutar · scroll / cubit untuk zoom</div>
+  </div>
+  <div class="transport">
+    <button class="play" id="play" aria-label="Putar atau jeda">❚❚</button>
+    <div class="track">
+      <div class="ticks" id="ticks"></div>
+      <input type="range" id="time" min="0" max="1" step="1" value="0" aria-label="Waktu">
+    </div>
+    <div class="speed" id="speed">
+      <button data-s="0.5" aria-pressed="false">0,5×</button>
+      <button data-s="1" aria-pressed="true">1×</button>
+      <button data-s="2" aria-pressed="false">2×</button>
+    </div>
+  </div>
+  <aside>
+    <section>
+      <h2>Sudut pandang</h2>
+      <div class="views" id="views"></div>
+    </section>
+    <section>
+      <h2>Tampilkan</h2>
+      <div class="toggles">
+        <button id="t-fov" aria-pressed="true">Bidang pandang CCTV</button>
+        <button id="t-labels" aria-pressed="true">Label ID</button>
+        <button id="t-trails" aria-pressed="true">Jejak 3 detik</button>
+        <button id="t-zones" aria-pressed="true">Zona &amp; garis</button>
+      </div>
+    </section>
+    <section>
+      <h2>Sekarang</h2>
+      <div class="counts">
+        <div class="count"><div class="v" id="c-people">0</div><div class="k">orang terpantau</div></div>
+        <div class="count"><div class="v" id="c-walk">0</div><div class="k">sedang berjalan</div></div>
+        <div class="count"><div class="v" id="c-lift">0</div><div class="k">forklift bergerak</div></div>
+        <div class="count"><div class="v" id="c-near" style="color:var(--bad)">0</div><div class="k">nyaris tertabrak</div></div>
+      </div>
+    </section>
+    <section>
+      <div class="legend">
+        <span><i style="background:var(--person)"></i>orang berjalan</span>
+        <span><i style="background:var(--person-still)"></i>orang diam</span>
+        <span><i class="sq" style="background:var(--forklift)"></i>forklift</span>
+        <span><i class="sq" style="background:var(--pallet)"></i>pallet truck</span>
+        <span><i style="background:var(--bad)"></i>nyaris tertabrak</span>
+        <span><i style="background:var(--lane)"></i>di jalur forklift</span>
+        <span><i style="background:var(--idle)"></i>diam lama</span>
+        <span><i style="background:var(--wrong)"></i>salah arah</span>
+      </div>
+    </section>
+    <section>
+      <h2>Kejadian · klik untuk lompat</h2>
+      <div class="events" id="events"></div>
+    </section>
+    <section>
+      <p class="note" id="note"></p>
+    </section>
+  </aside>
+</div>
+
+<script id="replay-data" type="application/json">__DATA__</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+function start() {
+  "use strict";
+  const D = JSON.parse(document.getElementById("replay-data").textContent);
+  const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const COL = {
+    person: css("--person"), still: css("--person-still"), forklift: css("--forklift"), pallet_truck: css("--pallet"),
+    robot: "#c084fc", near_miss: css("--bad"), speeding: css("--bad"), lane: css("--lane"), wrong_way: css("--wrong"),
+    idle: css("--idle"), crowd: css("--crowd"), crossing: css("--cross"), ground: css("--ground"), signal: css("--signal")
+  };
+  const EVNAME = { near_miss: "nyaris", speeding: "ngebut", idle: "diam lama", lane: "jalur forklift",
+                   wrong_way: "salah arah", crowd: "kerumunan", crossing: "melintas" };
+  const fmt = (t) => { const m = Math.floor(t / 60), s = t - 60 * m;
+    return String(m).padStart(2, "0") + ":" + s.toFixed(1).padStart(4, "0").replace(".", ","); };
+  const num = (x, d = 1) => x.toFixed(d).replace(".", ",");
+
+  document.getElementById("src").textContent = D.source;
+  document.getElementById("note").textContent = D.note;
+  if (!window.THREE) {
+    document.getElementById("viewname").textContent = "Pustaka 3D tidak termuat: periksa koneksi internet lalu muat ulang.";
+    return;
+  }
+
+  // world (x, y, z-up, metres) -> three (x, y-up, z)
+  const W = (x, y, z = 0) => new THREE.Vector3(x, z, -y);
+  const canvas = document.getElementById("gl");
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(COL.ground);
+  const cam = new THREE.PerspectiveCamera(45, 16 / 9, 0.1, 600);
+  const controls = new THREE.OrbitControls(cam, canvas);
+  controls.enableDamping = true;
+  controls.maxPolarAngle = Math.PI * 0.495;
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x334455, 0.95));
+  const sun = new THREE.DirectionalLight(0xffffff, 0.55);
+  sun.position.set(-30, 60, 20);
+  scene.add(sun);
+
+  // ---- the floor: the plan, in metres
+  const [fx0, fy0, fx1, fy1] = D.floor.bounds;
+  const tex = new THREE.TextureLoader().load(D.floor.image);
+  tex.anisotropy = 4;
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(fx1 - fx0, fy1 - fy0),
+    new THREE.MeshBasicMaterial({ map: tex, color: 0xb8c0c4 }));
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.copy(W((fx0 + fx1) / 2, (fy0 + fy1) / 2, 0));
+  scene.add(floor);
+  const centre = W((fx0 + fx1) / 2, (fy0 + fy1) / 2, 0);
+
+  // ---- zones and counting lines
+  const zoneGroup = new THREE.Group();
+  scene.add(zoneGroup);
+  for (const z of D.zones) {
+    const shape = new THREE.Shape(z.polygon.map(([x, y]) => new THREE.Vector2(x, y)));
+    const m = new THREE.Mesh(new THREE.ShapeGeometry(shape), new THREE.MeshBasicMaterial({
+      color: z.colour, transparent: true, opacity: z.kind === "area" ? 0.12 : 0.28, depthWrite: false }));
+    m.rotation.x = -Math.PI / 2;
+    m.position.y = 0.02;
+    zoneGroup.add(m);
+    const pts = z.polygon.concat([z.polygon[0]]).map(([x, y]) => W(x, y, 0.03));
+    zoneGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),
+      new THREE.LineBasicMaterial({ color: z.colour })));
+  }
+  for (const l of D.lines) {
+    const g = new THREE.BufferGeometry().setFromPoints([W(l.a[0], l.a[1], 0.05), W(l.b[0], l.b[1], 0.05)]);
+    zoneGroup.add(new THREE.Line(g, new THREE.LineBasicMaterial({ color: 0xffffff })));
+    zoneGroup.add(textSprite(l.name, "#ffffff", W(l.b[0], l.b[1], 1.2), 0.026));
+  }
+
+  // ---- cameras: body, the rays to the picture's corners, the floor they place people on
+  const fovGroup = new THREE.Group();
+  scene.add(fovGroup);
+  for (const c of D.cameras) {
+    const colour = c.colour || "#6b7780";
+    const body = new THREE.Mesh(new THREE.ConeGeometry(0.35, 0.8, 4), new THREE.MeshLambertMaterial({ color: colour }));
+    const p = W(c.centre[0], c.centre[1], c.centre[2]);
+    body.position.copy(p);
+    const ax = W(c.axis[0], c.axis[1], c.axis[2]);
+    body.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), ax.clone().normalize());
+    scene.add(body);
+    if (c.colour) scene.add(textSprite(c.name, colour, p.clone().add(new THREE.Vector3(0, 1.1, 0)), 0.03));
+    const rays = [];
+    for (const q of c.corners) { rays.push(p, W(q[0], q[1], q[2])); }
+    fovGroup.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(rays),
+      new THREE.LineBasicMaterial({ color: colour, transparent: true, opacity: c.colour ? 0.7 : 0.25 })));
+    for (const poly of c.floor) {
+      const shape = new THREE.Shape(poly.map(([x, y]) => new THREE.Vector2(x, y)));
+      const m = new THREE.Mesh(new THREE.ShapeGeometry(shape), new THREE.MeshBasicMaterial({
+        color: colour, transparent: true, opacity: c.colour ? 0.16 : 0.05, depthWrite: false }));
+      m.rotation.x = -Math.PI / 2;
+      m.position.y = 0.01;
+      fovGroup.add(m);
+    }
+  }
+
+  // ---- objects
+  const objGroup = new THREE.Group();
+  scene.add(objGroup);
+  const pool = new Map();          // gid -> {mesh, label, trail}
+  const personGeo = new THREE.CylinderGeometry(0.24, 0.24, 1.45, 14);
+  const headGeo = new THREE.SphereGeometry(0.17, 12, 10);
+  const BODY = { forklift: [2.6, 2.1, 1.2], pallet_truck: [1.8, 1.3, 0.9], robot: [0.8, 0.6, 0.6] };
+  const mats = {};
+  const mat = (hex) => mats[hex] || (mats[hex] = new THREE.MeshLambertMaterial({ color: hex }));
+  function makeObject(gid, cls) {
+    const g = new THREE.Group();
+    let tag;
+    if (cls === "person") {
+      const b = new THREE.Mesh(personGeo, mat(COL.person)); b.position.y = 0.725; g.add(b);
+      const h = new THREE.Mesh(headGeo, mat(COL.person)); h.position.y = 1.62; g.add(h);
+      tag = "P";
+    } else {
+      const [L, Hh, Wd] = BODY[cls];
+      const b = new THREE.Mesh(new THREE.BoxGeometry(L, Hh, Wd), mat(COL[cls])); b.position.y = Hh / 2; g.add(b);
+      tag = cls === "forklift" ? "F" : cls === "pallet_truck" ? "T" : "R";
+    }
+    objGroup.add(g);
+    const label = textSprite(tag + gid, "#ffffff", new THREE.Vector3(), 0.022);
+    objGroup.add(label);
+    const tg = new THREE.BufferGeometry();
+    tg.setAttribute("position", new THREE.BufferAttribute(new Float32Array(31 * 3), 3));
+    const trail = new THREE.Line(tg, new THREE.LineBasicMaterial({ color: 0x8d9aa2, transparent: true, opacity: 0.8 }));
+    objGroup.add(trail);
+    const o = { g, label, trail, cls, tag };
+    pool.set(gid, o);
+    return o;
+  }
+  const nearGroup = new THREE.Group();
+  scene.add(nearGroup);
+
+  function textSprite(text, colour, pos, scale) {
+    const c = document.createElement("canvas");
+    const ctx = c.getContext("2d");
+    const fs = 44;
+    ctx.font = `600 ${fs}px ${css("--display") || "sans-serif"}`;
+    const w = Math.ceil(ctx.measureText(text).width) + 20;
+    c.width = w; c.height = fs + 16;
+    ctx.font = `600 ${fs}px ${css("--display") || "sans-serif"}`;
+    ctx.fillStyle = "rgba(14,19,22,0.78)";
+    ctx.fillRect(0, 0, w, c.height);
+    ctx.fillStyle = colour;
+    ctx.textBaseline = "middle";
+    ctx.fillText(text, 10, c.height / 2 + 2);
+    const t = new THREE.CanvasTexture(c);
+    // constant size on screen, whatever the zoom: `scale` is a share of the view's height
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, transparent: true,
+                                                          sizeAttenuation: false }));
+    s.scale.set(scale * w / c.height, scale, 1);
+    s.position.copy(pos);
+    s.renderOrder = 10;
+    return s;
+  }
+
+  // ---- time
+  const F = D.frames;
+  const N = F.length;
+  const dt = 1 / D.fps;
+  const slider = document.getElementById("time");
+  slider.max = String(N - 1);
+  let t = 0, playing = true, speed = 1, last = performance.now();
+  const byGid = F.map((fr) => new Map(fr.o.map((r) => [r[0], r])));
+
+  function alertsOf(bits) { return D.alerts.filter((_, i) => bits & (1 << i)); }
+  function colourOf(r, cls) {
+    const al = alertsOf(r[7]);
+    for (const a of ["near_miss", "speeding", "wrong_way", "lane", "idle", "crowd"]) if (al.includes(a)) return COL[a];
+    if (cls === "person") return r[6] ? COL.person : COL.still;
+    return COL[cls];
+  }
+
+  const show = { fov: true, labels: true, trails: true, zones: true };
+  function draw() {
+    const i = Math.min(N - 1, Math.floor(t / dt));
+    const k = Math.min(1, t / dt - i);
+    const now = byGid[i], next = byGid[Math.min(N - 1, i + 1)];
+    const seen = new Set();
+    let people = 0, walking = 0, lifts = 0;
+    for (const [gid, r] of now) {
+      const cls = D.classes[r[1]];
+      const o = pool.get(gid) || makeObject(gid, cls);
+      seen.add(gid);
+      const n = next.get(gid);
+      const x = n ? r[2] + (n[2] - r[2]) * k : r[2];
+      const y = n ? r[3] + (n[3] - r[3]) * k : r[3];
+      o.g.visible = true;
+      o.g.position.copy(W(x, y, 0));
+      o.g.rotation.y = r[4];
+      const col = colourOf(r, cls);
+      o.g.children.forEach((m) => { m.material = mat(col); });
+      o.label.visible = show.labels;
+      o.label.position.copy(W(x, y, cls === "person" ? 2.25 : 2.9));
+      // trail: the last three seconds
+      const pos = o.trail.geometry.attributes.position;
+      let m = 0;
+      for (let j = Math.max(0, i - 30); j <= i; j++) {
+        const q = byGid[j].get(gid);
+        if (!q) continue;
+        pos.setXYZ(m++, q[2], 0.06, -q[3]);
+      }
+      o.trail.geometry.setDrawRange(0, m);
+      pos.needsUpdate = true;
+      o.trail.visible = show.trails && m > 1;
+      if (cls === "person") { people++; walking += r[6]; }
+      if (cls === "forklift" && r[5] > 0.3) lifts++;
+    }
+    for (const [gid, o] of pool) if (!seen.has(gid)) { o.g.visible = false; o.label.visible = false; o.trail.visible = false; }
+    // near misses: a red line from the person to the forklift
+    nearGroup.clear();
+    for (const [p, v] of F[i].near) {
+      const a = now.get(p), b = now.get(v);
+      if (!a || !b) continue;
+      nearGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([W(a[2], a[3], 0.9), W(b[2], b[3], 0.9)]),
+        new THREE.LineBasicMaterial({ color: COL.near_miss })));
+    }
+    document.getElementById("clock").textContent = fmt(F[i].t) + " / " + fmt(F[N - 1].t);
+    document.getElementById("c-people").textContent = people;
+    document.getElementById("c-walk").textContent = walking;
+    document.getElementById("c-lift").textContent = lifts;
+    document.getElementById("c-near").textContent = D.events.filter((e) => e.type === "near_miss" && e.t <= F[i].t).length;
+    slider.value = String(i);
+    evRows.forEach(([e, el]) => el.classList.toggle("past", e.t < F[i].t - 0.05));
+  }
+
+  // ---- views
+  let current = null;
+  const views = [{ name: "Miring", kind: "orbit" }, { name: "Atas", kind: "top" }]
+    .concat(D.cameras.filter((c) => c.colour).map((c) => ({ name: c.name, kind: "cctv", c })));
+  const viewsEl = document.getElementById("views");
+  function setView(v) {
+    current = v;
+    for (const b of viewsEl.children) b.setAttribute("aria-pressed", String(b.dataset.name === v.name));
+    document.getElementById("viewname").textContent = v.kind === "cctv" ? "Dari " + v.name : v.name;
+    document.getElementById("hint").hidden = v.kind === "cctv";
+    controls.enabled = v.kind !== "cctv";
+    cam.up.set(0, 1, 0);
+    const span = Math.max(fx1 - fx0, fy1 - fy0);
+    if (v.kind === "orbit") {
+      cam.fov = 45; cam.position.copy(centre.clone().add(new THREE.Vector3(-span * 0.35, span * 0.62, span * 0.72)));
+      controls.target.copy(centre);
+    } else if (v.kind === "top") {
+      cam.fov = 45; cam.position.copy(centre.clone().add(new THREE.Vector3(0, span * 1.15, 0.01)));
+      controls.target.copy(centre);
+    } else {
+      // exactly where the CCTV hangs, looking where it looks, with its own field of view
+      const c = v.c;
+      cam.fov = c.vfov;
+      cam.position.copy(W(c.centre[0], c.centre[1], c.centre[2]));
+      cam.up.copy(W(-c.down[0], -c.down[1], -c.down[2]));
+      cam.lookAt(cam.position.clone().add(W(c.axis[0], c.axis[1], c.axis[2])));
+    }
+    resize();
+    if (v.kind !== "cctv") controls.update();
+  }
+  for (const v of views) {
+    const b = document.createElement("button");
+    b.dataset.name = v.name;
+    if (v.kind === "cctv") {
+      b.innerHTML = `<span class="sw" style="background:${v.c.colour}"></span>${v.name}<small>${num(v.c.centre[2])} m · ${Math.round(v.c.tilt)}° ke bawah</small>`;
+    } else {
+      b.innerHTML = v.name + `<small>${v.kind === "top" ? "denah dari atas" : "bebas diputar"}</small>`;
+    }
+    b.addEventListener("click", () => setView(v));
+    viewsEl.appendChild(b);
+  }
+
+  // ---- toggles, transport, events
+  function toggle(id, key, apply) {
+    const b = document.getElementById(id);
+    b.addEventListener("click", () => { show[key] = !show[key]; b.setAttribute("aria-pressed", String(show[key])); apply && apply(); draw(); });
+  }
+  toggle("t-fov", "fov", () => { fovGroup.visible = show.fov; });
+  toggle("t-labels", "labels");
+  toggle("t-trails", "trails");
+  toggle("t-zones", "zones", () => { zoneGroup.visible = show.zones; });
+  const playBtn = document.getElementById("play");
+  function setPlaying(p) { playing = p; playBtn.textContent = p ? "❚❚" : "▶"; last = performance.now(); }
+  playBtn.addEventListener("click", () => { if (!playing && t >= (N - 1) * dt) t = 0; setPlaying(!playing); });
+  slider.addEventListener("input", () => { t = Number(slider.value) * dt; draw(); });
+  slider.addEventListener("pointerdown", () => setPlaying(false));
+  for (const b of document.querySelectorAll("#speed button")) {
+    b.addEventListener("click", () => {
+      speed = Number(b.dataset.s);
+      for (const x of document.querySelectorAll("#speed button")) x.setAttribute("aria-pressed", String(x === b));
+    });
+  }
+  const ticks = document.getElementById("ticks");
+  const T1 = F[N - 1].t || 1;
+  for (const e of D.events) {
+    const i = document.createElement("i");
+    i.style.left = (100 * e.t / T1) + "%";
+    i.style.background = COL[e.type];
+    i.title = fmt(e.t) + " " + EVNAME[e.type];
+    ticks.appendChild(i);
+  }
+  const evEl = document.getElementById("events");
+  const evRows = [];
+  for (const e of D.events.filter((e) => e.type !== "crossing" || D.events.length < 60)) {
+    const b = document.createElement("button");
+    b.className = "ev";
+    b.innerHTML = `<span class="t">${fmt(e.t).slice(0, 5)}</span><span class="d"><span class="tag" style="background:${COL[e.type]}">${EVNAME[e.type]}</span><b>${e.who}</b> <span>${e.text}</span></span>`;
+    b.addEventListener("click", () => { t = Math.max(0, e.t - 1); setPlaying(false); draw(); });
+    evEl.appendChild(b);
+    evRows.push([e, b]);
+  }
+
+  // In a CCTV view the 3D eye must frame exactly what the camera frames, so the
+  // drawing area is cut to the camera's own 16:9 and the rest of the stage left dark.
+  let box = { x: 0, y: 0, w: 1, h: 1 };
+  function resize() {
+    const r = canvas.parentElement.getBoundingClientRect();
+    renderer.setSize(r.width, r.height, false);
+    let w = r.width, h = r.height;
+    if (current && current.kind === "cctv") {
+      const a = current.c.aspect;
+      if (w / h > a) w = h * a; else h = w / a;
+    }
+    box = { x: (r.width - w) / 2, y: (r.height - h) / 2, w, h };
+    renderer.setViewport(box.x, box.y, box.w, box.h);
+    renderer.setScissor(box.x, box.y, box.w, box.h);
+    renderer.setScissorTest(true);
+    cam.aspect = box.w / Math.max(box.h, 1);
+    cam.updateProjectionMatrix();
+  }
+  window.addEventListener("resize", resize);
+  setView(views[0]);
+  draw();
+  function loop(now) {
+    const el = Math.min(0.1, (now - last) / 1000);
+    last = now;
+    if (playing) {
+      t += el * speed;
+      if (t >= (N - 1) * dt) { t = (N - 1) * dt; setPlaying(false); }
+      draw();
+    }
+    if (controls.enabled) controls.update();
+    renderer.setScissorTest(false);
+    renderer.clear();
+    renderer.setScissorTest(true);
+    renderer.render(scene, cam);
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+}
+// labels are drawn into textures once, so wait (briefly) for the label face to load
+let started = false;
+const go = () => { if (!started) { started = true; start(); } };
+if (document.fonts && document.fonts.load) {
+  document.fonts.load('600 44px "Barlow Condensed"').then(go, go);
+  setTimeout(go, 1500);
+} else {
+  go();
+}
+</script>

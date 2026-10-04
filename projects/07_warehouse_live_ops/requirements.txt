@@ -1,0 +1,11 @@
+# Versions this PoC was run with (CPU only, Python 3.11).
+numpy==2.4.6
+opencv-python-headless==5.0.0.93
+scipy==1.17.1
+pillow==12.3.0
+torch==2.9.1            # CPU build is enough: pip install torch --index-url https://download.pytorch.org/whl/cpu
+ultralytics==8.4.106    # YOLOE-11L-seg and the TrackTrack tracker
+openvino==2026.4.1      # 3.6x faster YOLOE on CPU than PyTorch
+onnxruntime==1.30.0     # the tracker's ReID model
+lap==0.5.13
+imageio-ffmpeg==0.6.0   # H.264 writing without a system ffmpeg

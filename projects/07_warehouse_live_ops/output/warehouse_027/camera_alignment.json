@@ -1,0 +1,195 @@
+{
+ "rule": "shift per camera from people two cameras see at once (pairs within 3.0 m, both placing people at <= 0.25 m/px); a camera is used if, after its shift, it agrees with its partners to 0.35 m (median)",
+ "fit_frames": {
+  "count": 30,
+  "outside_window": [
+   150,
+   1050
+  ],
+  "every_s": 1.0
+ },
+ "reference": "Camera_0000",
+ "cameras": {
+  "Camera_0000": {
+   "shift_m": [
+    0.0,
+    0.0
+   ],
+   "matches_with_others": 349,
+   "disagreement_after_shift_m": 0.198,
+   "used": true
+  },
+  "Camera_0001": {
+   "shift_m": [
+    -0.086,
+    0.709
+   ],
+   "matches_with_others": 317,
+   "disagreement_after_shift_m": 0.588,
+   "used": false
+  },
+  "Camera_0002": {
+   "shift_m": [
+    0.0,
+    0.0
+   ],
+   "matches_with_others": 0,
+   "disagreement_after_shift_m": null,
+   "used": false
+  },
+  "Camera_0003": {
+   "shift_m": [
+    0.0,
+    0.0
+   ],
+   "matches_with_others": 0,
+   "disagreement_after_shift_m": null,
+   "used": false
+  },
+  "Camera_0004": {
+   "shift_m": [
+    0.0,
+    0.0
+   ],
+   "matches_with_others": 0,
+   "disagreement_after_shift_m": null,
+   "used": false
+  },
+  "Camera_0005": {
+   "shift_m": [
+    -0.062,
+    -0.208
+   ],
+   "matches_with_others": 263,
+   "disagreement_after_shift_m": 0.192,
+   "used": true
+  },
+  "Camera_0006": {
+   "shift_m": [
+    -0.543,
+    -0.253
+   ],
+   "matches_with_others": 309,
+   "disagreement_after_shift_m": 0.233,
+   "used": true
+  }
+ },
+ "verified": [
+  "Camera_0000",
+  "Camera_0005",
+  "Camera_0006"
+ ],
+ "rejected": {
+  "Camera_0002": "in the seconds used for fitting it never sees a person another camera also sees: cannot be checked",
+  "Camera_0003": "in the seconds used for fitting it never sees a person another camera also sees: cannot be checked",
+  "Camera_0004": "in the seconds used for fitting it never sees a person another camera also sees: cannot be checked",
+  "Camera_0001": "still 0.59 m from its partners after its best shift: the error is a turn or tilt, not a shift"
+ },
+ "check_on_video_window": {
+  "all_cameras_as_shipped": {
+   "samples": 8607,
+   "median_m": 0.703,
+   "within_0_5_m_pct": 24.3
+  },
+  "verified_cameras_shifted": {
+   "samples": 3084,
+   "median_m": 0.182,
+   "within_0_5_m_pct": 95.4
+  },
+  "pairs_as_shipped": {
+   "Camera_0000 + Camera_0001": {
+    "samples": 1311,
+    "median_m": 1.072,
+    "within_0_5_m_pct": 1.7
+   },
+   "Camera_0000 + Camera_0002": {
+    "samples": 240,
+    "median_m": 0.591,
+    "within_0_5_m_pct": 18.8
+   },
+   "Camera_0000 + Camera_0004": {
+    "samples": 200,
+    "median_m": 1.348,
+    "within_0_5_m_pct": 14.5
+   },
+   "Camera_0000 + Camera_0005": {
+    "samples": 1006,
+    "median_m": 0.265,
+    "within_0_5_m_pct": 93.3
+   },
+   "Camera_0000 + Camera_0006": {
+    "samples": 1317,
+    "median_m": 0.607,
+    "within_0_5_m_pct": 12.9
+   },
+   "Camera_0001 + Camera_0002": {
+    "samples": 56,
+    "median_m": 1.883,
+    "within_0_5_m_pct": 0.0
+   },
+   "Camera_0001 + Camera_0004": {
+    "samples": 281,
+    "median_m": 0.846,
+    "within_0_5_m_pct": 1.1
+   },
+   "Camera_0001 + Camera_0005": {
+    "samples": 894,
+    "median_m": 1.313,
+    "within_0_5_m_pct": 2.3
+   },
+   "Camera_0001 + Camera_0006": {
+    "samples": 1122,
+    "median_m": 1.292,
+    "within_0_5_m_pct": 5.7
+   },
+   "Camera_0002 + Camera_0004": {
+    "samples": 67,
+    "median_m": 1.737,
+    "within_0_5_m_pct": 1.5
+   },
+   "Camera_0002 + Camera_0005": {
+    "samples": 272,
+    "median_m": 0.667,
+    "within_0_5_m_pct": 0.7
+   },
+   "Camera_0002 + Camera_0006": {
+    "samples": 279,
+    "median_m": 0.194,
+    "within_0_5_m_pct": 81.4
+   },
+   "Camera_0004 + Camera_0005": {
+    "samples": 314,
+    "median_m": 1.539,
+    "within_0_5_m_pct": 19.7
+   },
+   "Camera_0004 + Camera_0006": {
+    "samples": 269,
+    "median_m": 0.68,
+    "within_0_5_m_pct": 9.7
+   },
+   "Camera_0005 + Camera_0006": {
+    "samples": 979,
+    "median_m": 0.508,
+    "within_0_5_m_pct": 49.4
+   }
+  },
+  "pairs_shifted": {
+   "Camera_0000 + Camera_0005": {
+    "samples": 972,
+    "median_m": 0.141,
+    "within_0_5_m_pct": 95.5
+   },
+   "Camera_0000 + Camera_0006": {
+    "samples": 1253,
+    "median_m": 0.21,
+    "within_0_5_m_pct": 96.6
+   },
+   "Camera_0005 + Camera_0006": {
+    "samples": 859,
+    "median_m": 0.184,
+    "within_0_5_m_pct": 93.5
+   }
+  }
+ },
+ "seconds": 3.4
+}

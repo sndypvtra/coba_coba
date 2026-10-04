@@ -1,0 +1,2879 @@
+{
+ "window": {
+  "start_frame": 690,
+  "end_frame": 1590,
+  "stride": 3,
+  "start_s": 23.0,
+  "end_s": 53.0,
+  "people_on_floor": [
+   52,
+   58
+  ],
+  "people_walking_mean": 37.8,
+  "forklifts_moving_mean": 5.28,
+  "people_near_moving_forklift_samples": 183,
+  "cameras": {
+   "Camera_0003": {
+    "people_visible_mean": 10.7,
+    "people_visible_max": 15,
+    "forklifts_visible_mean": 3.14
+   },
+   "Camera_0005": {
+    "people_visible_mean": 7.7,
+    "people_visible_max": 11,
+    "forklifts_visible_mean": 3.2
+   },
+   "Camera_0011": {
+    "people_visible_mean": 5.5,
+    "people_visible_max": 7,
+    "forklifts_visible_mean": 2.79
+   },
+   "Camera_0007": {
+    "people_visible_mean": 3.2,
+    "people_visible_max": 5,
+    "forklifts_visible_mean": 2.38
+   }
+  },
+  "shown": [
+   "Camera_0003",
+   "Camera_0005",
+   "Camera_0011",
+   "Camera_0007"
+  ],
+  "why": "busiest 30 s by walking, moving forklifts, people near moving forklifts and people in view; four cameras that see most of it, at least 10 m or 45 degrees apart"
+ },
+ "analytics": {
+  "window_s": 30.0,
+  "#1_people_per_camera": {
+   "Camera_0000": {
+    "mean": 2.0,
+    "max": 4
+   },
+   "Camera_0001": {
+    "mean": 6.1,
+    "max": 12
+   },
+   "Camera_0003": {
+    "mean": 6.8,
+    "max": 12
+   },
+   "Camera_0005": {
+    "mean": 5.7,
+    "max": 10
+   },
+   "Camera_0006": {
+    "mean": 3.7,
+    "max": 5
+   },
+   "Camera_0007": {
+    "mean": 2.2,
+    "max": 4
+   },
+   "Camera_0008": {
+    "mean": 8.0,
+    "max": 11
+   },
+   "Camera_0010": {
+    "mean": 4.2,
+    "max": 7
+   },
+   "Camera_0011": {
+    "mean": 3.4,
+    "max": 6
+   },
+   "Camera_0012": {
+    "mean": 0.7,
+    "max": 2
+   },
+   "Camera_0013": {
+    "mean": 3.2,
+    "max": 5
+   },
+   "Camera_0014": {
+    "mean": 4.3,
+    "max": 6
+   },
+   "Camera_0015": {
+    "mean": 5.4,
+    "max": 10
+   },
+   "Camera_0017": {
+    "mean": 0.5,
+    "max": 3
+   },
+   "Camera_0019": {
+    "mean": 3.9,
+    "max": 7
+   }
+  },
+  "#2_headcount": {
+   "mean": 28.0,
+   "min": 21,
+   "max": 35,
+   "unique_identities": 120
+  },
+  "#3_lines": [
+   {
+    "line": "Garis A",
+    "in": 2,
+    "out": 1
+   },
+   {
+    "line": "Garis B",
+    "in": 0,
+    "out": 0
+   },
+   {
+    "line": "Garis C · seberang jalur forklift",
+    "in": 2,
+    "out": 2
+   }
+  ],
+  "#3_crossings": [
+   {
+    "line": "Garis A",
+    "gid": 3,
+    "t": 3.2,
+    "dir": "in",
+    "x": -15.01,
+    "y": -52.87,
+    "cams": [
+     "Camera_0003",
+     "Camera_0015"
+    ]
+   },
+   {
+    "line": "Garis C · seberang jalur forklift",
+    "gid": 18,
+    "t": 8.7,
+    "dir": "out",
+    "x": -42.12,
+    "y": -61.99,
+    "cams": [
+     "Camera_0005"
+    ]
+   },
+   {
+    "line": "Garis A",
+    "gid": 223,
+    "t": 22.2,
+    "dir": "out",
+    "x": -14.98,
+    "y": -64.47,
+    "cams": [
+     "Camera_0003"
+    ]
+   },
+   {
+    "line": "Garis C · seberang jalur forklift",
+    "gid": 18,
+    "t": 24.9,
+    "dir": "in",
+    "x": -32.7,
+    "y": -62.06,
+    "cams": [
+     "Camera_0001",
+     "Camera_0005",
+     "Camera_0010"
+    ]
+   },
+   {
+    "line": "Garis C · seberang jalur forklift",
+    "gid": 187,
+    "t": 25.0,
+    "dir": "in",
+    "x": -33.56,
+    "y": -62.27,
+    "cams": [
+     "Camera_0001",
+     "Camera_0005"
+    ]
+   },
+   {
+    "line": "Garis C · seberang jalur forklift",
+    "gid": 171,
+    "t": 27.4,
+    "dir": "out",
+    "x": -20.72,
+    "y": -61.96,
+    "cams": [
+     "Camera_0005"
+    ]
+   },
+   {
+    "line": "Garis A",
+    "gid": 223,
+    "t": 28.4,
+    "dir": "in",
+    "x": -15.01,
+    "y": -62.24,
+    "cams": [
+     "Camera_0003",
+     "Camera_0015"
+    ]
+   }
+  ],
+  "#4_zones": [
+   {
+    "zone": "Staging A",
+    "kind": "area",
+    "occupancy_mean": 0.11,
+    "occupancy_max": 2,
+    "people_entered": 2,
+    "dwell_s_mean": 1.6,
+    "dwell_s_max": 2.3,
+    "person_seconds": 3.2
+   },
+   {
+    "zone": "Area kerja timur",
+    "kind": "area",
+    "occupancy_mean": 2.28,
+    "occupancy_max": 4,
+    "people_entered": 6,
+    "dwell_s_mean": 11.4,
+    "dwell_s_max": 19.1,
+    "person_seconds": 68.3
+   },
+   {
+    "zone": "Area utara",
+    "kind": "area",
+    "occupancy_mean": 0.74,
+    "occupancy_max": 2,
+    "people_entered": 7,
+    "dwell_s_mean": 3.2,
+    "dwell_s_max": 15.7,
+    "person_seconds": 22.3
+   },
+   {
+    "zone": "Area selatan",
+    "kind": "area",
+    "occupancy_mean": 0.17,
+    "occupancy_max": 1,
+    "people_entered": 3,
+    "dwell_s_mean": 1.7,
+    "dwell_s_max": 2.6,
+    "person_seconds": 5.1
+   },
+   {
+    "zone": "Jalur forklift tengah",
+    "kind": "vehicle_lane",
+    "occupancy_mean": 0.86,
+    "occupancy_max": 2,
+    "people_entered": 5,
+    "dwell_s_mean": 5.1,
+    "dwell_s_max": 6.9,
+    "person_seconds": 25.7
+   },
+   {
+    "zone": "Lorong satu arah (contoh)",
+    "kind": "one_way",
+    "occupancy_mean": 0.16,
+    "occupancy_max": 1,
+    "people_entered": 2,
+    "dwell_s_mean": 2.4,
+    "dwell_s_max": 3.7,
+    "person_seconds": 4.8
+   }
+  ],
+  "#6_walking": {
+   "walking_share_pct": 67.5,
+   "distance_m_per_person_mean": 6.9,
+   "travel_m_per_person_hour": 3543,
+   "note": "walking = faster than 0.4 m/s over one second"
+  },
+  "#7_congestion": {
+   "frames_with_a_crowd_pct": 0.0,
+   "rule": "4+ people within 2.0 m",
+   "hotspots": [],
+   "events": []
+  },
+  "#8_idle": {
+   "rule": "within 0.8 m of one spot for 15 s or more",
+   "events": [
+    {
+     "gid": 22,
+     "start_t": 0.0,
+     "x": -69.36,
+     "y": -90.05,
+     "cams": [
+      "Camera_0000"
+     ],
+     "seconds": 24.2
+    },
+    {
+     "gid": 3,
+     "start_t": 5.9,
+     "x": -17.98,
+     "y": -53.95,
+     "cams": [
+      "Camera_0003",
+      "Camera_0015"
+     ],
+     "seconds": 16.1
+    }
+   ]
+  },
+  "#9_forklift_use": [
+   {
+    "gid": 10,
+    "seconds_seen": 11.9,
+    "reliable_speed_s": 9.9,
+    "moving_pct": 40.4,
+    "top_kmh_p90": 3.3
+   },
+   {
+    "gid": 12,
+    "seconds_seen": 7.7,
+    "reliable_speed_s": 3.6,
+    "moving_pct": 100.0,
+    "top_kmh_p90": 7.5
+   },
+   {
+    "gid": 13,
+    "seconds_seen": 28.7,
+    "reliable_speed_s": 21.7,
+    "moving_pct": 86.6,
+    "top_kmh_p90": 4.3
+   },
+   {
+    "gid": 23,
+    "seconds_seen": 30.0,
+    "reliable_speed_s": 0.0,
+    "moving_pct": null,
+    "top_kmh_p90": null
+   },
+   {
+    "gid": 35,
+    "seconds_seen": 3.3,
+    "reliable_speed_s": 0.7,
+    "moving_pct": 100.0,
+    "top_kmh_p90": 2.9
+   },
+   {
+    "gid": 36,
+    "seconds_seen": 1.8,
+    "reliable_speed_s": 0.0,
+    "moving_pct": null,
+    "top_kmh_p90": null
+   },
+   {
+    "gid": 37,
+    "seconds_seen": 8.1,
+    "reliable_speed_s": 0.0,
+    "moving_pct": null,
+    "top_kmh_p90": null
+   },
+   {
+    "gid": 55,
+    "seconds_seen": 10.3,
+    "reliable_speed_s": 0.0,
+    "moving_pct": null,
+    "top_kmh_p90": null
+   },
+   {
+    "gid": 57,
+    "seconds_seen": 1.6,
+    "reliable_speed_s": 0.0,
+    "moving_pct": null,
+    "top_kmh_p90": null
+   },
+   {
+    "gid": 63,
+    "seconds_seen": 21.6,
+    "reliable_speed_s": 0.0,
+    "moving_pct": null,
+    "top_kmh_p90": null
+   },
+   {
+    "gid": 75,
+    "seconds_seen": 2.5,
+    "reliable_speed_s": 0.5,
+    "moving_pct": 100.0,
+    "top_kmh_p90": 1.8
+   },
+   {
+    "gid": 104,
+    "seconds_seen": 1.0,
+    "reliable_speed_s": 0.0,
+    "moving_pct": null,
+    "top_kmh_p90": null
+   },
+   {
+    "gid": 107,
+    "seconds_seen": 14.6,
+    "reliable_speed_s": 0.0,
+    "moving_pct": null,
+    "top_kmh_p90": null
+   },
+   {
+    "gid": 111,
+    "seconds_seen": 4.7,
+    "reliable_speed_s": 0.0,
+    "moving_pct": null,
+    "top_kmh_p90": null
+   },
+   {
+    "gid": 141,
+    "seconds_seen": 1.1,
+    "reliable_speed_s": 0.0,
+    "moving_pct": null,
+    "top_kmh_p90": null
+   },
+   {
+    "gid": 159,
+    "seconds_seen": 4.2,
+    "reliable_speed_s": 0.0,
+    "moving_pct": null,
+    "top_kmh_p90": null
+   },
+   {
+    "gid": 184,
+    "seconds_seen": 8.3,
+    "reliable_speed_s": 0.0,
+    "moving_pct": null,
+    "top_kmh_p90": null
+   },
+   {
+    "gid": 186,
+    "seconds_seen": 2.4,
+    "reliable_speed_s": 0.0,
+    "moving_pct": null,
+    "top_kmh_p90": null
+   },
+   {
+    "gid": 224,
+    "seconds_seen": 8.2,
+    "reliable_speed_s": 0.0,
+    "moving_pct": null,
+    "top_kmh_p90": null
+   },
+   {
+    "gid": 239,
+    "seconds_seen": 7.4,
+    "reliable_speed_s": 0.0,
+    "moving_pct": null,
+    "top_kmh_p90": null
+   },
+   {
+    "gid": 266,
+    "seconds_seen": 5.3,
+    "reliable_speed_s": 0.0,
+    "moving_pct": null,
+    "top_kmh_p90": null
+   },
+   {
+    "gid": 271,
+    "seconds_seen": 7.0,
+    "reliable_speed_s": 0.0,
+    "moving_pct": null,
+    "top_kmh_p90": null
+   },
+   {
+    "gid": 315,
+    "seconds_seen": 1.5,
+    "reliable_speed_s": 0.0,
+    "moving_pct": null,
+    "top_kmh_p90": null
+   },
+   {
+    "gid": 318,
+    "seconds_seen": 2.2,
+    "reliable_speed_s": 0.0,
+    "moving_pct": null,
+    "top_kmh_p90": null
+   }
+  ],
+  "#10_speeding": {
+   "limit_kmh": 5.0,
+   "events": []
+  },
+  "#11_near_miss": {
+   "rule": "person within 1.5 m of a moving forklift's body",
+   "events": [
+    {
+     "person": 14,
+     "forklift": 12,
+     "start_t": 2.0,
+     "min_m": 0.0,
+     "x": -62.21,
+     "y": -57.73,
+     "t": 3.8,
+     "cams": [
+      "Camera_0001"
+     ],
+     "forklift_kmh": 2.7,
+     "end_t": 3.8
+    }
+   ]
+  },
+  "#12_vehicle_lane": {
+   "entries": 6,
+   "person_seconds": 18.8,
+   "events": [
+    {
+     "gid": 18,
+     "t": 5.6,
+     "x": -42.97,
+     "y": -62.98,
+     "cams": [
+      "Camera_0005"
+     ]
+    },
+    {
+     "gid": 18,
+     "t": 7.9,
+     "x": -42.77,
+     "y": -62.37,
+     "cams": [
+      "Camera_0005"
+     ]
+    },
+    {
+     "gid": 93,
+     "t": 17.0,
+     "x": -42.84,
+     "y": -62.94,
+     "cams": [
+      "Camera_0005"
+     ]
+    },
+    {
+     "gid": 187,
+     "t": 22.9,
+     "x": -32.86,
+     "y": -60.85,
+     "cams": [
+      "Camera_0005"
+     ]
+    },
+    {
+     "gid": 18,
+     "t": 23.9,
+     "x": -32.85,
+     "y": -60.82,
+     "cams": [
+      "Camera_0001",
+      "Camera_0005",
+      "Camera_0010"
+     ]
+    },
+    {
+     "gid": 171,
+     "t": 26.0,
+     "x": -19.76,
+     "y": -63.14,
+     "cams": [
+      "Camera_0005"
+     ]
+    }
+   ]
+  },
+  "#13_wrong_way": {
+   "events": []
+  },
+  "#14_other_vehicles": {
+   "pallet_truck": [
+    {
+     "gid": 4,
+     "seconds_seen": 30.0,
+     "reliable_speed_s": 28.0,
+     "moving_pct": 0.0,
+     "top_kmh_p90": 0.1
+    },
+    {
+     "gid": 11,
+     "seconds_seen": 29.8,
+     "reliable_speed_s": 27.8,
+     "moving_pct": 0.0,
+     "top_kmh_p90": 0.3
+    }
+   ]
+  },
+  "#15_seen_by_cameras": {
+   "person_frames_seen_by_2plus_pct": 20.5,
+   "person_frames_seen_by_1_pct": 79.5
+  },
+  "heat_points": 8390
+ },
+ "accuracy": {
+  "people_on_plan": {
+   "frames": 300,
+   "precision": 0.788,
+   "recall_all_on_floor": 0.394,
+   "recall_seeable": 0.464,
+   "position_error_m_median": 0.185,
+   "position_error_m_p90": 0.415,
+   "count_vs_seeable_mean": -19.54,
+   "count_vs_seeable_abs_mean": 19.54,
+   "plan_ids_per_label_mean": 2.24,
+   "id_switches": 86,
+   "labels_per_plan_id_mean": 1.1,
+   "label_people_matched": 45
+  },
+  "forklifts_on_plan": {
+   "frames": 300,
+   "precision": 0.654,
+   "recall_all_on_floor": 0.473,
+   "recall_seeable": 0.476,
+   "position_error_m_median": 0.737,
+   "position_error_m_p90": 1.303,
+   "count_vs_seeable_mean": -2.43,
+   "count_vs_seeable_abs_mean": 2.43,
+   "plan_ids_per_label_mean": 3.12,
+   "id_switches": 37,
+   "labels_per_plan_id_mean": 1.25,
+   "label_people_matched": 8
+  },
+  "pallet_trucks_on_plan": {
+   "frames": 300,
+   "precision": 1.0,
+   "recall_all_on_floor": 0.199,
+   "recall_seeable": 0.222,
+   "position_error_m_median": 0.279,
+   "position_error_m_p90": 0.313,
+   "count_vs_seeable_mean": -6.98,
+   "count_vs_seeable_abs_mean": 6.98,
+   "plan_ids_per_label_mean": 1.0,
+   "id_switches": 0,
+   "labels_per_plan_id_mean": 1.0,
+   "label_people_matched": 2
+  },
+  "boxes_in_the_pictures": {
+   "person": {
+    "recall": 0.643,
+    "precision": 0.947,
+    "labels": 10579
+   },
+   "forklift": {
+    "recall": 0.508,
+    "precision": 0.852,
+    "labels": 2374
+   },
+   "pallet_truck": {
+    "recall": 0.506,
+    "precision": 0.851,
+    "labels": 2048
+   }
+  },
+  "analytics_vs_truth": {
+   "rows": [
+    {
+     "analytic": "#2 orang di lantai, rata-rata",
+     "ai": 28.0,
+     "truth_seen_by_cameras": 47.5,
+     "truth_whole_floor": 55.9
+    },
+    {
+     "analytic": "#2 orang di lantai, maks",
+     "ai": 35,
+     "truth_seen_by_cameras": 53,
+     "truth_whole_floor": 58
+    },
+    {
+     "analytic": "#3 Garis A: masuk + keluar",
+     "ai": 3,
+     "truth_seen_by_cameras": 3,
+     "truth_whole_floor": 3
+    },
+    {
+     "analytic": "#3 Garis B: masuk + keluar",
+     "ai": 0,
+     "truth_seen_by_cameras": 0,
+     "truth_whole_floor": 0
+    },
+    {
+     "analytic": "#3 Garis C: masuk + keluar",
+     "ai": 4,
+     "truth_seen_by_cameras": 4,
+     "truth_whole_floor": 4
+    },
+    {
+     "analytic": "#4 Staging A: okupansi rata-rata",
+     "ai": 0.11,
+     "truth_seen_by_cameras": 0.11,
+     "truth_whole_floor": 0.11
+    },
+    {
+     "analytic": "#4 Area kerja timur: okupansi rata-rata",
+     "ai": 2.28,
+     "truth_seen_by_cameras": 3.19,
+     "truth_whole_floor": 3.23
+    },
+    {
+     "analytic": "#4 Area utara: okupansi rata-rata",
+     "ai": 0.74,
+     "truth_seen_by_cameras": 0.86,
+     "truth_whole_floor": 0.88
+    },
+    {
+     "analytic": "#4 Area selatan: okupansi rata-rata",
+     "ai": 0.17,
+     "truth_seen_by_cameras": 0.42,
+     "truth_whole_floor": 0.42
+    },
+    {
+     "analytic": "#4 Jalur forklift tengah: okupansi rata-rata",
+     "ai": 0.86,
+     "truth_seen_by_cameras": 1.41,
+     "truth_whole_floor": 1.42
+    },
+    {
+     "analytic": "#4 Lorong satu arah (contoh): okupansi rata-rata",
+     "ai": 0.16,
+     "truth_seen_by_cameras": 0.13,
+     "truth_whole_floor": 0.13
+    },
+    {
+     "analytic": "#6 waktu berjalan (%)",
+     "ai": 67.5,
+     "truth_seen_by_cameras": 67.5,
+     "truth_whole_floor": 67.5
+    },
+    {
+     "analytic": "#7 frame dengan kerumunan (%)",
+     "ai": 0.0,
+     "truth_seen_by_cameras": 0.0,
+     "truth_whole_floor": 0.0
+    },
+    {
+     "analytic": "#8 kejadian diam lama",
+     "ai": 2,
+     "truth_seen_by_cameras": 5,
+     "truth_whole_floor": 5
+    },
+    {
+     "analytic": "#10 kejadian forklift ngebut",
+     "ai": 0,
+     "truth_seen_by_cameras": 0,
+     "truth_whole_floor": 0
+    },
+    {
+     "analytic": "#11 kejadian nyaris tertabrak",
+     "ai": 1,
+     "truth_seen_by_cameras": 13,
+     "truth_whole_floor": 11
+    },
+    {
+     "analytic": "#12 orang masuk jalur forklift",
+     "ai": 6,
+     "truth_seen_by_cameras": 4,
+     "truth_whole_floor": 4
+    }
+   ],
+   "events": {
+    "near_miss": {
+     "vs_truth_seen": {
+      "ai": 1,
+      "truth": 13,
+      "matched": 1,
+      "precision": 1.0,
+      "recall": 0.08
+     },
+     "vs_truth_whole_floor": {
+      "ai": 1,
+      "truth": 11,
+      "matched": 1,
+      "precision": 1.0,
+      "recall": 0.09
+     }
+    },
+    "speeding": {
+     "vs_truth_seen": {
+      "ai": 0,
+      "truth": 0,
+      "matched": 0,
+      "precision": null,
+      "recall": null
+     },
+     "vs_truth_whole_floor": {
+      "ai": 0,
+      "truth": 0,
+      "matched": 0,
+      "precision": null,
+      "recall": null
+     }
+    },
+    "idle": {
+     "vs_truth_seen": {
+      "ai": 2,
+      "truth": 5,
+      "matched": 2,
+      "precision": 1.0,
+      "recall": 0.4
+     },
+     "vs_truth_whole_floor": {
+      "ai": 2,
+      "truth": 5,
+      "matched": 2,
+      "precision": 1.0,
+      "recall": 0.4
+     }
+    },
+    "lane": {
+     "vs_truth_seen": {
+      "ai": 6,
+      "truth": 4,
+      "matched": 3,
+      "precision": 0.5,
+      "recall": 0.75
+     }
+    },
+    "crossing": {
+     "vs_truth_seen": {
+      "ai": 7,
+      "truth": 7,
+      "matched": 6,
+      "precision": 0.86,
+      "recall": 0.86
+     }
+    }
+   },
+   "note": "truth_seen_by_cameras = the labels kept only while a camera in use shows the object at least 40 px tall; truth_whole_floor = every labelled object. Both run through the same analytics code as the AI."
+  },
+  "detector": "hybrid",
+  "#1_people_per_camera_vs_labels": {
+   "Camera_0000": {
+    "ai_mean": 1.98,
+    "label_mean": 2.56,
+    "abs_error_mean": 0.65,
+    "bias": -0.58,
+    "within_1_pct": 91.7
+   },
+   "Camera_0001": {
+    "ai_mean": 6.13,
+    "label_mean": 8.81,
+    "abs_error_mean": 2.68,
+    "bias": -2.68,
+    "within_1_pct": 17.7
+   },
+   "Camera_0003": {
+    "ai_mean": 6.82,
+    "label_mean": 10.72,
+    "abs_error_mean": 3.89,
+    "bias": -3.89,
+    "within_1_pct": 4.3
+   },
+   "Camera_0005": {
+    "ai_mean": 5.72,
+    "label_mean": 7.68,
+    "abs_error_mean": 1.96,
+    "bias": -1.96,
+    "within_1_pct": 39.7
+   },
+   "Camera_0006": {
+    "ai_mean": 3.66,
+    "label_mean": 4.89,
+    "abs_error_mean": 1.23,
+    "bias": -1.23,
+    "within_1_pct": 78.0
+   },
+   "Camera_0007": {
+    "ai_mean": 2.17,
+    "label_mean": 3.19,
+    "abs_error_mean": 1.03,
+    "bias": -1.03,
+    "within_1_pct": 69.0
+   },
+   "Camera_0008": {
+    "ai_mean": 7.98,
+    "label_mean": 10.21,
+    "abs_error_mean": 2.29,
+    "bias": -2.23,
+    "within_1_pct": 35.7
+   },
+   "Camera_0010": {
+    "ai_mean": 4.16,
+    "label_mean": 6.33,
+    "abs_error_mean": 2.17,
+    "bias": -2.17,
+    "within_1_pct": 23.7
+   },
+   "Camera_0011": {
+    "ai_mean": 3.35,
+    "label_mean": 5.46,
+    "abs_error_mean": 2.14,
+    "bias": -2.11,
+    "within_1_pct": 32.7
+   },
+   "Camera_0012": {
+    "ai_mean": 0.71,
+    "label_mean": 0.87,
+    "abs_error_mean": 0.19,
+    "bias": -0.16,
+    "within_1_pct": 100.0
+   },
+   "Camera_0013": {
+    "ai_mean": 3.18,
+    "label_mean": 4.94,
+    "abs_error_mean": 1.76,
+    "bias": -1.76,
+    "within_1_pct": 46.3
+   },
+   "Camera_0014": {
+    "ai_mean": 4.27,
+    "label_mean": 6.46,
+    "abs_error_mean": 2.25,
+    "bias": -2.19,
+    "within_1_pct": 14.3
+   },
+   "Camera_0015": {
+    "ai_mean": 5.37,
+    "label_mean": 9.26,
+    "abs_error_mean": 3.89,
+    "bias": -3.89,
+    "within_1_pct": 2.3
+   },
+   "Camera_0017": {
+    "ai_mean": 0.49,
+    "label_mean": 0.61,
+    "abs_error_mean": 0.11,
+    "bias": -0.11,
+    "within_1_pct": 100.0
+   },
+   "Camera_0019": {
+    "ai_mean": 3.94,
+    "label_mean": 4.74,
+    "abs_error_mean": 0.81,
+    "bias": -0.81,
+    "within_1_pct": 82.7
+   }
+  },
+  "#17_detection_per_camera": {
+   "cameras": {
+    "Camera_0000": {
+     "recall": 0.694,
+     "precision": 0.995,
+     "labels": 310,
+     "mount_height_m": 3.8,
+     "tilt_deg": 9.5,
+     "group": "plafon rendah, mendatar (2,5-5 m, <15°)"
+    },
+    "Camera_0001": {
+     "recall": 0.679,
+     "precision": 0.964,
+     "labels": 999,
+     "mount_height_m": 4.8,
+     "tilt_deg": 14.9,
+     "group": "plafon rendah, mendatar (2,5-5 m, <15°)"
+    },
+    "Camera_0003": {
+     "recall": 0.541,
+     "precision": 0.971,
+     "labels": 1678,
+     "mount_height_m": 4.6,
+     "tilt_deg": 13.8,
+     "group": "plafon rendah, mendatar (2,5-5 m, <15°)"
+    },
+    "Camera_0005": {
+     "recall": 0.763,
+     "precision": 0.974,
+     "labels": 820,
+     "mount_height_m": 3.0,
+     "tilt_deg": 9.2,
+     "group": "plafon rendah, mendatar (2,5-5 m, <15°)"
+    },
+    "Camera_0006": {
+     "recall": 0.764,
+     "precision": 0.995,
+     "labels": 492,
+     "mount_height_m": 2.0,
+     "tilt_deg": 10.0,
+     "group": "setinggi mata (<2,5 m)"
+    },
+    "Camera_0007": {
+     "recall": 0.698,
+     "precision": 0.967,
+     "labels": 414,
+     "mount_height_m": 3.0,
+     "tilt_deg": 10.2,
+     "group": "plafon rendah, mendatar (2,5-5 m, <15°)"
+    },
+    "Camera_0008": {
+     "recall": 0.722,
+     "precision": 0.897,
+     "labels": 1157,
+     "mount_height_m": 3.0,
+     "tilt_deg": 12.6,
+     "group": "plafon rendah, mendatar (2,5-5 m, <15°)"
+    },
+    "Camera_0010": {
+     "recall": 0.594,
+     "precision": 0.889,
+     "labels": 863,
+     "mount_height_m": 2.5,
+     "tilt_deg": 10.1,
+     "group": "setinggi mata (<2,5 m)"
+    },
+    "Camera_0011": {
+     "recall": 0.603,
+     "precision": 0.941,
+     "labels": 682,
+     "mount_height_m": 3.7,
+     "tilt_deg": 13.0,
+     "group": "plafon rendah, mendatar (2,5-5 m, <15°)"
+    },
+    "Camera_0012": {
+     "recall": 0.827,
+     "precision": 0.988,
+     "labels": 98,
+     "mount_height_m": 2.2,
+     "tilt_deg": 9.8,
+     "group": "setinggi mata (<2,5 m)"
+    },
+    "Camera_0013": {
+     "recall": 0.65,
+     "precision": 0.985,
+     "labels": 514,
+     "mount_height_m": 2.4,
+     "tilt_deg": 9.2,
+     "group": "setinggi mata (<2,5 m)"
+    },
+    "Camera_0014": {
+     "recall": 0.638,
+     "precision": 0.853,
+     "labels": 654,
+     "mount_height_m": 3.0,
+     "tilt_deg": 10.1,
+     "group": "plafon rendah, mendatar (2,5-5 m, <15°)"
+    },
+    "Camera_0015": {
+     "recall": 0.482,
+     "precision": 0.963,
+     "labels": 1359,
+     "mount_height_m": 2.4,
+     "tilt_deg": 9.6,
+     "group": "setinggi mata (<2,5 m)"
+    },
+    "Camera_0017": {
+     "recall": 0.794,
+     "precision": 1.0,
+     "labels": 63,
+     "mount_height_m": 3.7,
+     "tilt_deg": 17.4,
+     "group": "plafon rendah, menunduk (2,5-5 m, ≥15°)"
+    },
+    "Camera_0019": {
+     "recall": 0.87,
+     "precision": 0.979,
+     "labels": 476,
+     "mount_height_m": 2.3,
+     "tilt_deg": 10.3,
+     "group": "setinggi mata (<2,5 m)"
+    }
+   },
+   "groups": {
+    "plafon rendah, mendatar (2,5-5 m, <15°)": {
+     "cameras": 8,
+     "recall_mean": 0.667,
+     "precision_mean": 0.945
+    },
+    "plafon rendah, menunduk (2,5-5 m, ≥15°)": {
+     "cameras": 1,
+     "recall_mean": 0.794,
+     "precision_mean": 1.0
+    },
+    "setinggi mata (<2,5 m)": {
+     "cameras": 6,
+     "recall_mean": 0.698,
+     "precision_mean": 0.966
+    }
+   }
+  },
+  "#15_floor_coverage": {
+   "floor_points": 227383,
+   "seen_by_0_pct": 36.0,
+   "seen_by_1_pct": 35.5,
+   "seen_by_2plus_pct": 28.4,
+   "rule": "floor imaged at 0.25 m per pixel or finer; racks hiding the floor are not modelled"
+  },
+  "person_height": {
+   "people": 120,
+   "median_m": 1.75
+  },
+  "lift_rejections": {
+   "forklift: height implausible": 35,
+   "forklift: too far to place": 1703,
+   "pallet_truck: too far to place": 2754,
+   "person: feet below the frame": 276,
+   "person: height implausible": 109,
+   "person: too far to place": 10367
+  },
+  "identities_joined_by_stitching": 29,
+  "camera_agreement": {
+   "rule": "same instant, floor both cameras place people on (≤ 0.25 m/px), optimal pairs within 3.0 m",
+   "all_pairs": {
+    "samples": 3108,
+    "median_m": 0.226,
+    "within_0_5_m_pct": 72.5
+   },
+   "pairs": {
+    "Camera_0001 + Camera_0003": {
+     "samples": 135,
+     "median_m": 0.147,
+     "within_0_5_m_pct": 89.6
+    },
+    "Camera_0001 + Camera_0005": {
+     "samples": 195,
+     "median_m": 0.42,
+     "within_0_5_m_pct": 54.4
+    },
+    "Camera_0001 + Camera_0010": {
+     "samples": 252,
+     "median_m": 0.292,
+     "within_0_5_m_pct": 58.7
+    },
+    "Camera_0001 + Camera_0019": {
+     "samples": 192,
+     "median_m": 0.445,
+     "within_0_5_m_pct": 65.1
+    },
+    "Camera_0003 + Camera_0005": {
+     "samples": 394,
+     "median_m": 1.056,
+     "within_0_5_m_pct": 43.4
+    },
+    "Camera_0003 + Camera_0008": {
+     "samples": 39,
+     "median_m": 0.326,
+     "within_0_5_m_pct": 82.1
+    },
+    "Camera_0003 + Camera_0010": {
+     "samples": 157,
+     "median_m": 0.132,
+     "within_0_5_m_pct": 95.5
+    },
+    "Camera_0003 + Camera_0015": {
+     "samples": 737,
+     "median_m": 0.056,
+     "within_0_5_m_pct": 94.8
+    },
+    "Camera_0005 + Camera_0010": {
+     "samples": 287,
+     "median_m": 0.232,
+     "within_0_5_m_pct": 70.0
+    },
+    "Camera_0005 + Camera_0015": {
+     "samples": 65,
+     "median_m": 0.133,
+     "within_0_5_m_pct": 96.9
+    },
+    "Camera_0006 + Camera_0012": {
+     "samples": 24,
+     "median_m": 0.376,
+     "within_0_5_m_pct": 58.3
+    },
+    "Camera_0008 + Camera_0010": {
+     "samples": 78,
+     "median_m": 0.362,
+     "within_0_5_m_pct": 66.7
+    },
+    "Camera_0008 + Camera_0014": {
+     "samples": 327,
+     "median_m": 0.464,
+     "within_0_5_m_pct": 54.4
+    },
+    "Camera_0010 + Camera_0014": {
+     "samples": 70,
+     "median_m": 0.441,
+     "within_0_5_m_pct": 67.1
+    },
+    "Camera_0011 + Camera_0013": {
+     "samples": 104,
+     "median_m": 0.202,
+     "within_0_5_m_pct": 96.2
+    },
+    "Camera_0011 + Camera_0014": {
+     "samples": 52,
+     "median_m": 0.268,
+     "within_0_5_m_pct": 88.5
+    }
+   },
+   "cameras": {
+    "Camera_0001": {
+     "partners": 4,
+     "median_disagreement_m": 0.356
+    },
+    "Camera_0003": {
+     "partners": 5,
+     "median_disagreement_m": 0.147
+    },
+    "Camera_0005": {
+     "partners": 4,
+     "median_disagreement_m": 0.326
+    },
+    "Camera_0006": {
+     "partners": 1,
+     "median_disagreement_m": 0.376
+    },
+    "Camera_0008": {
+     "partners": 3,
+     "median_disagreement_m": 0.362
+    },
+    "Camera_0010": {
+     "partners": 5,
+     "median_disagreement_m": 0.292
+    },
+    "Camera_0011": {
+     "partners": 2,
+     "median_disagreement_m": 0.235
+    },
+    "Camera_0012": {
+     "partners": 1,
+     "median_disagreement_m": 0.376
+    },
+    "Camera_0013": {
+     "partners": 1,
+     "median_disagreement_m": 0.202
+    },
+    "Camera_0014": {
+     "partners": 3,
+     "median_disagreement_m": 0.441
+    },
+    "Camera_0015": {
+     "partners": 2,
+     "median_disagreement_m": 0.094
+    },
+    "Camera_0019": {
+     "partners": 1,
+     "median_disagreement_m": 0.445
+    }
+   }
+  },
+  "other_detector": {
+   "zero_shot": {
+    "people_on_plan": {
+     "frames": 300,
+     "precision": 0.788,
+     "recall_all_on_floor": 0.394,
+     "recall_seeable": 0.464,
+     "position_error_m_median": 0.185,
+     "position_error_m_p90": 0.415,
+     "count_vs_seeable_mean": -19.54,
+     "count_vs_seeable_abs_mean": 19.54,
+     "plan_ids_per_label_mean": 2.24,
+     "id_switches": 86,
+     "labels_per_plan_id_mean": 1.1,
+     "label_people_matched": 45
+    },
+    "forklifts_on_plan": {
+     "frames": 300,
+     "precision": 0.544,
+     "recall_all_on_floor": 0.154,
+     "recall_seeable": 0.155,
+     "position_error_m_median": 0.611,
+     "position_error_m_p90": 1.678,
+     "count_vs_seeable_mean": -6.39,
+     "count_vs_seeable_abs_mean": 6.39,
+     "plan_ids_per_label_mean": 2.5,
+     "id_switches": 14,
+     "labels_per_plan_id_mean": 1.0,
+     "label_people_matched": 4
+    },
+    "pallet_trucks_on_plan": {
+     "frames": 300,
+     "precision": 0.305,
+     "recall_all_on_floor": 0.196,
+     "recall_seeable": 0.219,
+     "position_error_m_median": 0.35,
+     "position_error_m_p90": 0.42,
+     "count_vs_seeable_mean": -2.54,
+     "count_vs_seeable_abs_mean": 2.54,
+     "plan_ids_per_label_mean": 1.0,
+     "id_switches": 0,
+     "labels_per_plan_id_mean": 1.0,
+     "label_people_matched": 2
+    },
+    "boxes_in_the_pictures": {
+     "person": {
+      "recall": 0.643,
+      "precision": 0.947,
+      "labels": 10579
+     },
+     "forklift": {
+      "recall": 0.242,
+      "precision": 0.274,
+      "labels": 2374
+     },
+     "pallet_truck": {
+      "recall": 0.134,
+      "precision": 0.326,
+      "labels": 2048
+     }
+    },
+    "analytics_vs_truth": {
+     "rows": [
+      {
+       "analytic": "#2 orang di lantai, rata-rata",
+       "ai": 28.0,
+       "truth_seen_by_cameras": 47.5,
+       "truth_whole_floor": 55.9
+      },
+      {
+       "analytic": "#2 orang di lantai, maks",
+       "ai": 35,
+       "truth_seen_by_cameras": 53,
+       "truth_whole_floor": 58
+      },
+      {
+       "analytic": "#3 Garis A: masuk + keluar",
+       "ai": 3,
+       "truth_seen_by_cameras": 3,
+       "truth_whole_floor": 3
+      },
+      {
+       "analytic": "#3 Garis B: masuk + keluar",
+       "ai": 0,
+       "truth_seen_by_cameras": 0,
+       "truth_whole_floor": 0
+      },
+      {
+       "analytic": "#3 Garis C: masuk + keluar",
+       "ai": 4,
+       "truth_seen_by_cameras": 4,
+       "truth_whole_floor": 4
+      },
+      {
+       "analytic": "#4 Staging A: okupansi rata-rata",
+       "ai": 0.11,
+       "truth_seen_by_cameras": 0.11,
+       "truth_whole_floor": 0.11
+      },
+      {
+       "analytic": "#4 Area kerja timur: okupansi rata-rata",
+       "ai": 2.28,
+       "truth_seen_by_cameras": 3.19,
+       "truth_whole_floor": 3.23
+      },
+      {
+       "analytic": "#4 Area utara: okupansi rata-rata",
+       "ai": 0.74,
+       "truth_seen_by_cameras": 0.86,
+       "truth_whole_floor": 0.88
+      },
+      {
+       "analytic": "#4 Area selatan: okupansi rata-rata",
+       "ai": 0.17,
+       "truth_seen_by_cameras": 0.42,
+       "truth_whole_floor": 0.42
+      },
+      {
+       "analytic": "#4 Jalur forklift tengah: okupansi rata-rata",
+       "ai": 0.86,
+       "truth_seen_by_cameras": 1.41,
+       "truth_whole_floor": 1.42
+      },
+      {
+       "analytic": "#4 Lorong satu arah (contoh): okupansi rata-rata",
+       "ai": 0.16,
+       "truth_seen_by_cameras": 0.13,
+       "truth_whole_floor": 0.13
+      },
+      {
+       "analytic": "#6 waktu berjalan (%)",
+       "ai": 67.5,
+       "truth_seen_by_cameras": 67.5,
+       "truth_whole_floor": 67.5
+      },
+      {
+       "analytic": "#7 frame dengan kerumunan (%)",
+       "ai": 0.0,
+       "truth_seen_by_cameras": 0.0,
+       "truth_whole_floor": 0.0
+      },
+      {
+       "analytic": "#8 kejadian diam lama",
+       "ai": 2,
+       "truth_seen_by_cameras": 5,
+       "truth_whole_floor": 5
+      },
+      {
+       "analytic": "#10 kejadian forklift ngebut",
+       "ai": 2,
+       "truth_seen_by_cameras": 0,
+       "truth_whole_floor": 0
+      },
+      {
+       "analytic": "#11 kejadian nyaris tertabrak",
+       "ai": 6,
+       "truth_seen_by_cameras": 13,
+       "truth_whole_floor": 11
+      },
+      {
+       "analytic": "#12 orang masuk jalur forklift",
+       "ai": 6,
+       "truth_seen_by_cameras": 4,
+       "truth_whole_floor": 4
+      }
+     ],
+     "events": {
+      "near_miss": {
+       "vs_truth_seen": {
+        "ai": 6,
+        "truth": 13,
+        "matched": 1,
+        "precision": 0.17,
+        "recall": 0.08
+       },
+       "vs_truth_whole_floor": {
+        "ai": 6,
+        "truth": 11,
+        "matched": 1,
+        "precision": 0.17,
+        "recall": 0.09
+       }
+      },
+      "speeding": {
+       "vs_truth_seen": {
+        "ai": 2,
+        "truth": 0,
+        "matched": 0,
+        "precision": 0.0,
+        "recall": null
+       },
+       "vs_truth_whole_floor": {
+        "ai": 2,
+        "truth": 0,
+        "matched": 0,
+        "precision": 0.0,
+        "recall": null
+       }
+      },
+      "idle": {
+       "vs_truth_seen": {
+        "ai": 2,
+        "truth": 5,
+        "matched": 2,
+        "precision": 1.0,
+        "recall": 0.4
+       },
+       "vs_truth_whole_floor": {
+        "ai": 2,
+        "truth": 5,
+        "matched": 2,
+        "precision": 1.0,
+        "recall": 0.4
+       }
+      },
+      "lane": {
+       "vs_truth_seen": {
+        "ai": 6,
+        "truth": 4,
+        "matched": 3,
+        "precision": 0.5,
+        "recall": 0.75
+       }
+      },
+      "crossing": {
+       "vs_truth_seen": {
+        "ai": 7,
+        "truth": 7,
+        "matched": 6,
+        "precision": 0.86,
+        "recall": 0.86
+       }
+      }
+     },
+     "note": "truth_seen_by_cameras = the labels kept only while a camera in use shows the object at least 40 px tall; truth_whole_floor = every labelled object. Both run through the same analytics code as the AI."
+    }
+   },
+   "site": {
+    "people_on_plan": {
+     "frames": 300,
+     "precision": 0.779,
+     "recall_all_on_floor": 0.373,
+     "recall_seeable": 0.439,
+     "position_error_m_median": 0.235,
+     "position_error_m_p90": 0.554,
+     "count_vs_seeable_mean": -20.76,
+     "count_vs_seeable_abs_mean": 20.76,
+     "plan_ids_per_label_mean": 2.64,
+     "id_switches": 116,
+     "labels_per_plan_id_mean": 1.16,
+     "label_people_matched": 45
+    },
+    "forklifts_on_plan": {
+     "frames": 300,
+     "precision": 0.654,
+     "recall_all_on_floor": 0.473,
+     "recall_seeable": 0.476,
+     "position_error_m_median": 0.737,
+     "position_error_m_p90": 1.303,
+     "count_vs_seeable_mean": -2.43,
+     "count_vs_seeable_abs_mean": 2.43,
+     "plan_ids_per_label_mean": 3.12,
+     "id_switches": 37,
+     "labels_per_plan_id_mean": 1.25,
+     "label_people_matched": 8
+    },
+    "pallet_trucks_on_plan": {
+     "frames": 300,
+     "precision": 1.0,
+     "recall_all_on_floor": 0.199,
+     "recall_seeable": 0.222,
+     "position_error_m_median": 0.279,
+     "position_error_m_p90": 0.313,
+     "count_vs_seeable_mean": -6.98,
+     "count_vs_seeable_abs_mean": 6.98,
+     "plan_ids_per_label_mean": 1.0,
+     "id_switches": 0,
+     "labels_per_plan_id_mean": 1.0,
+     "label_people_matched": 2
+    },
+    "boxes_in_the_pictures": {
+     "person": {
+      "recall": 0.559,
+      "precision": 0.955,
+      "labels": 10579
+     },
+     "forklift": {
+      "recall": 0.508,
+      "precision": 0.852,
+      "labels": 2374
+     },
+     "pallet_truck": {
+      "recall": 0.506,
+      "precision": 0.851,
+      "labels": 2048
+     }
+    },
+    "analytics_vs_truth": {
+     "rows": [
+      {
+       "analytic": "#2 orang di lantai, rata-rata",
+       "ai": 26.8,
+       "truth_seen_by_cameras": 47.5,
+       "truth_whole_floor": 55.9
+      },
+      {
+       "analytic": "#2 orang di lantai, maks",
+       "ai": 35,
+       "truth_seen_by_cameras": 53,
+       "truth_whole_floor": 58
+      },
+      {
+       "analytic": "#3 Garis A: masuk + keluar",
+       "ai": 5,
+       "truth_seen_by_cameras": 3,
+       "truth_whole_floor": 3
+      },
+      {
+       "analytic": "#3 Garis B: masuk + keluar",
+       "ai": 0,
+       "truth_seen_by_cameras": 0,
+       "truth_whole_floor": 0
+      },
+      {
+       "analytic": "#3 Garis C: masuk + keluar",
+       "ai": 4,
+       "truth_seen_by_cameras": 4,
+       "truth_whole_floor": 4
+      },
+      {
+       "analytic": "#4 Staging A: okupansi rata-rata",
+       "ai": 0.14,
+       "truth_seen_by_cameras": 0.11,
+       "truth_whole_floor": 0.11
+      },
+      {
+       "analytic": "#4 Area kerja timur: okupansi rata-rata",
+       "ai": 2.27,
+       "truth_seen_by_cameras": 3.19,
+       "truth_whole_floor": 3.23
+      },
+      {
+       "analytic": "#4 Area utara: okupansi rata-rata",
+       "ai": 0.57,
+       "truth_seen_by_cameras": 0.86,
+       "truth_whole_floor": 0.88
+      },
+      {
+       "analytic": "#4 Area selatan: okupansi rata-rata",
+       "ai": 0.16,
+       "truth_seen_by_cameras": 0.42,
+       "truth_whole_floor": 0.42
+      },
+      {
+       "analytic": "#4 Jalur forklift tengah: okupansi rata-rata",
+       "ai": 0.82,
+       "truth_seen_by_cameras": 1.41,
+       "truth_whole_floor": 1.42
+      },
+      {
+       "analytic": "#4 Lorong satu arah (contoh): okupansi rata-rata",
+       "ai": 0.14,
+       "truth_seen_by_cameras": 0.13,
+       "truth_whole_floor": 0.13
+      },
+      {
+       "analytic": "#6 waktu berjalan (%)",
+       "ai": 72.4,
+       "truth_seen_by_cameras": 67.5,
+       "truth_whole_floor": 67.5
+      },
+      {
+       "analytic": "#7 frame dengan kerumunan (%)",
+       "ai": 0.7,
+       "truth_seen_by_cameras": 0.0,
+       "truth_whole_floor": 0.0
+      },
+      {
+       "analytic": "#8 kejadian diam lama",
+       "ai": 2,
+       "truth_seen_by_cameras": 5,
+       "truth_whole_floor": 5
+      },
+      {
+       "analytic": "#10 kejadian forklift ngebut",
+       "ai": 0,
+       "truth_seen_by_cameras": 0,
+       "truth_whole_floor": 0
+      },
+      {
+       "analytic": "#11 kejadian nyaris tertabrak",
+       "ai": 1,
+       "truth_seen_by_cameras": 13,
+       "truth_whole_floor": 11
+      },
+      {
+       "analytic": "#12 orang masuk jalur forklift",
+       "ai": 8,
+       "truth_seen_by_cameras": 4,
+       "truth_whole_floor": 4
+      }
+     ],
+     "events": {
+      "near_miss": {
+       "vs_truth_seen": {
+        "ai": 1,
+        "truth": 13,
+        "matched": 1,
+        "precision": 1.0,
+        "recall": 0.08
+       },
+       "vs_truth_whole_floor": {
+        "ai": 1,
+        "truth": 11,
+        "matched": 1,
+        "precision": 1.0,
+        "recall": 0.09
+       }
+      },
+      "speeding": {
+       "vs_truth_seen": {
+        "ai": 0,
+        "truth": 0,
+        "matched": 0,
+        "precision": null,
+        "recall": null
+       },
+       "vs_truth_whole_floor": {
+        "ai": 0,
+        "truth": 0,
+        "matched": 0,
+        "precision": null,
+        "recall": null
+       }
+      },
+      "idle": {
+       "vs_truth_seen": {
+        "ai": 2,
+        "truth": 5,
+        "matched": 2,
+        "precision": 1.0,
+        "recall": 0.4
+       },
+       "vs_truth_whole_floor": {
+        "ai": 2,
+        "truth": 5,
+        "matched": 2,
+        "precision": 1.0,
+        "recall": 0.4
+       }
+      },
+      "lane": {
+       "vs_truth_seen": {
+        "ai": 8,
+        "truth": 4,
+        "matched": 3,
+        "precision": 0.38,
+        "recall": 0.75
+       }
+      },
+      "crossing": {
+       "vs_truth_seen": {
+        "ai": 9,
+        "truth": 7,
+        "matched": 5,
+        "precision": 0.56,
+        "recall": 0.71
+       }
+      }
+     },
+     "note": "truth_seen_by_cameras = the labels kept only while a camera in use shows the object at least 40 px tall; truth_whole_floor = every labelled object. Both run through the same analytics code as the AI."
+    }
+   }
+  },
+  "#16_fewest_cameras": [
+   {
+    "cameras": 15,
+    "recall_all_on_floor": 0.391,
+    "removed": null
+   },
+   {
+    "cameras": 14,
+    "recall_all_on_floor": 0.389,
+    "removed": "Camera_0012"
+   },
+   {
+    "cameras": 13,
+    "recall_all_on_floor": 0.387,
+    "removed": "Camera_0011"
+   },
+   {
+    "cameras": 12,
+    "recall_all_on_floor": 0.385,
+    "removed": "Camera_0010"
+   },
+   {
+    "cameras": 11,
+    "recall_all_on_floor": 0.381,
+    "removed": "Camera_0015"
+   },
+   {
+    "cameras": 10,
+    "recall_all_on_floor": 0.374,
+    "removed": "Camera_0007"
+   },
+   {
+    "cameras": 9,
+    "recall_all_on_floor": 0.366,
+    "removed": "Camera_0017"
+   },
+   {
+    "cameras": 8,
+    "recall_all_on_floor": 0.345,
+    "removed": "Camera_0000"
+   },
+   {
+    "cameras": 7,
+    "recall_all_on_floor": 0.32,
+    "removed": "Camera_0019"
+   },
+   {
+    "cameras": 6,
+    "recall_all_on_floor": 0.291,
+    "removed": "Camera_0014"
+   },
+   {
+    "cameras": 5,
+    "recall_all_on_floor": 0.253,
+    "removed": "Camera_0006"
+   },
+   {
+    "cameras": 4,
+    "recall_all_on_floor": 0.214,
+    "removed": "Camera_0013"
+   },
+   {
+    "cameras": 3,
+    "recall_all_on_floor": 0.171,
+    "removed": "Camera_0003"
+   },
+   {
+    "cameras": 2,
+    "recall_all_on_floor": 0.122,
+    "removed": "Camera_0008"
+   },
+   {
+    "cameras": 1,
+    "recall_all_on_floor": 0.068,
+    "removed": "Camera_0005"
+   }
+  ]
+ },
+ "truth": {
+  "seen_by_cameras": {
+   "window_s": 30.0,
+   "#1_people_per_camera": {},
+   "#2_headcount": {
+    "mean": 47.5,
+    "min": 42,
+    "max": 53,
+    "unique_identities": 59
+   },
+   "#3_lines": [
+    {
+     "line": "Garis A",
+     "in": 2,
+     "out": 1
+    },
+    {
+     "line": "Garis B",
+     "in": 0,
+     "out": 0
+    },
+    {
+     "line": "Garis C · seberang jalur forklift",
+     "in": 1,
+     "out": 3
+    }
+   ],
+   "#3_crossings": [
+    {
+     "line": "Garis A",
+     "gid": 2412,
+     "t": 3.1,
+     "dir": "in",
+     "x": -15.04,
+     "y": -52.84,
+     "cams": []
+    },
+    {
+     "line": "Garis C · seberang jalur forklift",
+     "gid": 2425,
+     "t": 8.8,
+     "dir": "out",
+     "x": -42.0,
+     "y": -61.96,
+     "cams": []
+    },
+    {
+     "line": "Garis C · seberang jalur forklift",
+     "gid": 2420,
+     "t": 18.4,
+     "dir": "out",
+     "x": -42.16,
+     "y": -61.94,
+     "cams": []
+    },
+    {
+     "line": "Garis A",
+     "gid": 2427,
+     "t": 22.5,
+     "dir": "out",
+     "x": -14.97,
+     "y": -64.26,
+     "cams": []
+    },
+    {
+     "line": "Garis C · seberang jalur forklift",
+     "gid": 2425,
+     "t": 25.0,
+     "dir": "in",
+     "x": -32.75,
+     "y": -62.01,
+     "cams": []
+    },
+    {
+     "line": "Garis C · seberang jalur forklift",
+     "gid": 2418,
+     "t": 27.5,
+     "dir": "out",
+     "x": -20.8,
+     "y": -61.93,
+     "cams": []
+    },
+    {
+     "line": "Garis A",
+     "gid": 2427,
+     "t": 28.1,
+     "dir": "in",
+     "x": -15.0,
+     "y": -62.52,
+     "cams": []
+    }
+   ],
+   "#4_zones": [
+    {
+     "zone": "Staging A",
+     "kind": "area",
+     "occupancy_mean": 0.11,
+     "occupancy_max": 1,
+     "people_entered": 1,
+     "dwell_s_mean": 3.2,
+     "dwell_s_max": 3.2,
+     "person_seconds": 3.2
+    },
+    {
+     "zone": "Area kerja timur",
+     "kind": "area",
+     "occupancy_mean": 3.19,
+     "occupancy_max": 5,
+     "people_entered": 7,
+     "dwell_s_mean": 13.7,
+     "dwell_s_max": 19.2,
+     "person_seconds": 95.7
+    },
+    {
+     "zone": "Area utara",
+     "kind": "area",
+     "occupancy_mean": 0.86,
+     "occupancy_max": 1,
+     "people_entered": 1,
+     "dwell_s_mean": 25.8,
+     "dwell_s_max": 25.8,
+     "person_seconds": 25.8
+    },
+    {
+     "zone": "Area selatan",
+     "kind": "area",
+     "occupancy_mean": 0.42,
+     "occupancy_max": 1,
+     "people_entered": 1,
+     "dwell_s_mean": 12.5,
+     "dwell_s_max": 12.5,
+     "person_seconds": 12.5
+    },
+    {
+     "zone": "Jalur forklift tengah",
+     "kind": "vehicle_lane",
+     "occupancy_mean": 1.41,
+     "occupancy_max": 2,
+     "people_entered": 4,
+     "dwell_s_mean": 10.6,
+     "dwell_s_max": 14.9,
+     "person_seconds": 42.3
+    },
+    {
+     "zone": "Lorong satu arah (contoh)",
+     "kind": "one_way",
+     "occupancy_mean": 0.13,
+     "occupancy_max": 1,
+     "people_entered": 1,
+     "dwell_s_mean": 3.8,
+     "dwell_s_max": 3.8,
+     "person_seconds": 3.8
+    }
+   ],
+   "#6_walking": {
+    "walking_share_pct": 67.5,
+    "distance_m_per_person_mean": 20.6,
+    "travel_m_per_person_hour": 3064,
+    "note": "walking = faster than 0.4 m/s over one second"
+   },
+   "#7_congestion": {
+    "frames_with_a_crowd_pct": 0.0,
+    "rule": "4+ people within 2.0 m",
+    "hotspots": [],
+    "events": []
+   },
+   "#8_idle": {
+    "rule": "within 0.8 m of one spot for 15 s or more",
+    "events": [
+     {
+      "gid": 9914,
+      "start_t": 0.0,
+      "x": -69.32,
+      "y": -90.03,
+      "cams": [],
+      "seconds": 24.2
+     },
+     {
+      "gid": 219,
+      "start_t": 0.0,
+      "x": -41.21,
+      "y": -17.64,
+      "cams": [],
+      "seconds": 16.5
+     },
+     {
+      "gid": 485,
+      "start_t": 0.0,
+      "x": -92.74,
+      "y": -49.75,
+      "cams": [],
+      "seconds": 29.9
+     },
+     {
+      "gid": 2412,
+      "start_t": 5.7,
+      "x": -17.96,
+      "y": -53.91,
+      "cams": [],
+      "seconds": 16.2
+     },
+     {
+      "gid": 4088,
+      "start_t": 11.3,
+      "x": -9.43,
+      "y": -24.54,
+      "cams": [],
+      "seconds": 15.7
+     }
+    ]
+   },
+   "#9_forklift_use": [
+    {
+     "gid": 8,
+     "seconds_seen": 30.0,
+     "reliable_speed_s": 28.0,
+     "moving_pct": 68.6,
+     "top_kmh_p90": 3.9
+    },
+    {
+     "gid": 14,
+     "seconds_seen": 28.3,
+     "reliable_speed_s": 26.3,
+     "moving_pct": 84.0,
+     "top_kmh_p90": 4.4
+    },
+    {
+     "gid": 11294,
+     "seconds_seen": 30.0,
+     "reliable_speed_s": 28.0,
+     "moving_pct": 92.5,
+     "top_kmh_p90": 3.6
+    },
+    {
+     "gid": 6813,
+     "seconds_seen": 30.0,
+     "reliable_speed_s": 28.0,
+     "moving_pct": 0.0,
+     "top_kmh_p90": 0.0
+    },
+    {
+     "gid": 8469,
+     "seconds_seen": 30.0,
+     "reliable_speed_s": 28.0,
+     "moving_pct": 0.0,
+     "top_kmh_p90": 0.0
+    },
+    {
+     "gid": 4486,
+     "seconds_seen": 30.0,
+     "reliable_speed_s": 28.0,
+     "moving_pct": 0.0,
+     "top_kmh_p90": 0.0
+    },
+    {
+     "gid": 7055,
+     "seconds_seen": 30.0,
+     "reliable_speed_s": 28.0,
+     "moving_pct": 86.8,
+     "top_kmh_p90": 3.7
+    },
+    {
+     "gid": 7058,
+     "seconds_seen": 30.0,
+     "reliable_speed_s": 28.0,
+     "moving_pct": 87.5,
+     "top_kmh_p90": 4.1
+    },
+    {
+     "gid": 4052,
+     "seconds_seen": 30.0,
+     "reliable_speed_s": 28.0,
+     "moving_pct": 93.6,
+     "top_kmh_p90": 3.6
+    }
+   ],
+   "#10_speeding": {
+    "limit_kmh": 5.0,
+    "events": []
+   },
+   "#11_near_miss": {
+    "rule": "person within 1.5 m of a moving forklift's body",
+    "events": [
+     {
+      "person": 2427,
+      "forklift": 8,
+      "start_t": 2.0,
+      "min_m": 0.0,
+      "x": -14.21,
+      "y": -76.94,
+      "t": 2.3,
+      "cams": [],
+      "forklift_kmh": 2.8,
+      "end_t": 2.3
+     },
+     {
+      "person": 2427,
+      "forklift": 8,
+      "start_t": 4.4,
+      "min_m": 0.0,
+      "x": -14.22,
+      "y": -76.94,
+      "t": 4.4,
+      "cams": [],
+      "forklift_kmh": 1.3,
+      "end_t": 5.2
+     },
+     {
+      "person": 25,
+      "forklift": 8,
+      "start_t": 5.5,
+      "min_m": 0.42,
+      "x": -14.49,
+      "y": -77.53,
+      "t": 5.9,
+      "cams": [],
+      "forklift_kmh": 2.9,
+      "end_t": 5.9
+     },
+     {
+      "person": 9912,
+      "forklift": 4052,
+      "start_t": 2.0,
+      "min_m": 0.0,
+      "x": -63.28,
+      "y": -57.13,
+      "t": 4.7,
+      "cams": [],
+      "forklift_kmh": 2.8,
+      "end_t": 6.6
+     },
+     {
+      "person": 2427,
+      "forklift": 8,
+      "start_t": 6.7,
+      "min_m": 0.0,
+      "x": -14.24,
+      "y": -76.95,
+      "t": 6.9,
+      "cams": [],
+      "forklift_kmh": 3.2,
+      "end_t": 8.3
+     },
+     {
+      "person": 25,
+      "forklift": 8,
+      "start_t": 7.3,
+      "min_m": 0.0,
+      "x": -15.22,
+      "y": -76.25,
+      "t": 7.6,
+      "cams": [],
+      "forklift_kmh": 3.8,
+      "end_t": 8.7
+     },
+     {
+      "person": 7060,
+      "forklift": 7058,
+      "start_t": 6.4,
+      "min_m": 0.12,
+      "x": -39.93,
+      "y": -86.32,
+      "t": 8.1,
+      "cams": [],
+      "forklift_kmh": 2.8,
+      "end_t": 10.1
+     },
+     {
+      "person": 9912,
+      "forklift": 4052,
+      "start_t": 8.1,
+      "min_m": 1.47,
+      "x": -66.38,
+      "y": -58.07,
+      "t": 10.6,
+      "cams": [],
+      "forklift_kmh": 3.6,
+      "end_t": 10.8
+     },
+     {
+      "person": 2415,
+      "forklift": 8,
+      "start_t": 14.0,
+      "min_m": 0.0,
+      "x": -15.04,
+      "y": -77.11,
+      "t": 16.0,
+      "cams": [],
+      "forklift_kmh": 4.4,
+      "end_t": 16.0
+     },
+     {
+      "person": 24,
+      "forklift": 8,
+      "start_t": 16.0,
+      "min_m": 1.43,
+      "x": -11.82,
+      "y": -78.16,
+      "t": 16.0,
+      "cams": [],
+      "forklift_kmh": 4.4,
+      "end_t": 16.0
+     },
+     {
+      "person": 24,
+      "forklift": 8,
+      "start_t": 17.4,
+      "min_m": 1.45,
+      "x": -11.78,
+      "y": -79.01,
+      "t": 17.4,
+      "cams": [],
+      "forklift_kmh": 3.0,
+      "end_t": 17.4
+     },
+     {
+      "person": 486,
+      "forklift": 11294,
+      "start_t": 22.4,
+      "min_m": 0.21,
+      "x": -95.76,
+      "y": -58.03,
+      "t": 24.0,
+      "cams": [],
+      "forklift_kmh": 2.6,
+      "end_t": 26.6
+     },
+     {
+      "person": 24,
+      "forklift": 14,
+      "start_t": 29.8,
+      "min_m": 0.55,
+      "x": -11.85,
+      "y": -82.06,
+      "t": 29.9,
+      "cams": [],
+      "forklift_kmh": 2.9,
+      "end_t": 29.9
+     }
+    ]
+   },
+   "#12_vehicle_lane": {
+    "entries": 4,
+    "person_seconds": 38.2,
+    "events": [
+     {
+      "gid": 7603,
+      "t": 10.8,
+      "x": -49.76,
+      "y": -63.19,
+      "cams": []
+     },
+     {
+      "gid": 2420,
+      "t": 17.1,
+      "x": -42.87,
+      "y": -63.12,
+      "cams": []
+     },
+     {
+      "gid": 2425,
+      "t": 24.1,
+      "x": -32.88,
+      "y": -60.91,
+      "cams": []
+     },
+     {
+      "gid": 2418,
+      "t": 25.9,
+      "x": -19.56,
+      "y": -63.16,
+      "cams": []
+     }
+    ]
+   },
+   "#13_wrong_way": {
+    "events": []
+   },
+   "#14_other_vehicles": {
+    "pallet_truck": [
+     {
+      "gid": 35,
+      "seconds_seen": 29.2,
+      "reliable_speed_s": 27.2,
+      "moving_pct": 0.0,
+      "top_kmh_p90": 0.0
+     },
+     {
+      "gid": 7342,
+      "seconds_seen": 30.0,
+      "reliable_speed_s": 28.0,
+      "moving_pct": 0.0,
+      "top_kmh_p90": 0.0
+     },
+     {
+      "gid": 247,
+      "seconds_seen": 30.0,
+      "reliable_speed_s": 28.0,
+      "moving_pct": 0.0,
+      "top_kmh_p90": 0.0
+     },
+     {
+      "gid": 248,
+      "seconds_seen": 30.0,
+      "reliable_speed_s": 28.0,
+      "moving_pct": 0.0,
+      "top_kmh_p90": 0.0
+     },
+     {
+      "gid": 249,
+      "seconds_seen": 30.0,
+      "reliable_speed_s": 28.0,
+      "moving_pct": 0.0,
+      "top_kmh_p90": 0.0
+     },
+     {
+      "gid": 2833,
+      "seconds_seen": 30.0,
+      "reliable_speed_s": 28.0,
+      "moving_pct": 0.0,
+      "top_kmh_p90": 0.0
+     },
+     {
+      "gid": 8472,
+      "seconds_seen": 30.0,
+      "reliable_speed_s": 28.0,
+      "moving_pct": 0.0,
+      "top_kmh_p90": 0.0
+     },
+     {
+      "gid": 4487,
+      "seconds_seen": 30.0,
+      "reliable_speed_s": 28.0,
+      "moving_pct": 0.0,
+      "top_kmh_p90": 0.0
+     },
+     {
+      "gid": 4488,
+      "seconds_seen": 30.0,
+      "reliable_speed_s": 28.0,
+      "moving_pct": 0.0,
+      "top_kmh_p90": 0.0
+     }
+    ]
+   },
+   "#15_seen_by_cameras": {
+    "person_frames_seen_by_2plus_pct": 100.0,
+    "person_frames_seen_by_1_pct": 0.0
+   },
+   "heat_points": 14253
+  },
+  "whole_floor": {
+   "window_s": 30.0,
+   "#1_people_per_camera": {},
+   "#2_headcount": {
+    "mean": 55.9,
+    "min": 52,
+    "max": 58,
+    "unique_identities": 59
+   },
+   "#3_lines": [
+    {
+     "line": "Garis A",
+     "in": 2,
+     "out": 1
+    },
+    {
+     "line": "Garis B",
+     "in": 0,
+     "out": 0
+    },
+    {
+     "line": "Garis C · seberang jalur forklift",
+     "in": 1,
+     "out": 3
+    }
+   ],
+   "#3_crossings": [
+    {
+     "line": "Garis A",
+     "gid": 2412,
+     "t": 3.1,
+     "dir": "in",
+     "x": -15.04,
+     "y": -52.84,
+     "cams": []
+    },
+    {
+     "line": "Garis C · seberang jalur forklift",
+     "gid": 2425,
+     "t": 8.8,
+     "dir": "out",
+     "x": -42.0,
+     "y": -61.96,
+     "cams": []
+    },
+    {
+     "line": "Garis C · seberang jalur forklift",
+     "gid": 2420,
+     "t": 18.4,
+     "dir": "out",
+     "x": -42.16,
+     "y": -61.94,
+     "cams": []
+    },
+    {
+     "line": "Garis A",
+     "gid": 2427,
+     "t": 22.5,
+     "dir": "out",
+     "x": -14.97,
+     "y": -64.26,
+     "cams": []
+    },
+    {
+     "line": "Garis C · seberang jalur forklift",
+     "gid": 2425,
+     "t": 25.0,
+     "dir": "in",
+     "x": -32.75,
+     "y": -62.01,
+     "cams": []
+    },
+    {
+     "line": "Garis C · seberang jalur forklift",
+     "gid": 2418,
+     "t": 27.5,
+     "dir": "out",
+     "x": -20.8,
+     "y": -61.93,
+     "cams": []
+    },
+    {
+     "line": "Garis A",
+     "gid": 2427,
+     "t": 28.1,
+     "dir": "in",
+     "x": -15.0,
+     "y": -62.52,
+     "cams": []
+    }
+   ],
+   "#4_zones": [
+    {
+     "zone": "Staging A",
+     "kind": "area",
+     "occupancy_mean": 0.11,
+     "occupancy_max": 1,
+     "people_entered": 1,
+     "dwell_s_mean": 3.2,
+     "dwell_s_max": 3.2,
+     "person_seconds": 3.2
+    },
+    {
+     "zone": "Area kerja timur",
+     "kind": "area",
+     "occupancy_mean": 3.23,
+     "occupancy_max": 5,
+     "people_entered": 7,
+     "dwell_s_mean": 13.8,
+     "dwell_s_max": 19.2,
+     "person_seconds": 96.9
+    },
+    {
+     "zone": "Area utara",
+     "kind": "area",
+     "occupancy_mean": 0.88,
+     "occupancy_max": 1,
+     "people_entered": 1,
+     "dwell_s_mean": 26.4,
+     "dwell_s_max": 26.4,
+     "person_seconds": 26.4
+    },
+    {
+     "zone": "Area selatan",
+     "kind": "area",
+     "occupancy_mean": 0.42,
+     "occupancy_max": 1,
+     "people_entered": 1,
+     "dwell_s_mean": 12.5,
+     "dwell_s_max": 12.5,
+     "person_seconds": 12.5
+    },
+    {
+     "zone": "Jalur forklift tengah",
+     "kind": "vehicle_lane",
+     "occupancy_mean": 1.42,
+     "occupancy_max": 2,
+     "people_entered": 4,
+     "dwell_s_mean": 10.6,
+     "dwell_s_max": 14.9,
+     "person_seconds": 42.5
+    },
+    {
+     "zone": "Lorong satu arah (contoh)",
+     "kind": "one_way",
+     "occupancy_mean": 0.13,
+     "occupancy_max": 1,
+     "people_entered": 1,
+     "dwell_s_mean": 3.8,
+     "dwell_s_max": 3.8,
+     "person_seconds": 3.8
+    }
+   ],
+   "#6_walking": {
+    "walking_share_pct": 67.5,
+    "distance_m_per_person_mean": 22.6,
+    "travel_m_per_person_hour": 2858,
+    "note": "walking = faster than 0.4 m/s over one second"
+   },
+   "#7_congestion": {
+    "frames_with_a_crowd_pct": 0.0,
+    "rule": "4+ people within 2.0 m",
+    "hotspots": [],
+    "events": []
+   },
+   "#8_idle": {
+    "rule": "within 0.8 m of one spot for 15 s or more",
+    "events": [
+     {
+      "gid": 9914,
+      "start_t": 0.0,
+      "x": -69.32,
+      "y": -90.03,
+      "cams": [],
+      "seconds": 24.2
+     },
+     {
+      "gid": 219,
+      "start_t": 0.0,
+      "x": -41.21,
+      "y": -17.64,
+      "cams": [],
+      "seconds": 16.5
+     },
+     {
+      "gid": 485,
+      "start_t": 0.0,
+      "x": -92.74,
+      "y": -49.75,
+      "cams": [],
+      "seconds": 29.9
+     },
+     {
+      "gid": 2412,
+      "start_t": 5.7,
+      "x": -17.96,
+      "y": -53.91,
+      "cams": [],
+      "seconds": 16.2
+     },
+     {
+      "gid": 4088,
+      "start_t": 11.3,
+      "x": -9.43,
+      "y": -24.54,
+      "cams": [],
+      "seconds": 16.3
+     }
+    ]
+   },
+   "#9_forklift_use": [
+    {
+     "gid": 8,
+     "seconds_seen": 30.0,
+     "reliable_speed_s": 28.0,
+     "moving_pct": 68.6,
+     "top_kmh_p90": 3.9
+    },
+    {
+     "gid": 14,
+     "seconds_seen": 30.0,
+     "reliable_speed_s": 28.0,
+     "moving_pct": 84.6,
+     "top_kmh_p90": 4.5
+    },
+    {
+     "gid": 11294,
+     "seconds_seen": 30.0,
+     "reliable_speed_s": 28.0,
+     "moving_pct": 92.5,
+     "top_kmh_p90": 3.6
+    },
+    {
+     "gid": 6813,
+     "seconds_seen": 30.0,
+     "reliable_speed_s": 28.0,
+     "moving_pct": 0.0,
+     "top_kmh_p90": 0.0
+    },
+    {
+     "gid": 8469,
+     "seconds_seen": 30.0,
+     "reliable_speed_s": 28.0,
+     "moving_pct": 0.0,
+     "top_kmh_p90": 0.0
+    },
+    {
+     "gid": 4486,
+     "seconds_seen": 30.0,
+     "reliable_speed_s": 28.0,
+     "moving_pct": 0.0,
+     "top_kmh_p90": 0.0
+    },
+    {
+     "gid": 7055,
+     "seconds_seen": 30.0,
+     "reliable_speed_s": 28.0,
+     "moving_pct": 86.8,
+     "top_kmh_p90": 3.7
+    },
+    {
+     "gid": 7058,
+     "seconds_seen": 30.0,
+     "reliable_speed_s": 28.0,
+     "moving_pct": 87.5,
+     "top_kmh_p90": 4.1
+    },
+    {
+     "gid": 4052,
+     "seconds_seen": 30.0,
+     "reliable_speed_s": 28.0,
+     "moving_pct": 93.6,
+     "top_kmh_p90": 3.6
+    }
+   ],
+   "#10_speeding": {
+    "limit_kmh": 5.0,
+    "events": []
+   },
+   "#11_near_miss": {
+    "rule": "person within 1.5 m of a moving forklift's body",
+    "events": [
+     {
+      "person": 9912,
+      "forklift": 4052,
+      "start_t": 2.0,
+      "min_m": 0.0,
+      "x": -63.28,
+      "y": -57.13,
+      "t": 4.7,
+      "cams": [],
+      "forklift_kmh": 2.8,
+      "end_t": 6.6
+     },
+     {
+      "person": 2427,
+      "forklift": 8,
+      "start_t": 2.0,
+      "min_m": 0.0,
+      "x": -14.24,
+      "y": -76.95,
+      "t": 6.9,
+      "cams": [],
+      "forklift_kmh": 3.2,
+      "end_t": 8.3
+     },
+     {
+      "person": 25,
+      "forklift": 8,
+      "start_t": 5.5,
+      "min_m": 0.0,
+      "x": -15.22,
+      "y": -76.25,
+      "t": 7.6,
+      "cams": [],
+      "forklift_kmh": 3.8,
+      "end_t": 8.7
+     },
+     {
+      "person": 7060,
+      "forklift": 7058,
+      "start_t": 6.4,
+      "min_m": 0.12,
+      "x": -39.93,
+      "y": -86.32,
+      "t": 8.1,
+      "cams": [],
+      "forklift_kmh": 2.8,
+      "end_t": 10.1
+     },
+     {
+      "person": 9912,
+      "forklift": 4052,
+      "start_t": 8.1,
+      "min_m": 1.47,
+      "x": -66.38,
+      "y": -58.07,
+      "t": 10.6,
+      "cams": [],
+      "forklift_kmh": 3.6,
+      "end_t": 10.8
+     },
+     {
+      "person": 24,
+      "forklift": 8,
+      "start_t": 16.0,
+      "min_m": 1.27,
+      "x": -11.77,
+      "y": -78.37,
+      "t": 16.4,
+      "cams": [],
+      "forklift_kmh": 4.0,
+      "end_t": 16.9
+     },
+     {
+      "person": 2415,
+      "forklift": 8,
+      "start_t": 14.0,
+      "min_m": 0.0,
+      "x": -15.0,
+      "y": -77.3,
+      "t": 16.1,
+      "cams": [],
+      "forklift_kmh": 4.3,
+      "end_t": 17.2
+     },
+     {
+      "person": 24,
+      "forklift": 14,
+      "start_t": 20.1,
+      "min_m": 0.0,
+      "x": -11.58,
+      "y": -83.96,
+      "t": 21.6,
+      "cams": [],
+      "forklift_kmh": 3.7,
+      "end_t": 23.8
+     },
+     {
+      "person": 486,
+      "forklift": 11294,
+      "start_t": 22.4,
+      "min_m": 0.21,
+      "x": -95.76,
+      "y": -58.03,
+      "t": 24.0,
+      "cams": [],
+      "forklift_kmh": 2.6,
+      "end_t": 26.6
+     },
+     {
+      "person": 2415,
+      "forklift": 14,
+      "start_t": 25.6,
+      "min_m": 0.9,
+      "x": -14.31,
+      "y": -83.19,
+      "t": 26.5,
+      "cams": [],
+      "forklift_kmh": 2.8,
+      "end_t": 27.0
+     },
+     {
+      "person": 24,
+      "forklift": 14,
+      "start_t": 24.7,
+      "min_m": 0.19,
+      "x": -12.05,
+      "y": -82.72,
+      "t": 29.1,
+      "cams": [],
+      "forklift_kmh": 2.1,
+      "end_t": 29.9
+     }
+    ]
+   },
+   "#12_vehicle_lane": {
+    "entries": 4,
+    "person_seconds": 38.8,
+    "events": [
+     {
+      "gid": 7603,
+      "t": 10.2,
+      "x": -49.04,
+      "y": -63.2,
+      "cams": []
+     },
+     {
+      "gid": 2420,
+      "t": 17.1,
+      "x": -42.87,
+      "y": -63.12,
+      "cams": []
+     },
+     {
+      "gid": 2425,
+      "t": 24.1,
+      "x": -32.88,
+      "y": -60.91,
+      "cams": []
+     },
+     {
+      "gid": 2418,
+      "t": 25.9,
+      "x": -19.56,
+      "y": -63.16,
+      "cams": []
+     }
+    ]
+   },
+   "#13_wrong_way": {
+    "events": []
+   },
+   "#14_other_vehicles": {
+    "pallet_truck": [
+     {
+      "gid": 35,
+      "seconds_seen": 30.0,
+      "reliable_speed_s": 28.0,
+      "moving_pct": 0.0,
+      "top_kmh_p90": 0.0
+     },
+     {
+      "gid": 7342,
+      "seconds_seen": 30.0,
+      "reliable_speed_s": 28.0,
+      "moving_pct": 0.0,
+      "top_kmh_p90": 0.0
+     },
+     {
+      "gid": 247,
+      "seconds_seen": 30.0,
+      "reliable_speed_s": 28.0,
+      "moving_pct": 0.0,
+      "top_kmh_p90": 0.0
+     },
+     {
+      "gid": 248,
+      "seconds_seen": 30.0,
+      "reliable_speed_s": 28.0,
+      "moving_pct": 0.0,
+      "top_kmh_p90": 0.0
+     },
+     {
+      "gid": 249,
+      "seconds_seen": 30.0,
+      "reliable_speed_s": 28.0,
+      "moving_pct": 0.0,
+      "top_kmh_p90": 0.0
+     },
+     {
+      "gid": 2833,
+      "seconds_seen": 30.0,
+      "reliable_speed_s": 28.0,
+      "moving_pct": 0.0,
+      "top_kmh_p90": 0.0
+     },
+     {
+      "gid": 8472,
+      "seconds_seen": 30.0,
+      "reliable_speed_s": 28.0,
+      "moving_pct": 0.0,
+      "top_kmh_p90": 0.0
+     },
+     {
+      "gid": 8480,
+      "seconds_seen": 30.0,
+      "reliable_speed_s": 28.0,
+      "moving_pct": 0.0,
+      "top_kmh_p90": 0.0
+     },
+     {
+      "gid": 4487,
+      "seconds_seen": 30.0,
+      "reliable_speed_s": 28.0,
+      "moving_pct": 0.0,
+      "top_kmh_p90": 0.0
+     },
+     {
+      "gid": 4488,
+      "seconds_seen": 30.0,
+      "reliable_speed_s": 28.0,
+      "moving_pct": 0.0,
+      "top_kmh_p90": 0.0
+     }
+    ]
+   },
+   "#15_seen_by_cameras": {
+    "person_frames_seen_by_2plus_pct": 100.0,
+    "person_frames_seen_by_1_pct": 0.0
+   },
+   "heat_points": 16771
+  }
+ }
+}

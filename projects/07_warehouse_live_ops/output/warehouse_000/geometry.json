@@ -1,0 +1,409 @@
+{
+ "labels_inside_building_pct": 99.99,
+ "criteria": {
+  "bias_px": 6.0,
+  "spread_px": 5.0,
+  "floor_m": 0.3
+ },
+ "cameras": {
+  "Camera_0000": {
+   "passed": true,
+   "verdict": "lolos",
+   "mount_height_m": 3.8,
+   "tilt_deg": 9.5,
+   "hfov_deg": 60.0,
+   "useful_floor_m2": 310.7,
+   "labels": {
+    "samples": 1744,
+    "whole_person_boxes": 1655,
+    "hidden_pct": 5.1,
+    "bias_px": 0.4,
+    "bias_direction_px": [
+     -0.2,
+     -0.4
+    ],
+    "spread_px": 1.4,
+    "floor_m_median": 0.145,
+    "floor_m_p90": 0.348
+   }
+  },
+  "Camera_0001": {
+   "passed": true,
+   "verdict": "lolos",
+   "mount_height_m": 4.78,
+   "tilt_deg": 14.9,
+   "hfov_deg": 60.0,
+   "useful_floor_m2": 406.1,
+   "labels": {
+    "samples": 7842,
+    "whole_person_boxes": 6930,
+    "hidden_pct": 11.6,
+    "bias_px": 3.6,
+    "bias_direction_px": [
+     -3.4,
+     -1.1
+    ],
+    "spread_px": 4.0,
+    "floor_m_median": 0.186,
+    "floor_m_p90": 0.408
+   }
+  },
+  "Camera_0002": {
+   "passed": false,
+   "verdict": "gagal: bias 12.0 px, meleset 1.1 m",
+   "mount_height_m": 3.07,
+   "tilt_deg": 7.1,
+   "hfov_deg": 60.0,
+   "useful_floor_m2": 253.9,
+   "labels": {
+    "samples": 3053,
+    "whole_person_boxes": 2882,
+    "hidden_pct": 5.6,
+    "bias_px": 12.0,
+    "bias_direction_px": [
+     8.3,
+     8.7
+    ],
+    "spread_px": 4.9,
+    "floor_m_median": 1.1,
+    "floor_m_p90": 2.295
+   }
+  },
+  "Camera_0003": {
+   "passed": true,
+   "verdict": "lolos",
+   "mount_height_m": 4.57,
+   "tilt_deg": 13.8,
+   "hfov_deg": 60.0,
+   "useful_floor_m2": 385.6,
+   "labels": {
+    "samples": 12310,
+    "whole_person_boxes": 10364,
+    "hidden_pct": 15.8,
+    "bias_px": 0.5,
+    "bias_direction_px": [
+     0.3,
+     -0.4
+    ],
+    "spread_px": 2.6,
+    "floor_m_median": 0.157,
+    "floor_m_p90": 0.435
+   }
+  },
+  "Camera_0004": {
+   "passed": false,
+   "verdict": "gagal: bias 50.6 px, meleset 1.07 m",
+   "mount_height_m": 3.44,
+   "tilt_deg": 15.0,
+   "hfov_deg": 60.0,
+   "useful_floor_m2": 298.8,
+   "labels": {
+    "samples": 2146,
+    "whole_person_boxes": 2085,
+    "hidden_pct": 2.8,
+    "bias_px": 50.6,
+    "bias_direction_px": [
+     50.6,
+     2.0
+    ],
+    "spread_px": 3.1,
+    "floor_m_median": 1.07,
+    "floor_m_p90": 2.321
+   }
+  },
+  "Camera_0005": {
+   "passed": true,
+   "verdict": "lolos",
+   "mount_height_m": 3.0,
+   "tilt_deg": 9.2,
+   "hfov_deg": 60.0,
+   "useful_floor_m2": 250.0,
+   "labels": {
+    "samples": 6349,
+    "whole_person_boxes": 4836,
+    "hidden_pct": 23.8,
+    "bias_px": 1.9,
+    "bias_direction_px": [
+     -0.4,
+     -1.8
+    ],
+    "spread_px": 2.8,
+    "floor_m_median": 0.25,
+    "floor_m_p90": 0.506
+   }
+  },
+  "Camera_0006": {
+   "passed": true,
+   "verdict": "lolos",
+   "mount_height_m": 2.0,
+   "tilt_deg": 10.0,
+   "hfov_deg": 60.0,
+   "useful_floor_m2": 172.7,
+   "labels": {
+    "samples": 3623,
+    "whole_person_boxes": 3521,
+    "hidden_pct": 2.8,
+    "bias_px": 0.8,
+    "bias_direction_px": [
+     0.5,
+     -0.6
+    ],
+    "spread_px": 1.7,
+    "floor_m_median": 0.183,
+    "floor_m_p90": 0.394
+   }
+  },
+  "Camera_0007": {
+   "passed": true,
+   "verdict": "lolos",
+   "mount_height_m": 3.0,
+   "tilt_deg": 10.2,
+   "hfov_deg": 60.0,
+   "useful_floor_m2": 252.3,
+   "labels": {
+    "samples": 3287,
+    "whole_person_boxes": 2410,
+    "hidden_pct": 26.7,
+    "bias_px": 0.4,
+    "bias_direction_px": [
+     0.2,
+     -0.3
+    ],
+    "spread_px": 1.0,
+    "floor_m_median": 0.217,
+    "floor_m_p90": 0.46
+   }
+  },
+  "Camera_0008": {
+   "passed": true,
+   "verdict": "lolos",
+   "mount_height_m": 2.98,
+   "tilt_deg": 12.6,
+   "hfov_deg": 60.0,
+   "useful_floor_m2": 255.9,
+   "labels": {
+    "samples": 8241,
+    "whole_person_boxes": 6351,
+    "hidden_pct": 22.9,
+    "bias_px": 0.7,
+    "bias_direction_px": [
+     -0.4,
+     -0.5
+    ],
+    "spread_px": 2.3,
+    "floor_m_median": 0.173,
+    "floor_m_p90": 0.439
+   }
+  },
+  "Camera_0009": {
+   "passed": false,
+   "verdict": "gagal: bias 11.8 px, sebaran 19.4 px, meleset 1.248 m",
+   "mount_height_m": 2.05,
+   "tilt_deg": 9.3,
+   "hfov_deg": 60.0,
+   "useful_floor_m2": 179.7,
+   "labels": {
+    "samples": 1908,
+    "whole_person_boxes": 983,
+    "hidden_pct": 48.5,
+    "bias_px": 11.8,
+    "bias_direction_px": [
+     -2.4,
+     11.5
+    ],
+    "spread_px": 19.4,
+    "floor_m_median": 1.248,
+    "floor_m_p90": 4.575
+   }
+  },
+  "Camera_0010": {
+   "passed": true,
+   "verdict": "lolos",
+   "mount_height_m": 2.48,
+   "tilt_deg": 10.1,
+   "hfov_deg": 60.0,
+   "useful_floor_m2": 211.2,
+   "labels": {
+    "samples": 6996,
+    "whole_person_boxes": 5511,
+    "hidden_pct": 21.2,
+    "bias_px": 5.8,
+    "bias_direction_px": [
+     -5.8,
+     0.6
+    ],
+    "spread_px": 2.3,
+    "floor_m_median": 0.168,
+    "floor_m_p90": 0.943
+   }
+  },
+  "Camera_0011": {
+   "passed": true,
+   "verdict": "lolos",
+   "mount_height_m": 3.73,
+   "tilt_deg": 13.0,
+   "hfov_deg": 60.0,
+   "useful_floor_m2": 316.9,
+   "labels": {
+    "samples": 3902,
+    "whole_person_boxes": 2844,
+    "hidden_pct": 27.1,
+    "bias_px": 0.9,
+    "bias_direction_px": [
+     0.9,
+     -0.2
+    ],
+    "spread_px": 2.6,
+    "floor_m_median": 0.203,
+    "floor_m_p90": 1.537
+   }
+  },
+  "Camera_0012": {
+   "passed": true,
+   "verdict": "lolos",
+   "mount_height_m": 2.15,
+   "tilt_deg": 9.8,
+   "hfov_deg": 60.0,
+   "useful_floor_m2": 184.4,
+   "labels": {
+    "samples": 1539,
+    "whole_person_boxes": 1465,
+    "hidden_pct": 4.8,
+    "bias_px": 4.1,
+    "bias_direction_px": [
+     -3.7,
+     -1.6
+    ],
+    "spread_px": 2.7,
+    "floor_m_median": 0.18,
+    "floor_m_p90": 0.417
+   }
+  },
+  "Camera_0013": {
+   "passed": true,
+   "verdict": "lolos",
+   "mount_height_m": 2.38,
+   "tilt_deg": 9.2,
+   "hfov_deg": 60.0,
+   "useful_floor_m2": 201.8,
+   "labels": {
+    "samples": 2250,
+    "whole_person_boxes": 1685,
+    "hidden_pct": 25.1,
+    "bias_px": 3.3,
+    "bias_direction_px": [
+     3.0,
+     -1.2
+    ],
+    "spread_px": 2.7,
+    "floor_m_median": 0.209,
+    "floor_m_p90": 0.422
+   }
+  },
+  "Camera_0014": {
+   "passed": true,
+   "verdict": "lolos",
+   "mount_height_m": 3.0,
+   "tilt_deg": 10.1,
+   "hfov_deg": 60.0,
+   "useful_floor_m2": 252.4,
+   "labels": {
+    "samples": 4364,
+    "whole_person_boxes": 3156,
+    "hidden_pct": 27.7,
+    "bias_px": 2.1,
+    "bias_direction_px": [
+     -1.6,
+     -1.3
+    ],
+    "spread_px": 3.7,
+    "floor_m_median": 0.192,
+    "floor_m_p90": 0.485
+   }
+  },
+  "Camera_0015": {
+   "passed": true,
+   "verdict": "lolos",
+   "mount_height_m": 2.45,
+   "tilt_deg": 9.6,
+   "hfov_deg": 60.0,
+   "useful_floor_m2": 208.3,
+   "labels": {
+    "samples": 10296,
+    "whole_person_boxes": 7808,
+    "hidden_pct": 24.2,
+    "bias_px": 0.7,
+    "bias_direction_px": [
+     0.6,
+     -0.2
+    ],
+    "spread_px": 2.2,
+    "floor_m_median": 0.166,
+    "floor_m_p90": 0.586
+   }
+  },
+  "Camera_0016": {
+   "passed": false,
+   "verdict": "gagal: bias 16.3 px, sebaran 11.4 px, meleset 0.347 m",
+   "mount_height_m": 2.11,
+   "tilt_deg": 10.4,
+   "hfov_deg": 60.0,
+   "useful_floor_m2": 181.7,
+   "labels": {
+    "samples": 1412,
+    "whole_person_boxes": 1317,
+    "hidden_pct": 6.7,
+    "bias_px": 16.3,
+    "bias_direction_px": [
+     -12.6,
+     -10.3
+    ],
+    "spread_px": 11.4,
+    "floor_m_median": 0.347,
+    "floor_m_p90": 0.522
+   }
+  },
+  "Camera_0017": {
+   "passed": true,
+   "verdict": "lolos",
+   "mount_height_m": 3.7,
+   "tilt_deg": 17.4,
+   "hfov_deg": 60.0,
+   "useful_floor_m2": 327.8,
+   "labels": {
+    "samples": 1319,
+    "whole_person_boxes": 1175,
+    "hidden_pct": 10.9,
+    "bias_px": 1.6,
+    "bias_direction_px": [
+     0.2,
+     -1.6
+    ],
+    "spread_px": 2.0,
+    "floor_m_median": 0.164,
+    "floor_m_p90": 0.356
+   }
+  },
+  "Camera_0019": {
+   "passed": true,
+   "verdict": "lolos",
+   "mount_height_m": 2.32,
+   "tilt_deg": 10.3,
+   "hfov_deg": 60.0,
+   "useful_floor_m2": 197.8,
+   "labels": {
+    "samples": 3819,
+    "whole_person_boxes": 3503,
+    "hidden_pct": 8.3,
+    "bias_px": 2.8,
+    "bias_direction_px": [
+     -2.8,
+     0.0
+    ],
+    "spread_px": 4.5,
+    "floor_m_median": 0.18,
+    "floor_m_p90": 0.637
+   }
+  }
+ }
+}

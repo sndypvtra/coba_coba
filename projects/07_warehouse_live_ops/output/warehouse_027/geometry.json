@@ -1,0 +1,49 @@
+{
+ "cameras": {
+  "Camera_0000": {
+   "mount_height_m": 2.86,
+   "tilt_deg": 32.4,
+   "hfov_deg": 86.0,
+   "used": true
+  },
+  "Camera_0001": {
+   "mount_height_m": 2.52,
+   "tilt_deg": 20.6,
+   "hfov_deg": 84.9,
+   "used": false
+  },
+  "Camera_0002": {
+   "mount_height_m": 2.71,
+   "tilt_deg": 35.7,
+   "hfov_deg": 85.8,
+   "used": false
+  },
+  "Camera_0003": {
+   "mount_height_m": 2.57,
+   "tilt_deg": 20.8,
+   "hfov_deg": 87.0,
+   "used": false
+  },
+  "Camera_0004": {
+   "mount_height_m": 2.56,
+   "tilt_deg": 20.6,
+   "hfov_deg": 84.3,
+   "used": false
+  },
+  "Camera_0005": {
+   "mount_height_m": 2.71,
+   "tilt_deg": 28.2,
+   "hfov_deg": 85.9,
+   "used": true
+  },
+  "Camera_0006": {
+   "mount_height_m": 2.99,
+   "tilt_deg": 33.8,
+   "hfov_deg": 87.0,
+   "used": true
+  }
+ },
+ "plan_px_per_m": 40.0,
+ "floor_painted_m2": 141.4,
+ "vggt_report": "\ud83d\udcf7 Camera 0:\n   Points: 237\n   Mean error: 0.0577 units\n   Std error: 0.0596 units\n   Median error: 0.0379 units\n   Max error: 0.3636 units\n\ud83d\udcf7 Camera 1:\n   Points: 130\n   Mean error: 0.0660 units\n   Std error: 0.0917 units\n   Median error: 0.0299 units\n   Max error: 0.6053 units\n\ud83d\udcf7 Camera 2:\n   Points: 133\n   Mean error: 0.0501 units\n   Std error: 0.0446 units\n   Median error: 0.0363 units\n   Max error: 0.2221 units\n\ud83d\udcf7 Camera 3:\n   Points: 102\n   Mean error: 0.0708 units\n   Std error: 0.0384 units\n   Median error: 0.0676 units\n   Max error: 0.1826 units\n\ud83d\udcf7 Camera 4:\n   Points: 54\n   Mean error: 0.1164 units\n   Std error: 0.0753 units\n   Median error: 0.0990 units\n   Max error: 0.3599 units\n\ud83d\udcf7 Camera 5:\n   Points: 207\n   Mean error: 0.0525 units\n   Std error: 0.0575 units\n   Median error: 0.0332 units\n   Max error: 0.4069 units\n\ud83d\udcf7 Camera 6:\n   Points: 137\n   Mean error: 0.0928 units\n   Std error: 0.0624 units\n   Median error: 0.0834 units\n   Max error: 0.3399 units\n\n\ud83d\udcca Overall Reprojection Error Statistics:\n   Total points: 1000\n   Mean error: 0.0660 units\n   RMSE: 0.0925 units\n   Std error: 0.0648 units\n   Median error: 0.0479 units\n   Min error: 0.0001 units\n   Max error: 0.6053 units\n\n\ud83d\udcc8 Error Distribution:\n   50th percentile: 0.0479 units\n   75th percentile: 0.0908 units\n   90th percentile: 0.1417 units\n   95th percentile: 0.1913 units\n   99th percentile: 0.3038 units"
+}

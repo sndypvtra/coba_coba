@@ -1,0 +1,66 @@
+{
+ "base": "yolo11n.pt",
+ "settings": {
+  "epochs": 6,
+  "imgsz": 960,
+  "batch": 8,
+  "freeze": 10,
+  "close_mosaic": 2,
+  "device": "cpu",
+  "val": false,
+  "plots": false,
+  "amp": false,
+  "seed": 0,
+  "deterministic": true
+ },
+ "training_set": {
+  "folder": "output/training_sets/semua_cctv",
+  "cameras": [
+   "Camera_0000",
+   "Camera_0001",
+   "Camera_0002",
+   "Camera_0003",
+   "Camera_0004",
+   "Camera_0005",
+   "Camera_0006",
+   "Camera_0007",
+   "Camera_0008",
+   "Camera_0009",
+   "Camera_0010",
+   "Camera_0011",
+   "Camera_0012",
+   "Camera_0013",
+   "Camera_0014",
+   "Camera_0015",
+   "Camera_0016",
+   "Camera_0017",
+   "Camera_0019"
+  ],
+  "images": {
+   "train": 684,
+   "val": 228
+  },
+  "boxes_train": {
+   "forklift": 879,
+   "person": 4412,
+   "pallet_truck": 720
+  },
+  "boxes_val": {
+   "forklift": 324,
+   "person": 1594,
+   "pallet_truck": 238
+  }
+ },
+ "held_out_frames": [
+  [
+   690,
+   1590
+  ],
+  [
+   3480,
+   4380
+  ]
+ ],
+ "minutes_on_cpu": 30.1,
+ "weights": "weights/site_detector_warehouse_000/site_detector_openvino_model"
+}

@@ -1,0 +1,78 @@
+{
+ "yoloe-11l-seg.pt @ 960": {
+  "sec_per_frame": 0.84,
+  "person": {
+   "recall": 0.519,
+   "precision": 1.0,
+   "labels": 206
+  },
+  "forklift": {
+   "recall": 0.176,
+   "precision": 0.565,
+   "labels": 74
+  },
+  "pallet_truck": {
+   "recall": 0.091,
+   "precision": 0.545,
+   "labels": 66
+  },
+  "person_recall_20_60px": 0.345
+ },
+ "yoloe-11l-seg.pt @ 1280": {
+  "sec_per_frame": 1.54,
+  "person": {
+   "recall": 0.636,
+   "precision": 0.992,
+   "labels": 206
+  },
+  "forklift": {
+   "recall": 0.189,
+   "precision": 1.0,
+   "labels": 74
+  },
+  "pallet_truck": {
+   "recall": 0.045,
+   "precision": 0.375,
+   "labels": 66
+  },
+  "person_recall_20_60px": 0.5
+ },
+ "yoloe-11m-seg.pt @ 960": {
+  "sec_per_frame": 0.77,
+  "person": {
+   "recall": 0.461,
+   "precision": 1.0,
+   "labels": 206
+  },
+  "forklift": {
+   "recall": 0.014,
+   "precision": 0.083,
+   "labels": 74
+  },
+  "pallet_truck": {
+   "recall": 0.136,
+   "precision": 0.25,
+   "labels": 66
+  },
+  "person_recall_20_60px": 0.267
+ },
+ "yoloe-11m-seg.pt @ 1280": {
+  "sec_per_frame": 1.29,
+  "person": {
+   "recall": 0.563,
+   "precision": 0.983,
+   "labels": 206
+  },
+  "forklift": {
+   "recall": 0.014,
+   "precision": 0.143,
+   "labels": 74
+  },
+  "pallet_truck": {
+   "recall": 0.076,
+   "precision": 0.161,
+   "labels": 66
+  },
+  "person_recall_20_60px": 0.379
+ }
+}

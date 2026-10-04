@@ -1,0 +1,169 @@
+{
+ "candidates": [
+  "Camera_0000",
+  "Camera_0001",
+  "Camera_0003",
+  "Camera_0005",
+  "Camera_0006",
+  "Camera_0007",
+  "Camera_0008",
+  "Camera_0010",
+  "Camera_0011",
+  "Camera_0012",
+  "Camera_0013",
+  "Camera_0014",
+  "Camera_0015",
+  "Camera_0017",
+  "Camera_0019"
+ ],
+ "rejected_by_geometry": [
+  "Camera_0002",
+  "Camera_0004",
+  "Camera_0009",
+  "Camera_0016"
+ ],
+ "video1_live_ops": {
+  "start_frame": 690,
+  "end_frame": 1590,
+  "stride": 3,
+  "start_s": 23.0,
+  "end_s": 53.0,
+  "people_on_floor": [
+   52,
+   58
+  ],
+  "people_walking_mean": 37.8,
+  "forklifts_moving_mean": 5.28,
+  "people_near_moving_forklift_samples": 183,
+  "cameras": {
+   "Camera_0003": {
+    "people_visible_mean": 10.7,
+    "people_visible_max": 15,
+    "forklifts_visible_mean": 3.14
+   },
+   "Camera_0005": {
+    "people_visible_mean": 7.7,
+    "people_visible_max": 11,
+    "forklifts_visible_mean": 3.2
+   },
+   "Camera_0011": {
+    "people_visible_mean": 5.5,
+    "people_visible_max": 7,
+    "forklifts_visible_mean": 2.79
+   },
+   "Camera_0007": {
+    "people_visible_mean": 3.2,
+    "people_visible_max": 5,
+    "forklifts_visible_mean": 2.38
+   }
+  },
+  "shown": [
+   "Camera_0003",
+   "Camera_0005",
+   "Camera_0011",
+   "Camera_0007"
+  ],
+  "why": "busiest 30 s by walking, moving forklifts, people near moving forklifts and people in view; four cameras that see most of it, at least 10 m or 45 degrees apart"
+ },
+ "video2_one_camera": {
+  "start_frame": 3480,
+  "end_frame": 4380,
+  "stride": 3,
+  "start_s": 116.0,
+  "end_s": 146.0,
+  "people_on_floor": [
+   52,
+   58
+  ],
+  "people_walking_mean": 37.2,
+  "forklifts_moving_mean": 5.2,
+  "people_near_moving_forklift_samples": 105,
+  "cameras": {
+   "Camera_0003": {
+    "people_visible_mean": 17.5,
+    "people_visible_max": 21,
+    "forklifts_visible_mean": 2.84
+   }
+  },
+  "camera": "Camera_0003",
+  "why": "the passing camera with the most people in view, over its own busiest 30 s"
+ },
+ "window_s": 30.0,
+ "busiest_cameras_whole_recording": [
+  {
+   "camera": "Camera_0003",
+   "people_visible_mean": 13.9,
+   "forklifts_visible_mean": 3.13
+  },
+  {
+   "camera": "Camera_0015",
+   "people_visible_mean": 11.6,
+   "forklifts_visible_mean": 2.98
+  },
+  {
+   "camera": "Camera_0008",
+   "people_visible_mean": 9.6,
+   "forklifts_visible_mean": 0.0
+  },
+  {
+   "camera": "Camera_0001",
+   "people_visible_mean": 9.4,
+   "forklifts_visible_mean": 1.37
+  },
+  {
+   "camera": "Camera_0010",
+   "people_visible_mean": 7.9,
+   "forklifts_visible_mean": 1.1
+  },
+  {
+   "camera": "Camera_0005",
+   "people_visible_mean": 7.5,
+   "forklifts_visible_mean": 3.44
+  },
+  {
+   "camera": "Camera_0014",
+   "people_visible_mean": 5.2,
+   "forklifts_visible_mean": 1.0
+  },
+  {
+   "camera": "Camera_0011",
+   "people_visible_mean": 4.4,
+   "forklifts_visible_mean": 2.08
+  },
+  {
+   "camera": "Camera_0019",
+   "people_visible_mean": 4.4,
+   "forklifts_visible_mean": 0.06
+  },
+  {
+   "camera": "Camera_0006",
+   "people_visible_mean": 4.1,
+   "forklifts_visible_mean": 0.09
+  },
+  {
+   "camera": "Camera_0007",
+   "people_visible_mean": 3.7,
+   "forklifts_visible_mean": 2.25
+  },
+  {
+   "camera": "Camera_0013",
+   "people_visible_mean": 2.6,
+   "forklifts_visible_mean": 0.3
+  },
+  {
+   "camera": "Camera_0000",
+   "people_visible_mean": 2.3,
+   "forklifts_visible_mean": 1.23
+  },
+  {
+   "camera": "Camera_0012",
+   "people_visible_mean": 1.9,
+   "forklifts_visible_mean": 0.06
+  },
+  {
+   "camera": "Camera_0017",
+   "people_visible_mean": 1.5,
+   "forklifts_visible_mean": 0.02
+  }
+ ]
+}

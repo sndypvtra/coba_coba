@@ -3,7 +3,8 @@
 <p align="center">
   <b>Turning a fixed camera into a number an operator can act on</b><br>
   Conveyor counting from text prompts, fill-volume inspection, cafe occupancy
-  and dwell time, and multi-camera 3D localisation on a warehouse floor.
+  and dwell time, multi-camera 3D localisation on a warehouse floor, and live
+  operations analytics across fifteen warehouse cameras.
 </p>
 
 <p align="center">
@@ -18,7 +19,7 @@
 
 ## What this is
 
-Six projects on fixed-camera footage, each in its own folder under
+Seven projects on fixed-camera footage, each in its own folder under
 [`projects/`](projects), each run with `python main.py`. Every figure below was
 measured by running the code in this repository, not estimated.
 
@@ -30,6 +31,7 @@ measured by running the code in this repository, not estimated.
 | **4** | [Bottling line](projects/04_bottle_fill_volume) | Measure dispensed volume | **1,001 mL** · 66.7 % of nominal |
 | **5** | [Cafe, two rooms](projects/05_cafe_dwell_time) | Occupancy and per-person dwell time | **14** / **12** visitors · mean dwell **17.9 s** / **24.6 s** |
 | **6** | [Warehouse, four cameras](projects/06_warehouse_3d) | Locate people in 3D, one floor plan, operational KPIs | median error **0.181 m** vs the dataset's own 3D truth |
+| **7** | [Warehouse live ops, fifteen cameras](projects/07_warehouse_live_ops) | One live floor plan, 20 operations analytics, each checked against ground truth | position error **0.19 m**; line counts and walking share match the truth |
 
 Each project's own README carries its method, its measured figures and what
 breaks it, and is written to stand on its own if the folder is lifted into a
@@ -37,7 +39,8 @@ separate repository.
 
 Cases 1–3, 5 and 6 are **zero-shot**: the detector is given words, never labels,
 never training. Case 4 is a **calibrated inspection**: colour segmentation and
-geometry, tuned to one station.
+geometry, tuned to one station. Case 7 uses both kinds of detector: zero-shot
+for people, and for vehicles one fine-tuned on the site's own labelled frames.
 
 ---
 
@@ -432,10 +435,12 @@ API, so its two 30-second cuts (47 MB) live in the repository.
 
 ## Layout
 
-Six projects, six folders. **Projects 01-04 are fully self-contained**: each
+Seven projects, seven folders. **Projects 01-04 are fully self-contained**: each
 carries its own copy of the engine in `factory_vision/`, so the folder can be
 lifted into a repository of its own and run there unchanged. Projects 05 and 06
-still import the shared `factory_vision/` at the root.
+still import the shared `factory_vision/` at the root. Project 07 is
+self-contained too, with its own code and its own layout (see its README) and
+no shared engine.
 
 Each has its own `main.py`, its own `input/` and `output/`, and its own README
 with its own measured results.
@@ -448,6 +453,7 @@ projects/
   04_bottle_fill_volume/    dispensed millilitres, colour and geometry
   05_cafe_dwell_time/       occupancy and per-person dwell
   06_warehouse_3d/          four cameras -> one floor plan in metres
+  07_warehouse_live_ops/    fifteen cameras -> one live plan, 20 analytics vs truth
 
     every project has these
       main.py               the entry point, and only the sequence of steps
