@@ -6,6 +6,11 @@
     python tools/build_mockups.py --scale 1       # quick, low-resolution preview
     python tools/build_mockups.py --no-svg        # PNG only
 
+Most pages are one 16:9 screen. The few in pages.LONG_PAGES (the full landing page)
+are 1600 px wide and as tall as their content: such a page writes its own height into
+data-h on <body>, and the build reads it back before sizing the screenshot and the
+PDF sheet.
+
 Each page is a hand-built HTML/CSS/SVG document (tools/mockup/pages.py) drawn in
 headless Chromium - the same engine the architecture diagram was checked with.
 Fonts and icons are fetched once into tools/.mockup_cache and embedded, so a
@@ -43,22 +48,32 @@ CHROME = os.environ.get("CHROME") or (_SHELL if Path(_SHELL).exists()
                                       else "/opt/pw-browsers/chromium-1194/chrome-linux/chrome")
 
 
-def _chrome(*args: str) -> subprocess.CompletedProcess:
+def _chrome(*args: str, size: tuple[int, int] = (1600, 900)) -> subprocess.CompletedProcess:
     cmd = [CHROME] + ([] if "headless_shell" in CHROME else ["--headless"]) + [
-           "--no-sandbox", "--disable-gpu", "--hide-scrollbars", "--window-size=1600,900",
+           "--no-sandbox", "--disable-gpu", "--hide-scrollbars", f"--window-size={size[0]},{size[1]}",
            "--virtual-time-budget=6000", *args]
     return subprocess.run(cmd, capture_output=True, text=True)
 
 
-def render(html_path: Path, png_path: Path, scale: float) -> None:
-    r = _chrome(f"--force-device-scale-factor={scale}", f"--screenshot={png_path}", f"file://{html_path}")
+def render(html_path: Path, png_path: Path, scale: float, size: tuple[int, int] = (1600, 900)) -> None:
+    png_path.unlink(missing_ok=True)
+    r = _chrome(f"--force-device-scale-factor={scale}", f"--screenshot={png_path}", f"file://{html_path}", size=size)
     if not png_path.exists():
         sys.exit(f"render failed for {html_path.name}:\n{r.stderr[-800:]}")
 
 
-def render_svg(html_path: Path, svg_path: Path) -> None:
-    """Print the page to a one-page PDF (the page CSS sets a 1600x900 sheet), then
-    convert that page to SVG with the text drawn as outlines."""
+def page_height(html_path: Path) -> int:
+    """The height a long page reports for itself once its fonts are in."""
+    r = _chrome("--dump-dom", f"file://{html_path}", size=(1600, 2000))
+    m = re.search(r'<body[^>]*\bdata-h="(\d+)"', r.stdout)
+    if not m:
+        sys.exit(f"{html_path.name} did not report its height:\n{r.stderr[-800:]}")
+    return int(m.group(1))
+
+
+def render_svg(html_path: Path, svg_path: Path, size: tuple[int, int] = (1600, 900)) -> None:
+    """Print the page to a one-page PDF (the page CSS sets the sheet to the page's own
+    size), then convert that page to SVG with the text drawn as outlines."""
     import pymupdf
     pdf_path = html_path.with_suffix(".pdf")
     pdf_path.unlink(missing_ok=True)
@@ -71,7 +86,7 @@ def render_svg(html_path: Path, svg_path: Path) -> None:
         svg = doc[0].get_svg_image(text_as_path=True)
     # Chromium rounds the 1600x900 px sheet to 1200 x 675.12 pt; trim the stray 0.12 pt
     # so the SVG is exactly 16:9 and fills a slide with no sliver.
-    w, h = 1200, 675
+    w, h = round(size[0] * 0.75), round(size[1] * 0.75)
 
     def sized(m: re.Match) -> str:
         tag = re.sub(r'\bheight="[\d.]+"', f'height="{h}"', m.group(0))
@@ -91,7 +106,7 @@ def render_svg(html_path: Path, svg_path: Path) -> None:
     # number: a deck tool that pastes several pages into one document would otherwise
     # let a page pick up another page's clip_451 or glyph font_6_363.
     svg = re.sub(r"<clipPath\b[^>]*>.*?</clipPath>", _bake_clip, svg, flags=re.S)
-    pfx = f"p{svg_path.name[:2]}_"
+    pfx = f"p{svg_path.name[:2]}{'' if size == (1600, 900) else 'L'}_"  # the long page shares its number
     svg = re.sub(r'(\sid="|url\(#|href="#)', lambda m: m.group(1) + pfx, svg)
     svg_path.write_text(svg, encoding="utf-8")
 
@@ -153,6 +168,20 @@ def main() -> None:
         if a.only and not any(name.startswith(p) for p in a.only):
             continue
         emit(name, fn())
+
+    for name, fn in pages.LONG_PAGES:
+        if a.only and not any(name.startswith(p) for p in a.only):
+            continue
+        html = fn()
+        h = work / f"{name}.html"
+        h.write_text(html, encoding="utf-8")
+        size = (1600, page_height(h.resolve()))
+        h.write_text(html.replace("</head>", f"<style>@page{{size:{size[0]}px {size[1]}px;margin:0}}</style></head>", 1),
+                     encoding="utf-8")
+        render(h.resolve(), (out / f"{name}.png").resolve(), a.scale, size)
+        if want_svg:
+            render_svg(h.resolve(), (svg_dir / f"{name}.svg").resolve(), size)
+        print(f"  {name} ({size[0]}x{size[1]})")
 
     if not a.only or any("00".startswith(p) or p.startswith("00") for p in a.only):
         import base64

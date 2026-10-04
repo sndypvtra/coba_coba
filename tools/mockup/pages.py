@@ -17,7 +17,7 @@ from __future__ import annotations
 import math
 from pathlib import Path
 
-from kit import (AXIS, BLUE, BRAND, INK, INK2, MUTED, ORANGE, ORDINAL, RAMP, SURF, basis, chip, columns,
+from kit import (AXIS, BLUE, BRAND, CSS, INK, INK2, MUTED, ORANGE, ORDINAL, RAMP, SURF, basis, chip, columns, font_css,
                  data_uri, heatmap, ic, kpi, line_chart, logo, page, scale_bar, spark, stacked_columns, toggle)
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -1047,6 +1047,296 @@ def audit() -> str:
                 actions=sel("Periode", "Kemarin") + sel("Shift", "Semua shift") + btn("Download", "download"), body=body)
 
 
+# ============================================================== 12 landing page
+# The public site an outlet owner lands on from an ad or a WhatsApp link. It is
+# written for the person who pays, not for an engineer: one promise in the headline
+# (find the money leaking at the till, with the cameras already there), the proof
+# right beside it (the audit page and the morning WhatsApp), and one action (try it
+# free for 30 days). Its numbers are the app pages' numbers, so the site and the deck
+# never disagree. There are no testimonials and no customer logos: there are none
+# yet, and a mockup that invents them is the first thing an investor checks.
+SITE = "outlytics.ai"
+PILOT_SLOTS = 10   # outlets in the first pilot round, Jabodetabek
+
+LP_CSS = r"""
+html,body{height:auto!important;overflow:visible!important;background:#fff}
+.lp{background:#fff;color:var(--ink)}
+.lp-wrap{width:1300px;margin:0 auto}
+.lp-ann{background:#0d366b;color:#cde2fb;font-size:13px;height:34px;display:flex;align-items:center;justify-content:center;gap:10px}
+.lp-ann b{color:#fff}
+.lp-nav{height:70px;display:flex;align-items:center;justify-content:space-between}
+.lp-links{display:flex;gap:32px;font-size:14.5px;color:var(--ink2);font-weight:500}
+.lp-btn{display:inline-flex;align-items:center;gap:9px;height:50px;padding:0 24px;border-radius:12px;font-size:16px;font-weight:600;
+  border:1px solid rgba(11,11,11,.14);background:#fff;color:var(--ink);white-space:nowrap}
+.lp-btn.pri{background:var(--blue);border-color:var(--blue);color:#fff}
+.lp-btn.sm{height:40px;padding:0 16px;font-size:14px;border-radius:10px}
+.lp-eyebrow{display:inline-flex;align-items:center;gap:8px;height:32px;padding:0 14px;border-radius:999px;background:var(--blue-t);color:var(--blue-d);font-size:13.5px;font-weight:600}
+.lp-h1{font-size:52px;line-height:1.08;font-weight:700;letter-spacing:-.03em;margin-top:20px}
+.lp-h1 .hl{color:var(--blue)}
+.lp-lead{font-size:18.5px;line-height:1.55;color:var(--ink2);margin-top:20px}
+.lp-micro{font-size:13.5px;color:var(--muted);margin-top:14px}
+.lp-trust{display:flex;gap:26px;margin-top:30px;padding-top:24px;border-top:1px solid var(--grid)}
+.lp-trust div{display:flex;gap:10px;align-items:center;font-size:14px;font-weight:600;line-height:1.3}
+.lp-ti{width:36px;height:36px;border-radius:10px;background:var(--blue-t);color:var(--blue-d);display:grid;place-items:center;flex:none}
+.lp-sec{padding:88px 0}
+.lp-sec.tint{background:#f6f6f3}
+.lp-kicker{font-size:13px;font-weight:700;letter-spacing:.1em;color:var(--blue);text-transform:uppercase}
+.lp-h2{font-size:40px;line-height:1.15;font-weight:700;letter-spacing:-.025em;margin-top:12px}
+.lp-sub{font-size:17.5px;line-height:1.55;color:var(--ink2);margin-top:14px;max-width:780px}
+.lp-center{text-align:center}.lp-center .lp-sub{margin-left:auto;margin-right:auto}
+.lp-card{background:#fff;border:1px solid var(--border);border-radius:18px;padding:28px}
+.lp-card h4{font-size:20px;font-weight:700;letter-spacing:-.01em;margin-top:18px}
+.lp-card p{font-size:15.5px;line-height:1.55;color:var(--ink2);margin-top:8px}
+.lp-ic{width:48px;height:48px;border-radius:14px;display:grid;place-items:center}
+.lp-ic.blue{background:var(--blue-t);color:var(--blue-d)}.lp-ic.warn{background:var(--warn-t);color:var(--warn-x)}
+.lp-ic.crit{background:var(--crit-t);color:var(--crit-x)}.lp-ic.good{background:var(--good-t);color:var(--good-x)}
+.lp-check{display:flex;gap:12px;align-items:flex-start;font-size:16px;line-height:1.5;color:var(--ink2);margin-top:14px}
+.lp-check b{color:var(--ink)}
+.lp-num{width:40px;height:40px;border-radius:50%;background:var(--blue);color:#fff;display:grid;place-items:center;font-weight:700;font-size:17px;flex:none}
+.lp-price{font-size:40px;font-weight:700;letter-spacing:-.025em}
+.lp-price small{font-size:15px;font-weight:500;color:var(--ink2);letter-spacing:0;margin-left:4px}
+.lp-feat{display:flex;gap:10px;font-size:15px;color:var(--ink2);margin-top:11px;align-items:center}
+.lp-q{font-size:17px;font-weight:700}
+.lp-a{font-size:15.5px;line-height:1.55;color:var(--ink2);margin-top:8px}
+.lp-field{height:52px;border-radius:12px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.12);display:flex;align-items:center;padding:0 18px;
+  font-size:15.5px;color:#cde2fb}
+.lp-wa{width:58px;height:58px;border-radius:50%;background:#25d366;display:grid;place-items:center}
+"""
+
+
+def _lp_shot(box: tuple[int, int, int, int], width: int) -> str:
+    """A crop of the rendered Audit Kasir page as a JPEG data URI; box is in page px."""
+    import base64
+    import cv2
+    src = Path(__file__).resolve().parents[2] / "docs" / "mockup" / "11-audit-kasir.png"
+    if not src.exists():
+        raise SystemExit("the landing page shows 11-audit-kasir.png; render page 11 first")
+    im = cv2.imread(str(src))
+    k = im.shape[1] / 1600
+    x0, y0, x1, y1 = (round(v * k) for v in box)
+    crop = im[y0:y1, x0:x1]
+    crop = cv2.resize(crop, (width, round(width * crop.shape[0] / crop.shape[1])), interpolation=cv2.INTER_AREA)
+    ok, buf = cv2.imencode(".jpg", crop, [cv2.IMWRITE_JPEG_QUALITY, 90])
+    return "data:image/jpeg;base64," + base64.b64encode(buf.tobytes()).decode()
+
+
+def _lp_nav() -> str:
+    links = "".join(f"<span>{t}</span>" for t in ("Cara kerja", "Audit Kasir", "Fitur", "Harga", "Tanya jawab"))
+    return (f'<div class="lp-wrap lp-nav"><div class="brand" style="padding:0;font-size:20px"><span class="logo" style="width:32px;height:32px">{logo(19)}</span>{BRAND}</div>'
+            f'<div class="lp-links">{links}</div>'
+            f'<div class="row g10"><span class="lp-btn sm">Masuk</span><span class="lp-btn sm pri">Coba gratis 30 hari</span></div></div>')
+
+
+def _lp_ann() -> str:
+    return (f'<div class="lp-ann">{ic("sparkles", 14, color="#9ec5f4")}<span>Program pilot dibuka: <b>{PILOT_SLOTS} outlet pertama di Jabodetabek</b>'
+            f' dipasang dan didampingi langsung oleh tim kami.</span><span style="color:#fff;font-weight:600">Daftar →</span></div>')
+
+
+def _lp_phone(t: dict) -> str:
+    """The morning WhatsApp, drawn in the page so it stays vector in the SVG."""
+    wa = ic("whatsapp", 13, prefix="simple-icons", color="#25d366")
+    lines = (f"• Pengunjung: <b>241 orang</b><br>• Kasir vs struk: <b>{t['matched']} dari {t['served']}</b> cocok<br>"
+             f"• Perlu dicek: <b>{len(FINDINGS)} temuan</b><br>&nbsp;&nbsp;(±Rp {t['est']} rb)<br>• Antre lalu pergi: <b>{QUEUE_LEFT} rombongan</b>")
+    return (f'<div style="width:214px;height:330px;border-radius:32px;background:#161615;padding:8px">'
+            f'<div style="width:100%;height:100%;border-radius:25px;background:#ece5dd;overflow:hidden;display:flex;flex-direction:column">'
+            f'<div class="row g8" style="padding:12px 12px 10px;background:#0f5a4c;color:#fff"><span class="logo" style="width:26px;height:26px;border-radius:50%">{logo(15)}</span>'
+            f'<div><div style="font-size:12px;font-weight:600;line-height:1.2">{BRAND} · Senopati</div><div style="font-size:10px;opacity:.8" class="row g4">{wa}akun bisnis</div></div></div>'
+            f'<div style="padding:10px 9px"><div style="background:#fff;border-radius:2px 10px 10px 10px;padding:8px 10px 6px;font-size:11.5px;line-height:1.5">'
+            f'<b>Laporan harian</b> · Rabu, 30 Sep<br>{lines}<div class="right" style="font-size:9.5px;color:#898781;margin-top:2px">08.00</div></div></div></div></div>')
+
+
+def _lp_hero(t: dict, pad: int = 34) -> str:
+    shot = _lp_shot((26, 20, 1574, 872), 1240)
+    trust = "".join(f'<div><span class="lp-ti">{ic(i, 19)}</span><span>{a}<br><span style="font-weight:500;color:var(--ink2)">{b}</span></span></div>'
+                    for i, a, b in (("cctv", "Tanpa kamera baru", "pakai CCTV yang ada"),
+                                    ("eye-off", "Tanpa wajah", "tanpa nama"),
+                                    ("cloud-off", "Video tidak", "disimpan di cloud")))
+    left = f"""<div style="width:600px;flex:none;padding-top:8px">
+ <span class="lp-eyebrow">{ic("store", 15)}Untuk pemilik kafe, resto, dan toko dengan banyak outlet</span>
+ <h1 class="lp-h1">Temukan omzet yang <span class="hl">bocor di kasir</span>, dari CCTV yang sudah ada.</h1>
+ <p class="lp-lead">Outlytics mencocokkan setiap pelanggan yang dilayani di kasir dengan struk di aplikasi kasir Anda.
+ Selisihnya dikirim ke WhatsApp setiap pagi, lengkap dengan perkiraan rupiah dan klip buktinya.</p>
+ <div class="row g12" style="margin-top:30px"><span class="lp-btn pri">Coba gratis 30 hari{ic("arrow-right", 18, 2.2)}</span>
+  <span class="lp-btn">{ic("whatsapp", 18, prefix="simple-icons", color="#25d366")}Tanya lewat WhatsApp</span></div>
+ <div class="lp-micro">Tanpa kartu kredit · Tanpa kontrak · Dipasang tim kami dalam satu kunjungan</div>
+ <div class="lp-trust">{trust}</div></div>"""
+    chip = ('position:absolute;background:#fff;border:1px solid var(--border);border-radius:14px;padding:11px 14px;'
+            'box-shadow:0 12px 30px rgba(11,11,11,.14);display:flex;gap:10px;align-items:center')
+    right = f"""<div style="position:relative;width:640px;height:560px;flex:none">
+ <div style="position:absolute;left:44px;top:34px;width:596px;height:478px;border-radius:30px;background:#eaf1fb"></div>
+ <div style="position:absolute;left:78px;top:76px;width:540px;border-radius:12px;overflow:hidden;background:#fff;border:1px solid rgba(11,11,11,.12);box-shadow:0 24px 50px rgba(16,66,129,.18)">
+  <img src="{shot}" style="width:100%;display:block"></div>
+ <div style="position:absolute;left:0;top:226px;box-shadow:0 20px 40px rgba(11,11,11,.22);border-radius:32px">{_lp_phone(t)}</div>
+ <div style="{chip};right:0;top:0"><span class="ibox crit" style="width:34px;height:34px">{ic("receipt-text", 17)}</span>
+  <div><div class="b" style="font-size:14px">{len(FINDINGS)} temuan perlu dicek</div><div class="xs ink2">kemarin · perkiraan ±Rp {t["est"]} rb</div></div></div>
+ <div style="{chip};right:6px;bottom:0"><span class="ibox good" style="width:34px;height:34px">{ic("circle-check", 17)}</span>
+  <div><div class="b" style="font-size:14px">{t["matched"]} dari {t["served"]} rombongan</div><div class="xs ink2">cocok dengan struk</div></div></div></div>"""
+    return f'<div class="lp-wrap row" style="justify-content:space-between;align-items:center;padding:{pad}px 0 0">{left}{right}</div>'
+
+
+def _lp_doc(body: str) -> str:
+    return (f'<!doctype html><html lang="id"><head><meta charset="utf-8"><style>{font_css()}{CSS}{LP_CSS}</style></head>'
+            f'<body>{body}</body></html>')
+
+
+def landing() -> str:
+    """The site's first screen in a browser window, for the deck."""
+    _, t = _audit()
+    wa = ic("whatsapp", 30, prefix="simple-icons", color="#fff")
+    site = (f'<div class="lp" style="position:relative;height:100%">{_lp_ann()}{_lp_nav()}<div style="height:1px;background:var(--grid)"></div>{_lp_hero(t, 62)}'
+            f'<div class="lp-wa" style="position:absolute;right:26px;bottom:22px;box-shadow:0 10px 24px rgba(11,11,11,.22)">{wa}</div></div>')
+    return _lp_doc(f"""<div class="stage"><div class="win">
+ <div class="chrome"><div class="dots"><i></i><i></i><i></i></div>
+   <div class="url">{ic('lock', 12, color=MUTED)}<span>{SITE}</span></div><div class="sp"></div></div>
+ <div style="flex:1;min-height:0;overflow:hidden">{site}</div></div>
+ <div class="mocktag">MOCKUP · contoh data, bukan data asli</div></div>""")
+
+
+def landing_full() -> str:
+    """The whole site top to bottom, 1600 px wide. The page measures its own height
+    (data-h on <body>) so the build can size the screenshot and the PDF sheet to it."""
+    _, t = _audit()
+
+    def problem(kind, icon_, title, text):
+        return f'<div class="lp-card"><div class="lp-ic {kind}">{ic(icon_, 24)}</div><h4>{title}</h4><p>{text}</p></div>'
+
+    problems = f"""<div class="lp-sec"><div class="lp-wrap">
+ <div class="lp-center"><div class="lp-kicker">Masalahnya</div><h2 class="lp-h2">Yang tidak tercatat, tidak bisa Anda perbaiki.</h2>
+  <p class="lp-sub">Aplikasi kasir hanya tahu apa yang diketik. CCTV merekam semuanya, tapi rekamannya baru dibuka kalau sudah ada masalah.</p></div>
+ <div class="grid" style="grid-template-columns:repeat(3,1fr);gap:24px;margin-top:48px">
+  {problem("crit", "receipt-text", "Transaksi yang tidak diketik", "Pelanggan sudah membayar, tapi struknya tidak pernah ada. Di laporan kasir, transaksi itu tidak pernah terjadi.")}
+  {problem("warn", "log-out", "Pembeli pergi karena antre", "Mereka masuk, melihat antrean panjang, lalu keluar. Tidak tercatat di mana pun, padahal omzetnya hilang.")}
+  {problem("blue", "store", "Cabang yang tidak bisa Anda tunggui", "Anda tidak bisa ada di semua outlet setiap hari. Laporan dari cabang belum tentu menceritakan semuanya.")}</div></div></div>"""
+
+    def step(n, icon_, title, text):
+        return (f'<div class="lp-card" style="position:relative"><div class="row sp"><span class="lp-num">{n}</span><span class="lp-ic blue">{ic(icon_, 24)}</span></div>'
+                f'<h4>{title}</h4><p>{text}</p></div>')
+
+    how = f"""<div class="lp-sec tint"><div class="lp-wrap">
+ <div class="lp-center"><div class="lp-kicker">Cara kerja</div><h2 class="lp-h2">Tiga langkah. Tanpa kamera baru.</h2>
+  <p class="lp-sub">Tim kami memasang semuanya dalam satu kunjungan. Laporan pertama datang ke WhatsApp Anda keesokan paginya.</p></div>
+ <div class="grid" style="grid-template-columns:repeat(3,1fr);gap:24px;margin-top:48px">
+  {step(1, "cctv", "Sambungkan CCTV yang sudah ada", "Perangkat kecil di outlet membaca CCTV Anda dan menghitung orang. Videonya tetap di outlet.")}
+  {step(2, "plug", "Sambungkan aplikasi kasir", "Lewat sambungan resmi aplikasi kasir Anda, atau cukup upload file Excel penjualan harian.")}
+  {step(3, "message-circle", "Terima laporan di WhatsApp", "Setiap pagi: berapa pelanggan yang cocok dengan struk, berapa yang perlu dicek, dan perkiraan rupiahnya.")}</div></div></div>"""
+
+    spot_img = _lp_shot((238, 58, 1574, 872), 1300)
+    checks = "".join(f'<div class="lp-check"><span style="color:var(--good-x);margin-top:2px">{ic("circle-check", 20, 2.2)}</span><span>{x}</span></div>' for x in (
+        "<b>Pelanggan tanpa struk langsung terlihat</b>, lengkap dengan jam dan berapa lama ia dilayani.",
+        "<b>Kasus wajar disaring otomatis</b>, misalnya pengemudi ojol yang mengambil pesanan online, atau orang yang hanya bertanya.",
+        "<b>Selisihnya dalam rupiah</b>, dengan klip bukti 30 detik yang diputar langsung dari perangkat di outlet.",
+        "<b>Dibandingkan per shift, bukan per orang</b>, supaya adil untuk tim Anda."))
+    spotlight = f"""<div class="lp-sec"><div class="lp-wrap row" style="gap:64px;align-items:center">
+ <div style="width:500px;flex:none"><div class="lp-kicker">Audit Kasir</div><h2 class="lp-h2">Setiap pelanggan dicocokkan dengan struknya.</h2>
+  <p class="lp-sub">Contoh dari satu outlet, satu hari: {t["served"]} rombongan dilayani di kasir, {t["matched"]} cocok dengan struk, {t["explained"]} dijelaskan otomatis,
+  dan {len(FINDINGS)} perlu dicek senilai ±Rp {t["est"]} rb.</p>{checks}</div>
+ <div class="grow" style="border-radius:16px;overflow:hidden;border:1px solid rgba(11,11,11,.12);box-shadow:0 24px 50px rgba(16,66,129,.16)"><img src="{spot_img}" style="width:100%;display:block"></div>
+ </div></div>"""
+
+    def feat(icon_, title, text):
+        return (f'<div class="lp-card" style="padding:24px"><div class="row g14" style="align-items:flex-start"><span class="lp-ic blue" style="width:44px;height:44px">{ic(icon_, 22)}</span>'
+                f'<div><div class="b" style="font-size:17px">{title}</div><div style="font-size:15px;line-height:1.5;color:var(--ink2);margin-top:6px">{text}</div></div></div></div>')
+
+    feats = f"""<div class="lp-sec tint"><div class="lp-wrap">
+ <div class="lp-center"><div class="lp-kicker">Fitur lain</div><h2 class="lp-h2">Satu aplikasi untuk semua outlet Anda.</h2></div>
+ <div class="grid" style="grid-template-columns:repeat(3,1fr);gap:20px;margin-top:44px">
+  {feat("message-circle", "Ringkasan setiap pagi", "Pengunjung, jam ramai, kasir kosong, dan temuan, langsung di WhatsApp.")}
+  {feat("radio", "Pantauan live", "Lihat ramai-sepinya outlet saat ini tanpa membuka rekaman.")}
+  {feat("siren", "Antrean dan kasir kosong", "Pemberitahuan saat antrean panjang dan tidak ada staf di kasir.")}
+  {feat("chart-column", "Jam ramai dan kebutuhan staf", "Tahu kapan perlu tambah orang, dari data, bukan perkiraan.")}
+  {feat("building-2", "Perbandingan semua outlet", "Satu layar untuk semua cabang. Tahu mana yang perlu dicek minggu ini.")}
+  {feat("users", "Hak akses per peran", "Owner, admin, dan manager outlet melihat yang memang perlu saja.")}</div></div></div>"""
+
+    omzet, struk, miss, left = 150_000, 60, 1, 3        # Rp rb a month, Rp rb a receipt, % unrecorded, % who walk out
+    receipts = omzet // struk
+    a_rp, b_rp = receipts * miss // 100 * struk, receipts * left // 100 * struk
+    total, fee = a_rp + b_rp, 1_500
+
+    def field(k, v):
+        return (f'<div><div style="font-size:14px;color:var(--ink2);font-weight:500">{k}</div>'
+                f'<div class="field" style="height:50px;font-size:17px;margin-top:8px;border-radius:12px"><span class="b">{v}</span>{ic("pencil", 16, color=MUTED)}</div></div>')
+
+    def res(label, v, sub):
+        return (f'<div class="row sp" style="padding:16px 0;border-bottom:1px solid var(--grid)"><div><div style="font-size:16px;font-weight:600">{label}</div>'
+                f'<div class="sm muted" style="margin-top:3px">{sub}</div></div><div class="b tnum" style="font-size:22px">±Rp {idn(v / 1000)} jt</div></div>')
+
+    def bar(label, v, color, txt):
+        return (f'<div class="row g12" style="margin-top:12px"><span style="width:150px;font-size:14px;color:var(--ink2)">{label}</span>'
+                f'<div class="grow"><div style="width:{100 * v / total:.1f}%;height:14px;border-radius:0 4px 4px 0;background:{color}"></div></div>'
+                f'<span class="b tnum" style="width:92px;text-align:right;font-size:15px">{txt}</span></div>')
+
+    roi = f"""<div class="lp-sec"><div class="lp-wrap">
+ <div class="lp-center"><div class="lp-kicker">Hitung sendiri</div><h2 class="lp-h2">Berapa yang mungkin bocor di outlet Anda?</h2>
+  <p class="lp-sub">Masukkan omzet dan rata-rata nilai struk. Angka sebenarnya di outlet Anda terlihat dalam masa coba gratis 30 hari.</p></div>
+ <div class="lp-card row" style="margin-top:44px;padding:36px;gap:48px;align-items:stretch">
+  <div class="col" style="width:380px;flex:none;gap:22px">{field("Omzet per bulan", f"Rp {omzet // 1000} jt")}{field("Rata-rata nilai struk", f"Rp {struk} rb")}
+   <div class="sm muted" style="line-height:1.5">Sekitar {idn(receipts, 0)} struk sebulan. Persentase di samping adalah contoh, bukan janji.</div></div>
+  <div class="grow">{res(f"Kalau {miss}% transaksi tidak tercatat", a_rp, f"{receipts * miss // 100} struk × Rp {struk} rb")}
+   {res(f"Kalau {left}% pembeli pergi karena antre", b_rp, f"{receipts * left // 100} pembeli × Rp {struk} rb")}
+   <div class="row sp" style="padding:18px 0 6px"><div style="font-size:18px;font-weight:700">Yang bisa terlihat setiap bulan</div>
+    <div class="tnum" style="font-size:34px;font-weight:700;letter-spacing:-.02em;color:var(--blue-d)">±Rp {idn(total / 1000)} jt</div></div>
+   {bar("Potensi terlihat", total, BLUE, f"±Rp {idn(total / 1000)} jt")}{bar("Biaya paket Growth", fee, AXIS, f"Rp {idn(fee / 1000)} jt")}
+   <div class="sm muted" style="margin-top:14px">Biaya paket Growth per outlet per bulan, {round(total / fee)}× lebih kecil dari potensi pada contoh ini.</div></div></div></div></div>"""
+
+    def trust_item(icon_, title, text):
+        return (f'<div class="row g14" style="align-items:flex-start"><span class="lp-ic good" style="width:44px;height:44px">{ic(icon_, 22)}</span>'
+                f'<div><div class="b" style="font-size:17px">{title}</div><div style="font-size:15px;line-height:1.5;color:var(--ink2);margin-top:5px">{text}</div></div></div>')
+
+    privacy = f"""<div class="lp-sec tint"><div class="lp-wrap">
+ <div class="lp-center"><div class="lp-kicker">Privasi</div><h2 class="lp-h2">Aman untuk pelanggan, adil untuk karyawan.</h2></div>
+ <div class="grid" style="grid-template-columns:repeat(3,1fr);gap:34px 40px;margin-top:48px">
+  {trust_item("cctv", "Tanpa kamera baru", "Memakai CCTV yang sudah terpasang di outlet Anda.")}
+  {trust_item("eye-off", "Tanpa wajah, tanpa nama", "Sistem hanya menghitung orang, tidak mengenali siapa orangnya.")}
+  {trust_item("cloud-off", "Video tidak disimpan di cloud", "Rekaman tetap di outlet. Yang dikirim hanya angka.")}
+  {trust_item("lock", "Klip bukti hanya untuk Owner", "30 detik per temuan, terhapus otomatis setelah 30 hari, setiap pemutaran tercatat.")}
+  {trust_item("users", "Per shift, bukan per orang", "Laporan per kasir hanya menyala kalau Owner mengizinkan dan tim diberi tahu.")}
+  {trust_item("key-round", "Akses tim kami dengan izin Anda", "Tim Outlytics hanya bisa melihat data Anda dengan izin sementara yang tercatat.")}</div></div></div>"""
+
+    def plan(name, price, unit, items, hot=False):
+        ft = "".join(f'<div class="lp-feat">{ic("check", 17, 2.4, color="#2a78d6")}<span>{x}</span></div>' for x in items)
+        tag = '<span class="chip info" style="height:24px">Disarankan</span>' if hot else ""
+        line = "2px solid var(--blue)" if hot else "1px solid var(--border)"
+        btn = '<span class="lp-btn pri" style="width:100%;justify-content:center">Coba gratis 30 hari</span>' if hot else '<span class="lp-btn" style="width:100%;justify-content:center">Coba gratis 30 hari</span>'
+        return (f'<div class="lp-card col" style="border:{line};padding:30px"><div class="row sp"><span class="b" style="font-size:19px">{name}</span>{tag}</div>'
+                f'<div class="lp-price" style="margin-top:14px">{price}<small>{unit}</small></div><div style="margin:8px 0 6px;height:1px;background:var(--grid)"></div>{ft}'
+                f'<div style="margin-top:auto;padding-top:26px">{btn}</div></div>')
+
+    pricing = f"""<div class="lp-sec"><div class="lp-wrap">
+ <div class="lp-center"><div class="lp-kicker">Harga</div><h2 class="lp-h2">Mulai dari satu outlet.</h2>
+  <p class="lp-sub">Gratis 30 hari untuk semua paket. Tanpa kontrak, bisa berhenti kapan saja.</p></div>
+ <div class="grid" style="grid-template-columns:repeat(3,1fr);gap:24px;margin-top:48px;align-items:stretch">
+  {plan("Starter", "Rp 500 rb", "/outlet/bulan", ["Maksimal 2 CCTV", "Pantauan live", "Riwayat 30 hari", "Laporan lewat email"])}
+  {plan("Growth", "Rp 1,5 jt", "/outlet/bulan", ["Maksimal 4 CCTV", "<b style='color:var(--ink)'>Audit Kasir</b>", "Antrean dan kasir kosong", "Laporan dan notifikasi WhatsApp", "Riwayat 13 bulan"], True)}
+  {plan("Enterprise", "Hubungi kami", "", ["CCTV tanpa batas", "Perbandingan semua outlet", "Login Google dan peran khusus", "Garansi layanan (SLA)"])}</div></div></div>"""
+
+    qa = [("Apakah saya harus membeli kamera baru?", "Tidak. Outlytics memakai CCTV yang sudah ada, selama gambarnya cukup jelas. Tim kami mengeceknya saat pemasangan."),
+          ("Apakah karyawan saya akan merasa diawasi?", "Laporan dibuat per shift, bukan per orang, dan sistem tidak mengenali wajah. Kami juga menyiapkan pemberitahuan untuk tim Anda."),
+          ("Aplikasi kasir apa yang bisa disambungkan?", "Aplikasi kasir yang menyediakan sambungan resmi (Open API). Kalau belum ada, cukup upload file Excel penjualan harian."),
+          ("Apakah video saya dikirim ke internet?", "Video tidak disimpan di cloud; yang dikirim hanya angka. Klip bukti 30 detik hanya bisa diputar Owner, langsung dari perangkat di outlet."),
+          ("Berapa lama pemasangannya?", "Biasanya selesai dalam satu kunjungan. Laporan pertama datang ke WhatsApp Anda keesokan paginya."),
+          ("Bagaimana kalau internet outlet mati?", "Perangkat di outlet tetap menghitung, lalu mengirim datanya begitu internet kembali.")]
+    faq = f"""<div class="lp-sec tint"><div class="lp-wrap">
+ <div class="lp-center"><div class="lp-kicker">Tanya jawab</div><h2 class="lp-h2">Yang paling sering ditanyakan.</h2></div>
+ <div class="grid" style="grid-template-columns:1fr 1fr;gap:20px;margin-top:44px">{"".join(f'<div class="lp-card" style="padding:26px"><div class="lp-q">{q}</div><div class="lp-a">{a}</div></div>' for q, a in qa)}</div></div></div>"""
+
+    cta = f"""<div style="background:#0d366b;padding:84px 0"><div class="lp-wrap row" style="gap:64px;align-items:center">
+ <div class="grow"><h2 class="lp-h2" style="color:#fff;margin-top:0">Mulai dari satu outlet.<br>Lihat sendiri hasilnya dalam 30 hari.</h2>
+  <p class="lp-sub" style="color:#b7d3f6">Tim kami datang, memasang, dan mendampingi Anda membaca laporan pertama.</p></div>
+ <div style="width:470px;flex:none;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:20px;padding:30px" class="col g12">
+  <div class="lp-field">Nama Anda</div><div class="lp-field">Nomor WhatsApp</div><div class="lp-field">Jumlah outlet</div>
+  <span class="lp-btn pri" style="justify-content:center;margin-top:6px;background:#fff;color:#0d366b;border-color:#fff">Coba gratis 30 hari{ic("arrow-right", 18, 2.2)}</span>
+  <div class="row g8" style="justify-content:center;font-size:14px;color:#cde2fb;margin-top:4px">{ic("whatsapp", 16, prefix="simple-icons", color="#25d366")}atau chat kami lewat WhatsApp</div></div></div></div>"""
+
+    foot = f"""<div style="padding:34px 0 40px"><div class="lp-wrap row sp"><div class="brand" style="padding:0;font-size:17px"><span class="logo">{logo()}</span>{BRAND}</div>
+ <div class="row g24 sm ink2" style="gap:26px"><span>Kebijakan privasi</span><span>Syarat layanan</span><span>Kontak</span><span>© 2026 {BRAND}</span></div>
+ <span class="xs muted">MOCKUP · contoh data, bukan data asli</span></div></div>"""
+
+    measure = ('<script>document.fonts.ready.then(function(){document.body.setAttribute("data-h",'
+               'Math.ceil(document.documentElement.getBoundingClientRect().height))})</script>')
+    return _lp_doc(f'<div class="lp" style="width:1600px">{_lp_ann()}{_lp_nav()}<div style="height:1px;background:var(--grid)"></div>'
+                   f'<div style="padding-bottom:70px">{_lp_hero(t)}</div>{problems}{how}{spotlight}{feats}{roi}{privacy}{pricing}{faq}{cta}{foot}</div>{measure}')
+
+
 # ================================================================ panel internal
 PLATFORM_NOTE = (f'{ic("lock", 15)}<span>Anda hanya melihat <b>data teknis</b> (status perangkat dan CCTV). Data bisnis klien hanya bisa dibuka '
                  'dengan izin Owner: sementara dan tercatat.</span>')
@@ -1251,4 +1541,7 @@ PAGES = [("01-ringkasan", home), ("02-pantauan-live", live), ("03-analitik", ana
          ("04-perbandingan-outlet", hq), ("05-cctv-area", setup), ("06-notifikasi-laporan", alerts),
          ("07-tim-hak-akses", users), ("08-privasi-keamanan", privacy),
          ("09-superadmin-klien", sa_tenants), ("10-superadmin-perangkat", sa_fleet),
-         ("11-audit-kasir", audit)]
+         ("11-audit-kasir", audit), ("12-landing-page", landing)]
+
+# Pages longer than one screen: drawn 1600 px wide at their own height.
+LONG_PAGES = [("12-landing-page-penuh", landing_full)]

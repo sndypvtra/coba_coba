@@ -1,8 +1,8 @@
 # Brief: deck investor Outlytics
 
 Kamu akan membuat deck presentasi untuk investor tentang **Outlytics**. Bahan
-utamanya adalah 12 gambar mockup aplikasi yang saya lampirkan, dari
-`00-peta-halaman.png` sampai `11-audit-kasir.png`. Ini presentasi pertama
+utamanya adalah 13 gambar mockup yang saya lampirkan, dari
+`00-peta-halaman.png` sampai `12-landing-page.png`. Ini presentasi pertama
 kami ke investor, jadi deck harus jelas, meyakinkan, dan jujur.
 
 ## Tentang Outlytics
@@ -122,14 +122,16 @@ Ikuti gaya mockup supaya deck dan gambarnya terasa satu kesatuan.
 | `09-superadmin-klien.png` | Panel internal, Klien & Paket: semua klien, status teknis, serta paket dan harga |
 | `10-superadmin-perangkat.png` | Panel internal, Perangkat AI & Update: kondisi perangkat dan update bertahap |
 | `11-audit-kasir.png` | Audit Kasir: rombongan vs struk, temuan yang perlu dicek, pola per shift, garis waktu satu temuan, dan sumber data kasir |
+| `12-landing-page.png` | Landing page `outlytics.ai`: janji utama, bukti di sampingnya (halaman audit dan laporan WhatsApp), ajakan coba gratis 30 hari, dan tiga janji privasi |
 
 Setiap gambar juga ada versi SVG-nya, dengan nama yang sama di folder `svg/`. Kalau
 kamu bisa memakai SVG, gunakan versi itu supaya gambar tetap tajam saat diperbesar
-atau dipotong.
+atau dipotong. File `12-landing-page-penuh.png` adalah landing page utuh dari atas
+sampai bawah, untuk desain web. Deck cukup memakai `12-landing-page.png`.
 
 ## Alur slide
 
-Buat sekitar 17 slide dengan urutan di bawah. Judul di sini adalah arah pesannya;
+Buat sekitar 18 slide dengan urutan di bawah. Judul di sini adalah arah pesannya;
 boleh dipoles asal maknanya tetap sama.
 
 1. **Cover.** "Outlytics", dengan tagline *"CCTV Anda, kini paham bisnis."*
@@ -201,7 +203,14 @@ boleh dipoles asal maknanya tetap sama.
 15. **Siap untuk banyak klien.** Pakai `09-superadmin-klien.png` dan
     `10-superadmin-perangkat.png`. Semua klien dikelola dari satu panel, dan
     update AI dikirim bertahap serta otomatis berhenti kalau ada masalah.
-16. **Model bisnis dan langkah berikutnya.** Harga per outlet per bulan:
+16. **Cara kami menjual ke pemilik outlet.** Pakai `12-landing-page.png`. Judul:
+    "Satu janji, satu bukti, satu ajakan." Sorot hal-hal berikut:
+    - judulnya bicara uang: *"Temukan omzet yang bocor di kasir, dari CCTV yang sudah
+      ada"*;
+    - buktinya ada tepat di samping judul: halaman Audit Kasir dan laporan WhatsApp pagi;
+    - ajakannya satu: coba gratis 30 hari, dengan WhatsApp sebagai pilihan kedua;
+    - program pilot untuk 10 outlet pertama di Jabodetabek.
+17. **Model bisnis dan langkah berikutnya.** Harga per outlet per bulan:
     - Starter Rp 500 rb;
     - Growth Rp 1,5 jt, termasuk Audit Kasir;
     - Enterprise sesuai kontrak.
@@ -213,7 +222,7 @@ boleh dipoles asal maknanya tetap sama.
     cermin. Langkah berikutnya adalah pilot di outlet nyata untuk mengukur dua hal:
     berapa rupiah yang ditemukan Audit Kasir, dan berapa persen temuannya memang perlu
     dicek. Target pilot: [isi target pilot].
-17. **Penutup.** Tulis ajakannya: [isi kebutuhan pendanaan atau kemitraan], lalu
+18. **Penutup.** Tulis ajakannya: [isi kebutuhan pendanaan atau kemitraan], lalu
     kontak: [isi kontak].
 
 ## Aturan kejujuran (wajib)
@@ -234,6 +243,13 @@ boleh dipoles asal maknanya tetap sama.
 - Jangan menulis bahwa produk sudah sesuai UU PDP. Tulis "dirancang mengikuti
   prinsip UU PDP; akan ditinjau konsultan hukum".
 - Harga paket masih hipotesis.
+- Landing page belum dipakai sungguhan. Program pilot 10 outlet, gratis 30 hari, dan
+  pemasangan dalam satu kunjungan adalah rencana. Tulis sebagai rencana, bukan sebagai
+  hasil.
+- Jangan menambahkan testimoni, logo pelanggan, atau logo aplikasi kasir ke slide
+  mana pun. Belum ada pelanggan maupun kerja sama.
+- Hitungan "±Rp 6 jt per bulan" di landing page adalah contoh dengan persentase
+  andaian. Jangan sajikan sebagai hasil rata-rata pelanggan.
 - Jangan mengarang data pasar, pesaing, pendanaan, atau tim. Kalau sebuah slide
   butuh data itu, beri tempat kosong yang jelas, misalnya [isi ukuran pasar], supaya
   saya yang mengisinya.

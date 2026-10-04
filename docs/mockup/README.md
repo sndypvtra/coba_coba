@@ -1,9 +1,10 @@
 # Mockup webapp Outlytics — gambaran halaman untuk presentasi
 
-Dua belas gambar 16:9 tentang **Outlytics**, webapp yang membungkus pipeline
+Tiga belas gambar 16:9 tentang **Outlytics**, webapp yang membungkus pipeline
 dwell time (project 05) menjadi produk: pantauan live per CCTV, analitik, perbandingan
 outlet, pengaturan CCTV, notifikasi WhatsApp, dua sisi akses (aplikasi klien dan
-panel internal), serta pembeda utamanya: **Audit Kasir**.
+panel internal), pembeda utamanya (**Audit Kasir**), dan **landing page** untuk
+menjual ke pemilik outlet. Landing page juga tersedia sebagai satu halaman penuh.
 Nama "Outlytics" berasal dari *outlet* + *analytics*. Per 1 Okt 2026 belum ditemukan
 perusahaan atau aplikasi dengan nama itu, dan outlytics.ai, .io, serta .id belum
 terdaftar (outlytics.com diparkir dan dijual). Merek di DJKI belum dicek; alamat
@@ -26,8 +27,8 @@ Setiap halaman tersedia dalam dua bentuk:
   dan 05. Di versi SVG, bayangan lembut di sekeliling jendela diganti garis tepi tipis,
   karena efek bayangan sering tidak tergambar saat SVG diimpor ke aplikasi slide.
 
-Untuk membuat deck investor dari gambar-gambar ini di Claude Design, lampirkan ke-12
-gambar bersama [`prompt-claude-design.md`](prompt-claude-design.md).
+Untuk membuat deck investor dari gambar-gambar ini di Claude Design, lampirkan ke-13
+gambar 16:9 bersama [`prompt-claude-design.md`](prompt-claude-design.md).
 
 Gambar-gambarnya statis. Ini bukan prototipe yang bisa diklik.
 
@@ -45,8 +46,10 @@ Gambar-gambarnya statis. Ini bukan prototipe yang bisa diklik.
 | `09-superadmin-klien` | Klien & Paket | Super Admin, Support | semua klien, status teknis, paket dan harga, permintaan akses |
 | `10-superadmin-perangkat` | Perangkat AI & Update | Super Admin | perangkat AI di tiap outlet, update bertahap dengan syarat lanjut |
 | `11-audit-kasir` | Audit Kasir | Owner | setiap rombongan yang dilayani di kasir dicocokkan dengan struk dari aplikasi kasir; selisihnya dalam rupiah, pola per shift, temuan yang perlu dicek, dan klip bukti |
+| `12-landing-page` | Landing page | Calon pembeli | layar pertama situs `outlytics.ai`: janji utama, bukti di sampingnya (halaman audit dan laporan WhatsApp), dan satu ajakan |
+| `12-landing-page-penuh` | Landing page, utuh | Calon pembeli | seluruh situs dari atas sampai bawah, 2400 × 9890 piksel; untuk desain web, bukan untuk slide |
 
-Nomor 11 ditambahkan di belakang supaya nama file lama tidak berubah.
+Nomor 11 dan 12 ditambahkan di belakang supaya nama file lama tidak berubah.
 
 ## Pembeda utama: Audit Kasir
 
@@ -90,6 +93,44 @@ Supaya fitur ini masuk akal di seluruh aplikasi, halaman lain ikut diubah:
 **Rapor Kafe ditunda.** Pembanding antar-kafe sempat dirancang sebagai halaman `12`,
 lalu ditunda karena belum dibutuhkan. Fitur ini baru berguna kalau sudah ada banyak
 outlet lintas brand. Desain dan kodenya tersimpan di riwayat git (commit `2214dcf`).
+
+## Landing page
+
+Landing page ditulis untuk orang yang membayar, yaitu pemilik outlet, bukan untuk
+orang teknis. Bahasanya bahasa bisnis sehari-hari, dan istilah "POS" diganti
+"aplikasi kasir". Urutannya mengikuti pertanyaan calon pembeli:
+
+1. **Apa untungnya?** Judul: *"Temukan omzet yang bocor di kasir, dari CCTV yang sudah
+   ada."* Di sampingnya ada buktinya: halaman Audit Kasir dan laporan WhatsApp pagi.
+   Ajakannya satu: **Coba gratis 30 hari**, dengan WhatsApp sebagai pilihan kedua.
+2. **Masalah apa?** Transaksi yang tidak diketik, pembeli yang pergi karena antre, dan
+   cabang yang tidak bisa ditunggui.
+3. **Repot tidak?** Tiga langkah tanpa kamera baru: sambungkan CCTV, sambungkan
+   aplikasi kasir (atau upload Excel), lalu terima laporan di WhatsApp.
+4. **Seperti apa hasilnya?** Contoh audit satu hari dengan angka yang sama dengan
+   halaman `11`.
+5. **Sepadan tidak?** Hitungan contoh: omzet Rp 150 jt dan struk Rp 60 rb. Kalau 1%
+   transaksi tidak tercatat dan 3% pembeli pergi karena antre, potensinya ±Rp 6 jt
+   per bulan, 4× biaya paket Growth.
+6. **Aman tidak?** Enam janji privasi yang sama dengan halaman `08`.
+7. **Berapa harganya, dan apa yang sering ditanyakan?** Tiga paket (sama dengan `09`)
+   dan enam tanya jawab. Penutupnya formulir singkat: nama, nomor WhatsApp, dan
+   jumlah outlet.
+
+Landing page ini sengaja **tidak** memuat testimoni, logo pelanggan, atau logo
+aplikasi kasir. Semuanya belum ada, dan kalau dikarang justru menjadi hal pertama yang
+dicek investor. Tambahkan setelah pilot.
+
+Sebelum landing page ini dipakai sungguhan, putuskan dan sanggupi dulu janji-janji
+bisnis di dalamnya:
+
+- program pilot untuk 10 outlet pertama di Jabodetabek;
+- gratis 30 hari, tanpa kartu kredit dan tanpa kontrak;
+- pemasangan dalam satu kunjungan;
+- laporan pertama datang keesokan paginya;
+- harga paket.
+
+Gambar ini adalah desain, belum situs yang responsif untuk HP.
 
 **Perubahan janji privasi.** Janji lama "Video tidak keluar dari outlet" bertabrakan
 dengan klip bukti: Owner perlu memutar klip dari mana saja. Janjinya diganti menjadi
@@ -147,6 +188,8 @@ Hal lain yang juga ilustrasi:
   mereka.
 - **Gambar di panel temuan `11` digambar, bukan dipotong dari video.** Tidak ada orang
   sungguhan yang ditampilkan sebagai temuan.
+- **Hitungan di landing page adalah contoh.** Persentase 1% dan 3% bukan hasil ukur, dan
+  ditulis sebagai "kalau", bukan sebagai janji.
 
 Angka antarhalaman sengaja dibuat saling cocok, jadi tidak ada yang bertentangan saat
 dibandingkan:
@@ -185,12 +228,15 @@ adalah hipotesis dari konsep bisnis dan belum divalidasi.
 pip install pymupdf                           # sekali saja, untuk SVG
 python tools/build_mockups.py                 # semua halaman -> docs/mockup/ dan docs/mockup/svg/
 python tools/build_mockups.py --only 01 03    # sebagian saja
+python tools/build_mockups.py --only 11 12    # Audit Kasir lalu landing page (landing page memakai gambar halaman 11)
 python tools/build_mockups.py --scale 1 --no-svg   # pratinjau cepat 1600x900
 ```
 
 Halaman ditulis sebagai HTML/CSS/SVG di `tools/mockup/pages.py` dan digambar dengan
 Chromium headless. Untuk SVG, Chromium mencetak tiap halaman ke PDF satu halaman, lalu
-PyMuPDF mengubahnya ke SVG. Font dan ikon diunduh sekali ke `tools/.mockup_cache` lalu ditanam di
+PyMuPDF mengubahnya ke SVG. Landing page versi utuh lebih tinggi dari satu layar: halaman
+itu melaporkan tingginya sendiri, lalu screenshot dan lembar PDF-nya disesuaikan. ID di
+SVG-nya diawali `p12L_`, jadi tidak bentrok dengan versi 16:9 (`p12_`). Font dan ikon diunduh sekali ke `tools/.mockup_cache` lalu ditanam di
 halaman: Inter (SIL OFL), Lucide (ISC), dan Iconify untuk logo merek (milik pemiliknya
 masing-masing). Palet dan aturan grafik mengikuti referensi dataviz: satu hue untuk
 besaran angka, warna status hanya untuk status, dan tanpa sumbu ganda.
