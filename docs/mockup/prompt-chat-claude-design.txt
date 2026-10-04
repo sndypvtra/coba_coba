@@ -1,0 +1,42 @@
+PROMPT UNTUK CLAUDE DESIGN
+==========================
+
+Lampirkan dulu 13 gambar 16:9 (00-landing-page sampai 11-audit-kasir, dari folder PNG
+atau SVG) dan file prompt-claude-design.md. Lalu salin SALAH SATU prompt di bawah ke
+kolom chat.
+
+
+A. Kalau deck lama sudah ada di Claude Design (revisi)
+-------------------------------------------------------
+
+Ini revisi untuk deck Outlytics. Saya melampirkan 13 gambar mockup terbaru, dimulai dari
+00-landing-page.png, dan brief baru prompt-claude-design.md.
+
+Tolong susun ulang deck sesuai brief baru itu:
+1. Ganti semua gambar mockup lama dengan gambar terlampir. Nama dan nomor file lama
+   sudah tidak berlaku.
+2. Buka deck dengan landing page (00-landing-page.png) sebagai cover.
+3. Hapus semua bagian tentang Rapor Kafe, serta klaim "tanpa kamera baru", "tanpa
+   wajah", dan "video tidak disimpan di cloud".
+4. Posisikan dirimu sebagai pembacanya: pemilik outlet dan investor yang bukan orang
+   teknis. Pakai bahasa bisnis sehari-hari (rupiah, omzet, kasir, struk, pelanggan,
+   cabang), satu pesan per slide, dan judul berupa kesimpulan.
+5. Ikuti alur 16 slide dan aturan kejujuran di brief.
+
+Sebelum selesai, baca ulang setiap slide dari kursi pemilik outlet. Kalau pesannya tidak
+tertangkap dalam 5 detik, atau masih ada kata teknis, tulis ulang slide itu. Lalu beri
+saya daftar kata teknis yang kamu ganti.
+
+
+B. Kalau membuat deck baru
+--------------------------
+
+Buat deck presentasi Outlytics sesuai brief di prompt-claude-design.md, memakai 13 gambar
+mockup yang saya lampirkan, dengan 00-landing-page.png sebagai cover.
+
+Posisikan dirimu sebagai pembacanya: pemilik outlet dan investor yang bukan orang
+teknis. Pakai bahasa bisnis sehari-hari, satu pesan per slide, dan judul berupa
+kesimpulan. Ikuti alur 16 slide dan aturan kejujuran di brief.
+
+Sebelum selesai, baca ulang setiap slide dari kursi pemilik outlet. Kalau pesannya tidak
+tertangkap dalam 5 detik, atau masih ada kata teknis, tulis ulang slide itu.

@@ -18,7 +18,7 @@ Setiap halaman tersedia dalam dua bentuk:
 - **SVG** (`svg/*.svg`), yang tetap tajam di ukuran berapa pun. Teks di dalamnya sudah
   berupa garis (outline), jadi tidak butuh font. Hanya foto (di halaman 00, 02, dan 05)
   yang tetap berupa piksel. Foto-foto itu ditanam langsung di dalam file SVG, tanpa
-  file terpisah. ID internal di tiap file diawali nomor halamannya (`p02_…`), jadi
+  file terpisah. ID internal di tiap file diawali nomor dan inisial nama halamannya (`p02pl_…`), jadi
   beberapa SVG aman ditempel ke satu dokumen. Tanpa itu, halaman-halaman bisa saling
   meminjam bentuk potong (clip), lalu foto hilang: video jadi hitam dan thumbnail
   kosong. Bisa dimasukkan ke PowerPoint 2019, 2021, atau Microsoft
@@ -27,13 +27,19 @@ Setiap halaman tersedia dalam dua bentuk:
   dan 05. Di versi SVG, bayangan lembut di sekeliling jendela diganti garis tepi tipis,
   karena efek bayangan sering tidak tergambar saat SVG diimpor ke aplikasi slide.
 
-Untuk membuat deck investor dari gambar-gambar ini di Claude Design, lampirkan ke-13
-gambar 16:9 bersama [`prompt-claude-design.md`](prompt-claude-design.md).
+Untuk membuat deck di Claude Design, lampirkan ke-13 gambar 16:9 bersama
+[`prompt-claude-design.md`](prompt-claude-design.md), lalu tempel salah satu prompt di
+[`prompt-chat-claude-design.txt`](prompt-chat-claude-design.txt) ke kolom chat: prompt A
+untuk merevisi deck yang sudah ada, prompt B untuk membuat deck baru. Brief-nya ditulis
+dari kursi pembaca, yaitu pemilik outlet dan investor. Deck dibuka dengan landing page,
+dan setiap slide memakai bahasa bisnis sehari-hari.
 
 Gambar-gambarnya statis. Ini bukan prototipe yang bisa diklik.
 
 | File | Halaman | Untuk | Fungsinya |
 |---|---|---|---|
+| `00-landing-page` | Landing page | Calon pembeli | layar pertama situs `outlytics.ai`: janji utama, bukti di sampingnya (halaman audit dan laporan WhatsApp), dan satu ajakan; jadi cover deck |
+| `00-landing-page-penuh` | Landing page, utuh | Calon pembeli | seluruh situs dari atas sampai bawah, 2400 × 9729 piksel; untuk desain web, bukan untuk slide |
 | `00-peta-halaman` | Peta halaman | — | seluruh halaman dalam tiga kelompok (aplikasi klien, pembeda utama, panel internal) dan tiga prinsip privasi |
 | `01-ringkasan` | Ringkasan Hari Ini | Owner, Admin, Manager | lima angka kunci hari ini, hal yang perlu ditindaklanjuti, dan kartu "Kasir vs struk hari ini"; tiap angka berlabel Akurat atau Estimasi |
 | `02-pantauan-live` | Pantauan Live | Manager, Layar TV | kondisi outlet saat ini per CCTV: denah ruangan, antrean, kasir, kejadian, video |
@@ -46,10 +52,9 @@ Gambar-gambarnya statis. Ini bukan prototipe yang bisa diklik.
 | `09-superadmin-klien` | Klien & Paket | Super Admin, Support | semua klien, status teknis, paket dan harga, permintaan akses |
 | `10-superadmin-perangkat` | Perangkat AI & Update | Super Admin | perangkat AI di tiap outlet, update bertahap dengan syarat lanjut |
 | `11-audit-kasir` | Audit Kasir | Owner | setiap rombongan yang dilayani di kasir dicocokkan dengan struk dari aplikasi kasir; selisihnya dalam rupiah, pola per shift, temuan yang perlu dicek, dan klip bukti |
-| `12-landing-page` | Landing page | Calon pembeli | layar pertama situs `outlytics.ai`: janji utama, bukti di sampingnya (halaman audit dan laporan WhatsApp), dan satu ajakan |
-| `12-landing-page-penuh` | Landing page, utuh | Calon pembeli | seluruh situs dari atas sampai bawah, 2400 × 9890 piksel; untuk desain web, bukan untuk slide |
 
-Nomor 11 dan 12 ditambahkan di belakang supaya nama file lama tidak berubah.
+Landing page bernomor 00 supaya membuka set gambar dan deck. Audit Kasir (11) ditambahkan
+di belakang supaya nama file lama tidak berubah.
 
 ## Pembeda utama: Audit Kasir
 
@@ -90,7 +95,7 @@ Supaya fitur ini masuk akal di seluruh aplikasi, halaman lain ikut diubah:
   untuk Enterprise).
 - **`00`**: kelompok baru "Pembeda utama", dengan cara kerjanya dalam tiga langkah.
 
-**Rapor Kafe ditunda.** Pembanding antar-kafe sempat dirancang sebagai halaman `12`,
+**Rapor Kafe ditunda.** Pembanding antar-kafe sempat dirancang sebagai halaman tersendiri,
 lalu ditunda karena belum dibutuhkan. Fitur ini baru berguna kalau sudah ada banyak
 outlet lintas brand. Desain dan kodenya tersimpan di riwayat git (commit `2214dcf`).
 
@@ -227,15 +232,16 @@ adalah hipotesis dari konsep bisnis dan belum divalidasi.
 pip install pymupdf                           # sekali saja, untuk SVG
 python tools/build_mockups.py                 # semua halaman -> docs/mockup/ dan docs/mockup/svg/
 python tools/build_mockups.py --only 01 03    # sebagian saja
-python tools/build_mockups.py --only 11 12    # Audit Kasir lalu landing page (landing page memakai gambar halaman 11)
+python tools/build_mockups.py --only 11 00    # Audit Kasir lalu landing page (landing page memakai gambar halaman 11)
 python tools/build_mockups.py --scale 1 --no-svg   # pratinjau cepat 1600x900
 ```
 
 Halaman ditulis sebagai HTML/CSS/SVG di `tools/mockup/pages.py` dan digambar dengan
 Chromium headless. Untuk SVG, Chromium mencetak tiap halaman ke PDF satu halaman, lalu
 PyMuPDF mengubahnya ke SVG. Landing page versi utuh lebih tinggi dari satu layar: halaman
-itu melaporkan tingginya sendiri, lalu screenshot dan lembar PDF-nya disesuaikan. ID di
-SVG-nya diawali `p12L_`, jadi tidak bentrok dengan versi 16:9 (`p12_`). Font dan ikon diunduh sekali ke `tools/.mockup_cache` lalu ditanam di
+itu melaporkan tingginya sendiri, lalu screenshot dan lembar PDF-nya disesuaikan. Karena
+nomor 00 dipakai tiga file, ID di setiap SVG diawali nomor plus inisial namanya
+(`p00lp_`, `p00lpp_`, `p00ph_`), jadi tidak ada yang bentrok. Font dan ikon diunduh sekali ke `tools/.mockup_cache` lalu ditanam di
 halaman: Inter (SIL OFL), Lucide (ISC), dan Iconify untuk logo merek (milik pemiliknya
 masing-masing). Palet dan aturan grafik mengikuti referensi dataviz: satu hue untuk
 besaran angka, warna status hanya untuk status, dan tanpa sumbu ganda.

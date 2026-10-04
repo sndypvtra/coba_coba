@@ -1046,7 +1046,7 @@ def audit() -> str:
                 actions=sel("Periode", "Kemarin") + sel("Shift", "Semua shift") + btn("Download", "download"), body=body)
 
 
-# ============================================================== 12 landing page
+# ============================================================== 00 landing page
 # The public site an outlet owner lands on from an ad or a WhatsApp link. It is
 # written for the person who pays, not for an engineer: one promise in the headline
 # (find the money leaking at the till, with the cameras already there), the proof
@@ -1537,7 +1537,9 @@ PAGES = [("01-ringkasan", home), ("02-pantauan-live", live), ("03-analitik", ana
          ("04-perbandingan-outlet", hq), ("05-cctv-area", setup), ("06-notifikasi-laporan", alerts),
          ("07-tim-hak-akses", users), ("08-privasi-keamanan", privacy),
          ("09-superadmin-klien", sa_tenants), ("10-superadmin-perangkat", sa_fleet),
-         ("11-audit-kasir", audit), ("12-landing-page", landing)]
+         ("11-audit-kasir", audit),
+         # Numbered 00 so it opens the set, but drawn last: it shows page 11's picture.
+         ("00-landing-page", landing)]
 
 # Pages longer than one screen: drawn 1600 px wide at their own height.
-LONG_PAGES = [("12-landing-page-penuh", landing_full)]
+LONG_PAGES = [("00-landing-page-penuh", landing_full)]

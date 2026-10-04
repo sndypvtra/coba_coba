@@ -9,7 +9,7 @@
 Most pages are one 16:9 screen. The few in pages.LONG_PAGES (the full landing page)
 are 1600 px wide and as tall as their content: such a page writes its own height into
 data-h on <body>, and the build reads it back before sizing the screenshot and the
-PDF sheet.
+PDF sheet. The landing page is numbered 00 so it opens the set.
 
 Each page is a hand-built HTML/CSS/SVG document (tools/mockup/pages.py) drawn in
 headless Chromium - the same engine the architecture diagram was checked with.
@@ -106,7 +106,10 @@ def render_svg(html_path: Path, svg_path: Path, size: tuple[int, int] = (1600, 9
     # number: a deck tool that pastes several pages into one document would otherwise
     # let a page pick up another page's clip_451 or glyph font_6_363.
     svg = re.sub(r"<clipPath\b[^>]*>.*?</clipPath>", _bake_clip, svg, flags=re.S)
-    pfx = f"p{svg_path.name[:2]}{'' if size == (1600, 900) else 'L'}_"  # the long page shares its number
+    # The number alone is not unique - 00 is the landing page, its full-length copy and
+    # the overview - so the words' initials follow it: 00-landing-page -> p00lp_.
+    num, *words = svg_path.stem.split("-")
+    pfx = f"p{num}{''.join(w[0] for w in words)}_"
     svg = re.sub(r'(\sid="|url\(#|href="#)', lambda m: m.group(1) + pfx, svg)
     svg_path.write_text(svg, encoding="utf-8")
 
