@@ -27,12 +27,12 @@ Setiap halaman tersedia dalam dua bentuk:
   dan 05. Di versi SVG, bayangan lembut di sekeliling jendela diganti garis tepi tipis,
   karena efek bayangan sering tidak tergambar saat SVG diimpor ke aplikasi slide.
 
-Untuk membuat deck di Claude Design, lampirkan ke-13 gambar 16:9 bersama
-[`prompt-claude-design.md`](prompt-claude-design.md), lalu tempel salah satu prompt di
-[`prompt-chat-claude-design.txt`](prompt-chat-claude-design.txt) ke kolom chat: prompt A
-untuk merevisi deck yang sudah ada, prompt B untuk membuat deck baru. Brief-nya ditulis
-dari kursi pembaca, yaitu pemilik outlet dan investor. Deck dibuka dengan landing page,
-dan setiap slide memakai bahasa bisnis sehari-hari.
+Untuk merevisi deck di Claude Design, lampirkan ke-13 PNG 16:9 (tanpa
+`00-landing-page-penuh`) bersama [`prompt-claude-design.md`](prompt-claude-design.md),
+lalu salin seluruh isi [`salin-ke-chat-claude-design.txt`](salin-ke-chat-claude-design.txt)
+ke kolom chat. File itu hanya berisi pesannya, tanpa judul atau petunjuk, jadi bisa
+disalin utuh. Brief-nya ditulis dari kursi pembaca, yaitu pemilik outlet dan investor.
+Deck dibuka dengan landing page, dan setiap slide memakai bahasa bisnis sehari-hari.
 
 Gambar-gambarnya statis. Ini bukan prototipe yang bisa diklik.
 

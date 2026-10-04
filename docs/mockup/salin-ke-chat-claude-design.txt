@@ -1,0 +1,37 @@
+Ini revisi untuk deck Outlytics yang sudah ada di proyek ini. Saya melampirkan 13 gambar mockup terbaru dalam format PNG, dari 00-landing-page.png sampai 11-audit-kasir.png, dan brief baru prompt-claude-design.md. Jadikan brief itu pegangan utama. Kalau deck lama berbeda dengan brief, ikuti brief.
+
+Langsung kerjakan tanpa bertanya dulu. Kalau ada yang kurang jelas, pilih yang paling masuk akal dan tulis asumsinya di akhir.
+
+Yang harus berubah dari deck lama:
+1. Ganti semua gambar mockup lama dengan 13 gambar terlampir. Nama, nomor, dan isi gambar lama sudah tidak berlaku.
+2. Jadikan 00-landing-page.png sebagai cover di slide 1.
+3. Hapus semua bagian tentang Rapor Kafe.
+4. Hapus klaim "tanpa kamera baru", "tanpa wajah", dan "video tidak disimpan di cloud" dari semua slide dan catatan pembicara. Jangan menggantinya dengan kalimat lain yang maknanya sama, misalnya "cukup pakai CCTV lama", "tidak mengenali wajah", atau "video tetap di outlet".
+5. Susun ulang menjadi 16 slide sesuai alur di brief.
+6. Tulis ulang catatan pembicara untuk setiap slide sesuai brief.
+
+Cara menulis:
+- Posisikan dirimu sebagai pembacanya: pemilik kafe dengan beberapa cabang yang membaca deck ini sekilas di sela jam ramai, dan investor yang baru pertama kali mendengar Outlytics. Setiap slide menjawab satu pertanyaan mereka, sesuai tabel "Duduklah di kursi pembaca" di brief.
+- Pakai bahasa Indonesia sehari-hari yang sopan, dan sapa pembaca dengan "Anda". Pakai kata-kata pemilik outlet: omzet, rupiah, kasir, struk, pelanggan, staf, shift, cabang.
+- Judul slide berupa satu kalimat kesimpulan, bukan topik. Satu slide berisi satu pesan, dengan teks isi maksimal sekitar 30 kata.
+- Tampilkan gambar mockup besar dan apa adanya. Jangan menggambar ulang atau mengubah angka di dalamnya. Boleh memotong atau memperbesar bagian yang dibahas, lalu beri label penunjuk singkat.
+- Pakai hanya angka yang ada di gambar dan brief. Jangan membuat angka baru.
+
+Ikuti semua aturan kejujuran di brief. Yang paling penting:
+- Semua angka adalah contoh data. Beri catatan kecil "Mockup · contoh data" di setiap slide yang memakai mockup.
+- Audit Kasir masih rencana produk, harga masih hipotesis, dan janji di landing page masih rencana.
+- Jangan menambahkan testimoni, logo pelanggan, atau logo aplikasi kasir.
+- Biarkan tempat kosong seperti [isi kontak] tetap terlihat. Jangan mengisinya sendiri.
+
+Sebelum selesai, baca ulang setiap slide dari kursi pemilik outlet dan uji dengan tiga pertanyaan:
+1. Apakah pesannya tertangkap dalam 5 detik?
+2. Adakah kata yang membuat pembaca harus bertanya artinya?
+3. Apakah slide ini bicara uang, waktu, atau risiko?
+Kalau ada yang gagal, tulis ulang slide itu. Pastikan juga Rapor Kafe dan tiga klaim di atas sudah benar-benar hilang.
+
+Setelah selesai, tulis di chat:
+1. daftar 16 judul slide;
+2. apa saja yang dihapus atau diganti dari deck lama;
+3. kata teknis yang kamu ganti, dan penggantinya;
+4. asumsi yang kamu ambil, dan hal yang perlu saya putuskan;
+5. usulan kalau ada urutan atau sudut cerita yang lebih kuat. Jangan langsung diterapkan.
