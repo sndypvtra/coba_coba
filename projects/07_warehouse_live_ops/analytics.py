@@ -278,7 +278,8 @@ def analyse(scene: str, res: Result, detections: dict, stride: int) -> tuple[lis
                     if z.name in o.zones and (o.gid in in_lane_prev or
                                               edge_distance(o.x, o.y, z.polygon) >= C.LANE_MARGIN_M):
                         in_lane_now.add(o.gid)
-                if z.name in o.zones:
+                # the lane's occupancy follows the lane rule above, so "in the lane" means one thing everywhere
+                if z.name in o.zones and (z.kind != "vehicle_lane" or o.gid in in_lane_now):
                     zone_people[z.name] += 1
                     zone_time[(z.name, o.gid)] += dt
                     if z.kind == "one_way" and o.speed > C.WRONG_WAY_MS:

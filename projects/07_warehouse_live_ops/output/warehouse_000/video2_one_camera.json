@@ -231,12 +231,12 @@
    {
     "zone": "Jalur forklift tengah",
     "kind": "vehicle_lane",
-    "occupancy_mean": 0.43,
+    "occupancy_mean": 0.0,
     "occupancy_max": 1,
     "people_entered": 1,
-    "dwell_s_mean": 12.8,
-    "dwell_s_max": 12.8,
-    "person_seconds": 12.8
+    "dwell_s_mean": 0.1,
+    "dwell_s_max": 0.1,
+    "person_seconds": 0.1
    },
    {
     "zone": "Lorong satu arah (contoh)",
@@ -443,9 +443,9 @@
     },
     {
      "analytic": "#4 Jalur forklift tengah: okupansi rata-rata",
-     "ai": 0.43,
-     "truth_seen_by_cameras": 1.57,
-     "truth_whole_floor": 1.98
+     "ai": 0.0,
+     "truth_seen_by_cameras": 1.5,
+     "truth_whole_floor": 1.92
     },
     {
      "analytic": "#4 Lorong satu arah (contoh): okupansi rata-rata",
@@ -568,12 +568,23 @@
   "rule": "people >= 100 px tall; helmet / vest box on the head / torso of the person crop at score >= 0.3, and for a vest CLIP's safety-vest share >= 0.2; a person's status is the majority of their judged frames (live: the last 2 s); a violation is 2 s or more without",
   "violations": [
    {
-    "gid": 2,
+    "gid": 6,
     "what": "helm",
     "start_t": 0.2,
-    "end_t": 12.5,
-    "x": -15.3,
-    "y": -53.49,
+    "end_t": 6.2,
+    "x": -21.76,
+    "y": -48.25,
+    "cams": [
+     "Camera_0003"
+    ]
+   },
+   {
+    "gid": 6,
+    "what": "rompi",
+    "start_t": 0.2,
+    "end_t": 6.2,
+    "x": -21.76,
+    "y": -48.25,
     "cams": [
      "Camera_0003"
     ]
@@ -582,9 +593,20 @@
     "gid": 3,
     "what": "rompi",
     "start_t": 0.2,
-    "end_t": 8.0,
+    "end_t": 6.8,
     "x": -13.54,
     "y": -53.86,
+    "cams": [
+     "Camera_0003"
+    ]
+   },
+   {
+    "gid": 2,
+    "what": "helm",
+    "start_t": 0.2,
+    "end_t": 11.4,
+    "x": -15.3,
+    "y": -53.49,
     "cams": [
      "Camera_0003"
     ]
@@ -593,7 +615,7 @@
     "gid": 4,
     "what": "rompi",
     "start_t": 0.2,
-    "end_t": 14.4,
+    "end_t": 13.2,
     "x": -17.22,
     "y": -62.31,
     "cams": [
@@ -601,50 +623,10 @@
     ]
    },
    {
-    "gid": 6,
-    "what": "helm",
-    "start_t": 0.2,
-    "end_t": 7.4,
-    "x": -21.76,
-    "y": -48.25,
-    "cams": [
-     "Camera_0003"
-    ]
-   },
-   {
-    "gid": 6,
-    "what": "rompi",
-    "start_t": 0.2,
-    "end_t": 7.4,
-    "x": -21.76,
-    "y": -48.25,
-    "cams": [
-     "Camera_0003"
-    ]
-   },
-   {
-    "gid": 7,
-    "what": "helm",
-    "start_t": 0.2,
-    "end_t": 2.7,
-    "x": null,
-    "y": null,
-    "cams": []
-   },
-   {
-    "gid": 7,
-    "what": "rompi",
-    "start_t": 0.2,
-    "end_t": 2.7,
-    "x": null,
-    "y": null,
-    "cams": []
-   },
-   {
     "gid": 13,
     "what": "rompi",
     "start_t": 0.6,
-    "end_t": 25.8,
+    "end_t": 24.6,
     "x": -18.52,
     "y": -56.46,
     "cams": [
@@ -655,7 +637,7 @@
     "gid": 13,
     "what": "helm",
     "start_t": 1.0,
-    "end_t": 25.8,
+    "end_t": 24.6,
     "x": -19.02,
     "y": -56.51,
     "cams": [
@@ -666,7 +648,7 @@
     "gid": 5,
     "what": "helm",
     "start_t": 1.5,
-    "end_t": 8.3,
+    "end_t": 7.1,
     "x": -18.27,
     "y": -54.23,
     "cams": [
@@ -677,7 +659,7 @@
     "gid": 5,
     "what": "rompi",
     "start_t": 1.5,
-    "end_t": 8.3,
+    "end_t": 7.1,
     "x": -18.27,
     "y": -54.23,
     "cams": [
@@ -685,73 +667,15 @@
     ]
    },
    {
-    "gid": 16,
-    "what": "helm",
-    "start_t": 3.1,
-    "end_t": 8.7,
-    "x": null,
-    "y": null,
-    "cams": []
-   },
-   {
-    "gid": 16,
-    "what": "rompi",
-    "start_t": 3.1,
-    "end_t": 8.7,
-    "x": null,
-    "y": null,
-    "cams": []
-   },
-   {
     "gid": 21,
     "what": "helm",
     "start_t": 4.5,
-    "end_t": 12.6,
+    "end_t": 11.4,
     "x": -14.35,
     "y": -54.72,
     "cams": [
      "Camera_0003"
     ]
-   },
-   {
-    "gid": 15,
-    "what": "helm",
-    "start_t": 5.2,
-    "end_t": 7.6,
-    "x": -33.07,
-    "y": -48.05,
-    "cams": [
-     "Camera_0003"
-    ]
-   },
-   {
-    "gid": 15,
-    "what": "rompi",
-    "start_t": 5.2,
-    "end_t": 7.6,
-    "x": -33.07,
-    "y": -48.05,
-    "cams": [
-     "Camera_0003"
-    ]
-   },
-   {
-    "gid": 29,
-    "what": "helm",
-    "start_t": 6.4,
-    "end_t": 9.5,
-    "x": null,
-    "y": null,
-    "cams": []
-   },
-   {
-    "gid": 29,
-    "what": "rompi",
-    "start_t": 6.4,
-    "end_t": 9.5,
-    "x": null,
-    "y": null,
-    "cams": []
    },
    {
     "gid": 21,
@@ -768,7 +692,7 @@
     "gid": 35,
     "what": "helm",
     "start_t": 7.6,
-    "end_t": 19.9,
+    "end_t": 18.7,
     "x": -25.02,
     "y": -53.96,
     "cams": [
@@ -779,7 +703,7 @@
     "gid": 35,
     "what": "rompi",
     "start_t": 7.6,
-    "end_t": 19.9,
+    "end_t": 18.7,
     "x": -25.02,
     "y": -53.96,
     "cams": [
@@ -789,10 +713,10 @@
    {
     "gid": 31,
     "what": "rompi",
-    "start_t": 8.0,
+    "start_t": 8.9,
     "end_t": 11.0,
-    "x": -32.37,
-    "y": -47.03,
+    "x": -31.75,
+    "y": -46.97,
     "cams": [
      "Camera_0003"
     ]
@@ -801,7 +725,7 @@
     "gid": 62,
     "what": "rompi",
     "start_t": 15.8,
-    "end_t": 21.7,
+    "end_t": 21.0,
     "x": -33.12,
     "y": -45.82,
     "cams": [
@@ -823,7 +747,7 @@
     "gid": 69,
     "what": "helm",
     "start_t": 16.9,
-    "end_t": 29.9,
+    "end_t": 21.8,
     "x": -29.34,
     "y": -55.53,
     "cams": [
@@ -834,7 +758,7 @@
     "gid": 69,
     "what": "rompi",
     "start_t": 16.9,
-    "end_t": 29.9,
+    "end_t": 21.8,
     "x": -29.34,
     "y": -55.53,
     "cams": [
@@ -845,7 +769,7 @@
     "gid": 68,
     "what": "rompi",
     "start_t": 17.2,
-    "end_t": 27.8,
+    "end_t": 23.4,
     "x": -19.37,
     "y": -56.4,
     "cams": [
@@ -856,7 +780,7 @@
     "gid": 31,
     "what": "helm",
     "start_t": 20.2,
-    "end_t": 23.8,
+    "end_t": 22.8,
     "x": -31.97,
     "y": -43.37,
     "cams": [
@@ -867,7 +791,7 @@
     "gid": 31,
     "what": "rompi",
     "start_t": 20.8,
-    "end_t": 24.0,
+    "end_t": 22.8,
     "x": null,
     "y": null,
     "cams": []
@@ -887,7 +811,7 @@
     "gid": 101,
     "what": "helm",
     "start_t": 24.4,
-    "end_t": 29.9,
+    "end_t": 27.0,
     "x": -27.8,
     "y": -46.25,
     "cams": [
@@ -898,9 +822,31 @@
     "gid": 101,
     "what": "rompi",
     "start_t": 24.4,
-    "end_t": 29.9,
+    "end_t": 27.0,
     "x": -27.8,
     "y": -46.25,
+    "cams": [
+     "Camera_0003"
+    ]
+   },
+   {
+    "gid": 69,
+    "what": "helm",
+    "start_t": 24.7,
+    "end_t": 28.4,
+    "x": -28.12,
+    "y": -46.11,
+    "cams": [
+     "Camera_0003"
+    ]
+   },
+   {
+    "gid": 69,
+    "what": "rompi",
+    "start_t": 24.7,
+    "end_t": 28.4,
+    "x": -28.12,
+    "y": -46.11,
     "cams": [
      "Camera_0003"
     ]
@@ -909,7 +855,7 @@
     "gid": 102,
     "what": "helm",
     "start_t": 26.2,
-    "end_t": 29.9,
+    "end_t": 28.9,
     "x": -22.55,
     "y": -46.58,
     "cams": [
@@ -920,7 +866,7 @@
     "gid": 102,
     "what": "rompi",
     "start_t": 26.2,
-    "end_t": 29.9,
+    "end_t": 28.9,
     "x": -22.55,
     "y": -46.58,
     "cams": [

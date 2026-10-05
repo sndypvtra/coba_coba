@@ -178,6 +178,7 @@ def run_video1(report: dict, detector: str, do_render: bool = True) -> None:
         "lift_rejections": {f"{c}: {r}": n for (c, r), n in sorted(run["rejects"].items())},
         "identities_joined_by_stitching": run["joins"],
         "camera_agreement": ev.camera_agreement(res.sightings, cams),
+        "forklift_moving_vs_truth": ev.forklift_motion(run["frames"], labels),
         "other_detector": {d: _scores(r, labels, used, frames, truth_seen, truth_all)
                            for d, r in runs.items() if d != detector},
     })

@@ -298,6 +298,7 @@ def run_video(video: int) -> list[Path]:
 WINDOW_S = 2.0           # live status: majority of the judged frames in the last two seconds
 MIN_JUDGED = 3           # fewer judged frames than this: not known yet
 VIOLATION_S = 2.0        # without a helmet / vest for this long, continuously, is an event
+PRESENT_S = 0.5          # not judged for this long (gone, too small, cut): no live status, the episode ends
 
 
 def per_frame(res, detections: dict, evidence: dict, track_offset: int = 0) -> dict[int, dict[int, tuple]]:
@@ -331,23 +332,36 @@ def statuses(frames: list[int], judged: dict, fps: float) -> tuple[dict, dict, l
     """Live status per frame, the window's status per person, and violation events.
 
     live[frame][gid] = (helmet, vest), each True / False / None (not known yet).
+    A person only has a status while they are being judged: one who has left
+    the pictures (or become too small to judge) for PRESENT_S has none, and
+    their open violation ends there - nobody is reported for time off screen.
     """
     hist: dict[int, list] = {}
     live, out_events, open_ = {}, [], {}
     n = int(round(WINDOW_S * fps))
     t0 = frames[0]
     step = frames[1] - frames[0] if len(frames) > 1 else 1
+
+    def close(key):
+        ev = open_.pop(key)
+        if ev["end_t"] - ev["start_t"] >= VIOLATION_S:
+            out_events.append(ev)
+
     for f in frames:
         for gid, hv in judged.get(f, {}).items():
             hist.setdefault(gid, []).append((f, hv))
         cur = {}
         for gid, h in hist.items():
+            if f - h[-1][0] > PRESENT_S * fps * step:
+                continue
             recent = [hv for g, hv in h if f - g < n * step]
             if len(recent) < MIN_JUDGED:
                 continue
             cur[gid] = tuple(bool(np.mean([hv[k] for hv in recent]) >= 0.5) for k in (0, 1))
         live[f] = cur
         t = round((f - t0) / (fps * step), 1)
+        for key in [k for k in open_ if k[0] not in cur]:
+            close(key)
         for gid, (helm, vest) in cur.items():
             for what, ok in (("helm", helm), ("rompi", vest)):
                 key = (gid, what)
@@ -355,10 +369,9 @@ def statuses(frames: list[int], judged: dict, fps: float) -> tuple[dict, dict, l
                     ev = open_.setdefault(key, {"gid": gid, "what": what, "start_t": t})
                     ev["end_t"] = t
                 elif key in open_:
-                    ev = open_.pop(key)
-                    if ev["end_t"] - ev["start_t"] >= VIOLATION_S:
-                        out_events.append(ev)
-    out_events += [ev for ev in open_.values() if ev["end_t"] - ev["start_t"] >= VIOLATION_S]
+                    close(key)
+    for key in list(open_):
+        close(key)
     final = {}
     for gid, h in hist.items():
         if len(h) >= MIN_JUDGED:

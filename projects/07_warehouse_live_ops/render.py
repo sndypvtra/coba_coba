@@ -1,18 +1,17 @@
-"""The three videos. Every CCTV tile is tied to the plan, by colour and by name.
+"""Pictures for the videos: camera views and the floor plan, in the look of ui.py.
 
 The promise a viewer has to be able to check with their own eyes is that a dot
-on the plan is the person in the tile. Four things carry it:
+on the plan is the person in the camera picture. Three things carry it:
 
-  colour     each camera on screen has one colour: its tile border, its field
-             of view drawn on the plan, its marker on the plan, and a ring
+  name       a person is P12 in the picture and P12 on the plan; a forklift F3.
+  colour     each camera on screen has one colour: the dot before its name,
+             its field of view on the plan, its marker there, and a thin ring
              around every dot it currently sees.
-  name       a person is P12 in the tile and P12 on the plan; a forklift F3.
-  echoes     a person placed by *other* cameras is drawn into a tile as a small
-             hollow circle at the floor point those cameras computed. If the
-             calibration were wrong, the circles would float off the people.
   honesty    a box that did not make it onto the plan - feet out of frame, too
-             far to place, not yet confirmed - is still drawn, in grey.
+             far to place, not yet confirmed - is still drawn, faint and unlabelled.
 
+Shapes are drawn with OpenCV (anti-aliased) on each picture; every label is
+collected as a mark and drawn later, once per frame, on the page's Canvas.
 Frames are written straight into ffmpeg as H.264, so the files play anywhere.
 """
 
@@ -27,18 +26,19 @@ import cv2
 import numpy as np
 
 import config as C
-import draw as dr
+import ops
+import ui
 from analytics import VEHICLE_BODY, Frame
 from scene import Camera, FloorPlan
 
-W, H = 1920, 1080
-HEADER = 48
+W, H = ui.W, ui.H
 TAG = {"person": "P", "forklift": "F", "pallet_truck": "T", "robot": "R"}
-CLASS_COLOUR = {"person": dr.PERSON, "forklift": dr.FORKLIFT, "pallet_truck": dr.PALLET, "robot": dr.ROBOT}
-ALERT_COLOUR = {"near_miss": dr.BAD, "speeding": dr.BAD, "lane": dr.bgr("#fb923c"),
-                "wrong_way": dr.bgr("#f472b6"), "idle": dr.WARN, "crowd": dr.bgr("#f87171")}
-ALERT_NAME = {"near_miss": "nyaris tertabrak", "speeding": "ngebut", "lane": "di jalur forklift",
-              "wrong_way": "salah arah", "idle": "diam lama", "crowd": "kerumunan"}
+CLASS_RGB = {"person": ui.CYAN, "forklift": ui.ORANGE, "pallet_truck": ui.YELLOW, "robot": ui.VIOLET}
+CLASS_ICON = {"forklift": "forklift", "pallet_truck": "pallet", "robot": "smart_toy"}
+# an object's colour when it is part of an alert, most serious first
+ALERT_RGB = [("near_miss", ui.RED), ("speeding", ui.RED), ("lane", ui.ORANGE), ("wrong_way", ui.PINK)]
+UNPLACED = (110, 122, 136)
+DARK = (10, 14, 19)
 
 
 # ------------------------------------------------------------------ output
@@ -51,7 +51,7 @@ class VideoOut:
         self.p = subprocess.Popen(
             [imageio_ffmpeg.get_ffmpeg_exe(), "-y", "-loglevel", "error", "-f", "rawvideo",
              "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", f"{fps}", "-i", "-",
-             "-c:v", "libx264", "-preset", "veryfast", "-crf", "21", "-pix_fmt", "yuv420p",
+             "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p",
              "-movflags", "+faststart", str(path)], stdin=subprocess.PIPE)
 
     def write(self, img: np.ndarray) -> None:
@@ -80,22 +80,123 @@ class Reader:
         return img
 
 
+# ------------------------------------------------------------------ labels
+def _ink_on(rgb) -> tuple:
+    """Dark text on a light chip, white on a dark one."""
+    return DARK if (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) > 140 else (255, 255, 255)
+
+
+class Marks:
+    """Labels for one picture, placed clear of each other, drawn later on the page at an offset."""
+
+    def __init__(self, w: int, h: int, taken: list | None = None):
+        self.w, self.h = w, h
+        self.taken = list(taken or [])
+        self.ops: list[tuple] = []
+
+    def _spot(self, cands, tw: int, th: int):
+        best, best_cost = None, None
+        for x0, y0 in cands:
+            x0 = min(max(2, x0), self.w - tw - 2)
+            y0 = min(max(2, y0), self.h - th - 2)
+            box = (x0, y0, x0 + tw, y0 + th)
+            hit = sum(max(0, min(box[2], b[2]) - max(box[0], b[0])) * max(0, min(box[3], b[3]) - max(box[1], b[1]))
+                      for b in self.taken)
+            if best_cost is None or hit < best_cost:
+                best, best_cost = box, hit
+            if hit == 0:
+                break
+        self.taken.append(best)
+        return best
+
+    @staticmethod
+    def tag_size(text: str, size: int, icon: str | None, badges: int) -> tuple[int, int]:
+        h = size + 9
+        w = ui.Canvas.width(text, size, "semibold") + 12 + (size + 6 if icon else 0) + badges * (h - 2)
+        return w, h
+
+    def tag(self, box, text: str, rgb, size: int = 12, icon: str | None = None, badges: list | None = None,
+            point: bool = False) -> None:
+        """A coloured tag for an object: above its box (or beside a point), PPE badges at its end."""
+        tw, th = self.tag_size(text, size, icon, len(badges or []))
+        if point:
+            u, v = box
+            cands = [(u + 8, v - th - 4), (u - tw - 8, v - th - 4), (u + 8, v + 4), (u - tw - 8, v + 4)]
+        else:
+            x1, y1, x2, y2 = box
+            cands = [(x1, y1 - th - 3), (x2 - tw, y1 - th - 3), (x1, y2 + 3), (x1 + 2, y1 + 2),
+                     (x1, y1 - 2 * th - 6), (x2 - tw, y1 - 2 * th - 6), (x1 - tw - 3, y1), (x2 + 3, y1),
+                     (x1 - tw // 2, y1 - th - 3), (x1 - tw // 2, y1 - 2 * th - 6), (x1, y1 - 3 * th - 9),
+                     (x2 + 3, y1 + th + 3), (x1 - tw - 3, y1 + th + 3)]
+        self.ops.append(("tag", self._spot(cands, tw, th), text, rgb, size, icon, badges or []))
+
+    def chip(self, xy, text: str, size: int = 11, rgb=ui.TEXT, bg=(10, 14, 19, 200), icon: str | None = None,
+             dot=None, anchor: str = "la", place: bool = True) -> None:
+        """A neutral dark chip (zone names, line counts, camera names)."""
+        w = ui.Canvas.width(text, size, "semibold") + 16 + (size + 8 if icon else 0) + (12 if dot else 0)
+        h = size + 10
+        x, y = xy
+        x -= w if anchor[0] == "r" else (w // 2 if anchor[0] == "m" else 0)
+        y -= h if anchor[1] == "b" else (h // 2 if anchor[1] == "m" else 0)
+        if place:
+            box = self._spot([(x, y), (x, y - h - 4), (x, y + h + 4), (x - w // 2, y)], w, h)
+        else:
+            box = (x, y, x + w, y + h)
+        self.ops.append(("chip", box, text, size, rgb, bg, icon, dot))
+
+    def draw(self, cv: ui.Canvas, dx: int = 0, dy: int = 0) -> None:
+        for op in self.ops:
+            if op[0] == "tag":
+                _, (x0, y0, x1, y1), text, rgb, size, icon, badges = op
+                x0, y0, x1, y1 = x0 + dx, y0 + dy, x1 + dx, y1 + dy
+                cv.rrect((x0, y0, x1, y1), r=6, fill=(*rgb, 235))
+                ink = _ink_on(rgb)
+                x = x0 + 6
+                if icon:
+                    cv.icon(icon, (x + (size + 2) / 2, (y0 + y1) / 2), size + 3, ink)
+                    x += size + 6
+                b = cv.text((x, (y0 + y1) / 2), text, size, "semibold", ink, anchor="lm")
+                x = b[2] + 5
+                d = y1 - y0 - 4
+                for name, state in badges:
+                    cx, cy = x + d / 2, (y0 + y1) / 2
+                    cv.dot((cx, cy), d / 2, ui.STATE[state])
+                    cv.d.ellipse((cx - d / 2, cy - d / 2, cx + d / 2, cy + d / 2), outline=(*DARK, 120), width=1)
+                    cv.pictogram(name, (cx, cy), int(d * 0.72), (255, 255, 255))
+                    x += d + 2
+            else:
+                _, (x0, y0, x1, y1), text, size, rgb, bg, icon, dot = op
+                x0, y0, x1, y1 = x0 + dx, y0 + dy, x1 + dx, y1 + dy
+                cv.rrect((x0, y0, x1, y1), r=(y1 - y0) // 2, fill=bg)
+                x = x0 + 8
+                if dot:
+                    cv.dot((x + 3, (y0 + y1) / 2), 3.5, dot)
+                    x += 12
+                if icon:
+                    cv.icon(icon, (x + (size + 4) / 2, (y0 + y1) / 2), size + 4, rgb)
+                    x += size + 8
+                cv.text((x, (y0 + y1) / 2), text, size, "semibold", rgb, anchor="lm", tnum=True)
+
+
 # --------------------------------------------------------------- the plan
 class PlanView:
-    """The floor plan, cropped to a world rectangle and fitted into w x h."""
+    """The floor plan, cropped to a world rectangle, fitted into w x h and toned down to a dark map."""
 
-    def __init__(self, plan: FloorPlan, bounds: tuple, w: int, h: int, dim: float = 0.62):
+    def __init__(self, plan: FloorPlan, bounds: tuple, w: int, h: int, inside: np.ndarray | None = None):
         x0, y0, x1, y1 = bounds
         crop = plan.crop(x0, y0, x1, y1)
         s = min(w / crop.image.shape[1], h / crop.image.shape[0])
         crop = crop.resized(s)
         self.w, self.h = w, h
-        self.img = np.full((h, w, 3), dr.BG, np.uint8)
+        g = cv2.cvtColor(crop.image, cv2.COLOR_BGR2GRAY).astype(np.float32)
+        tone = (g[..., None] * np.array([0.34, 0.31, 0.28], np.float32) + np.array([16, 12, 9], np.float32))
+        self.img = np.full((h, w, 3), ui.bgr(ui.SURFACE), np.uint8)
         oy, ox = (h - crop.image.shape[0]) // 2, (w - crop.image.shape[1]) // 2
-        self.img[oy:oy + crop.image.shape[0], ox:ox + crop.image.shape[1]] = (crop.image * dim).astype(np.uint8)
+        self.img[oy:oy + crop.image.shape[0], ox:ox + crop.image.shape[1]] = np.clip(tone, 0, 255).astype(np.uint8)
         self.A = np.array([[1, 0, ox], [0, 1, oy], [0, 0, 1.0]]) @ crop.A
         self.px_per_m = abs(self.A[0, 0])
         self.base = self.img.copy()
+        self.taken: list = []
 
     def pt(self, x, y) -> tuple[int, int]:
         u = self.A[0, 0] * x + self.A[0, 1] * y + self.A[0, 2]
@@ -120,61 +221,90 @@ def fov_mask(view: PlanView, cam: Camera, inside: np.ndarray | None) -> np.ndarr
     return m
 
 
-def draw_static(view: PlanView, cams: dict[str, Camera], shown: list[str], other: list[str],
-                zones, lines, inside: np.ndarray | None = None) -> np.ndarray:
-    """Zones, lines, fields of view and camera markers - drawn once.
+ZONE_RGB = {"area": ui.SLATE, "vehicle_lane": ui.AMBER, "one_way": ui.PINK}
 
-    `inside`, in the view's pixels, is the building's floor: a field of view
-    stops at the wall even though the geometry would carry it on outside.
-    """
+
+def zone_share(cam: Camera, zone) -> float:
+    """The share of a zone's floor this camera can place a person on."""
+    from analytics import inside
+    fp = cam.footprint(PLACE_SCALE, radius_m=80.0, step_m=0.25)
+    if len(fp) < 3:
+        return 0.0
+    xs, ys = [p[0] for p in zone.polygon], [p[1] for p in zone.polygon]
+    gx, gy = np.meshgrid(np.linspace(min(xs), max(xs), 40), np.linspace(min(ys), max(ys), 40))
+    gx, gy = gx.ravel(), gy.ravel()
+    inz = inside(gx, gy, zone.polygon)
+    return float(np.mean(inside(gx[inz], gy[inz], fp))) if inz.any() else 0.0
+
+
+def _blend_poly(img, pts, rgb, a: float) -> None:
+    layer = img.copy()
+    cv2.fillPoly(layer, [pts], ui.bgr(rgb), cv2.LINE_AA)
+    cv2.addWeighted(layer, a, img, 1 - a, 0, img)
+
+
+def plan_static(view: PlanView, cams: dict[str, Camera], shown: list[str], other: list[str],
+                zones, lines, inside: np.ndarray | None = None) -> np.ndarray:
+    """Zones, lines, fields of view and camera markers - drawn once."""
     img = view.base.copy()
-    T = dr.Texts()
-    marks = [view.pt(cams[c].centre[0], cams[c].centre[1]) for c in list(other) + list(shown)]
-    taken = [(u - 6, v - 6, u + 6, v + 6) for u, v in marks]
     for z in zones:
         p = view.poly(z.polygon)
-        if z.kind == "vehicle_lane":
-            dr.fill_alpha(img, p, dr.FORKLIFT, 0.20)
-            cv2.polylines(img, [p], True, dr.FORKLIFT, 1, cv2.LINE_AA)
-        elif z.kind == "one_way":
-            dr.fill_alpha(img, p, dr.bgr("#f472b6"), 0.16)
-            cv2.polylines(img, [p], True, dr.bgr("#f472b6"), 1, cv2.LINE_AA)
+        rgb = ZONE_RGB.get(z.kind, ui.SLATE)
+        _blend_poly(img, p, rgb, 0.16 if z.kind != "area" else 0.08)
+        if z.kind == "area":
+            ui.dashed(img, np.vstack([p, p[:1]]), rgb, 1, 6, 5)
+        else:
+            cv2.polylines(img, [p], True, ui.bgr(rgb), 1, cv2.LINE_AA)
+        if z.kind == "one_way":
             cx, cy = np.mean([q[0] for q in z.polygon]), np.mean([q[1] for q in z.polygon])
             a = view.pt(cx - z.direction[0] * 3, cy - z.direction[1] * 3)
             b = view.pt(cx + z.direction[0] * 3, cy + z.direction[1] * 3)
-            cv2.arrowedLine(img, a, b, dr.bgr("#f472b6"), 2, cv2.LINE_AA, tipLength=0.35)
-        else:
-            dr.fill_alpha(img, p, dr.bgr("#94a3b8"), 0.10)
-            cv2.polylines(img, [p], True, dr.bgr("#cbd5e1"), 1, cv2.LINE_AA)
+            cv2.arrowedLine(img, a, b, ui.bgr(ui.PINK), 2, cv2.LINE_AA, tipLength=0.35)
     for ln in lines:
         a, b = view.pt(*ln.a), view.pt(*ln.b)
-        cv2.line(img, a, b, dr.INK, 2, cv2.LINE_AA)
-        dr.place_label(T, ln.name.split(" ·")[0].replace("Garis ", ""), b, 13, dr.INK, taken, view.w, view.h, 4)
-    for cid in other:
-        cs, _ = cv2.findContours(fov_mask(view, cams[cid], inside), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        cv2.drawContours(img, cs, -1, dr.FAINT, 1, cv2.LINE_AA)
+        cv2.line(img, a, b, ui.bgr(ui.TEXT), 2, cv2.LINE_AA)
+        for p in (a, b):
+            cv2.circle(img, p, 3, ui.bgr(ui.TEXT), -1, cv2.LINE_AA)
     for k, cid in enumerate(shown):
-        col = dr.CAMERA_COLOURS[k]
+        rgb = ui.CAMERA[k]
         m = fov_mask(view, cams[cid], inside)
-        dr.blend(img, np.full_like(img, col), m.astype(bool), 0.13)
+        layer = img.copy()
+        layer[m.astype(bool)] = ui.bgr(rgb)
+        cv2.addWeighted(layer, 0.07, img, 0.93, 0, img)
         cs, _ = cv2.findContours(m, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        cv2.drawContours(img, cs, -1, col, 2, cv2.LINE_AA)
+        for c in cs:
+            ui.dashed(img, np.vstack([c[:, 0], c[:1, 0]]), rgb, 1, 7, 5)
     for cid in list(other) + list(shown):
         cam = cams[cid]
-        col = dr.CAMERA_COLOURS[shown.index(cid)] if cid in shown else dr.FAINT
+        rgb = ui.CAMERA[shown.index(cid)] if cid in shown else ui.TEXT_3
         u, v = view.pt(cam.centre[0], cam.centre[1])
-        hx, hy = view.pt(cam.centre[0] + 2.5 * math.cos(cam.heading), cam.centre[1] + 2.5 * math.sin(cam.heading))
-        cv2.arrowedLine(img, (u, v), (hx, hy), col, 2, cv2.LINE_AA, tipLength=0.4)
-        cv2.circle(img, (u, v), 5 if cid in shown else 3, col, -1, cv2.LINE_AA)
-        # the heading arrow is part of the marker: a label must not cover it
-        taken.append((min(u, hx) - 3, min(v, hy) - 3, max(u, hx) + 3, max(v, hy) + 3))
-    for cid in shown:
-        u, v = view.pt(cams[cid].centre[0], cams[cid].centre[1])
-        dr.place_label(T, cid.replace("Camera_", "CCTV "), (u, v), 13, dr.CAMERA_COLOURS[shown.index(cid)],
-                    taken, view.w, view.h)
-    T.flush(img)
-    view.taken = taken            # moving labels are kept off these, every frame
+        hx, hy = view.pt(cam.centre[0] + 2.2 * math.cos(cam.heading), cam.centre[1] + 2.2 * math.sin(cam.heading))
+        cv2.line(img, (u, v), (hx, hy), ui.bgr(rgb), 2, cv2.LINE_AA)
+        cv2.circle(img, (u, v), 5 if cid in shown else 3, ui.bgr(rgb), -1, cv2.LINE_AA)
+        if cid in shown:
+            cv2.circle(img, (u, v), 8, ui.bgr(rgb), 1, cv2.LINE_AA)
+        view.taken.append((min(u, hx) - 6, min(v, hy) - 6, max(u, hx) + 6, max(v, hy) + 6))
     return img
+
+
+def plan_labels(view: PlanView, cams, shown: list[str], zones, lines, fr: Frame, scene: str) -> Marks:
+    """The plan's names: shown cameras, zones with how many people are in them now, lines with their counts."""
+    mk = Marks(view.w, view.h, view.taken)
+    for k, cid in enumerate(shown):
+        u, v = view.pt(cams[cid].centre[0], cams[cid].centre[1])
+        mk.chip((u + 10, v - 10), ops.cam_label(cid), 10, ui.CAMERA[k], (10, 14, 19, 215), anchor="lb")
+    for k, z in enumerate(zones):          # numbered; the names and counts are listed under the plan
+        xs, ys = [p[0] for p in z.polygon], [p[1] for p in z.polygon]
+        u, v = view.pt(min(xs), max(ys))
+        mk.chip((u + 2, v + 2), f"{k + 1}", 10, ZONE_RGB.get(z.kind, ui.SLATE) if z.kind != "area" else ui.TEXT,
+                (10, 14, 19, 215))
+    for ln in lines:
+        a, b = view.pt(*ln.a), view.pt(*ln.b)
+        i, o = fr.line_totals.get(ln.name, (0, 0))
+        letter = ln.name.split(" ·")[0].replace("Garis ", "")
+        mk.chip(((a[0] + b[0]) // 2 + 6, (a[1] + b[1]) // 2), f"{letter}  ↑{i} ↓{o}", 10, ui.TEXT,
+                (10, 14, 19, 215), anchor="lm")
+    return mk
 
 
 class Heat:
@@ -197,59 +327,68 @@ class Heat:
         h /= max(float(np.percentile(h[h > 0], 99.5)), 1e-6)
         h = np.clip(h, 0, 1)
         col = cv2.applyColorMap((h * 255).astype(np.uint8), cv2.COLORMAP_INFERNO)
-        a = (np.clip((h - 0.06) / 0.7, 0, 1) * 0.55)[..., None]
+        a = (np.clip((h - 0.08) / 0.7, 0, 1) * 0.42)[..., None]
         img[:] = (img * (1 - a) + col * a).astype(np.uint8)
 
 
-def draw_objects(img: np.ndarray, view: PlanView, fr: Frame, seen_by: dict[int, set],
-                 shown: list[str], trails: dict, T: dr.Texts, label_all: bool = False) -> None:
-    taken = list(getattr(view, "taken", []))
+def person_rgb(o, ppe_state=None) -> tuple:
+    """A person's colour: an alert first, then their PPE (green complete, amber not), else cyan."""
+    for a, rgb in ALERT_RGB:
+        if a in o.alerts:
+            return rgb
+    if ppe_state is not None and ppe_state != (None, None):
+        return ui.GREEN if all(ppe_state) else ui.AMBER
+    return ui.CYAN
+
+
+def plan_objects(img: np.ndarray, view: PlanView, fr: Frame, seen_by: dict[int, set], shown: list[str],
+                 trails: dict, mk: Marks, ppe: dict | None = None, label_all: bool = False) -> None:
+    """People, vehicles, their last three seconds, and the near-miss link, on the plan."""
     for o in fr.objects:
-        tr = trails.setdefault(o.gid, deque(maxlen=30))
-        tr.append((o.x, o.y))
+        trails.setdefault(o.gid, deque(maxlen=30)).append((o.x, o.y))
+    layer = img.copy()
     for gid, tr in trails.items():
         if len(tr) > 1:
             pts = np.array([view.pt(x, y) for x, y in tr], np.int32)
-            cv2.polylines(img, [pts], False, dr.FAINT, 1, cv2.LINE_AA)
+            cv2.polylines(layer, [pts], False, ui.bgr(ui.CYAN), 1, cv2.LINE_AA)
+    cv2.addWeighted(layer, 0.35, img, 0.65, 0, img)
     for p, v, d in fr.near_pairs:
         po = next((o for o in fr.objects if o.gid == p), None)
         vo = next((o for o in fr.objects if o.gid == v), None)
         if po and vo:
-            cv2.line(img, view.pt(po.x, po.y), view.pt(vo.x, vo.y), dr.BAD, 2, cv2.LINE_AA)
+            cv2.line(img, view.pt(po.x, po.y), view.pt(vo.x, vo.y), ui.bgr(ui.RED), 2, cv2.LINE_AA)
     for x, y, n in fr.crowd_spots:
-        u, v = view.pt(x, y)
-        cv2.circle(img, (u, v), int(C.CROWD_RADIUS_M * view.px_per_m), ALERT_COLOUR["crowd"], 1, cv2.LINE_AA)
-    for o in sorted(fr.objects, key=lambda o: o.cls != "person"):
+        cv2.circle(img, view.pt(x, y), int(C.CROWD_RADIUS_M * view.px_per_m), ui.bgr(ui.BLUE), 1, cv2.LINE_AA)
+    for o in sorted(fr.objects, key=lambda o: o.cls == "person"):
         u, v = view.pt(o.x, o.y)
-        rings = [dr.CAMERA_COLOURS[shown.index(c)] for c in sorted(seen_by.get(o.gid, ())) if c in shown]
+        rings = [ui.CAMERA[shown.index(c)] for c in sorted(seen_by.get(o.gid, ())) if c in shown]
         if o.cls in VEHICLE_BODY:
             L, Wd = VEHICLE_BODY[o.cls]
             c, s = math.cos(o.heading), math.sin(o.heading)
             corners = [(o.x + c * a - s * b, o.y + s * a + c * b)
                        for a, b in ((-L / 2, -Wd / 2), (L / 2, -Wd / 2), (L / 2, Wd / 2), (-L / 2, Wd / 2))]
             p = view.poly(corners)
-            col = ALERT_COLOUR["near_miss"] if "near_miss" in o.alerts or "speeding" in o.alerts \
-                else CLASS_COLOUR[o.cls]
-            cv2.fillPoly(img, [p], col, cv2.LINE_AA)
+            rgb = ui.RED if ("near_miss" in o.alerts or "speeding" in o.alerts) else CLASS_RGB[o.cls]
+            cv2.fillPoly(img, [p], ui.bgr(rgb), cv2.LINE_AA)
+            cv2.polylines(img, [p], True, ui.bgr(DARK), 1, cv2.LINE_AA)
+            if o.cls == "forklift" and o.reliable and o.speed > C.VEHICLE_MOVING_MS:
+                tip = view.pt(o.x + c * (L / 2 + 0.9), o.y + s * (L / 2 + 0.9))
+                cv2.arrowedLine(img, (u, v), tip, ui.bgr(ui.TEXT), 1, cv2.LINE_AA, tipLength=0.5)
             for k, rc in enumerate(rings):
-                cv2.polylines(img, [p], True, rc, 2 + 2 * k, cv2.LINE_AA)
-            lab = f"{TAG[o.cls]}{o.gid}" + (f" {kmh(o.speed)}" if o.cls == "forklift" and o.reliable else "")
-            dr.place_label(T, lab, (u, v), 12, col, taken, view.w, view.h, 6)
+                cv2.polylines(img, [p], True, ui.bgr(rc), 1 + k, cv2.LINE_AA)
+            lab = f"{TAG[o.cls]}{o.gid}" + (f" · {speed_text(o)}" if o.cls == "forklift" and o.reliable else "")
+            mk.tag((u, v), lab, rgb, 10, point=True)
             continue
-        col = dr.PERSON if o.walking else dr.PERSON_IDLE
-        for a in ("near_miss", "wrong_way", "lane", "idle", "crowd"):
-            if a in o.alerts:
-                col = ALERT_COLOUR[a]
-                break
+        rgb = person_rgb(o, (ppe or {}).get(o.gid))
         for k, rc in enumerate(rings):
-            cv2.circle(img, (u, v), 6 + 3 * k, rc, 2, cv2.LINE_AA)
-        cv2.circle(img, (u, v), 4, col, -1, cv2.LINE_AA)
+            cv2.circle(img, (u, v), 7 + 3 * k, ui.bgr(rc), 1, cv2.LINE_AA)
+        cv2.circle(img, (u, v), 5, ui.bgr(DARK), -1, cv2.LINE_AA)
+        cv2.circle(img, (u, v), 4, ui.bgr(rgb if o.walking or rgb != ui.CYAN else (186, 230, 253)), -1, cv2.LINE_AA)
         if rings or o.alerts or label_all:
-            dr.place_label(T, f"P{o.gid}", (u, v), 11, col if o.alerts else dr.INK, taken, view.w, view.h, 5,
-                           bold=bool(o.alerts))
+            mk.tag((u, v), f"P{o.gid}", rgb, 10, point=True)
 
 
-# --------------------------------------------------------------- the tiles
+# --------------------------------------------------------------- the cameras
 def project_poly(cam: Camera, pts, step_m: float = 0.1) -> list[np.ndarray]:
     """A floor outline as image segments, kept only where the camera places things.
 
@@ -282,82 +421,94 @@ def project_poly(cam: Camera, pts, step_m: float = 0.1) -> list[np.ndarray]:
     return segs
 
 
-def tile(img: np.ndarray, cam: Camera, rows: np.ndarray, classes: list[str], frame: int, fr: Frame,
-         key_to_gid: dict, placed: set, colour, size: tuple[int, int], zones, lines,
-         title: str, big: bool = False, ppe: dict | None = None, echoes: bool = True) -> np.ndarray:
-    """One camera, scaled to `size`, with everything tying it to the plan.
+class CameraOverlay:
+    """What is fixed in one camera's picture at one size: its zones and lines, projected once."""
 
-    `ppe`, when given, is each person's live helmet / vest status: the label
-    then carries an H and an R chip (green worn, red not, grey not known yet).
+    def __init__(self, cam: Camera, size: tuple[int, int], zones, lines):
+        self.cam, self.size = cam, size
+        s = size[0] / cam.width
+        self.zones = [(z, [(seg * s).astype(np.int32) for seg in project_poly(cam, list(z.polygon))]) for z in zones]
+        self.lines = [(ln, [(seg * s).astype(np.int32) for seg in project_poly(cam, [ln.a, ln.b])]) for ln in lines]
+
+
+def camera_view(img: np.ndarray, ov: CameraOverlay, rows: np.ndarray, classes: list[str], frame: int, fr: Frame,
+                key_to_gid: dict, placed: set, big: bool = False, ppe: dict | None = None,
+                header: tuple | None = None) -> tuple[np.ndarray, Marks]:
+    """One camera picture scaled to its tile, with the floor's zones and lines and every detection.
+
+    Returns the picture and its labels (drawn later on the page). `ppe`, when
+    given, is each person's live helmet / vest status, shown as two badges.
+    `header` = (camera colour, camera label, place name, people count).
     """
-    tw, th = size
+    tw, th = ov.size
+    cam = ov.cam
     s = tw / cam.width
     out = cv2.resize(img, (tw, th), interpolation=cv2.INTER_AREA)
-    T = dr.Texts()
-    fs = 15 if big else 11
-    taken = [(0, 0, 14 + T.width(title, 16 if big else 13, True), 32 if big else 26)]   # the title
-    # the floor overlays, projected from metres; zones faint, lines solid
+    mk = Marks(tw, th)
+    fs = 12 if big else 10
+    if header:
+        rgb, label, place, n = header
+        mk.chip((10, 10), f"{label} · {place}", 12 if big else 10, ui.TEXT, (10, 14, 19, 205), dot=rgb, place=False)
+        mk.chip((tw - 10, 10), f"{n} orang", 12 if big else 10, ui.TEXT, (10, 14, 19, 205), icon="groups",
+                anchor="ra", place=False)
+        mk.taken += [(0, 0, tw, 40 if big else 32)]
+    # the floor: zones as outlines, lines solid
     layer = out.copy()
-    for z in zones:
-        col = dr.FORKLIFT if z.kind == "vehicle_lane" else dr.bgr("#f472b6") if z.kind == "one_way" \
-            else dr.bgr("#cbd5e1")
-        for seg in project_poly(cam, list(z.polygon)):
-            cv2.polylines(layer, [(seg * s).astype(np.int32)], False, col, 2 if big else 1, cv2.LINE_AA)
-    cv2.addWeighted(layer, 0.55, out, 0.45, 0, out)
-    for ln in lines:
-        for seg in project_poly(cam, [ln.a, ln.b]):
-            q = (seg * s).astype(np.int32)
-            cv2.polylines(out, [q], False, dr.INK, 2, cv2.LINE_AA)
-            if np.hypot(*(q[-1] - q[0])) >= (90 if big else 45):
+    for z, segs in ov.zones:
+        rgb = ZONE_RGB.get(z.kind, ui.SLATE)
+        for seg in segs:
+            if z.kind == "area":
+                ui.dashed(layer, seg, (226, 232, 240), 2 if big else 1, 10, 7)
+            else:
+                cv2.polylines(layer, [seg], False, ui.bgr(rgb), 3 if big else 2, cv2.LINE_AA)
+    cv2.addWeighted(layer, 0.6, out, 0.4, 0, out)
+    if big:
+        for z, segs in ov.zones:
+            if not segs or z.kind == "area":
+                continue
+            seg = max(segs, key=len)
+            if np.hypot(*(seg[-1] - seg[0])) >= 120:
+                mid = seg[len(seg) // 2]
+                mk.chip((int(mid[0]), int(mid[1]) + 6), ops.zone_label(z.name), 11, ZONE_RGB[z.kind],
+                        (10, 14, 19, 190))
+    for ln, segs in ov.lines:
+        for q in segs:
+            cv2.polylines(out, [q], False, ui.bgr(ui.TEXT), 2, cv2.LINE_AA)
+            if np.hypot(*(q[-1] - q[0])) >= (110 if big else 60):
                 mid = q[len(q) // 2]
-                dr.place_label(T, ln.name.split(" ·")[0], (int(mid[0]), int(mid[1])), fs, dr.INK, taken, tw, th, 4)
+                i, o = fr.line_totals.get(ln.name, (0, 0))
+                text = f"{ops.line_label(ln.name)}  ↑{i} ↓{o}" if big else ln.name.split(" ·")[0].replace("Garis ", "")
+                mk.chip((int(mid[0]), int(mid[1]) + 4), text, fs, ui.TEXT, (10, 14, 19, 205))
     objs = {o.gid: o for o in fr.objects}
-    here = set()
     labels = []
-    r = rows[rows[:, 0] == frame]
-    for d in r:
-        x1, y1, x2, y2 = (d[2:6] * s).astype(int)
+    for d in rows[rows[:, 0] == frame]:
+        box = (d[2:6] * s).astype(int)
         cls = classes[int(d[7])]
         gid = key_to_gid.get((cam.id, int(d[1]))) if d[1] >= 0 else None
         if gid is not None and gid in objs and gid in placed:
             o = objs[gid]
-            here.add(gid)
-            col = CLASS_COLOUR[cls]
-            for a in ("near_miss", "speeding", "wrong_way", "lane", "idle", "crowd"):
-                if a in o.alerts:
-                    col = ALERT_COLOUR[a]
-                    break
-            cv2.rectangle(out, (x1, y1), (x2, y2), col, 2 if big else 1, cv2.LINE_AA)
-            lab = f"{TAG[cls]}{gid}"
-            if cls == "forklift" and o.reliable:
-                lab += f" {kmh(o.speed)}"
-            labels.append((lab, (x1, y1, x2, y2), col, gid if cls == "person" else None))
+            state = (ppe or {}).get(gid) if cls == "person" else None
+            if cls == "person":
+                rgb = person_rgb(o, state if ppe is not None else None)
+            else:
+                rgb = ui.RED if ("near_miss" in o.alerts or "speeding" in o.alerts) else CLASS_RGB[cls]
+            alert = any(a in o.alerts for a, _ in ALERT_RGB)
+            ui.corner_box(out, box, rgb, 2, fill=0.10 if alert else 0.0)
+            labels.append((o, cls, box, rgb, state))
         else:
             # seen, but not on the plan (feet out of frame, too far, not yet confirmed)
-            cv2.rectangle(out, (x1, y1), (x2, y2), dr.MUTED, 1, cv2.LINE_AA)
+            ui.corner_box(out, box, UNPLACED, 1, frac=0.18)
     # nearest first: the label of the biggest box is the one that keeps its place
-    for lab, box, col, pgid in sorted(labels, key=lambda t: -(t[1][3] - t[1][1])):
-        if ppe is not None and pgid is not None:
-            helm, vest = ppe.get(pgid, (None, None))
-            dr.box_label_chips(T, lab, [("H", helm), ("R", vest)], box, fs, col, taken, tw, th)
-        else:
-            dr.box_label(T, lab, box, fs, col, taken, tw, th)
-    # echoes: objects other cameras placed, drawn at their floor point in this view
-    for o in (fr.objects if echoes else []):
-        if o.gid in here:
-            continue
-        uv = cam.to_image(np.array([[o.x, o.y, 0.0]]))[0]
-        if not np.isfinite(uv).all() or not (0 <= uv[0] < cam.width and 0 <= uv[1] < cam.height):
-            continue
-        if cam.floor_scale(np.array([uv[0]]), np.array([uv[1]]))[0] > 0.15:
-            continue
-        u, v = int(uv[0] * s), int(uv[1] * s)
-        cv2.circle(out, (u, v), 6 if big else 4, CLASS_COLOUR[o.cls], 1, cv2.LINE_AA)
-        if big:
-            dr.place_label(T, f"{TAG[o.cls]}{o.gid}", (u, v), 11, dr.MUTED, taken, tw, th, 5, bold=False)
-    cv2.rectangle(out, (0, 0), (tw - 1, th - 1), colour, 4 if big else 3)
-    T.add(title, (8, 6), 16 if big else 13, dr.INK, True, bg=colour, pad=4)
-    return T.flush(out)
+    for o, cls, box, rgb, state in sorted(labels, key=lambda t: -(t[2][3] - t[2][1])):
+        text = f"{TAG[cls]}{o.gid}"
+        if cls == "forklift" and o.reliable:
+            text += f" · {speed_text(o)}"
+        badges = None
+        if cls == "person" and ppe is not None:
+            h, v = state if state else (None, None)
+            badges = [("helmet", h), ("vest", v)]
+        mk.tag(tuple(box), text, rgb, fs, icon=CLASS_ICON.get(cls), badges=badges)
+    return out, mk
 
 
 def key_index(fr_blobs, confirmed: set) -> tuple[dict, dict]:
@@ -373,58 +524,15 @@ def key_index(fr_blobs, confirmed: set) -> tuple[dict, dict]:
     return k2g, seen
 
 
-# --------------------------------------------------------------- panels
-def header(img: np.ndarray, title: str, sub: str, clock: str) -> None:
-    img[:HEADER] = dr.PANEL
-    T = dr.Texts()
-    T.add(title, (16, 11), 21, dr.INK, True)
-    x = 16 + T.width(title, 21, True) + 18
-    room = W - 16 - T.width(clock, 20, True) - 24 - x
-    size = 15
-    while size > 11 and T.width(sub, size) > room:      # shrink to fit before the clock
-        size -= 1
-    while T.width(sub, size) > room and len(sub) > 4:   # and only then cut
-        sub = sub[:-2].rstrip() + "…"
-    T.add(sub, (x, 15 + (15 - size) // 2), size, dr.MUTED)
-    T.add(clock, (W - 16, 12), 20, dr.INK, True, anchor="ra")
-    T.flush(img)
+def speed_text(o) -> str:
+    """The speed written beside a forklift.
 
-
-def kpi(T: dr.Texts, x: int, y: int, label: str, value: str, note: str = "", colour=dr.INK,
-        size: int = 34) -> None:
-    T.add(label.upper(), (x, y), 12, dr.MUTED, True)
-    T.add(value, (x, y + 16), size, colour, True)
-    if note:
-        T.add(note, (x + T.width(value, size, True) + 8, y + 16 + size - 20), 13, dr.MUTED)
-
-
-def ticker(T: dr.Texts, x: int, y: int, w: int, events: list[str], rows: int = 5) -> None:
-    T.add("KEJADIAN TERBARU", (x, y), 12, dr.MUTED, True)
-    for i, e in enumerate(events[-rows:][::-1]):
-        T.add(e, (x, y + 20 + i * 21), 14, dr.INK if i == 0 else dr.MUTED)
-
-
-def sparkline(img: np.ndarray, x: int, y: int, w: int, h: int, series: list[list[float]],
-              colours: list, ymax: float | None = None) -> None:
-    cv2.rectangle(img, (x, y), (x + w, y + h), dr.FAINT, 1)
-    top = ymax or max(1.0, max(max(s) for s in series if s))
-    for s, col in zip(series, colours):
-        if len(s) < 2:
-            continue
-        n = len(s)
-        pts = np.array([(x + int(i * w / max(n - 1, 1)) if n > 1 else x, y + h - int(v / top * (h - 4)) - 2)
-                        for i, v in enumerate(s)], np.int32)
-        cv2.polylines(img, [pts], False, col, 2, cv2.LINE_AA)
-
-
-def num(x: float, digits: int = 1) -> str:
-    """A decimal the Indonesian way: 4,6 not 4.6."""
-    return f"{x:.{digits}f}".replace(".", ",")
-
-
-def kmh(speed_ms: float) -> str:
-    return f"{speed_ms * 3.6:.0f} km/j"
-
-
-def fmt_t(t: float) -> str:
-    return f"{int(t) // 60:02d}:{int(t) % 60:02d}"
+    Above the limit only once it has lasted the full second the speeding alert
+    needs; shorter, it reads "<= limit". On this site every such short reading
+    was a position jump between cameras, not a forklift going faster (F12 shown
+    at 11 km/h against 2.9 true, F13 at 9 against 3.6).
+    """
+    kmh = o.speed * 3.6
+    if kmh > C.SPEED_LIMIT_KMH and "speeding" not in o.alerts:
+        return f"≤{C.SPEED_LIMIT_KMH:.0f} km/j"
+    return f"{kmh:.0f} km/j"

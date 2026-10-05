@@ -2,24 +2,6 @@
  "how": "every violation the video reports, checked by eye on the person's crop when it is reported (after the AI, so not blind)",
  "events": [
   {
-   "gid": 2,
-   "what": "helm",
-   "start_t": 0.2,
-   "verdict": "real"
-  },
-  {
-   "gid": 3,
-   "what": "rompi",
-   "start_t": 0.2,
-   "verdict": "real"
-  },
-  {
-   "gid": 4,
-   "what": "rompi",
-   "start_t": 0.2,
-   "verdict": "real"
-  },
-  {
    "gid": 6,
    "what": "helm",
    "start_t": 0.2,
@@ -33,18 +15,22 @@
    "verdict": "real"
   },
   {
-   "gid": 7,
-   "what": "helm",
-   "start_t": 0.2,
-   "verdict": "cannot tell",
-   "note": "hidden behind a pillar"
-  },
-  {
-   "gid": 7,
+   "gid": 3,
    "what": "rompi",
    "start_t": 0.2,
-   "verdict": "cannot tell",
-   "note": "hidden behind a pillar"
+   "verdict": "real"
+  },
+  {
+   "gid": 2,
+   "what": "helm",
+   "start_t": 0.2,
+   "verdict": "real"
+  },
+  {
+   "gid": 4,
+   "what": "rompi",
+   "start_t": 0.2,
+   "verdict": "real"
   },
   {
    "gid": 13,
@@ -71,49 +57,10 @@
    "verdict": "real"
   },
   {
-   "gid": 16,
-   "what": "helm",
-   "start_t": 3.1,
-   "verdict": "real"
-  },
-  {
-   "gid": 16,
-   "what": "rompi",
-   "start_t": 3.1,
-   "verdict": "real"
-  },
-  {
    "gid": 21,
    "what": "helm",
    "start_t": 4.5,
    "verdict": "real"
-  },
-  {
-   "gid": 15,
-   "what": "helm",
-   "start_t": 5.2,
-   "verdict": "false",
-   "note": "yellow helmet on a person about 100 px tall"
-  },
-  {
-   "gid": 15,
-   "what": "rompi",
-   "start_t": 5.2,
-   "verdict": "real"
-  },
-  {
-   "gid": 29,
-   "what": "helm",
-   "start_t": 6.4,
-   "verdict": "cannot tell",
-   "note": "red head: curly red hair or a red helmet"
-  },
-  {
-   "gid": 29,
-   "what": "rompi",
-   "start_t": 6.4,
-   "verdict": "false",
-   "note": "white reflective vest"
   },
   {
    "gid": 21,
@@ -138,7 +85,7 @@
   {
    "gid": 31,
    "what": "rompi",
-   "start_t": 8.0,
+   "start_t": 8.9,
    "verdict": "false",
    "note": "pale yellow vest"
   },
@@ -205,6 +152,19 @@
    "what": "rompi",
    "start_t": 24.4,
    "verdict": "real"
+  },
+  {
+   "gid": 69,
+   "what": "helm",
+   "start_t": 24.7,
+   "verdict": "real"
+  },
+  {
+   "gid": 69,
+   "what": "rompi",
+   "start_t": 24.7,
+   "verdict": "false",
+   "note": "lime vest"
   },
   {
    "gid": 102,

@@ -11,9 +11,9 @@ Videos 2 and 3 also follow each person's helmet and vest; the data has no
 labels for those, so they are checked by eye on crops labelled before the AI
 was scored (#21).
 
-![Video 1: four of the fifteen CCTV on the left, the whole floor plan on the right; every dot on the plan carries the ring colour of the camera that sees it](docs/video1_live_ops.jpg)
+![Video 1, the site overview: the owner's cards across the top, four of the fifteen cameras, the whole floor live on the right, the alerts with their snapshots, the timeline](docs/video1_live_ops.jpg)
 
-*Second 29 of 30. CCTV 0007's purple tile shows forklift F13 at 4 km/h; on the plan F13 stands inside the purple field of view, with the same label. The red × is where the one near miss so far happened (second 3: P14 walking through the path of forklift F12). People are dots, blue walking and white standing; forklifts are orange, pallet trucks yellow; a coloured ring means the camera of that colour sees it.*
+*Video 1, second 24. The cards are what an owner checks first: 29 people on the floor, 5 of 7 forklifts moving (62 % of their time so far), the window's one near miss (second 3; its spot stays marked on the plan), 5 entries into the forklift lane — P18 and P211 are in it now, orange in CAM 0005 and on the plan, and the zone list under the plan says 2 as well. Each alert carries a snapshot of the camera that saw it, and the timeline marks it in its severity's colour. On the plan, a person is a dot (cyan walking, pale standing), a forklift an orange block; the thin coloured ring says which camera on screen sees them.*
 
 ## Result
 
@@ -30,6 +30,7 @@ recording), 15 cameras, 10 analysed frames a second.
 | **Counting lines** | 7 crossings on three lines; the ground truth has 7, and 6 of them are the same crossing, same direction, within 0.5 s |
 | **Walking vs standing** | 67.5 % of the time walking; ground truth 67.5 % |
 | **Forklifts on the plan** | found 47 %, precision 77 % with the site-trained detector (zero-shot alone: 15 %, 54 %); speed within 0.38 km/h (median), 1.6 km/h for 90 % |
+| **Forklifts moving** | moving or standing, right **81 %** of the time; utilisation (share of forklift time moving) **62 %** against 57 % true |
 | **False alarms** | speeding 0 (truth 0) · crowds 0 (truth 0) · near miss: 1 raised, and it is real |
 | **Missed** | 12 of 13 real near misses: the person stands inside the forklift's outline in the picture and is not detected |
 | **Real warehouse** | 3 of 7 cameras verified; they place the same person **0.18 m** apart (0.70 m as shipped) |
@@ -59,13 +60,12 @@ than no plan. Five things make sure it is — and let anyone check it.
    differs from the projection matrix by three orders of magnitude and puts the
    floor behind some cameras. The floor plane is always rebuilt from the
    projection matrix: `H = P[:, [0, 1, 3]]` (`scene.py`).
-4. **Same colour and same name in the tile and on the plan.** Each camera on
-   screen has one colour: its tile border, its field of view on the plan, its
-   marker, and a ring around every dot it currently sees. A person is `P12` in
-   the tile and `P12` on the plan. A person placed by *other* cameras is drawn
-   into a tile as a small hollow circle on the floor — if the geometry were
-   wrong, the circles would float away from the people. Boxes that could not be
-   placed (feet out of frame, too far away) stay visible, in grey.
+4. **Same colour and same name in the picture and on the plan.** Each camera on
+   screen has one colour: the dot before its name, its field of view on the plan
+   (dashed), its marker, and a thin ring around every dot it currently sees. A
+   person is `P12` in the picture and `P12` on the plan, a forklift `F3`. Boxes
+   that could not be placed (feet out of frame, too far away) stay visible, as
+   faint grey corners without a name.
 5. **The 3D replay can stand where a CCTV hangs.** "Dari CCTV …" in
    `replay_3d.html` puts the 3D eye at that camera's calibrated position, looking
    where it looks with its own field of view and picture shape.
@@ -93,9 +93,9 @@ and the pallet truck (yellow) are where they are in the picture.*
 
 | Output | What it shows | Made by |
 |---|---|---|
-| `output/warehouse_000/video1_live_ops.mp4` | **Video 1 · live ops.** 4 of the 15 verified CCTV, the whole floor plan, the live panel. 30 s, the busiest of the recording | `main.py` |
-| `output/warehouse_000/video2_one_camera.mp4` | **Video 2 · one CCTV.** The busiest camera large: its count against the labels, lines, zones, dwell, each person's helmet and vest (#21) | `main.py` |
-| `output/warehouse_027/video3_real.mp4` | **Video 3 · real warehouse.** The three verified real cameras large, one identity per person across them, each person's helmet and vest, the camera check; no floor plan ([why](#why-video-3-has-no-floor-plan)) | `main.py` |
+| `output/warehouse_000/video1_live_ops.mp4` | **Video 1 · site overview.** The owner's cards (people, forklifts moving and their utilisation, near misses, forklift lane, speeding, crowds), 4 of the 15 verified CCTV, the whole floor live, the alerts with a snapshot each, the timeline. 30 s, the busiest of the recording | `main.py` |
+| `output/warehouse_000/video2_one_camera.mp4` | **Video 2 · one camera.** The east work area's camera large: people in view, PPE (#21), counting lines, wrong-way walks, the zones it watches and how long people stay, its own plan, alerts and timeline | `main.py` |
+| `output/warehouse_027/video3_real.mp4` | **Video 3 · real warehouse.** The three verified real cameras, one identity per person across them, a list of everyone in the area with their helmet and vest, the robot, alerts and the system's own health; no floor plan ([why](#why-video-3-has-no-floor-plan)) | `main.py` |
 | `docs/accuracy_report.jpg` | Every number above, measured against the ground truth | `report.py` |
 | `docs/ppe_audit_video*_check.jpg` | #21 · helmet and vest, the AI against the eye on random crops | `ppe.py --audit` |
 | `weights/ppe_detector/` | #21 · the helmet / vest detector, fine-tuned on the CPU | `ppe.py --train` |
@@ -109,27 +109,77 @@ Videos, training sets and model weights are rebuilt by the scripts and kept out
 of git; the cached detections and helmet / vest evidence are committed, so
 everything after them reruns in minutes.
 
-![Video 2: CCTV 0003 large, its own count against the labels, and a plan of what it sees](docs/video2_one_camera.jpg)
+## What the owner sees
 
-*Video 2, second 20: CCTV 0003 alone, its busiest 30 seconds. The AI counts 15
-people, the labels 18; the curve under the plan follows both counts over the
-window. P74, pink, has just walked against the declared one-way aisle — one of
-the two wrong-way walks the AI flagged in this window, both of which the ground
-truth has too (it has a third the AI missed). H and R are each person's helmet
-and vest (#21): P31 wears both and P68 a helmet only, both read right; P69's
-lime vest is missed (red R) and P62's dark cap is taken for a helmet (green H)
-— the two kinds of mistake the check in #21 counts. Grey: too small to judge.*
+The three videos are laid out as one operations dashboard, in Indonesian, with
+the same parts in each (`videos.py`, `ui.py`, `ops.py`):
 
-![Video 3: the real warehouse, the three verified cameras large, each person's helmet and vest, and the camera check](docs/video3_real.jpg)
+| Part | What it is for |
+|---|---|
+| Top bar | the site, the view, the clock; "Putar ulang" says it is a recording analysed afterwards, not a live feed |
+| Cards | the figures an owner acts on: people, forklifts moving and their utilisation, near misses, people in the forklift lane, speeding, crowds; PPE in videos 2 and 3 |
+| Camera pictures | each detection as corner brackets in its status colour, with a tag: its name, a forklift's speed, a person's helmet and vest badges |
+| Floor plan | where everyone is now, the numbered zones with how many people are in each, the counting lines with their counts, every near miss so far |
+| Alerts | newest first: how serious, what happened in plain words, who, where, which camera, and a snapshot of the camera that saw it |
+| Timeline | every alert of the window as a mark in its severity's colour |
 
-*Video 3, second 20: the real warehouse's three verified cameras. P1, in the
-white hoodie, carries the same name in CCTV 0000 and CCTV 0006: one identity
-across cameras. Nobody here wears a helmet or a vest, and every judged person
-shows two red chips; what the PPE check has to get right on this site is not
-to invent PPE on ordinary clothes — the striped hoodie (P3), the yellow T-shirt
-(P10), the red jacket (P2). The panel takes the floor plan's place: people and
-the robot R5, how closely the cameras agree on a person (0.18 m), the camera
-check, and the latest events.*
+**How serious.** High (red): a near miss, a forklift over the limit. Medium
+(amber): a pedestrian in the forklift lane, a walk against a one-way aisle, a
+missing helmet or vest. Low (blue): a crowd. Information (grey): someone
+standing in one spot for 15 s — which can be a bottleneck, but is not
+misconduct. Counting-line crossings are flows: counted on the cards and the
+plan, not listed as alerts.
+
+**One count everywhere.** The cards, the alert list and the timeline are all
+counted from one list of events, so they cannot disagree. Making the dashboard
+sensible to an owner meant fixing what did disagree, each checked:
+
+- *A person in the forklift lane* was two things - the lane alert, which needs
+  a person 0.3 m inside its edge, and the zone count, which did not. The zone
+  now follows the alert's rule; card and plan agree in all 300 frames.
+- *Forklifts moving* counted only forklifts close enough for a speed reading,
+  which showed "0/0" in a quarter of the frames while five were on the plan.
+  Every forklift on the plan now counts: against the labels, moving or
+  standing is right 81 % of the time and the utilisation reads 62 % against
+  57 % true (`evaluate.forklift_motion`).
+- *A speed over the limit with no speeding alert.* Beside a forklift, a speed
+  above 5 km/h is written only once it has lasted the second the alert needs;
+  shorter, it reads "≤5 km/j". Both such readings in video 1 were position
+  jumps between cameras: F12 read 11 km/h at 2.9 true, F13 9 at 3.6.
+- *PPE alerts for people who had left.* A person kept a PPE status for two
+  seconds after they were last judged, so alerts were raised for people no
+  longer on screen. A status now lasts only while the person is being judged
+  (`ppe.PRESENT_S`); video 2 went from 34 violations to 28 and video 3 from 28
+  to 18, and every alert now has a snapshot. One person missing helmet and
+  vest is one alert, not two.
+- *Names.* A camera is called by the zone its floor covers most (measured on
+  its footprint: CAM 0003 "Area kerja timur"), a counting line by what it
+  counts ("C · Penyeberangan jalur forklift"), and the one-way aisle says
+  "aturan PoC", because the site has none.
+
+![Video 2: the east work area's camera large, its cards, its plan, the zones it watches, its alerts](docs/video2_one_camera.jpg)
+
+*Video 2, second 20: CAM 0003, the east work area, its busiest 30 seconds. 15
+people in view (the labels say 18); 5 are close enough to judge for PPE and 1
+of them wears both helmet and vest. The two badges after each name are the
+helmet and the vest: P31 wears both and P68 a helmet only, both read right;
+P69's lime vest is missed and P62's dark cap is taken for a helmet — the two
+kinds of mistake #21 counts; grey badges are people too small to judge. P74,
+pink, has just walked against the one-way aisle (a rule declared for the PoC;
+the ground truth has both of the AI's wrong-way walks, and a third it missed):
+the alert heads the list, with the camera's snapshot.*
+
+![Video 3: the real warehouse, its three verified cameras, everyone in the area with their helmet and vest, the alerts, the system's health](docs/video3_real.jpg)
+
+*Video 3, second 20: the real warehouse's three verified cameras. 7 people,
+each counted once though most are in two or three pictures (the dots at the end
+of each row of the list say which cameras see them; P1, in the white hoodie, is
+P1 in CAM 0000 and CAM 0006). The PPE rule here is a PoC setting — helmet and
+vest everywhere — and nobody wears either, so every judged person has two red
+badges and the card reads 0/7, while none of the ordinary clothes (the striped
+hoodie, the yellow T-shirt, the red jackets) is taken for PPE. The newest alert
+is a crowd, 4 people within 2 m. Where a floor plan would be, the system's own
+health: 3 of 7 cameras used, their positions agreeing to 0.18 m.*
 
 ## The data
 
@@ -248,27 +298,27 @@ perfect detector's ceiling); the whole-building figure is in
 
 | # | Analytic | Where | Video 1 (30 s), AI | Truth |
 |:-:|---|---|---|---|
-| 1 | People per CCTV | tile titles; video 2 | CCTV 0003: 6.8 per frame | 10.7 (labels ≥ 40 px) |
-| 2 | People in the building, each once | live panel | 28 on average, 35 at most | 47.5 / 53 seen by the cameras, 55.9 in the building |
-| 3 | Counting lines, in and out | plan, tiles, panel | A 2 in 1 out · B 0 · C 2 in 2 out | A 3 · B 0 · C 4; 6 of 7 the same crossing |
-| 4 | Zone occupancy and dwell | zone list; video 2 | "Area kerja timur" 2.3 people, 11 s per visit | 3.2 people |
+| 1 | People per CCTV | each camera's name tag; video 2's first card | CCTV 0003: 6.8 per frame | 10.7 (labels ≥ 40 px) |
+| 2 | People in the building, each once | card "Orang terpantau" and its curve | 28 on average, 35 at most | 47.5 / 53 seen by the cameras, 55.9 in the building |
+| 3 | Counting lines, in and out | on the lines in the plan and pictures (↑ in ↓ out); video 2 card | A 2 in 1 out · B 0 · C 2 in 2 out | A 3 · B 0 · C 4; 6 of 7 the same crossing |
+| 4 | Zone occupancy and dwell | numbered zones under the plan; video 2 zone card | "Area kerja timur" 2.3 people, 11 s per visit | 3.2 people |
 | 5 | Heat map and walking paths | plan (heat, 3 s trails); 3D replay | — | — |
-| 6 | Walking vs standing, distance | live panel | 67.5 % walking, 6.9 m per person | 67.5 % |
-| 7 | Congestion (4+ within 2 m for 1 s) | plan circles | 0 % of the time | 0 % |
-| 8 | Standing still too long (15 s within 0.8 m) | ticker, plan | 2, both real | 5 |
-| 9 | Forklift use | `video1_live_ops.json` | moving share and 90th-percentile speed per forklift identity | speeds within 0.38 km/h |
-| 10 | Speed and speeding (> 5 km/h for 1 s) | labels in tiles and plan | 0 alerts | 0 |
-| 11 | Near miss (person within 1.5 m of a moving forklift) and its hot spots | red line; red × stays on the plan | 1, real | 13 |
-| 12 | Person in the forklift lane | orange, panel | 6 entries, 3 real | 4 |
-| 13 | Wrong way in a one-way aisle | pink aisle | 0 | 0 |
-| 14 | Pallet trucks and robots | plan; video 3 | 2 pallet trucks, both parked all window; the real site's robot R5 | pallet trucks: every one placed is real |
+| 6 | Walking vs standing, distance | card "Orang terpantau" | 67.5 % walking, 6.9 m per person | 67.5 % |
+| 7 | Congestion (4+ within 2 m for 1 s) | card, alert, blue circle on the plan | 0 % of the time | 0 % |
+| 8 | Standing still too long (15 s within 0.8 m) | alert (information); video 3 card | 2, both real | 5 |
+| 9 | Forklift use | card "Forklift bergerak" with the utilisation; `video1_live_ops.json` per forklift | utilisation 62 %; moving share and 90th-percentile speed per forklift identity | utilisation 57 %; moving or not right 81 % of the time; speeds within 0.38 km/h |
+| 10 | Speed and speeding (> 5 km/h for 1 s) | beside each forklift; card, alert | 0 alerts | 0 |
+| 11 | Near miss (person within 1.5 m of a moving forklift) and its hot spots | card, alert with snapshot, red line, every one marked on the plan | 1, real | 13 |
+| 12 | Person in the forklift lane | card, alert, the amber lane | 6 entries, 3 real | 4 |
+| 13 | Wrong way in a one-way aisle | pink aisle, alert; video 2 card | 0 | 0 |
+| 14 | Pallet trucks and robots | plan; video 3's robot card | 2 pallet trucks, both parked all window; the real site's robot R5 | pallet trucks: every one placed is real |
 | 15 | Blind spots | report | 36 % of the floor no camera can place a person on; 35 % one camera; 28 % two or more | — |
 | 16 | Fewest cameras | report | dropping the 6 least useful cameras costs 6 % of the people found (0.391 → 0.366); the 7th takes it past 10 % | — |
 | 17 | Accuracy per camera angle | report | people found 67–79 % by angle group | — |
 | 18 | Training set per camera angle, and the training | `export_dataset.py`, `train_detector.py` | 912 frames, 3 angle groups; YOLO11n in 30 min on CPU | forklifts found 24 % → 51 % |
 | 19 | Event search in Indonesian | `search_events.py` | see below | — |
 | 20 | 3D replay | `replay_3d.html` | see above | — |
-| 21 | Helmet and vest per person, violations | videos 2 and 3: H/R chips, ticker; #19 | video 2: 34 violations, 24 real by eye | no PPE labels: checked by eye, [below](#21--helmet-and-vest-apd) |
+| 21 | Helmet and vest per person, violations | videos 2 and 3: helmet and vest badges, cards, alerts, video 3's list of people; #19 | video 2: 28 violations, 22 real by eye | no PPE labels: checked by eye, [below](#21--helmet-and-vest-apd) |
 
 ![#18: one labelled training frame per camera-angle group](docs/training_sets_preview.jpg)
 
@@ -296,9 +346,9 @@ terlama*) — with no language model, and whatever it did not understand it says
 ## #21 · Helmet and vest (APD)
 
 Videos 2 and 3 also track, for every person, whether they wear a helmet and a
-high-visibility vest: two chips beside each person's name, **H** (helmet) and
-**R** (*rompi*, vest), green when worn, red when not, grey when the person is
-too small to judge.
+high-visibility vest: two badges after each person's name, a helmet and a vest,
+green when worn, red when not, grey when the person is too small to judge; the
+person's tag is green with both, amber without.
 
 **The detector.** [Construction-PPE](https://docs.ultralytics.com/datasets/detect/construction-ppe/),
 Ultralytics' dataset of 1,132 photos of construction workers labelled helmet,
@@ -330,8 +380,12 @@ the real warehouse that cuts the vests claimed from 38 % of the crops to 0.9 %.
 **Over time, per person.** A person's status is the majority of their judged
 frames over the last two seconds, and over the whole window for the summary —
 per tracked identity, so in the real warehouse it follows a person from camera
-to camera. Two seconds or more without a helmet or a vest is a violation: it
-appears in the ticker and in the event search (#19, *"siapa yang tanpa helm"*).
+to camera. It lasts only while the person is being judged: half a second
+without a judgement (gone, too small, cut by the frame) and they have no status
+and their episode ends, so nobody is reported for time off screen. Two seconds
+or more without a helmet or a vest is a violation; one person missing both is
+one alert in the video, with a snapshot, and both items are searchable (#19,
+*"siapa yang tanpa helm"*).
 Judging takes 0.06 s per person crop on 4 CPU cores, detector and CLIP together.
 
 **How right it is.** The recordings carry no PPE labels, so crops of tracked
@@ -371,10 +425,10 @@ warehouse the AI claims a helmet on 3.1 % of its 5,100 judged person crops and
 a vest on 0.9 %, every one of them false.
 
 **Every violation, checked** (by eye on the person when it is reported, after
-the AI, so not blind; `output/*/ppe_violation_check.json`): video 2 raises 34,
-of which 24 are real, 7 are not (five vests and two helmets the AI missed) and
-3 cannot be told from the picture. Video 3 raises 28, all real — nobody there
-wears a helmet or a vest.
+the AI, so not blind; `output/*/ppe_violation_check.json`): video 2 raises 28,
+of which 22 are real and 6 are not (five vests the AI missed, pale and lime
+ones, and one orange helmet). Video 3 raises 18, all real — nobody there wears
+a helmet or a vest.
 
 ## Accuracy
 
@@ -438,7 +492,7 @@ from where they stand; lines A and B: 6 and 6 crossings against 6 and 5.
 - **Helmet and vest (#21) are read from photos of other sites.** The detector
   learned on construction photos, so in the simulation it misses about half the
   vests that are not orange and some helmets on people near 100 px, and every
-  miss is a false "tanpa helm / rompi" (7 of video 2's 34 violations). People
+  miss is a false "tanpa helm / rompi" (6 of video 2's 28 violations). People
   under 100 px are not judged at all. The real warehouse shows that ordinary
   clothes no longer pass for vests, but nobody there wears PPE, so how well it
   finds PPE on a real site is not measured here; a few hundred labelled crops
@@ -485,7 +539,10 @@ recordings: `fetch_data.py` first).
 | `world.py` | lift, fuse, follow, stitch |
 | `analytics.py` | the analytics, in metres |
 | `evaluate.py` | everything scored against the labels |
-| `render.py`, `videos.py`, `draw.py` | the videos |
+| `videos.py` | the three videos, laid out as the owner's dashboard |
+| `ops.py` | what the owner reads: alerts with a severity and a snapshot, names, running figures |
+| `render.py`, `ui.py` | camera pictures and the plan; the dashboard's look (Inter, Material Symbols in `assets/fonts`) |
+| `draw.py` | the check images and the report |
 | `main.py` | runs it all after detection |
 | `report.py` | the accuracy picture |
 | `export_dataset.py`, `train_detector.py` | #18 |
@@ -500,3 +557,5 @@ recordings: `fetch_data.py` first).
 - Tracker: [TrackTrack](https://openaccess.thecvf.com/content/CVPR2025/html/Shim_Focusing_on_Tracks_for_Online_Multi-Object_Tracking_CVPR_2025_paper.html) (CVPR 2025) via Ultralytics, ReID `yolo26n-reid`
 - PPE data: [Construction-PPE](https://docs.ultralytics.com/datasets/detect/construction-ppe/), Ultralytics, AGPL-3.0
 - 3D replay: [three.js](https://threejs.org/)
+- Vest check: [CLIP](https://github.com/openai/CLIP) ViT-B/32 (OpenAI, MIT), via `ultralytics/CLIP`
+- Dashboard type and icons: [Inter](https://rsms.me/inter/) (SIL OFL 1.1) and [Material Symbols](https://fonts.google.com/icons) (Apache 2.0), bundled in `assets/fonts` with their licences

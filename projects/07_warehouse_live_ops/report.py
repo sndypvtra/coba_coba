@@ -139,6 +139,10 @@ def build() -> Path:
         rows.append([f"{name}: recall"] + [pct(by[d][k]["recall_all_on_floor"]) for d in both])
         rows.append([f"{name}: meleset median"] + [m(by[d][k]["position_error_m_median"]) for d in both])
     y = S.table(x, y + 32, cols, rows, [""] + [NAME[d] for d in both])
+    fm = acc.get("forklift_moving_vs_truth")
+    if fm:
+        T.add(f"Forklift bergerak atau tidak: benar {pct(fm['moving_right'])} · utilisasi AI "
+              f"{pct(fm['utilisation_ai'])}, nyata {pct(fm['utilisation_truth'])}", (x, y + 4), 13, dr.INK)
 
     # ------------------------------------------------------------ column 2
     x, y = 650, 116
@@ -320,8 +324,7 @@ def _ppe_band(S: Sheet, v2: dict | None, v3: dict | None) -> None:
         T.add(f"{vs.count('real')} nyata · {vs.count('false')} salah · {vs.count('cannot tell')} tak bisa dipastikan",
               (x + 12, y + 19), 13, dr.GOOD if vs.count("false") == 0 else dr.WARN, True)
         y += 46
-    T.add("salah di video 2: rompi pucat, hijau muda dan putih yang tak terdeteksi, 2 helm", (x, y + 2), 12,
-          dr.MUTED)
+    T.add("salah di video 2: rompi pucat dan hijau muda yang tak terdeteksi, 1 helm", (x, y + 2), 12, dr.MUTED)
 
 
 if __name__ == "__main__":

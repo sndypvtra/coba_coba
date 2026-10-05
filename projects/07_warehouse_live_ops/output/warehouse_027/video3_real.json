@@ -272,28 +272,6 @@
     ]
    },
    {
-    "gid": 7,
-    "what": "helm",
-    "start_t": 0.2,
-    "end_t": 10.9,
-    "x": 3.54,
-    "y": 6.67,
-    "cams": [
-     "Camera_0000"
-    ]
-   },
-   {
-    "gid": 7,
-    "what": "rompi",
-    "start_t": 0.2,
-    "end_t": 10.9,
-    "x": 3.54,
-    "y": 6.67,
-    "cams": [
-     "Camera_0000"
-    ]
-   },
-   {
     "gid": 8,
     "what": "helm",
     "start_t": 0.2,
@@ -316,22 +294,26 @@
     ]
    },
    {
-    "gid": 12,
+    "gid": 7,
     "what": "helm",
-    "start_t": 1.2,
-    "end_t": 3.5,
-    "x": null,
-    "y": null,
-    "cams": []
+    "start_t": 1.9,
+    "end_t": 9.7,
+    "x": 3.33,
+    "y": 6.64,
+    "cams": [
+     "Camera_0000"
+    ]
    },
    {
-    "gid": 12,
+    "gid": 7,
     "what": "rompi",
-    "start_t": 1.2,
-    "end_t": 3.5,
-    "x": null,
-    "y": null,
-    "cams": []
+    "start_t": 1.9,
+    "end_t": 9.7,
+    "x": 3.33,
+    "y": 6.64,
+    "cams": [
+     "Camera_0000"
+    ]
    },
    {
     "gid": 3,
@@ -345,24 +327,6 @@
      "Camera_0005",
      "Camera_0006"
     ]
-   },
-   {
-    "gid": 13,
-    "what": "helm",
-    "start_t": 3.9,
-    "end_t": 6.9,
-    "x": null,
-    "y": null,
-    "cams": []
-   },
-   {
-    "gid": 13,
-    "what": "rompi",
-    "start_t": 3.9,
-    "end_t": 6.9,
-    "x": null,
-    "y": null,
-    "cams": []
    },
    {
     "gid": 10,
@@ -387,42 +351,6 @@
     ]
    },
    {
-    "gid": 18,
-    "what": "helm",
-    "start_t": 10.2,
-    "end_t": 12.3,
-    "x": null,
-    "y": null,
-    "cams": []
-   },
-   {
-    "gid": 18,
-    "what": "rompi",
-    "start_t": 10.2,
-    "end_t": 12.3,
-    "x": null,
-    "y": null,
-    "cams": []
-   },
-   {
-    "gid": 24,
-    "what": "helm",
-    "start_t": 17.4,
-    "end_t": 19.6,
-    "x": null,
-    "y": null,
-    "cams": []
-   },
-   {
-    "gid": 24,
-    "what": "rompi",
-    "start_t": 17.4,
-    "end_t": 19.6,
-    "x": null,
-    "y": null,
-    "cams": []
-   },
-   {
     "gid": 10,
     "what": "rompi",
     "start_t": 18.6,
@@ -432,24 +360,6 @@
     "cams": [
      "Camera_0000"
     ]
-   },
-   {
-    "gid": 27,
-    "what": "helm",
-    "start_t": 21.9,
-    "end_t": 23.9,
-    "x": null,
-    "y": null,
-    "cams": []
-   },
-   {
-    "gid": 27,
-    "what": "rompi",
-    "start_t": 21.9,
-    "end_t": 23.9,
-    "x": null,
-    "y": null,
-    "cams": []
    },
    {
     "gid": 3,

@@ -257,12 +257,12 @@
    {
     "zone": "Jalur forklift tengah",
     "kind": "vehicle_lane",
-    "occupancy_mean": 0.86,
+    "occupancy_mean": 0.63,
     "occupancy_max": 2,
     "people_entered": 5,
-    "dwell_s_mean": 5.1,
-    "dwell_s_max": 6.9,
-    "person_seconds": 25.7
+    "dwell_s_mean": 3.8,
+    "dwell_s_max": 6.6,
+    "person_seconds": 18.8
    },
    {
     "zone": "Lorong satu arah (contoh)",
@@ -692,9 +692,9 @@
     },
     {
      "analytic": "#4 Jalur forklift tengah: okupansi rata-rata",
-     "ai": 0.86,
-     "truth_seen_by_cameras": 1.41,
-     "truth_whole_floor": 1.42
+     "ai": 0.63,
+     "truth_seen_by_cameras": 1.27,
+     "truth_whole_floor": 1.29
     },
     {
      "analytic": "#4 Lorong satu arah (contoh): okupansi rata-rata",
@@ -1219,6 +1219,12 @@
     }
    }
   },
+  "forklift_moving_vs_truth": {
+   "sightings": 1461,
+   "moving_right": 0.812,
+   "utilisation_ai": 0.622,
+   "utilisation_truth": 0.568
+  },
   "other_detector": {
    "zero_shot": {
     "people_on_plan": {
@@ -1338,9 +1344,9 @@
       },
       {
        "analytic": "#4 Jalur forklift tengah: okupansi rata-rata",
-       "ai": 0.86,
-       "truth_seen_by_cameras": 1.41,
-       "truth_whole_floor": 1.42
+       "ai": 0.63,
+       "truth_seen_by_cameras": 1.27,
+       "truth_whole_floor": 1.29
       },
       {
        "analytic": "#4 Lorong satu arah (contoh): okupansi rata-rata",
@@ -1574,9 +1580,9 @@
       },
       {
        "analytic": "#4 Jalur forklift tengah: okupansi rata-rata",
-       "ai": 0.82,
-       "truth_seen_by_cameras": 1.41,
-       "truth_whole_floor": 1.42
+       "ai": 0.57,
+       "truth_seen_by_cameras": 1.27,
+       "truth_whole_floor": 1.29
       },
       {
        "analytic": "#4 Lorong satu arah (contoh): okupansi rata-rata",
@@ -1702,12 +1708,12 @@
    {
     "cameras": 14,
     "recall_all_on_floor": 0.389,
-    "removed": "Camera_0012"
+    "removed": "Camera_0011"
    },
    {
     "cameras": 13,
     "recall_all_on_floor": 0.387,
-    "removed": "Camera_0011"
+    "removed": "Camera_0012"
    },
    {
     "cameras": 12,
@@ -1907,12 +1913,12 @@
     {
      "zone": "Jalur forklift tengah",
      "kind": "vehicle_lane",
-     "occupancy_mean": 1.41,
+     "occupancy_mean": 1.27,
      "occupancy_max": 2,
      "people_entered": 4,
-     "dwell_s_mean": 10.6,
-     "dwell_s_max": 14.9,
-     "person_seconds": 42.3
+     "dwell_s_mean": 9.5,
+     "dwell_s_max": 14.6,
+     "person_seconds": 38.2
     },
     {
      "zone": "Lorong satu arah (contoh)",
@@ -2457,12 +2463,12 @@
     {
      "zone": "Jalur forklift tengah",
      "kind": "vehicle_lane",
-     "occupancy_mean": 1.42,
+     "occupancy_mean": 1.29,
      "occupancy_max": 2,
      "people_entered": 4,
-     "dwell_s_mean": 10.6,
-     "dwell_s_max": 14.9,
-     "person_seconds": 42.5
+     "dwell_s_mean": 9.7,
+     "dwell_s_max": 14.6,
+     "person_seconds": 38.8
     },
     {
      "zone": "Lorong satu arah (contoh)",

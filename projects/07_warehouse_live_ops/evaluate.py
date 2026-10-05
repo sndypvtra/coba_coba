@@ -105,6 +105,41 @@ def plan_accuracy(res: Result, labels: Labels, cams: list[str], cls: str = "pers
     }
 
 
+def forklift_motion(afr: list, labels: Labels, gate_m: float = 3.0) -> dict:
+    """Is each forklift on the plan moving, as the dashboard says, against the labels?
+
+    Every forklift on the plan counts (the "forklifts moving" card and the
+    utilisation use them all). A plan forklift is matched to the nearest
+    labelled forklift within `gate_m`; the label's speed is its displacement
+    over one second centred on the frame.
+    """
+    import config as C
+    kind = LABEL["forklift"]
+    tp = fp = fn = tn = 0
+    for fr in afr:
+        now, a, b = labels.at(fr.frame, kind), labels.at(fr.frame - 15, kind), labels.at(fr.frame + 15, kind)
+        for o in fr.objects:
+            if o.cls != "forklift" or not len(now):
+                continue
+            d = np.hypot(now[:, 3] - o.x, now[:, 4] - o.y)
+            if d.min() > gate_m:
+                continue
+            i = now[int(np.argmin(d)), 2]
+            ra, rb = a[a[:, 2] == i], b[b[:, 2] == i]
+            if not len(ra) or not len(rb):
+                continue
+            truth = np.hypot(rb[0, 3] - ra[0, 3], rb[0, 4] - ra[0, 4]) > C.VEHICLE_MOVING_MS
+            said = o.speed > C.VEHICLE_MOVING_MS
+            tp += said and truth
+            fp += said and not truth
+            fn += truth and not said
+            tn += not said and not truth
+    n = int(tp + fp + fn + tn)
+    return {"sightings": n, "moving_right": round(float(tp + tn) / max(n, 1), 3),
+            "utilisation_ai": round(float(tp + fp) / max(n, 1), 3),
+            "utilisation_truth": round(float(tp + fn) / max(n, 1), 3)}
+
+
 def camera_counts(detections: dict, labels: Labels, frames: list[int], min_px: float = 40.0) -> dict:
     """#1 - people in a camera's own picture: AI count against labelled boxes."""
     out = {}
