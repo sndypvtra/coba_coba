@@ -307,13 +307,16 @@ class Result:
 
 
 def lift_all(cams: dict[str, Camera], detections: dict[str, tuple[np.ndarray, list[str]]],
-             static: dict[str, np.ndarray] | None = None
+             static: dict[str, np.ndarray] | None = None, on_floor=None
              ) -> tuple[dict[int, list[Sighting]], Counter]:
     """Every cached detection lifted to the floor, grouped by frame.
 
     `detections[cam]` is the table from detect.py: frame, track id, x1, y1,
     x2, y2, score, class index - and the class names. `static[cam]`, aligned
     with those rows, is each box's similarity to the empty-floor background.
+    `on_floor(x, y)`, where the building's outline is known, says whether a
+    point is inside it: a sighting placed beyond the walls was placed wrong
+    (a far, coarse view), and is dropped rather than drawn in the car park.
     """
     by_frame: dict[int, list[Sighting]] = defaultdict(list)
     rejects: Counter = Counter()
@@ -323,6 +326,8 @@ def lift_all(cams: dict[str, Camera], detections: dict[str, tuple[np.ndarray, li
         for i, r in enumerate(rows):
             s = lift(cam, classes[int(r[7])], int(r[0]), int(r[1]), float(r[6]), r[2:6],
                      float(ncc[i]) if ncc is not None else math.nan)
+            if not s.reject and on_floor is not None and not on_floor(s.x, s.y):
+                s.reject = "outside the building"
             if s.reject:
                 rejects[(s.cls, s.reject)] += 1
             else:

@@ -145,7 +145,7 @@
      "seconds_seen": 30.0,
      "reliable_speed_s": 28.0,
      "moving_pct": 1.8,
-     "max_kmh": 1.2
+     "top_kmh_p90": 0.5
     }
    ]
   },

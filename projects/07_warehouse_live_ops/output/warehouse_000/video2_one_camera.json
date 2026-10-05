@@ -111,7 +111,7 @@
    },
    {
     "line": "Garis A",
-    "gid": 20,
+    "gid": 21,
     "t": 5.5,
     "dir": "out",
     "x": -14.96,
@@ -122,7 +122,7 @@
    },
    {
     "line": "Garis B",
-    "gid": 20,
+    "gid": 21,
     "t": 6.2,
     "dir": "out",
     "x": -14.44,
@@ -133,7 +133,7 @@
    },
    {
     "line": "Garis B",
-    "gid": 34,
+    "gid": 35,
     "t": 10.5,
     "dir": "in",
     "x": -25.24,
@@ -155,7 +155,7 @@
    },
    {
     "line": "Garis B",
-    "gid": 34,
+    "gid": 35,
     "t": 15.0,
     "dir": "out",
     "x": -24.96,
@@ -177,7 +177,7 @@
    },
    {
     "line": "Garis A",
-    "gid": 92,
+    "gid": 93,
     "t": 24.3,
     "dir": "out",
     "x": -14.93,
@@ -252,7 +252,7 @@
   "#6_walking": {
    "walking_share_pct": 69.8,
    "distance_m_per_person_mean": 7.5,
-   "travel_m_per_person_hour": 4002,
+   "travel_m_per_person_hour": 4009,
    "note": "walking = faster than 0.4 m/s over one second"
   },
   "#7_congestion": {
@@ -274,7 +274,7 @@
     "top_kmh_p90": null
    },
    {
-    "gid": 79,
+    "gid": 80,
     "seconds_seen": 2.1,
     "reliable_speed_s": 0.0,
     "moving_pct": null,
@@ -317,7 +317,7 @@
      ]
     },
     {
-     "gid": 73,
+     "gid": 74,
      "zone": "Lorong satu arah (contoh)",
      "t": 19.8,
      "x": -34.53,
@@ -343,7 +343,7 @@
    "person_frames_seen_by_2plus_pct": 0.0,
    "person_frames_seen_by_1_pct": 100.0
   },
-  "heat_points": 2769
+  "heat_points": 2768
  },
  "accuracy": {
   "detector": "hybrid",

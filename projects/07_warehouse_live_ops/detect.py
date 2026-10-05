@@ -545,14 +545,15 @@ def jobs(scene: str) -> list[tuple[str, int, int]]:
         return todo
     sel = json.loads((output_dir(scene) / "selection.json").read_text())
     v3 = sel["video3_real"]
-    return [(c, v3["start_frame"], v3["end_frame"]) for c in sorted(load_cameras(scene))]
+    # every camera, verified or not: align_real.py checks them against each other from these
+    return [(c, v3["start_frame"], v3["end_frame"]) for c in sorted(load_cameras(scene, aligned=False))]
 
 
 def survey(scene: str, every_s: float = 1.0) -> dict:
     """Count people once a second in every camera, to choose the real window."""
     classes = list(PROMPTS[scene])
     model = load_runtime(scene)
-    cams = sorted(load_cameras(scene))
+    cams = sorted(load_cameras(scene, aligned=False))
     counts = {}
     for cid in cams:
         cap = cv2.VideoCapture(str(video_path(scene, cid)))

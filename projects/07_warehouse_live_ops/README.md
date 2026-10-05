@@ -25,7 +25,7 @@ is a measurement, not an estimate. 30 seconds (the busiest of the recording),
 | **People found** | 46 % of the people a camera shows at least 40 px tall, 39 % of everyone in the building: the detector is the limit, not the geometry |
 | **Counting lines** | 7 crossings on three lines; the ground truth has 7, and 6 of them are the same crossing, same direction, within 0.5 s |
 | **Walking vs standing** | 67.5 % of the time walking; ground truth 67.5 % |
-| **Forklifts on the plan** | found 47 %, precision 65 % with the site-trained detector (zero-shot alone: 15 %, 54 %); speed within 0.38 km/h (median), 1.6 km/h for 90 % |
+| **Forklifts on the plan** | found 47 %, precision 77 % with the site-trained detector (zero-shot alone: 15 %, 54 %); speed within 0.38 km/h (median), 1.6 km/h for 90 % |
 | **False alarms** | speeding 0 (truth 0) · crowds 0 (truth 0) · near miss: 1 raised, and it is real |
 | **Missed** | 12 of 13 real near misses: the person stands inside the forklift's outline in the picture and is not detected |
 | **Real warehouse** | 3 of 7 cameras verified; they place the same person **0.18 m** apart (0.70 m as shipped) |
@@ -106,7 +106,7 @@ reruns in minutes.
 
 *Video 2, second 20: CCTV 0003 alone, its busiest 30 seconds. The AI counts 15
 people, the labels 18; the curve under the plan follows both counts over the
-window. P73, pink, has just walked against the declared one-way aisle — one of
+window. P74, pink, has just walked against the declared one-way aisle — one of
 the two wrong-way walks the AI flagged in this window, both of which the ground
 truth has too (it has a third the AI missed).*
 
@@ -184,7 +184,10 @@ height comes out outside 0.9–2.3 m is not standing where the box suggests
 People are placed out to 0.25 m of floor per pixel — measured against the
 labels, the median error is 0.15–0.24 m up to there and 0.64 m beyond. A
 vehicle's box bottom is its near edge, so its centre is set 0.8 m (forklift)
-or 0.5 m (pallet truck) further along the ray.
+or 0.5 m (pallet truck) further along the ray. Where the dataset's plan gives
+the building's outline, a placement beyond its walls (a far, coarse view of a
+forklift, 315 times in video 1's window) is dropped, not drawn in the
+yard.
 
 **Fuse.** Sightings of one instant from different cameras that land within
 0.9 m (person) or 2 m (forklift) of each other are one object; two sightings
@@ -245,8 +248,8 @@ Ditemukan  : 4 dari 16 kejadian dalam video 1
  waktu  kejadian             siapa        tempat                                 CCTV yang melihat          keterangan
  00:08  melintas garis       P18          Jalur forklift tengah (-42,1; -62,0) m 0005                       Garis C, keluar
  00:24  melintas garis       P18          Jalur forklift tengah (-32,7; -62,1) m 0001, 0005, 0010           Garis C, masuk
- 00:25  melintas garis       P187         Lorong satu arah (contoh) (-33,6; -62,3) m 0001, 0005                 Garis C, masuk
- 00:27  melintas garis       P171         Jalur forklift tengah (-20,7; -62,0) m 0005                       Garis C, keluar
+ 00:25  melintas garis       P184         Lorong satu arah (contoh) (-33,6; -62,3) m 0001, 0005                 Garis C, masuk
+ 00:27  melintas garis       P168         Jalur forklift tengah (-20,7; -62,0) m 0005                       Garis C, keluar
 ```
 
 The question is read by its words — event words (*nyaris, ngebut, diam, melintas,
@@ -296,7 +299,11 @@ from where they stand; lines A and B: 6 and 6 crossings against 6 and 5.
   and idle times are per identity, so they are cut short.
 - **Forklift positions are ±0.7 m.** A box's bottom edge is not a vehicle's
   footprint; the heading comes from motion only. Safety alerts only use
-  forklifts seen closely enough (≤ 0.15 m/px) for at least 2 s.
+  forklifts seen closely enough (≤ 0.15 m/px) for at least 2 s. The speed
+  shown beside a forklift can read high for a moment — above 5 km/h in 3.8 %
+  of its measured frames, when no forklift went over 4.8 km/h — which is why
+  the speeding alert needs a full second over the limit (measured: a 3- or
+  4-second speed window does not help; it lags more and spikes as often).
 - **36 % of the floor is not placeable by any of the 15 cameras** (#15); racks
   hiding the floor are not modelled, so the real figure is higher.
 - **The fine-tuned detector is site-specific.** It was trained on other

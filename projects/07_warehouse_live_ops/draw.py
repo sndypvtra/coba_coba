@@ -95,20 +95,11 @@ class Texts:
         return img
 
 
-def place_label(T: Texts, text: str, at: tuple[int, int], size: int, colour, taken: list,
-                w: int, h: int, gap: int = 8, bg=BG) -> None:
-    """Put a label beside a point where it fits on the picture and covers no other label.
-
-    Tries right-above, left-above, right-below and left-below of the point; the
-    first that stays inside the picture and clear of everything in `taken`
-    (rectangles x0, y0, x1, y1) wins, otherwise the one that overlaps least.
-    The chosen rectangle is added to `taken`.
-    """
-    tw, th = T.width(text, size, True) + 2, size + 4
-    u, v = int(at[0]), int(at[1])
+def _best_spot(candidates, tw: int, th: int, taken: list, w: int, h: int):
+    """The first candidate corner whose label box stays in the picture and clear of `taken`,
+    else the one that overlaps least (leaving the picture costs most)."""
     best, best_cost = None, None
-    for x0, y0 in ((u + gap, v - gap - th), (u - gap - tw, v - gap - th),
-                   (u + gap, v + gap - 2), (u - gap - tw, v + gap - 2)):
+    for x0, y0 in candidates:
         box = (x0, y0, x0 + tw, y0 + th)
         off = max(0, -box[0]) + max(0, box[2] - w) + max(0, -box[1]) + max(0, box[3] - h)
         hit = sum(max(0, min(box[2], b[2]) - max(box[0], b[0])) * max(0, min(box[3], b[3]) - max(box[1], b[1]))
@@ -118,6 +109,36 @@ def place_label(T: Texts, text: str, at: tuple[int, int], size: int, colour, tak
             best, best_cost = box, cost
         if cost == 0:
             break
+    return best
+
+
+def place_label(T: Texts, text: str, at: tuple[int, int], size: int, colour, taken: list,
+                w: int, h: int, gap: int = 8, bg=BG, bold: bool = True) -> None:
+    """Put a label beside a point where it fits on the picture and covers no other label.
+
+    Tries right-above, left-above, right-below and left-below of the point; the
+    first that stays inside the picture and clear of everything in `taken`
+    (rectangles x0, y0, x1, y1) wins, otherwise the one that overlaps least.
+    The chosen rectangle is added to `taken`.
+    """
+    tw, th = T.width(text, size, bold) + 2, size + 4
+    u, v = int(at[0]), int(at[1])
+    best = _best_spot(((u + gap, v - gap - th), (u - gap - tw, v - gap - th),
+                       (u + gap, v + gap - 2), (u - gap - tw, v + gap - 2)), tw, th, taken, w, h)
+    taken.append(best)
+    T.add(text, (best[0] + 1, best[1] + 1), size, colour, bold, bg=bg, pad=1)
+
+
+def box_label(T: Texts, text: str, box, size: int, colour, taken: list, w: int, h: int, bg=BG) -> None:
+    """Label a box: above its left corner, else above its right one, below it, or just inside its top.
+
+    Always inside the picture, and clear of the labels already in `taken`.
+    """
+    x1, y1, x2, y2 = (int(v) for v in box)
+    tw, th = T.width(text, size, True) + 2, size + 4
+    cands = [(x1, y1 - th - 1), (x2 - tw, y1 - th - 1), (x1, y2 + 1), (x1 + 1, y1 + 1)]
+    cands = [(min(max(0, x), w - tw), min(max(0, y), h - th)) for x, y in cands]
+    best = _best_spot(cands, tw, th, taken, w, h)
     taken.append(best)
     T.add(text, (best[0] + 1, best[1] + 1), size, colour, True, bg=bg, pad=1)
 

@@ -173,6 +173,7 @@ def draw_static(view: PlanView, cams: dict[str, Camera], shown: list[str], other
         dr.place_label(T, cid.replace("Camera_", "CCTV "), (u, v), 13, dr.CAMERA_COLOURS[shown.index(cid)],
                     taken, view.w, view.h)
     T.flush(img)
+    view.taken = taken            # moving labels are kept off these, every frame
     return img
 
 
@@ -202,6 +203,7 @@ class Heat:
 
 def draw_objects(img: np.ndarray, view: PlanView, fr: Frame, seen_by: dict[int, set],
                  shown: list[str], trails: dict, T: dr.Texts, label_all: bool = False) -> None:
+    taken = list(getattr(view, "taken", []))
     for o in fr.objects:
         tr = trails.setdefault(o.gid, deque(maxlen=30))
         tr.append((o.x, o.y))
@@ -232,7 +234,7 @@ def draw_objects(img: np.ndarray, view: PlanView, fr: Frame, seen_by: dict[int, 
             for k, rc in enumerate(rings):
                 cv2.polylines(img, [p], True, rc, 2 + 2 * k, cv2.LINE_AA)
             lab = f"{TAG[o.cls]}{o.gid}" + (f" {kmh(o.speed)}" if o.cls == "forklift" and o.reliable else "")
-            T.add(lab, (u + 8, v - 8), 12, col, True, bg=dr.BG, pad=1)
+            dr.place_label(T, lab, (u, v), 12, col, taken, view.w, view.h, 6)
             continue
         col = dr.PERSON if o.walking else dr.PERSON_IDLE
         for a in ("near_miss", "wrong_way", "lane", "idle", "crowd"):
@@ -243,7 +245,8 @@ def draw_objects(img: np.ndarray, view: PlanView, fr: Frame, seen_by: dict[int, 
             cv2.circle(img, (u, v), 6 + 3 * k, rc, 2, cv2.LINE_AA)
         cv2.circle(img, (u, v), 4, col, -1, cv2.LINE_AA)
         if rings or o.alerts or label_all:
-            T.add(f"P{o.gid}", (u + 6, v - 13), 11, col if o.alerts else dr.INK, bool(o.alerts), bg=dr.BG, pad=1)
+            dr.place_label(T, f"P{o.gid}", (u, v), 11, col if o.alerts else dr.INK, taken, view.w, view.h, 5,
+                           bold=bool(o.alerts))
 
 
 # --------------------------------------------------------------- the tiles
@@ -288,6 +291,7 @@ def tile(img: np.ndarray, cam: Camera, rows: np.ndarray, classes: list[str], fra
     out = cv2.resize(img, (tw, th), interpolation=cv2.INTER_AREA)
     T = dr.Texts()
     fs = 15 if big else 11
+    taken = [(0, 0, 14 + T.width(title, 16 if big else 13, True), 32 if big else 26)]   # the title
     # the floor overlays, projected from metres; zones faint, lines solid
     layer = out.copy()
     for z in zones:
@@ -302,10 +306,10 @@ def tile(img: np.ndarray, cam: Camera, rows: np.ndarray, classes: list[str], fra
             cv2.polylines(out, [q], False, dr.INK, 2, cv2.LINE_AA)
             if np.hypot(*(q[-1] - q[0])) >= (90 if big else 45):
                 mid = q[len(q) // 2]
-                T.add(ln.name.split(" ·")[0], (int(mid[0]) + 4, int(mid[1]) - (20 if big else 15)), fs,
-                      dr.INK, True, bg=dr.BG, pad=1)
+                dr.place_label(T, ln.name.split(" ·")[0], (int(mid[0]), int(mid[1])), fs, dr.INK, taken, tw, th, 4)
     objs = {o.gid: o for o in fr.objects}
     here = set()
+    labels = []
     r = rows[rows[:, 0] == frame]
     for d in r:
         x1, y1, x2, y2 = (d[2:6] * s).astype(int)
@@ -323,9 +327,13 @@ def tile(img: np.ndarray, cam: Camera, rows: np.ndarray, classes: list[str], fra
             lab = f"{TAG[cls]}{gid}"
             if cls == "forklift" and o.reliable:
                 lab += f" {kmh(o.speed)}"
-            T.add(lab, (x1, max(0, y1 - (19 if big else 14))), fs, col, True, bg=dr.BG, pad=1)
+            labels.append((lab, (x1, y1, x2, y2), col))
         else:
-            cv2.rectangle(out, (x1, y1), (x2, y2), dr.FAINT, 1, cv2.LINE_AA)
+            # seen, but not on the plan (feet out of frame, too far, not yet confirmed)
+            cv2.rectangle(out, (x1, y1), (x2, y2), dr.MUTED, 1, cv2.LINE_AA)
+    # nearest first: the label of the biggest box is the one that keeps its place
+    for lab, box, col in sorted(labels, key=lambda t: -(t[1][3] - t[1][1])):
+        dr.box_label(T, lab, box, fs, col, taken, tw, th)
     # echoes: objects other cameras placed, drawn at their floor point in this view
     for o in fr.objects:
         if o.gid in here:
@@ -338,7 +346,7 @@ def tile(img: np.ndarray, cam: Camera, rows: np.ndarray, classes: list[str], fra
         u, v = int(uv[0] * s), int(uv[1] * s)
         cv2.circle(out, (u, v), 6 if big else 4, CLASS_COLOUR[o.cls], 1, cv2.LINE_AA)
         if big:
-            T.add(f"{TAG[o.cls]}{o.gid}", (u + 6, v - 6), 11, dr.MUTED, bg=dr.BG, pad=1)
+            dr.place_label(T, f"{TAG[o.cls]}{o.gid}", (u, v), 11, dr.MUTED, taken, tw, th, 5, bold=False)
     cv2.rectangle(out, (0, 0), (tw - 1, th - 1), colour, 4 if big else 3)
     T.add(title, (8, 6), 16 if big else 13, dr.INK, True, bg=colour, pad=4)
     return T.flush(out)

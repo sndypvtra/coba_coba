@@ -268,6 +268,17 @@ def dataset_plan(scene: str) -> FloorPlan:
     return FloorPlan(img, A)
 
 
+def building_test(plan: FloorPlan):
+    """A function (x, y) metres -> True inside the building on this plan."""
+    inside = building_mask(plan)
+
+    def on_floor(x: float, y: float) -> bool:
+        u, v = plan.to_px(x, y)
+        u, v = int(round(float(u))), int(round(float(v)))
+        return 0 <= v < inside.shape[0] and 0 <= u < inside.shape[1] and bool(inside[v, u])
+    return on_floor
+
+
 def building_mask(plan: FloorPlan) -> np.ndarray:
     """Plan pixels inside the building: the largest dark region of map.png."""
     m = (plan.image.max(axis=2) < 150).astype(np.uint8)

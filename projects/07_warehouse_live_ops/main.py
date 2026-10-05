@@ -41,9 +41,9 @@ import analytics as an  # noqa: E402
 import evaluate as ev  # noqa: E402
 import videos as V  # noqa: E402
 import world as wd  # noqa: E402
-from config import STRIDE, output_dir  # noqa: E402
+from config import SOURCES, STRIDE, output_dir  # noqa: E402
 from detect import DETECTORS, HYBRID, cache_path, load_detections, static_scores  # noqa: E402
-from scene import FloorPlan, Labels, dataset_plan, load_cameras, video_path  # noqa: E402
+from scene import FloorPlan, Labels, building_test, dataset_plan, load_cameras, video_path  # noqa: E402
 
 SOURCE = {"warehouse_000": "NVIDIA PhysicalAI-SmartSpaces 2026 · Warehouse_000 (simulasi)",
           "warehouse_027": "NVIDIA PhysicalAI-SmartSpaces 2026 · Warehouse_027 (gudang asli)"}
@@ -80,7 +80,9 @@ def _floor(scene: str, cams: dict, used: list[str], frames: list[int], detector:
     start, end = frames[0], frames[-1] + STRIDE
     dets = {c: load_detections(scene, c, start, end, detector) for c in used}
     static = {c: static_scores(scene, c, start, end, detector) for c in used} if detector == "zero_shot" else None
-    by_frame, rejects = wd.lift_all({c: cams[c] for c in used}, dets, static)
+    # where the dataset ships a floor plan, its building outline bounds every placement
+    on_floor = building_test(dataset_plan(scene)) if SOURCES[scene].floor_plan else None
+    by_frame, rejects = wd.lift_all({c: cams[c] for c in used}, dets, static, on_floor)
     res = wd.track(frames, by_frame, rejects)
     joins = wd.stitch(res, stride=STRIDE)
     afr, summary = an.analyse(scene, res, dets, STRIDE)
