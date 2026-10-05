@@ -13,7 +13,7 @@ was scored (#21).
 
 ![Video 1, the site overview: the owner's cards across the top, four of the fifteen cameras, the whole floor live on the right, the alerts with their snapshots, the timeline](docs/video1_live_ops.jpg)
 
-*Video 1, second 24. The cards are what an owner checks first: 29 people on the floor, 5 of 7 forklifts moving (62 % of their time so far), the window's one near miss (second 3; its spot stays marked on the plan), 5 entries into the forklift lane — P18 and P211 are in it now, orange in CAM 0005 and on the plan, and the zone list under the plan says 2 as well. Each alert carries a snapshot of the camera that saw it, and the timeline marks it in its severity's colour. On the plan, a person is a dot (cyan walking, pale standing), a forklift an orange block; the thin coloured ring says which camera on screen sees them.*
+*Video 1, second 24. The cards are what an owner checks first: 29 people on the floor, 5 of 6 forklifts moving (62 % of their time so far), the window's one near miss, 4 entries into the forklift lane — P18 and P202 are in it now, orange in CAM 0005's picture and on the plan, and the zone list under the plan says 2 as well. Every alert names the camera that saw it and carries its snapshot; the near miss of second 2 was seen only by CAM 0001, which is not one of the four on screen, so the plan marks its spot with that camera, and while it happened CAM 0001 was called up into the fourth tile ([below](#what-the-owner-sees)). In the pictures every person a camera follows is boxed: named and coloured when they are on the plan, grey when they are too far from that camera to place precisely — "5 orang · 3 di peta" counts both. On the plan, a person is a dot (cyan walking, pale standing), a forklift an orange block; the thin coloured ring says which camera on screen sees them.*
 
 ## Result
 
@@ -25,12 +25,13 @@ recording), 15 cameras, 10 analysed frames a second.
 | | |
 |---|---|
 | **Cameras usable** | **15 of 19** pass the calibration test; 4 are rejected and used nowhere |
-| **People on the plan** | **79 %** of the dots are a real person (within 1 m); median position error **0.19 m**, 90 % within 0.42 m |
+| **People on the plan** | **79 %** of the dots are a real person (within 1 m); median position error **0.19 m**, 90 % within 0.41 m |
 | **People found** | 46 % of the people a camera shows at least 40 px tall, 39 % of everyone in the building: the detector is the limit, not the geometry |
-| **Counting lines** | 7 crossings on three lines; the ground truth has 7, and 6 of them are the same crossing, same direction, within 0.5 s |
-| **Walking vs standing** | 67.5 % of the time walking; ground truth 67.5 % |
-| **Forklifts on the plan** | found 47 %, precision 77 % with the site-trained detector (zero-shot alone: 15 %, 54 %); speed within 0.38 km/h (median), 1.6 km/h for 90 % |
-| **Forklifts moving** | moving or standing, right **81 %** of the time; utilisation (share of forklift time moving) **62 %** against 57 % true |
+| **Counting lines** | 6 crossings on three lines, all of them real: the same crossing, same direction, within 0.5 s, as 6 of the ground truth's 7 |
+| **Walking vs standing** | 67.4 % of the time walking; ground truth 67.5 % |
+| **Forklifts on the plan** | found 46 %, precision 77 % with the site-trained detector (zero-shot alone: 16 %, 55 %); speed within 0.37 km/h (median), 1.6 km/h for 90 % |
+| **Forklifts moving** | moving or standing, right **80 %** of the time; utilisation (share of forklift time moving) **62 %** against 55 % true |
+| **Names that stay** | a person or forklift in the four camera pictures changes its name 46 times in 30 s, down from 81 ([how](#names-that-stay)) |
 | **False alarms** | speeding 0 (truth 0) · crowds 0 (truth 0) · near miss: 1 raised, and it is real |
 | **Missed** | 12 of 13 real near misses: the person stands inside the forklift's outline in the picture and is not detected |
 | **Real warehouse** | 3 of 7 cameras verified; they place the same person **0.18 m** apart (0.70 m as shipped) |
@@ -118,9 +119,10 @@ the same parts in each (`videos.py`, `ui.py`, `ops.py`):
 |---|---|
 | Top bar | the site, the view, the clock; "Putar ulang" says it is a recording analysed afterwards, not a live feed |
 | Cards | the figures an owner acts on: people, forklifts moving and their utilisation, near misses, people in the forklift lane, speeding, crowds; PPE in videos 2 and 3 |
-| Camera pictures | each detection as corner brackets in its status colour, with a tag: its name, a forklift's speed, a person's helmet and vest badges |
+| Camera pictures | every object the camera follows, boxed: in its status colour with a tag on the box's edge (its name, a forklift's speed, a person's helmet and vest badges) when it is on the plan; in grey when it is too far from that camera to place precisely. The header counts both: "5 orang · 3 di peta" |
 | Floor plan | where everyone is now, the numbered zones with how many people are in each, the counting lines with their counts, every near miss so far |
-| Alerts | newest first: how serious, what happened in plain words, who, where, which camera, and a snapshot of the camera that saw it |
+| Alerts | newest first: how serious, what happened in plain words, who, where, the camera that saw it, and that camera's snapshot |
+| Call-up (video 1) | a serious alert seen only by a camera that is not on screen brings that camera into the fourth tile, framed in red, until 4 s after it is over; the plan draws its field of view in red |
 | Timeline | every alert of the window as a mark in its severity's colour |
 
 **How serious.** High (red): a near miss, a forklift over the limit. Medium
@@ -140,8 +142,8 @@ sensible to an owner meant fixing what did disagree, each checked:
 - *Forklifts moving* counted only forklifts close enough for a speed reading,
   which showed "0/0" in a quarter of the frames while five were on the plan.
   Every forklift on the plan now counts: against the labels, moving or
-  standing is right 81 % of the time and the utilisation reads 62 % against
-  57 % true (`evaluate.forklift_motion`).
+  standing is right 80 % of the time and the utilisation reads 62 % against
+  55 % true (`evaluate.forklift_motion`).
 - *A speed over the limit with no speeding alert.* Beside a forklift, a speed
   above 5 km/h is written only once it has lasted the second the alert needs;
   shorter, it reads "≤5 km/j". Both such readings in video 1 were position
@@ -156,15 +158,60 @@ sensible to an owner meant fixing what did disagree, each checked:
   its footprint: CAM 0003 "Area kerja timur"), a counting line by what it
   counts ("C · Penyeberangan jalur forklift"), and the one-way aisle says
   "aturan PoC", because the site has none.
+- *An alert from a camera nobody was looking at.* Video 1's one near miss
+  (P14 walking into the path of forklift F12, second 2) was seen only by
+  CAM 0001, which is not one of the four tiles, and its alert row was too
+  short to show the camera. Every alert row now names its camera, the plan
+  marks the spot with it ("00:02 · CAM 0001"), the alert is raised when the
+  person comes within reach rather than at the closest approach, and the
+  camera is called up into the fourth tile while it happens:
+
+![Video 1 at second 3: CAM 0001 called up into the fourth tile, framed in red, P14 and forklift F12 boxed in red; on the plan CAM 0001's field of view in red and the near miss's spot; the alert row names CAM 0001](docs/video1_spotlight.jpg)
+
+### Names that stay
+
+A tracker "locks on" when the box stays on its object and its name does not
+change. In video 1's first version neither held well enough to watch:
+
+- *Names changed under the viewer's eyes* — 81 times in 30 s across the four
+  pictures, often back and forth (one man in CAM 0003 went P3, P283, P3, P283).
+  Two causes, both fixed in `world.py`. A person seen by two cameras is one
+  object only while the two placements are within 0.9 m; at 0.9 m they split
+  into two identities and rejoined frame after frame. Now two cameras'
+  sightings that were one object stay one while they are within 1.8 m
+  (`STICKY_M`). And a forklift seen far away jumps by metres from one frame to
+  the next, which broke its identity although the camera's own tracker
+  followed it throughout; now the camera's tracker may carry a vehicle's
+  identity across a jump of up to 16 pixels of its floor (`TRACKLET_PX`).
+  Measured on video 1's window against the labels: renames 81 → 46; people
+  placed exactly as before (79 % real, 0.19 m median error, 2.2 identities per
+  labelled person, was 2.24); forklifts 77 % real, found 46 % (was 47 %), 2.75
+  identities per forklift (was 3.12); one fewer false forklift-lane entry and
+  one fewer false line crossing (a second identity of P18 crossing line C a
+  second after him), every other event the same. Two other ways were tried and rejected:
+  assigning by camera track before position, and tying identities to camera
+  tracks outright, cut renames further (to 57 and 45) but broke forklift
+  identities more often (4.1 per forklift) and raised a false speeding alert;
+  the second also placed people less precisely (75 % real).
+- *Boxes did not look attached.* Only small corner brackets were drawn, and a
+  tag could be pushed well away from its box. Now every box is outlined with
+  strong corners, a tag always touches its own box, and it keeps its side from
+  frame to frame unless something else is in the way.
+- *People with no box at all.* People too far from a camera to be placed on
+  the plan (beyond 0.25 m of floor per pixel, where placements are 0.4–0.9 m
+  off) had faint marks that could not be seen; in CAM 0011 and CAM 0007 that
+  is about half the people in view. They are still not placed — a person
+  drawn a metre from where they stand is worse than none — but they are boxed
+  in grey, and the header says how many are on the plan.
 
 ![Video 2: the east work area's camera large, its cards, its plan, the zones it watches, its alerts](docs/video2_one_camera.jpg)
 
 *Video 2, second 20: CAM 0003, the east work area, its busiest 30 seconds. 15
 people in view (the labels say 18); 5 are close enough to judge for PPE and 1
 of them wears both helmet and vest. The two badges after each name are the
-helmet and the vest: P31 wears both and P68 a helmet only, both read right;
-P69's lime vest is missed and P62's dark cap is taken for a helmet — the two
-kinds of mistake #21 counts; grey badges are people too small to judge. P74,
+helmet and the vest: P30 wears both and P66 a helmet only, both read right;
+P67's lime vest is missed and P60's dark cap is taken for a helmet — the two
+kinds of mistake #21 counts; grey badges are people too small to judge. P72,
 pink, has just walked against the one-way aisle (a rule declared for the PoC;
 the ground truth has both of the AI's wrong-way walks, and a third it missed):
 the alert heads the list, with the camera's snapshot.*
@@ -300,16 +347,16 @@ perfect detector's ceiling); the whole-building figure is in
 |:-:|---|---|---|---|
 | 1 | People per CCTV | each camera's name tag; video 2's first card | CCTV 0003: 6.8 per frame | 10.7 (labels ≥ 40 px) |
 | 2 | People in the building, each once | card "Orang terpantau" and its curve | 28 on average, 35 at most | 47.5 / 53 seen by the cameras, 55.9 in the building |
-| 3 | Counting lines, in and out | on the lines in the plan and pictures (↑ in ↓ out); video 2 card | A 2 in 1 out · B 0 · C 2 in 2 out | A 3 · B 0 · C 4; 6 of 7 the same crossing |
+| 3 | Counting lines, in and out | on the lines in the plan and pictures (↑ in ↓ out); video 2 card | A 2 in 1 out · B 0 · C 1 in 2 out | A 3 · B 0 · C 4; all 6 are among the 7 real crossings |
 | 4 | Zone occupancy and dwell | numbered zones under the plan; video 2 zone card | "Area kerja timur" 2.3 people, 11 s per visit | 3.2 people |
 | 5 | Heat map and walking paths | plan (heat, 3 s trails); 3D replay | — | — |
-| 6 | Walking vs standing, distance | card "Orang terpantau" | 67.5 % walking, 6.9 m per person | 67.5 % |
+| 6 | Walking vs standing, distance | card "Orang terpantau" | 67.4 % walking, 6.6 m per person | 67.5 % |
 | 7 | Congestion (4+ within 2 m for 1 s) | card, alert, blue circle on the plan | 0 % of the time | 0 % |
 | 8 | Standing still too long (15 s within 0.8 m) | alert (information); video 3 card | 2, both real | 5 |
-| 9 | Forklift use | card "Forklift bergerak" with the utilisation; `video1_live_ops.json` per forklift | utilisation 62 %; moving share and 90th-percentile speed per forklift identity | utilisation 57 %; moving or not right 81 % of the time; speeds within 0.38 km/h |
+| 9 | Forklift use | card "Forklift bergerak" with the utilisation; `video1_live_ops.json` per forklift | utilisation 62 %; moving share and 90th-percentile speed per forklift identity | utilisation 55 %; moving or not right 80 % of the time; speeds within 0.37 km/h |
 | 10 | Speed and speeding (> 5 km/h for 1 s) | beside each forklift; card, alert | 0 alerts | 0 |
 | 11 | Near miss (person within 1.5 m of a moving forklift) and its hot spots | card, alert with snapshot, red line, every one marked on the plan | 1, real | 13 |
-| 12 | Person in the forklift lane | card, alert, the amber lane | 6 entries, 3 real | 4 |
+| 12 | Person in the forklift lane | card, alert, the amber lane | 5 entries, 3 real | 4 |
 | 13 | Wrong way in a one-way aisle | pink aisle, alert; video 2 card | 0 | 0 |
 | 14 | Pallet trucks and robots | plan; video 3's robot card | 2 pallet trucks, both parked all window; the real site's robot R5 | pallet trucks: every one placed is real |
 | 15 | Blind spots | report | 36 % of the floor no camera can place a person on; 35 % one camera; 28 % two or more | — |
@@ -328,13 +375,12 @@ perfect detector's ceiling); the whole-building figure is in
 $ python search_events.py "siapa yang melintasi garis C"
 Pertanyaan : siapa yang melintasi garis C
 Dipahami   : melintas garis · di Garis C
-Ditemukan  : 4 dari 16 kejadian dalam video 1
+Ditemukan  : 3 dari 14 kejadian dalam video 1
 
  waktu  kejadian             siapa        tempat                                 CCTV yang melihat          keterangan
  00:08  melintas garis       P18          Jalur forklift tengah (-42,1; -62,0) m 0005                       Garis C, keluar
- 00:24  melintas garis       P18          Jalur forklift tengah (-32,7; -62,1) m 0001, 0005, 0010           Garis C, masuk
- 00:25  melintas garis       P184         Lorong satu arah (contoh) (-33,6; -62,3) m 0001, 0005                 Garis C, masuk
- 00:27  melintas garis       P168         Jalur forklift tengah (-20,7; -62,0) m 0005                       Garis C, keluar
+ 00:24  melintas garis       P18          Jalur forklift tengah (-32,7; -62,0) m 0001, 0005, 0010           Garis C, masuk
+ 00:27  melintas garis       P163         Jalur forklift tengah (-20,7; -62,0) m 0005                       Garis C, keluar
 ```
 
 The question is read by its words — event words (*nyaris, ngebut, diam, melintas,
@@ -472,7 +518,7 @@ from where they stand; lines A and B: 6 and 6 crossings against 6 and 5.
 - **Forklift positions are ±0.7 m.** A box's bottom edge is not a vehicle's
   footprint; the heading comes from motion only. Safety alerts only use
   forklifts seen closely enough (≤ 0.15 m/px) for at least 2 s. The speed
-  shown beside a forklift can read high for a moment — above 5 km/h in 3.8 %
+  measured beside a forklift can read high for a moment — above 5 km/h in 3.6 %
   of its measured frames, when no forklift went over 4.8 km/h — which is why
   the speeding alert needs a full second over the limit (measured: a 3- or
   4-second speed window does not help; it lags more and spikes as often).

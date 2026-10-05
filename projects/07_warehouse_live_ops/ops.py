@@ -28,7 +28,10 @@ from analytics import inside
 CAMERA_NAME = {
     # named after the zone each camera's floor covers most (measured on its footprint)
     "warehouse_000": {"Camera_0003": "Area kerja timur", "Camera_0005": "Jalur forklift tengah",
-                      "Camera_0011": "Area utara", "Camera_0007": "Area selatan"},
+                      "Camera_0011": "Area utara", "Camera_0007": "Area selatan",
+                      "Camera_0001": "Area konveyor barat", "Camera_0000": "Sudut barat daya",
+                      "Camera_0010": "Lorong tengah", "Camera_0015": "Area kerja timur, sisi dok",
+                      "Camera_0008": "Area tengah utara"},
     "warehouse_027": {"Camera_0000": "Lantai utama", "Camera_0005": "Lorong rak",
                       "Camera_0006": "Lantai utama, sisi dinding"},
 }
@@ -88,15 +91,20 @@ class Event:
     cam_ids: tuple
     x: float | None = None
     y: float | None = None
+    end: float | None = None  # when it was over, where that is known
+    moment: float | None = None  # the instant that shows it best (a near miss: the closest approach)
 
     @property
     def cams(self) -> list[str]:
         return [cam_label(c) for c in self.cam_ids]
 
 
-def _ev(kind: str, t: float, detail: str, gids, cams, x=None, y=None, title: str | None = None) -> Event:
+def _ev(kind: str, t: float, detail: str, gids, cams, x=None, y=None, title: str | None = None,
+        end: float | None = None, moment: float | None = None) -> Event:
     sev, icon, name = KIND[kind]
-    return Event(round(float(t), 1), kind, sev, icon, title or name, detail, tuple(gids), tuple(cams or ()), x, y)
+    return Event(round(float(t), 1), kind, sev, icon, title or name, detail, tuple(gids), tuple(cams or ()), x, y,
+                 round(float(end), 1) if end is not None else None,
+                 round(float(moment), 1) if moment is not None else None)
 
 
 def _distance(m: float) -> str:
@@ -140,14 +148,17 @@ def events(scene: str, summary: dict, ppe_violations: list[dict] | None = None) 
     out = []
     a = summary
     for e in a["#11_near_miss"]["events"]:
+        # raised the moment the person comes within reach, as an alarm would be; the row
+        # reports the closest approach of the whole episode, where it happened
         z = where(scene, e["x"], e["y"])
-        out.append(_ev("near_miss", e.get("t", e["start_t"]),
+        out.append(_ev("near_miss", e["start_t"],
                        f"P{e['person']} & forklift F{e['forklift']} · {_distance(e['min_m'])}" + (f" · {z}" if z else ""),
-                       (e["person"], e["forklift"]), e.get("cams"), e["x"], e["y"]))
+                       (e["person"], e["forklift"]), e.get("cams"), e["x"], e["y"], end=e.get("end_t"),
+                       moment=e.get("t")))
     for e in a["#10_speeding"]["events"]:
         out.append(_ev("speeding", e["start_t"], f"F{e['gid']} · puncak {ui.num(e['max_kmh'])} km/j, batas "
                                                  f"{C.SPEED_LIMIT_KMH:.0f}", (e["gid"],), e.get("cams"),
-                       e.get("x"), e.get("y")))
+                       e.get("x"), e.get("y"), end=e.get("end_t")))
     for e in a["#12_vehicle_lane"].get("events", []):
         z = where(scene, e["x"], e["y"]) or "Jalur forklift"
         out.append(_ev("lane", e["t"], f"P{e['gid']} · {z}", (e["gid"],), e.get("cams"), e["x"], e["y"]))
@@ -169,6 +180,23 @@ def events(scene: str, summary: dict, ppe_violations: list[dict] | None = None) 
     return sorted(out, key=lambda e: (e.t, e.kind))
 
 
+def spotlights(evs: list[Event], shown: list[str], linger_s: float = 4.0) -> list[tuple]:
+    """When a camera that is not on screen sees an alert, it is called up: (from, to, camera, event).
+
+    Serious alerts only (high and medium), from half a second before the alert
+    until `linger_s` after it is over; a later call-up ends an earlier one.
+    """
+    out = []
+    for e in evs:
+        if e.severity not in ("high", "medium") or not e.cam_ids or set(e.cam_ids) & set(shown):
+            continue
+        t0, t1 = max(0.0, e.t - 0.5), max(e.end or e.t, e.t) + linger_s
+        if out and t0 < out[-1][1]:
+            out[-1] = (out[-1][0], t0, out[-1][2], out[-1][3])
+        out.append((t0, t1, e.cam_ids[0], e))
+    return [s for s in out if s[1] > s[0]]
+
+
 # ------------------------------------------------------------ the evidence
 def snapshot(ev: Event, res, detections: dict, frames: list, video_path, prefer: list[str] = ()) -> np.ndarray | None:
     """A 16:9 crop of the camera that saw the event, at the moment it is reported.
@@ -177,7 +205,8 @@ def snapshot(ev: Event, res, detections: dict, frames: list, video_path, prefer:
     picture shows them largest (a camera on screen wins a tie). None when the
     people involved are not in any camera's picture then (seen by others only).
     """
-    near = sorted(frames, key=lambda f: abs(f.t - ev.t))[:12]
+    when = ev.moment if ev.moment is not None else ev.t
+    near = sorted(frames, key=lambda f: abs(f.t - when))[:12]
     for fr in near:
         per_cam: dict[str, list] = {}
         for b in res.blobs.get(fr.frame, []):

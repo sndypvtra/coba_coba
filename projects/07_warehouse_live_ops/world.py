@@ -15,6 +15,11 @@ the building:
            tracker has already said they are different.
   follow   Fused objects are linked over time into global identities, by where
            they should be now and by which camera tracks they were built from.
+           Two cameras' sightings fused into one object stay fused while they
+           are within STICKY_M of each other, so an object near fusion's own
+           0.9 m limit does not split and rejoin - and change its name - every
+           few frames; a vehicle's camera track keeps its identity across the
+           position jumps a coarse view makes.
 
 Nothing here reads the dataset's labels. `evaluate` compares against them
 afterwards.
@@ -63,6 +68,12 @@ CLASS = {
 }
 STATIC_NCC = 0.90               # this similar to the long-run background = scenery
 EDGE = 3                        # px: a box this close to the frame edge is cut by it
+# Measured on video 1's window against the labels (README, "Names that stay"):
+# together they cut the renames a viewer sees in the four camera pictures from
+# 81 to 46 in 30 s, with people placed as precisely and forklifts found as often.
+STICKY_M = 1.8                  # sightings fused last frame stay fused while this close
+TRACKLET_PX = 16                # a vehicle's camera track carries its identity across a jump
+                                # of this many pixels of floor at its finest resolution
 
 
 @dataclass
@@ -228,12 +239,36 @@ class World:
         self.tracks: dict[int, Track] = {}
         self.max_gap = int(max_gap_s * FPS)
         self._next = 1
+        self._last: dict[tuple[str, int], int] = {}     # camera track -> identity, previous frame
+
+    def _keep_fused(self, blobs: list[Blob]) -> list[Blob]:
+        """Re-join objects whose camera tracks were one identity last frame and are still close."""
+        out, gone = list(blobs), set()
+        for i, a in enumerate(out):
+            if i in gone:
+                continue
+            ga = {self._last.get(k) for k in a.keys} - {None}
+            if not ga:
+                continue
+            for j in range(i + 1, len(out)):
+                b = out[j]
+                if j in gone or b.cls != a.cls or not a.cams.isdisjoint(b.cams):
+                    continue
+                if ga & ({self._last.get(k) for k in b.keys} - {None}) and \
+                        math.hypot(a.x - b.x, a.y - b.y) <= STICKY_M:
+                    a.members.extend(b.members)
+                    a.settle()
+                    gone.add(j)
+        return [b for k, b in enumerate(out) if k not in gone]
 
     def step(self, frame: int, blobs: list[Blob], stride: int = 3) -> list[Blob]:
+        blobs = self._keep_fused(blobs)
         live = [t for t in self.tracks.values() if frame - t.frames[-1] <= self.max_gap * stride]
         if blobs and live:
             cost = np.full((len(blobs), len(live)), 1e6)
             for i, b in enumerate(blobs):
+                # a vehicle seen coarsely jumps by metres between frames; its camera track does not
+                coarse = TRACKLET_PX * min(m.scale for m in b.members) if b.cls != "person" else 0.0
                 for j, t in enumerate(live):
                     if t.cls != b.cls:
                         continue
@@ -244,7 +279,7 @@ class World:
                     spec = CLASS[b.cls]
                     gate = spec["noise_m"] + spec["vmax"] * gap_s
                     shared = sum(t.keys.get(k, 0) for k in b.keys)
-                    if shared and d <= 2.0 * gate:
+                    if shared and d <= 2.0 * gate + coarse:
                         # a camera tracker vouching for the link is the strongest
                         # evidence - but not strong enough to excuse a teleport
                         cost[i, j] = d / (1.0 + shared)
@@ -260,6 +295,7 @@ class World:
                 self._next += 1
                 self.tracks[t.gid] = t
                 self._extend(t, frame, b)
+        self._last = {k: b.gid for b in blobs for k in b.keys}
         return blobs
 
     def _extend(self, t: Track, frame: int, b: Blob) -> None:

@@ -45,9 +45,9 @@
   "#3_crossings": [],
   "#4_zones": [],
   "#6_walking": {
-   "walking_share_pct": 25.2,
+   "walking_share_pct": 24.9,
    "distance_m_per_person_mean": 4.6,
-   "travel_m_per_person_hour": 1134,
+   "travel_m_per_person_hour": 1124,
    "note": "walking = faster than 0.4 m/s over one second"
   },
   "#7_congestion": {
@@ -150,13 +150,13 @@
    ]
   },
   "#15_seen_by_cameras": {
-   "person_frames_seen_by_2plus_pct": 65.9,
-   "person_frames_seen_by_1_pct": 34.1
+   "person_frames_seen_by_2plus_pct": 66.2,
+   "person_frames_seen_by_1_pct": 33.8
   },
   "heat_points": 2211
  },
  "ppe": {
-  "people_judged": 18,
+  "people_judged": 16,
   "with_helmet": 0,
   "with_vest": 0,
   "rule": "people >= 100 px tall; helmet / vest box on the head / torso of the person crop at score >= 0.3, and for a vest CLIP's safety-vest share >= 0.2; a person's status is the majority of their judged frames (live: the last 2 s); a violation is 2 s or more without",
@@ -422,11 +422,6 @@
    "vest": false,
    "judged_frames": 207
   },
-  "P11": {
-   "helmet": false,
-   "vest": false,
-   "judged_frames": 3
-  },
   "P12": {
    "helmet": false,
    "vest": false,
@@ -445,24 +440,19 @@
   "P24": {
    "helmet": false,
    "vest": false,
-   "judged_frames": 8
+   "judged_frames": 3
   },
   "P25": {
    "helmet": false,
    "vest": false,
-   "judged_frames": 3
+   "judged_frames": 7
   },
-  "P27": {
+  "P26": {
    "helmet": false,
    "vest": false,
    "judged_frames": 7
   },
-  "P35": {
-   "helmet": false,
-   "vest": false,
-   "judged_frames": 3
-  },
-  "P36": {
+  "P34": {
    "helmet": false,
    "vest": false,
    "judged_frames": 4

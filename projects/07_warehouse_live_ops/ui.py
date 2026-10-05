@@ -201,7 +201,7 @@ class Canvas:
                       anchor="ls")
 
     def event_row(self, box, ev, thumb: np.ndarray | None, now: bool = False) -> None:
-        """One alert in a feed: severity bar, snapshot, what, who and where, when and which camera."""
+        """One alert in a feed: severity bar, snapshot, what and when, then who, where and which camera."""
         x0, y0, x1, y1 = box
         sev = SEVERITY[ev.severity]
         self.rrect(box, r=8, fill=alpha(sev, 0.10) if now else SURFACE_2)
@@ -217,21 +217,23 @@ class Canvas:
             self.rrect((tx, y0 + 6, tx + tw, y0 + 6 + th), r=6, fill=BORDER)
             self.icon("videocam_off", (tx + tw / 2, y0 + 6 + th / 2), 20, TEXT_3)
         tx += tw + 12
-        chips = bool(ev.cams) and y1 - y0 >= 68
-        ty = y0 + (15 if chips else 18)
+        ty = y0 + (y1 - y0) / 2 - 10
         self.icon(ev.icon, (tx + 9, ty), 17, sev)
         right = clock(ev.t)
         room = x1 - tx - 30 - self.width(right, 12, "medium", True) - 14
         self.text((tx + 24, ty), self.fit(ev.title, 14, "semibold", room), 14, "semibold", TEXT, anchor="lm")
         self.text((x1 - 12, ty), right, 12, "medium", TEXT_2, anchor="rm", tnum=True)
-        self.text((tx, ty + (19 if chips else 22)), self.fit(ev.detail, 12, "regular", x1 - tx - 12), 12, "regular",
-                  TEXT_2, anchor="lm")
-        if chips:
-            cx = tx
-            for c in ev.cams[:3]:
-                b = self.pill((cx, y1 - 7), c, 10, TEXT_2, BORDER, "medium", icon="videocam", pad=(6, 2),
-                              anchor="lb")
-                cx = b[2] + 4
+        # which camera saw it, always: right-aligned on the second line, the detail fills the rest
+        cx = x1 - 10
+        for c in reversed(ev.cams[:2]):
+            b = self.pill((cx, ty + 21), c, 10, TEXT, BORDER, "semibold", icon="videocam", pad=(6, 2), anchor="rm")
+            cx = b[0] - 4
+        more = len(ev.cams) - 2
+        if more > 0:
+            b = self.text((cx - 2, ty + 21), f"+{more}", 10, "medium", TEXT_2, anchor="rm")
+            cx = b[0] - 4
+        self.text((tx, ty + 21), self.fit(ev.detail, 12, "regular", cx - tx - 8), 12, "regular", TEXT_2,
+                  anchor="lm")
 
     def topbar(self, view: str, site: str, status: str, t: float, total: float, chips: list[str]) -> None:
         self.d.rectangle((0, 0, W, TOP), fill=SURFACE)
@@ -369,6 +371,27 @@ def corner_box(img_bgr: np.ndarray, box, rgb, thickness: int = 2, frac: float = 
         if roi.size:
             roi[:] = (roi.astype(np.float32) * (1 - fill) + np.array(c, np.float32) * fill).astype(np.uint8)
     lx, ly = max(4, int((x2 - x1) * frac)), max(4, int((y2 - y1) * frac * 0.6))
+    for (ax, ay), (dx, dy) in (((x1, y1), (1, 1)), ((x2, y1), (-1, 1)), ((x1, y2), (1, -1)), ((x2, y2), (-1, -1))):
+        cv2.line(img_bgr, (ax, ay), (ax + dx * lx, ay), c, thickness, cv2.LINE_AA)
+        cv2.line(img_bgr, (ax, ay), (ax, ay + dy * ly), c, thickness, cv2.LINE_AA)
+
+
+def lock_box(img_bgr: np.ndarray, box, rgb, thickness: int = 2, fill: float = 0.0, outline: float = 0.65) -> None:
+    """A detection: a thin full outline (so the box visibly encloses its object) with strong corners."""
+    x1, y1, x2, y2 = (int(round(v)) for v in box)
+    h_, w_ = img_bgr.shape[:2]
+    x1, y1, x2, y2 = max(0, x1), max(0, y1), min(w_ - 1, x2), min(h_ - 1, y2)
+    if x2 - x1 < 3 or y2 - y1 < 3:
+        return
+    c = bgr(rgb)
+    roi = img_bgr[y1:y2 + 1, x1:x2 + 1]
+    if fill > 0:
+        roi[:] = (roi.astype(np.float32) * (1 - fill) + np.array(c, np.float32) * fill).astype(np.uint8)
+    layer = roi.copy()
+    cv2.rectangle(layer, (0, 0), (x2 - x1, y2 - y1), c, 1, cv2.LINE_AA)
+    cv2.addWeighted(layer, outline, roi, 1 - outline, 0, roi)
+    lx = max(5, int(0.30 * (x2 - x1)))
+    ly = max(6, int(0.18 * (y2 - y1)))
     for (ax, ay), (dx, dy) in (((x1, y1), (1, 1)), ((x2, y1), (-1, 1)), ((x1, y2), (1, -1)), ((x2, y2), (-1, -1))):
         cv2.line(img_bgr, (ax, ay), (ax + dx * lx, ay), c, thickness, cv2.LINE_AA)
         cv2.line(img_bgr, (ax, ay), (ax, ay + dy * ly), c, thickness, cv2.LINE_AA)

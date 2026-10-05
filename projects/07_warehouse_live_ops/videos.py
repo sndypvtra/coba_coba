@@ -116,13 +116,24 @@ def video_live_ops(ctx: dict, out_path) -> None:
     x0, y1 = plan.to_world(xs.min(), ys.min())
     x1, y0 = plan.to_world(xs.max(), ys.max())
     view = R.PlanView(plan, (x0 - 1, y0 - 1, x1 + 1, y1 + 1), *map_wh)
-    static = R.plan_static(view, cams, shown, others, zones, lines, _view_mask(view, plan, inside))
+    floor = _view_mask(view, plan, inside)
+    static = R.plan_static(view, cams, shown, others, zones, lines, floor)
     heat = R.Heat(view)
     overlays = {c: R.CameraOverlay(cams[c], (TW, TH), zones, lines) for c in shown}
     readers = {c: R.Reader(Path(ctx["video_path"](c)), frames[0].frame, ctx["stride"]) for c in shown}
     confirmed = res.confirmed_ids()
     evs = ops.events(scene, summary)
     snaps = _snapshots(evs, ctx, shown)
+    # an alert seen only by a camera that is not on screen calls that camera up into the fourth tile
+    spots = ops.spotlights(evs, shown)
+    spot_cams = sorted({sp[2] for sp in spots})
+    for c in spot_cams:
+        overlays[c] = R.CameraOverlay(cams[c], (TW, TH), zones, lines)
+        readers[c] = R.Reader(Path(ctx["video_path"](c)), frames[0].frame, ctx["stride"])
+    spot_fov = {c: cv2.findContours(R.fov_mask(view, cams[c], floor), cv2.RETR_EXTERNAL,
+                                    cv2.CHAIN_APPROX_SIMPLE)[0] for c in spot_cams}
+    memory = {c: {} for c in list(shown) + spot_cams}
+    plan_memory: dict = {}
     tally = ops.Tally()
     trails: dict = {}
     out = R.VideoOut(out_path, 10.0)
@@ -130,12 +141,15 @@ def video_live_ops(ctx: dict, out_path) -> None:
         canvas = bg.copy()
         k2g, seen = R.key_index(res.blobs.get(fr.frame, []), confirmed)
         tally.add(fr)
+        spot = next((sp for sp in spots if sp[0] <= fr.t < sp[1]), None)
+        on_screen = list(shown) if spot is None else list(shown[:3]) + [spot[2]]
+        colours = list(ui.CAMERA[:4]) if spot is None else list(ui.CAMERA[:3]) + [ui.RED]
         marks = []
-        for k, cid in enumerate(shown):
+        for k, cid in enumerate(on_screen):
             rows, classes = ctx["detections"][cid]
             pic, mk = R.camera_view(readers[cid].get(fr.frame), overlays[cid], rows, classes, fr.frame, fr, k2g,
-                                    confirmed, header=(ui.CAMERA[k], ops.cam_label(cid), ops.camera_name(scene, cid),
-                                                       fr.camera_people.get(cid, 0)))
+                                    confirmed, header=(colours[k], ops.cam_label(cid), ops.camera_name(scene, cid),
+                                                       fr.camera_people.get(cid, 0)), memory=memory[cid])
             ui.paste_rounded(canvas, pic, tiles[k], 10)
             marks.append((mk, *tiles[k]))
         # the floor
@@ -144,13 +158,21 @@ def video_live_ops(ctx: dict, out_path) -> None:
             if o.cls == "person":
                 heat.add(o.x, o.y)
         heat.blend(m)
-        mk = R.plan_labels(view, cams, shown, zones, lines, fr, scene)
+        if spot is not None:                # the called-up camera and what it sees, in red
+            c = spot[2]
+            for cnt in spot_fov[c]:
+                ui.dashed(m, np.vstack([cnt[:, 0], cnt[:1, 0]]), ui.RED, 2, 7, 5)
+            u, v = view.pt(cams[c].centre[0], cams[c].centre[1])
+            cv2.circle(m, (u, v), 6, ui.bgr(ui.RED), -1, cv2.LINE_AA)
+            cv2.circle(m, (u, v), 10, ui.bgr(ui.RED), 1, cv2.LINE_AA)
+        mk = R.plan_labels(view, cams, on_screen, zones, lines, fr, scene, plan_memory, colours)
         for e in evs:                       # #11's hot spots: every near miss so far stays where it happened
             if e.kind == "near_miss" and e.t <= fr.t:
                 u, v = view.pt(e.x, e.y)
                 cv2.circle(m, (u, v), 11, ui.bgr(ui.RED), 2, cv2.LINE_AA)
-                mk.chip((u + 14, v), ui.clock(e.t), 10, ui.RED, (10, 14, 19, 220), icon="warning", anchor="lm")
-        R.plan_objects(m, view, fr, seen, shown, trails, mk)
+                mk.chip((u + 14, v), f"{ui.clock(e.t)} · {e.cams[0]}" if e.cams else ui.clock(e.t), 10, ui.RED,
+                        (10, 14, 19, 220), icon="warning", anchor="lm")
+        R.plan_objects(m, view, fr, seen, on_screen, trails, mk, colours=colours)
         ui.paste_rounded(canvas, m, map_xy, 8)
         marks.append((mk, *map_xy))
         # the headcount's curve, inside its card
@@ -161,6 +183,14 @@ def video_live_ops(ctx: dict, out_path) -> None:
         cv = ui.Canvas(canvas)
         for mk_, x, y in marks:
             mk_.draw(cv, x, y)
+        if spot is not None:                # the call-up: framed in red, and why it is on screen
+            x, y = tiles[3]
+            cv.rrect((x - 1, y - 1, x + TW, y + TH), r=11, outline=ui.RED, width=3)
+            e = spot[3]
+            cv.pill((x + 10, y + TH - 10), f"SOROTAN · {e.title} · {e.detail.split(' · ')[0]}", 12, (255, 255, 255),
+                    ui.RED, "semibold", icon=e.icon, pad=(9, 4), anchor="lb")
+            cv.pill((x + TW - 10, y + TH - 10), f"kembali ke {ops.cam_label(shown[3])} pukul {ui.clock(spot[1])}", 10,
+                    ui.TEXT, (10, 14, 19, 215), "medium", pad=(7, 3), anchor="rb")
         people = [o for o in fr.objects if o.cls == "person"]
         walking = sum(o.walking for o in people)
         lifts = [o for o in fr.objects if o.cls == "forklift"]
@@ -239,6 +269,8 @@ def video_one_camera(ctx: dict, out_path) -> None:
     snaps = _snapshots(evs, ctx, [cid])
     # the zones this camera watches, in the order an owner would read them
     covered = [z for z in zones if R.zone_share(cam, z) >= 0.25]
+    cam_memory: dict = {}
+    plan_memory: dict = {}
     watched_lines = [ln for ln, segs in overlay.lines if segs]
     dwell: dict = {}
     trails: dict = {}
@@ -253,7 +285,8 @@ def video_one_camera(ctx: dict, out_path) -> None:
         counts.append(ai)
         pic, mk = R.camera_view(reader.get(fr.frame), overlay, rows, classes, fr.frame, fr, k2g, confirmed,
                                 big=True, ppe=now if live else None,
-                                header=(ui.CAMERA[0], ops.cam_label(cid), ops.camera_name(scene, cid), ai))
+                                header=(ui.CAMERA[0], ops.cam_label(cid), ops.camera_name(scene, cid), ai),
+                                memory=cam_memory)
         ui.paste_rounded(canvas, pic, cam_xy, 12)
         marks = [(mk, *cam_xy)]
         for o in fr.objects:                 # seconds each person has spent in each zone so far
@@ -261,7 +294,7 @@ def video_one_camera(ctx: dict, out_path) -> None:
                 for zn in o.zones:
                     dwell[(o.gid, zn)] = dwell.get((o.gid, zn), 0.0) + 0.1
         m = static.copy()
-        mk2 = R.Marks(view.w, view.h, view.taken)
+        mk2 = R.Marks(view.w, view.h, view.taken, plan_memory)
         R.plan_objects(m, view, fr, seen, [cid], trails, mk2, ppe=now if live else None, label_all=True)
         ui.paste_rounded(canvas, m, map_xy, 8)
         marks.append((mk2, *map_xy))
@@ -359,6 +392,7 @@ def video_real(ctx: dict, out_path) -> None:
     confirmed = res.confirmed_ids()
     evs = ops.events(scene, summary, ctx.get("ppe_events"))
     snaps = _snapshots(evs, ctx, shown)
+    memory = {c: {} for c in shown}
     robot_moving = 0
     robot_seen = 0
     since: dict[int, float] = {}            # when each person's current missing PPE began
@@ -378,7 +412,7 @@ def video_real(ctx: dict, out_path) -> None:
             pic, mk = R.camera_view(imgs[cid], overlays[cid], rows, classes, fr.frame, fr, k2g, confirmed,
                                     big=True, ppe=now if live else None,
                                     header=(ui.CAMERA[k], ops.cam_label(cid), ops.camera_name(scene, cid),
-                                            fr.camera_people.get(cid, 0)))
+                                            fr.camera_people.get(cid, 0)), memory=memory[cid])
             ui.paste_rounded(canvas, pic, tiles[k], 10)
             marks.append((mk, *tiles[k]))
         people = sorted((o for o in fr.objects if o.cls == "person"), key=lambda o: o.gid)

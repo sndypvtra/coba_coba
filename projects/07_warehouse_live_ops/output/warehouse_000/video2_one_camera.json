@@ -111,7 +111,7 @@
    },
    {
     "line": "Garis A",
-    "gid": 21,
+    "gid": 20,
     "t": 5.5,
     "dir": "out",
     "x": -14.96,
@@ -122,7 +122,7 @@
    },
    {
     "line": "Garis B",
-    "gid": 21,
+    "gid": 20,
     "t": 6.2,
     "dir": "out",
     "x": -14.44,
@@ -133,7 +133,7 @@
    },
    {
     "line": "Garis B",
-    "gid": 35,
+    "gid": 34,
     "t": 10.5,
     "dir": "in",
     "x": -25.24,
@@ -155,7 +155,7 @@
    },
    {
     "line": "Garis B",
-    "gid": 35,
+    "gid": 34,
     "t": 15.0,
     "dir": "out",
     "x": -24.96,
@@ -177,7 +177,7 @@
    },
    {
     "line": "Garis A",
-    "gid": 93,
+    "gid": 88,
     "t": 24.3,
     "dir": "out",
     "x": -14.93,
@@ -268,14 +268,7 @@
   "#9_forklift_use": [
    {
     "gid": 12,
-    "seconds_seen": 26.3,
-    "reliable_speed_s": 0.0,
-    "moving_pct": null,
-    "top_kmh_p90": null
-   },
-   {
-    "gid": 80,
-    "seconds_seen": 2.1,
+    "seconds_seen": 29.2,
     "reliable_speed_s": 0.0,
     "moving_pct": null,
     "top_kmh_p90": null
@@ -317,7 +310,7 @@
      ]
     },
     {
-     "gid": 74,
+     "gid": 72,
      "zone": "Lorong satu arah (contoh)",
      "t": 19.8,
      "x": -34.53,
@@ -667,7 +660,7 @@
     ]
    },
    {
-    "gid": 21,
+    "gid": 20,
     "what": "helm",
     "start_t": 4.5,
     "end_t": 11.4,
@@ -678,7 +671,7 @@
     ]
    },
    {
-    "gid": 21,
+    "gid": 20,
     "what": "rompi",
     "start_t": 6.8,
     "end_t": 10.5,
@@ -689,7 +682,7 @@
     ]
    },
    {
-    "gid": 35,
+    "gid": 34,
     "what": "helm",
     "start_t": 7.6,
     "end_t": 18.7,
@@ -700,7 +693,7 @@
     ]
    },
    {
-    "gid": 35,
+    "gid": 34,
     "what": "rompi",
     "start_t": 7.6,
     "end_t": 18.7,
@@ -711,7 +704,7 @@
     ]
    },
    {
-    "gid": 31,
+    "gid": 30,
     "what": "rompi",
     "start_t": 8.9,
     "end_t": 11.0,
@@ -722,7 +715,7 @@
     ]
    },
    {
-    "gid": 62,
+    "gid": 60,
     "what": "rompi",
     "start_t": 15.8,
     "end_t": 21.0,
@@ -733,7 +726,7 @@
     ]
    },
    {
-    "gid": 62,
+    "gid": 60,
     "what": "helm",
     "start_t": 16.4,
     "end_t": 19.8,
@@ -744,7 +737,7 @@
     ]
    },
    {
-    "gid": 69,
+    "gid": 67,
     "what": "helm",
     "start_t": 16.9,
     "end_t": 21.8,
@@ -755,7 +748,7 @@
     ]
    },
    {
-    "gid": 69,
+    "gid": 67,
     "what": "rompi",
     "start_t": 16.9,
     "end_t": 21.8,
@@ -766,7 +759,7 @@
     ]
    },
    {
-    "gid": 68,
+    "gid": 66,
     "what": "rompi",
     "start_t": 17.2,
     "end_t": 23.4,
@@ -777,7 +770,7 @@
     ]
    },
    {
-    "gid": 31,
+    "gid": 30,
     "what": "helm",
     "start_t": 20.2,
     "end_t": 22.8,
@@ -788,7 +781,7 @@
     ]
    },
    {
-    "gid": 31,
+    "gid": 30,
     "what": "rompi",
     "start_t": 20.8,
     "end_t": 22.8,
@@ -797,7 +790,7 @@
     "cams": []
    },
    {
-    "gid": 93,
+    "gid": 88,
     "what": "helm",
     "start_t": 23.6,
     "end_t": 29.9,
@@ -808,7 +801,7 @@
     ]
    },
    {
-    "gid": 101,
+    "gid": 96,
     "what": "helm",
     "start_t": 24.4,
     "end_t": 27.0,
@@ -819,7 +812,7 @@
     ]
    },
    {
-    "gid": 101,
+    "gid": 96,
     "what": "rompi",
     "start_t": 24.4,
     "end_t": 27.0,
@@ -830,7 +823,7 @@
     ]
    },
    {
-    "gid": 69,
+    "gid": 67,
     "what": "helm",
     "start_t": 24.7,
     "end_t": 28.4,
@@ -841,7 +834,7 @@
     ]
    },
    {
-    "gid": 69,
+    "gid": 67,
     "what": "rompi",
     "start_t": 24.7,
     "end_t": 28.4,
@@ -852,7 +845,7 @@
     ]
    },
    {
-    "gid": 102,
+    "gid": 97,
     "what": "helm",
     "start_t": 26.2,
     "end_t": 28.9,
@@ -863,7 +856,7 @@
     ]
    },
    {
-    "gid": 102,
+    "gid": 97,
     "what": "rompi",
     "start_t": 26.2,
     "end_t": 28.9,
@@ -921,57 +914,57 @@
    "vest": false,
    "judged_frames": 6
   },
-  "P21": {
+  "P20": {
    "helmet": false,
    "vest": false,
    "judged_frames": 67
   },
-  "P29": {
+  "P28": {
    "helmet": false,
    "vest": false,
    "judged_frames": 17
   },
-  "P31": {
+  "P30": {
    "helmet": true,
    "vest": false,
    "judged_frames": 139
   },
-  "P35": {
+  "P34": {
    "helmet": false,
    "vest": false,
    "judged_frames": 109
   },
-  "P47": {
+  "P45": {
    "helmet": false,
    "vest": false,
    "judged_frames": 3
   },
-  "P62": {
+  "P60": {
    "helmet": false,
    "vest": false,
    "judged_frames": 42
   },
-  "P68": {
+  "P66": {
    "helmet": true,
    "vest": false,
    "judged_frames": 103
   },
-  "P69": {
+  "P67": {
    "helmet": false,
    "vest": false,
    "judged_frames": 97
   },
-  "P93": {
+  "P88": {
    "helmet": false,
    "vest": true,
    "judged_frames": 66
   },
-  "P101": {
+  "P96": {
    "helmet": false,
    "vest": false,
    "judged_frames": 30
   },
-  "P102": {
+  "P97": {
    "helmet": false,
    "vest": false,
    "judged_frames": 25

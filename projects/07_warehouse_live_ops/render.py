@@ -89,25 +89,31 @@ def _ink_on(rgb) -> tuple:
 class Marks:
     """Labels for one picture, placed clear of each other, drawn later on the page at an offset."""
 
-    def __init__(self, w: int, h: int, taken: list | None = None):
+    def __init__(self, w: int, h: int, taken: list | None = None, memory: dict | None = None):
         self.w, self.h = w, h
         self.taken = list(taken or [])
         self.ops: list[tuple] = []
+        # where each object's tag sat last frame: it stays there while that spot is as good as any,
+        # so a tag does not hop from side to side as its neighbours move
+        self.memory = memory if memory is not None else {}
 
-    def _spot(self, cands, tw: int, th: int):
-        best, best_cost = None, None
+    def _spot(self, cands, tw: int, th: int, key=None):
+        boxes, costs = [], []
         for x0, y0 in cands:
             x0 = min(max(2, x0), self.w - tw - 2)
             y0 = min(max(2, y0), self.h - th - 2)
             box = (x0, y0, x0 + tw, y0 + th)
-            hit = sum(max(0, min(box[2], b[2]) - max(box[0], b[0])) * max(0, min(box[3], b[3]) - max(box[1], b[1]))
-                      for b in self.taken)
-            if best_cost is None or hit < best_cost:
-                best, best_cost = box, hit
-            if hit == 0:
-                break
-        self.taken.append(best)
-        return best
+            boxes.append(box)
+            costs.append(sum(max(0, min(box[2], b[2]) - max(box[0], b[0])) *
+                             max(0, min(box[3], b[3]) - max(box[1], b[1])) for b in self.taken))
+        k = int(np.argmin(costs))
+        last = self.memory.get(key) if key is not None else None
+        if last is not None and last < len(costs) and costs[last] <= costs[k]:
+            k = last
+        if key is not None:
+            self.memory[key] = k
+        self.taken.append(boxes[k])
+        return boxes[k]
 
     @staticmethod
     def tag_size(text: str, size: int, icon: str | None, badges: int) -> tuple[int, int]:
@@ -116,19 +122,21 @@ class Marks:
         return w, h
 
     def tag(self, box, text: str, rgb, size: int = 12, icon: str | None = None, badges: list | None = None,
-            point: bool = False) -> None:
-        """A coloured tag for an object: above its box (or beside a point), PPE badges at its end."""
+            point: bool = False, key=None) -> None:
+        """A coloured tag for an object, PPE badges at its end.
+
+        On a picture the tag always touches its box - on its top edge, inside
+        it, or on its bottom edge - so it is never read as someone else's; on
+        the plan it sits beside the dot.
+        """
         tw, th = self.tag_size(text, size, icon, len(badges or []))
         if point:
             u, v = box
             cands = [(u + 8, v - th - 4), (u - tw - 8, v - th - 4), (u + 8, v + 4), (u - tw - 8, v + 4)]
         else:
             x1, y1, x2, y2 = box
-            cands = [(x1, y1 - th - 3), (x2 - tw, y1 - th - 3), (x1, y2 + 3), (x1 + 2, y1 + 2),
-                     (x1, y1 - 2 * th - 6), (x2 - tw, y1 - 2 * th - 6), (x1 - tw - 3, y1), (x2 + 3, y1),
-                     (x1 - tw // 2, y1 - th - 3), (x1 - tw // 2, y1 - 2 * th - 6), (x1, y1 - 3 * th - 9),
-                     (x2 + 3, y1 + th + 3), (x1 - tw - 3, y1 + th + 3)]
-        self.ops.append(("tag", self._spot(cands, tw, th), text, rgb, size, icon, badges or []))
+            cands = [(x1, y1 - th), (x2 - tw, y1 - th), (x1 + 1, y1 + 1), (x1, y2), (x2 - tw, y2)]
+        self.ops.append(("tag", self._spot(cands, tw, th, key), text, rgb, size, icon, badges or []))
 
     def chip(self, xy, text: str, size: int = 11, rgb=ui.TEXT, bg=(10, 14, 19, 200), icon: str | None = None,
              dot=None, anchor: str = "la", place: bool = True) -> None:
@@ -287,12 +295,14 @@ def plan_static(view: PlanView, cams: dict[str, Camera], shown: list[str], other
     return img
 
 
-def plan_labels(view: PlanView, cams, shown: list[str], zones, lines, fr: Frame, scene: str) -> Marks:
-    """The plan's names: shown cameras, zones with how many people are in them now, lines with their counts."""
-    mk = Marks(view.w, view.h, view.taken)
+def plan_labels(view: PlanView, cams, shown: list[str], zones, lines, fr: Frame, scene: str,
+                memory: dict | None = None, colours: list | None = None) -> Marks:
+    """The plan's names: shown cameras, numbered zones, lines with their counts."""
+    colours = colours or ui.CAMERA
+    mk = Marks(view.w, view.h, view.taken, memory)
     for k, cid in enumerate(shown):
         u, v = view.pt(cams[cid].centre[0], cams[cid].centre[1])
-        mk.chip((u + 10, v - 10), ops.cam_label(cid), 10, ui.CAMERA[k], (10, 14, 19, 215), anchor="lb")
+        mk.chip((u + 10, v - 10), ops.cam_label(cid), 10, colours[k], (10, 14, 19, 215), anchor="lb")
     for k, z in enumerate(zones):          # numbered; the names and counts are listed under the plan
         xs, ys = [p[0] for p in z.polygon], [p[1] for p in z.polygon]
         u, v = view.pt(min(xs), max(ys))
@@ -342,8 +352,13 @@ def person_rgb(o, ppe_state=None) -> tuple:
 
 
 def plan_objects(img: np.ndarray, view: PlanView, fr: Frame, seen_by: dict[int, set], shown: list[str],
-                 trails: dict, mk: Marks, ppe: dict | None = None, label_all: bool = False) -> None:
-    """People, vehicles, their last three seconds, and the near-miss link, on the plan."""
+                 trails: dict, mk: Marks, ppe: dict | None = None, label_all: bool = False,
+                 colours: list | None = None) -> None:
+    """People, vehicles, their last three seconds, and the near-miss link, on the plan.
+
+    `colours[i]` is the ring colour of `shown[i]` (default: the camera colours).
+    """
+    colours = colours or ui.CAMERA
     for o in fr.objects:
         trails.setdefault(o.gid, deque(maxlen=30)).append((o.x, o.y))
     layer = img.copy()
@@ -361,7 +376,7 @@ def plan_objects(img: np.ndarray, view: PlanView, fr: Frame, seen_by: dict[int, 
         cv2.circle(img, view.pt(x, y), int(C.CROWD_RADIUS_M * view.px_per_m), ui.bgr(ui.BLUE), 1, cv2.LINE_AA)
     for o in sorted(fr.objects, key=lambda o: o.cls == "person"):
         u, v = view.pt(o.x, o.y)
-        rings = [ui.CAMERA[shown.index(c)] for c in sorted(seen_by.get(o.gid, ())) if c in shown]
+        rings = [colours[shown.index(c)] for c in sorted(seen_by.get(o.gid, ())) if c in shown]
         if o.cls in VEHICLE_BODY:
             L, Wd = VEHICLE_BODY[o.cls]
             c, s = math.cos(o.heading), math.sin(o.heading)
@@ -377,7 +392,7 @@ def plan_objects(img: np.ndarray, view: PlanView, fr: Frame, seen_by: dict[int, 
             for k, rc in enumerate(rings):
                 cv2.polylines(img, [p], True, ui.bgr(rc), 1 + k, cv2.LINE_AA)
             lab = f"{TAG[o.cls]}{o.gid}" + (f" · {speed_text(o)}" if o.cls == "forklift" and o.reliable else "")
-            mk.tag((u, v), lab, rgb, 10, point=True)
+            mk.tag((u, v), lab, rgb, 10, point=True, key=o.gid)
             continue
         rgb = person_rgb(o, (ppe or {}).get(o.gid))
         for k, rc in enumerate(rings):
@@ -385,7 +400,7 @@ def plan_objects(img: np.ndarray, view: PlanView, fr: Frame, seen_by: dict[int, 
         cv2.circle(img, (u, v), 5, ui.bgr(DARK), -1, cv2.LINE_AA)
         cv2.circle(img, (u, v), 4, ui.bgr(rgb if o.walking or rgb != ui.CYAN else (186, 230, 253)), -1, cv2.LINE_AA)
         if rings or o.alerts or label_all:
-            mk.tag((u, v), f"P{o.gid}", rgb, 10, point=True)
+            mk.tag((u, v), f"P{o.gid}", rgb, 10, point=True, key=o.gid)
 
 
 # --------------------------------------------------------------- the cameras
@@ -433,24 +448,21 @@ class CameraOverlay:
 
 def camera_view(img: np.ndarray, ov: CameraOverlay, rows: np.ndarray, classes: list[str], frame: int, fr: Frame,
                 key_to_gid: dict, placed: set, big: bool = False, ppe: dict | None = None,
-                header: tuple | None = None) -> tuple[np.ndarray, Marks]:
+                header: tuple | None = None, memory: dict | None = None) -> tuple[np.ndarray, Marks]:
     """One camera picture scaled to its tile, with the floor's zones and lines and every detection.
 
     Returns the picture and its labels (drawn later on the page). `ppe`, when
     given, is each person's live helmet / vest status, shown as two badges.
-    `header` = (camera colour, camera label, place name, people count).
+    `header` = (camera colour, camera label, place name, people count);
+    `memory` keeps each tag's side from one frame to the next (one per camera).
     """
     tw, th = ov.size
     cam = ov.cam
     s = tw / cam.width
     out = cv2.resize(img, (tw, th), interpolation=cv2.INTER_AREA)
-    mk = Marks(tw, th)
+    mk = Marks(tw, th, memory=memory)
     fs = 12 if big else 10
     if header:
-        rgb, label, place, n = header
-        mk.chip((10, 10), f"{label} · {place}", 12 if big else 10, ui.TEXT, (10, 14, 19, 205), dot=rgb, place=False)
-        mk.chip((tw - 10, 10), f"{n} orang", 12 if big else 10, ui.TEXT, (10, 14, 19, 205), icon="groups",
-                anchor="ra", place=False)
         mk.taken += [(0, 0, tw, 40 if big else 32)]
     # the floor: zones as outlines, lines solid
     layer = out.copy()
@@ -481,6 +493,7 @@ def camera_view(img: np.ndarray, ov: CameraOverlay, rows: np.ndarray, classes: l
                 mk.chip((int(mid[0]), int(mid[1]) + 4), text, fs, ui.TEXT, (10, 14, 19, 205))
     objs = {o.gid: o for o in fr.objects}
     labels = []
+    on_plan = 0
     for d in rows[rows[:, 0] == frame]:
         box = (d[2:6] * s).astype(int)
         cls = classes[int(d[7])]
@@ -493,11 +506,13 @@ def camera_view(img: np.ndarray, ov: CameraOverlay, rows: np.ndarray, classes: l
             else:
                 rgb = ui.RED if ("near_miss" in o.alerts or "speeding" in o.alerts) else CLASS_RGB[cls]
             alert = any(a in o.alerts for a, _ in ALERT_RGB)
-            ui.corner_box(out, box, rgb, 2, fill=0.10 if alert else 0.0)
+            ui.lock_box(out, box, rgb, 2, fill=0.12 if alert else 0.0)
             labels.append((o, cls, box, rgb, state))
+            on_plan += cls == "person" and d[5] - d[3] >= 40
         else:
-            # seen, but not on the plan (feet out of frame, too far, not yet confirmed)
-            ui.corner_box(out, box, UNPLACED, 1, frac=0.18)
+            # seen and followed by the camera, but not on the plan (feet out of frame, too far
+            # to place precisely, not yet confirmed): boxed in grey, without a name
+            ui.lock_box(out, box, UNPLACED, 1, outline=0.8)
     # nearest first: the label of the biggest box is the one that keeps its place
     for o, cls, box, rgb, state in sorted(labels, key=lambda t: -(t[2][3] - t[2][1])):
         text = f"{TAG[cls]}{o.gid}"
@@ -507,7 +522,14 @@ def camera_view(img: np.ndarray, ov: CameraOverlay, rows: np.ndarray, classes: l
         if cls == "person" and ppe is not None:
             h, v = state if state else (None, None)
             badges = [("helmet", h), ("vest", v)]
-        mk.tag(tuple(box), text, rgb, fs, icon=CLASS_ICON.get(cls), badges=badges)
+        mk.tag(tuple(box), text, rgb, fs, icon=CLASS_ICON.get(cls), badges=badges, key=o.gid)
+    if header:
+        rgb, label, place, n = header
+        size = 12 if big else 10
+        mk.chip((10, 10), f"{label} · {place}", size, ui.TEXT, (10, 14, 19, 205), dot=rgb, place=False)
+        # the people this camera shows, and how many of them are named on the plan (the others: grey boxes)
+        mk.chip((tw - 10, 10), f"{n} orang · {min(on_plan, n)} di peta", size, ui.TEXT, (10, 14, 19, 205),
+                icon="groups", anchor="ra", place=False)
     return out, mk
 
 
