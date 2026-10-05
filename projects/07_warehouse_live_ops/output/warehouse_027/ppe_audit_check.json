@@ -1,0 +1,399 @@
+{
+ "video": 3,
+ "sample": "check",
+ "crops": [
+  {
+   "camera": "Camera_0000",
+   "frame": 702,
+   "track": 4,
+   "box": [
+    1389.0,
+    244.5,
+    1578.8,
+    685.5
+   ],
+   "row": 1396
+  },
+  {
+   "camera": "Camera_0000",
+   "frame": 1008,
+   "track": 1,
+   "box": [
+    800.6,
+    222.4,
+    931.5,
+    372.0
+   ],
+   "row": 2195
+  },
+  {
+   "camera": "Camera_0000",
+   "frame": 996,
+   "track": 3,
+   "box": [
+    195.0,
+    282.0,
+    453.8,
+    697.5
+   ],
+   "row": 2167
+  },
+  {
+   "camera": "Camera_0005",
+   "frame": 996,
+   "track": 49,
+   "box": [
+    838.7,
+    114.8,
+    903.4,
+    324.0
+   ],
+   "row": 1086
+  },
+  {
+   "camera": "Camera_0000",
+   "frame": 288,
+   "track": 3,
+   "box": [
+    385.5,
+    280.5,
+    637.5,
+    755.2
+   ],
+   "row": 322
+  },
+  {
+   "camera": "Camera_0006",
+   "frame": 939,
+   "track": 58,
+   "box": [
+    678.0,
+    71.2,
+    787.1,
+    378.8
+   ],
+   "row": 1969
+  },
+  {
+   "camera": "Camera_0006",
+   "frame": 663,
+   "track": 63,
+   "box": [
+    162.8,
+    208.5,
+    366.8,
+    639.0
+   ],
+   "row": 1238
+  },
+  {
+   "camera": "Camera_0005",
+   "frame": 474,
+   "track": 44,
+   "box": [
+    1089.8,
+    86.2,
+    1121.8,
+    229.5
+   ],
+   "row": 390
+  },
+  {
+   "camera": "Camera_0006",
+   "frame": 870,
+   "track": 60,
+   "box": [
+    209.6,
+    199.5,
+    351.0,
+    598.5
+   ],
+   "row": 1784
+  },
+  {
+   "camera": "Camera_0005",
+   "frame": 159,
+   "track": 44,
+   "box": [
+    1079.6,
+    82.9,
+    1112.5,
+    223.5
+   ],
+   "row": 11
+  },
+  {
+   "camera": "Camera_0005",
+   "frame": 759,
+   "track": 42,
+   "box": [
+    1016.4,
+    111.8,
+    1085.4,
+    347.2
+   ],
+   "row": 755
+  },
+  {
+   "camera": "Camera_0006",
+   "frame": 945,
+   "track": 57,
+   "box": [
+    1273.9,
+    245.6,
+    1405.1,
+    488.2
+   ],
+   "row": 1987
+  },
+  {
+   "camera": "Camera_0006",
+   "frame": 849,
+   "track": 58,
+   "box": [
+    693.8,
+    71.2,
+    796.7,
+    379.5
+   ],
+   "row": 1729
+  },
+  {
+   "camera": "Camera_0006",
+   "frame": 702,
+   "track": 57,
+   "box": [
+    768.8,
+    171.0,
+    942.8,
+    639.0
+   ],
+   "row": 1345
+  },
+  {
+   "camera": "Camera_0006",
+   "frame": 609,
+   "track": 63,
+   "box": [
+    139.7,
+    213.0,
+    334.5,
+    638.2
+   ],
+   "row": 1095
+  },
+  {
+   "camera": "Camera_0000",
+   "frame": 780,
+   "track": 8,
+   "box": [
+    841.5,
+    348.0,
+    1035.8,
+    868.5
+   ],
+   "row": 1585
+  },
+  {
+   "camera": "Camera_0000",
+   "frame": 936,
+   "track": 1,
+   "box": [
+    788.2,
+    134.2,
+    889.5,
+    387.8
+   ],
+   "row": 2003
+  },
+  {
+   "camera": "Camera_0006",
+   "frame": 720,
+   "track": 61,
+   "box": [
+    1011.8,
+    110.6,
+    1098.2,
+    345.0
+   ],
+   "row": 1394
+  },
+  {
+   "camera": "Camera_0000",
+   "frame": 525,
+   "track": 2,
+   "box": [
+    892.7,
+    100.5,
+    973.9,
+    359.2
+   ],
+   "row": 922
+  },
+  {
+   "camera": "Camera_0000",
+   "frame": 747,
+   "track": 4,
+   "box": [
+    1389.0,
+    247.5,
+    1581.4,
+    685.5
+   ],
+   "row": 1504
+  },
+  {
+   "camera": "Camera_0006",
+   "frame": 909,
+   "track": 59,
+   "box": [
+    1012.5,
+    472.5,
+    1348.5,
+    1006.5
+   ],
+   "row": 1888
+  },
+  {
+   "camera": "Camera_0005",
+   "frame": 297,
+   "track": 45,
+   "box": [
+    818.2,
+    94.5,
+    865.1,
+    228.8
+   ],
+   "row": 199
+  },
+  {
+   "camera": "Camera_0000",
+   "frame": 795,
+   "track": 8,
+   "box": [
+    831.4,
+    348.0,
+    1033.5,
+    867.0
+   ],
+   "row": 1625
+  },
+  {
+   "camera": "Camera_0000",
+   "frame": 735,
+   "track": 7,
+   "box": [
+    1408.5,
+    39.0,
+    1547.2,
+    344.2
+   ],
+   "row": 1478
+  }
+ ],
+ "labels": [
+  {
+   "helmet": false,
+   "vest": false,
+   "note": "red-and-navy striped hoodie"
+  },
+  {
+   "helmet": false,
+   "vest": false
+  },
+  {
+   "helmet": false,
+   "vest": false
+  },
+  {
+   "helmet": false,
+   "vest": false
+  },
+  {
+   "helmet": false,
+   "vest": false
+  },
+  {
+   "helmet": false,
+   "vest": false
+  },
+  {
+   "helmet": false,
+   "vest": false
+  },
+  {
+   "helmet": false,
+   "vest": false
+  },
+  {
+   "helmet": false,
+   "vest": false,
+   "note": "black cap, not a helmet"
+  },
+  {
+   "helmet": false,
+   "vest": false
+  },
+  {
+   "helmet": false,
+   "vest": false
+  },
+  {
+   "helmet": false,
+   "vest": false
+  },
+  {
+   "helmet": false,
+   "vest": false
+  },
+  {
+   "helmet": false,
+   "vest": false
+  },
+  {
+   "helmet": false,
+   "vest": false
+  },
+  {
+   "helmet": false,
+   "vest": false
+  },
+  {
+   "helmet": false,
+   "vest": false
+  },
+  {
+   "helmet": false,
+   "vest": false
+  },
+  {
+   "helmet": false,
+   "vest": false,
+   "note": "black cap, not a helmet"
+  },
+  {
+   "helmet": false,
+   "vest": false,
+   "note": "red-and-navy striped hoodie"
+  },
+  {
+   "helmet": false,
+   "vest": false,
+   "note": "red-and-navy striped hoodie"
+  },
+  {
+   "helmet": false,
+   "vest": false
+  },
+  {
+   "helmet": false,
+   "vest": false
+  },
+  {
+   "helmet": false,
+   "vest": false,
+   "note": "yellow T-shirt"
+  }
+ ],
+ "labelled": "by eye from the blind sheet ppe_audit_check_blind.jpg (and the same person's larger sightings), after the rules were fixed and before any AI verdict on these crops was seen; null = cannot be told"
+}
