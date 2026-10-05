@@ -183,14 +183,16 @@ def events(scene: str, summary: dict, ppe_violations: list[dict] | None = None) 
 def spotlights(evs: list[Event], shown: list[str], linger_s: float = 4.0) -> list[tuple]:
     """When a camera that is not on screen sees an alert, it is called up: (from, to, camera, event).
 
-    Serious alerts only (high and medium), from half a second before the alert
-    until `linger_s` after it is over; a later call-up ends an earlier one.
+    Serious alerts only (high and medium). The switch happens the moment the
+    alert is raised - never before, as it could not in a live system - and the
+    tile switches back `linger_s` after the alert is over; a later call-up ends
+    an earlier one.
     """
     out = []
     for e in evs:
         if e.severity not in ("high", "medium") or not e.cam_ids or set(e.cam_ids) & set(shown):
             continue
-        t0, t1 = max(0.0, e.t - 0.5), max(e.end or e.t, e.t) + linger_s
+        t0, t1 = e.t, max(e.end or e.t, e.t) + linger_s
         if out and t0 < out[-1][1]:
             out[-1] = (out[-1][0], t0, out[-1][2], out[-1][3])
         out.append((t0, t1, e.cam_ids[0], e))

@@ -122,7 +122,7 @@ the same parts in each (`videos.py`, `ui.py`, `ops.py`):
 | Camera pictures | every object the camera follows, boxed: in its status colour with a tag on the box's edge (its name, a forklift's speed, a person's helmet and vest badges) when it is on the plan; in grey when it is too far from that camera to place precisely. The header counts both: "5 orang · 3 di peta" |
 | Floor plan | where everyone is now, the numbered zones with how many people are in each, the counting lines with their counts, every near miss so far |
 | Alerts | newest first: how serious, what happened in plain words, who, where, the camera that saw it, and that camera's snapshot |
-| Call-up (video 1) | a serious alert seen only by a camera that is not on screen brings that camera into the fourth tile, framed in red, until 4 s after it is over; the plan draws its field of view in red |
+| Call-up (video 1) | a serious alert seen only by a camera that is not on screen switches the fourth tile to that camera the moment the alert is raised, framed in red, and back 4 s after it is over; the plan draws its field of view in red |
 | Timeline | every alert of the window as a mark in its severity's colour |
 
 **How serious.** High (red): a near miss, a forklift over the limit. Medium
