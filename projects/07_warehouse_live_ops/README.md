@@ -105,7 +105,7 @@ and the pallet truck (yellow) are where they are in the picture.*
 | `output/training_sets/` | #18 · a YOLO training set per camera angle, from the labels | `export_dataset.py` |
 | `weights/site_detector_warehouse_000/` | #18 · a detector fine-tuned on it, on the CPU | `train_detector.py` |
 | `output/*/video*.json` | every figure behind the videos, with its truth comparison | `main.py` |
-| `mockup/pages/*.png` | **The product, page by page, for the investor deck:** 23 mockups of the web app (admin), the realtime dashboard, the super-admin console and the supervisor's phone app, built on this PoC's own pictures; the concept, features, roles and pricing in [`mockup/KONSEP.md`](mockup/KONSEP.md) (Indonesian) | `mockup/assets.py`, `mockup/build.py` |
+| `mockup/pages/*.png` | **The product, page by page, for the investor deck:** 23 mockups of the web app (admin), the realtime dashboard, the super-admin console and the supervisor's phone app, built on this PoC's own pictures; the concept, features, roles and pricing in [`mockup/KONSEP.md`](mockup/KONSEP.md) (Indonesian); an 8-slide deck brief with the client's cost–benefit, ready to paste into Claude Design, in [`mockup/prompt-claude-warehouse.md`](mockup/prompt-claude-warehouse.md) | `mockup/assets.py`, `mockup/build.py` |
 
 Videos, training sets and model weights are rebuilt by the scripts and kept out
 of git; the cached detections and helmet / vest evidence are committed, so
