@@ -1,0 +1,201 @@
+{
+ "how": "every violation the video reports, checked by eye on the person's crop when it is reported (after the AI, so not blind)",
+ "events": [
+  {
+   "gid": 1,
+   "what": "helm",
+   "start_t": 0.2,
+   "verdict": "real",
+   "note": "nobody in the real recording wears a helmet or a vest"
+  },
+  {
+   "gid": 1,
+   "what": "rompi",
+   "start_t": 0.2,
+   "verdict": "real",
+   "note": "nobody in the real recording wears a helmet or a vest"
+  },
+  {
+   "gid": 2,
+   "what": "helm",
+   "start_t": 0.2,
+   "verdict": "real",
+   "note": "nobody in the real recording wears a helmet or a vest"
+  },
+  {
+   "gid": 2,
+   "what": "rompi",
+   "start_t": 0.2,
+   "verdict": "real",
+   "note": "nobody in the real recording wears a helmet or a vest"
+  },
+  {
+   "gid": 3,
+   "what": "rompi",
+   "start_t": 0.2,
+   "verdict": "real",
+   "note": "nobody in the real recording wears a helmet or a vest"
+  },
+  {
+   "gid": 4,
+   "what": "helm",
+   "start_t": 0.2,
+   "verdict": "real",
+   "note": "nobody in the real recording wears a helmet or a vest"
+  },
+  {
+   "gid": 4,
+   "what": "rompi",
+   "start_t": 0.2,
+   "verdict": "real",
+   "note": "nobody in the real recording wears a helmet or a vest"
+  },
+  {
+   "gid": 6,
+   "what": "helm",
+   "start_t": 0.2,
+   "verdict": "real",
+   "note": "nobody in the real recording wears a helmet or a vest"
+  },
+  {
+   "gid": 6,
+   "what": "rompi",
+   "start_t": 0.2,
+   "verdict": "real",
+   "note": "nobody in the real recording wears a helmet or a vest"
+  },
+  {
+   "gid": 7,
+   "what": "helm",
+   "start_t": 0.2,
+   "verdict": "real",
+   "note": "nobody in the real recording wears a helmet or a vest"
+  },
+  {
+   "gid": 7,
+   "what": "rompi",
+   "start_t": 0.2,
+   "verdict": "real",
+   "note": "nobody in the real recording wears a helmet or a vest"
+  },
+  {
+   "gid": 8,
+   "what": "helm",
+   "start_t": 0.2,
+   "verdict": "real",
+   "note": "nobody in the real recording wears a helmet or a vest"
+  },
+  {
+   "gid": 8,
+   "what": "rompi",
+   "start_t": 0.2,
+   "verdict": "real",
+   "note": "nobody in the real recording wears a helmet or a vest"
+  },
+  {
+   "gid": 12,
+   "what": "helm",
+   "start_t": 1.2,
+   "verdict": "real",
+   "note": "nobody in the real recording wears a helmet or a vest"
+  },
+  {
+   "gid": 12,
+   "what": "rompi",
+   "start_t": 1.2,
+   "verdict": "real",
+   "note": "nobody in the real recording wears a helmet or a vest"
+  },
+  {
+   "gid": 3,
+   "what": "helm",
+   "start_t": 3.7,
+   "verdict": "real",
+   "note": "nobody in the real recording wears a helmet or a vest"
+  },
+  {
+   "gid": 13,
+   "what": "helm",
+   "start_t": 3.9,
+   "verdict": "real",
+   "note": "nobody in the real recording wears a helmet or a vest"
+  },
+  {
+   "gid": 13,
+   "what": "rompi",
+   "start_t": 3.9,
+   "verdict": "real",
+   "note": "nobody in the real recording wears a helmet or a vest"
+  },
+  {
+   "gid": 10,
+   "what": "rompi",
+   "start_t": 9.5,
+   "verdict": "real",
+   "note": "nobody in the real recording wears a helmet or a vest"
+  },
+  {
+   "gid": 10,
+   "what": "helm",
+   "start_t": 9.5,
+   "verdict": "real",
+   "note": "nobody in the real recording wears a helmet or a vest"
+  },
+  {
+   "gid": 18,
+   "what": "helm",
+   "start_t": 10.2,
+   "verdict": "real",
+   "note": "nobody in the real recording wears a helmet or a vest"
+  },
+  {
+   "gid": 18,
+   "what": "rompi",
+   "start_t": 10.2,
+   "verdict": "real",
+   "note": "nobody in the real recording wears a helmet or a vest"
+  },
+  {
+   "gid": 24,
+   "what": "helm",
+   "start_t": 17.4,
+   "verdict": "real",
+   "note": "nobody in the real recording wears a helmet or a vest"
+  },
+  {
+   "gid": 24,
+   "what": "rompi",
+   "start_t": 17.4,
+   "verdict": "real",
+   "note": "nobody in the real recording wears a helmet or a vest"
+  },
+  {
+   "gid": 10,
+   "what": "rompi",
+   "start_t": 18.6,
+   "verdict": "real",
+   "note": "nobody in the real recording wears a helmet or a vest"
+  },
+  {
+   "gid": 27,
+   "what": "helm",
+   "start_t": 21.9,
+   "verdict": "real",
+   "note": "nobody in the real recording wears a helmet or a vest"
+  },
+  {
+   "gid": 27,
+   "what": "rompi",
+   "start_t": 21.9,
+   "verdict": "real",
+   "note": "nobody in the real recording wears a helmet or a vest"
+  },
+  {
+   "gid": 3,
+   "what": "helm",
+   "start_t": 24.9,
+   "verdict": "real",
+   "note": "nobody in the real recording wears a helmet or a vest"
+  }
+ ]
+}

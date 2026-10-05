@@ -277,16 +277,17 @@ def _ppe_counts(live: dict, gids) -> tuple[int, int, int]:
 
 
 def _ppe_legend(T: dr.Texts, x: int, y: int) -> None:
-    T.add("APD per orang:", (x, y), 12, dr.MUTED, True)
-    cx = x + T.width("APD per orang:", 12, True) + 10
-    for text, state in (("H", True), ("helm", None), ("R", True), ("rompi", None), ("hijau dipakai", None),
-                        ("merah tidak", None), ("abu belum bisa dinilai", None)):
-        if text in ("H", "R"):
-            T.add(text, (cx + 3, y), 11, dr.INK, True, bg=dr.CHIP[state], pad=2)
+    """H = helmet, R = vest, and what each chip colour means."""
+    cx = x
+    for text, chip in (("APD per orang:", None), ("H helm · R rompi", None), ("H", True), ("dipakai", None),
+                       ("H", False), ("tidak", None), ("H", None), ("belum bisa dinilai (terlalu kecil)", None)):
+        if text == "H":
+            T.add(text, (cx + 3, y), 11, dr.INK, True, bg=dr.CHIP[chip], pad=2)
             cx += T.width(text, 11, True) + 10
         else:
-            T.add(text, (cx, y), 12, dr.MUTED)
-            cx += T.width(text, 12) + 12
+            bold = text.endswith(":")
+            T.add(text, (cx, y), 12, dr.MUTED, bold)
+            cx += T.width(text, 12, bold) + 12
 
 
 def video_real(ctx: dict, out_path) -> None:

@@ -9,3 +9,4 @@ openvino==2026.4.1      # 3.6x faster YOLOE on CPU than PyTorch
 onnxruntime==1.30.0     # the tracker's ReID model
 lap==0.5.13
 imageio-ffmpeg==0.6.0   # H.264 writing without a system ffmpeg
+clip @ git+https://github.com/ultralytics/CLIP.git   # #21: CLIP ViT-B/32 checks every vest (~340 MB of weights on first use)

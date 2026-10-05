@@ -7,6 +7,9 @@ camera to camera, and turned into the numbers an operations floor runs on —
 headcount, zones, counting lines, congestion, idle time, forklift use and speed,
 near misses, people in the forklift lane. Every one of those numbers is then
 checked against the dataset's own ground truth, computed by the same code.
+Videos 2 and 3 also follow each person's helmet and vest; the data has no
+labels for those, so they are checked by eye on crops labelled before the AI
+was scored (#21).
 
 ![Video 1: four of the fifteen CCTV on the left, the whole floor plan on the right; every dot on the plan carries the ring colour of the camera that sees it](docs/video1_live_ops.jpg)
 
@@ -15,8 +18,9 @@ checked against the dataset's own ground truth, computed by the same code.
 ## Result
 
 Warehouse_000 is a simulation with full ground truth, so every figure below
-is a measurement, not an estimate. 30 seconds (the busiest of the recording),
-15 cameras, 10 analysed frames a second.
+is a measurement, not an estimate; helmet and vest, which its labels do not
+cover, are measured against labels made by eye. 30 seconds (the busiest of the
+recording), 15 cameras, 10 analysed frames a second.
 
 | | |
 |---|---|
@@ -30,6 +34,7 @@ is a measurement, not an estimate. 30 seconds (the busiest of the recording),
 | **Missed** | 12 of 13 real near misses: the person stands inside the forklift's outline in the picture and is not detected |
 | **Real warehouse** | 3 of 7 cameras verified; they place the same person **0.18 m** apart (0.70 m as shipped) |
 | **Metric scale** | people measured at 1.75 m (simulation) and 1.78 m (real) from box and calibration alone |
+| **Helmet / vest (#21)** | on random crops labelled by eye before the AI was scored: helmet right 24 of 26, vest 22 of 28 in the simulation; 24 of 24 each in the real warehouse, where nobody wears either and the AI claims a vest on 0.9 % of 5,100 crops (38 % without its CLIP check) |
 | **Speed** | 0.45 s per camera frame on 4 CPU cores for people (YOLOE), 0.035 s for vehicles (YOLO11n); not real time on a CPU |
 
 ## The one rule: the plan shows where the camera's people really are
@@ -92,6 +97,8 @@ and the pallet truck (yellow) are where they are in the picture.*
 | `output/warehouse_000/video2_one_camera.mp4` | **Video 2 · one CCTV.** The busiest camera large: its count against the labels, lines, zones, dwell, each person's helmet and vest (#21) | `main.py` |
 | `output/warehouse_027/video3_real.mp4` | **Video 3 · real warehouse.** The three verified real cameras large, one identity per person across them, each person's helmet and vest, the camera check; no floor plan ([why](#why-video-3-has-no-floor-plan)) | `main.py` |
 | `docs/accuracy_report.jpg` | Every number above, measured against the ground truth | `report.py` |
+| `docs/ppe_audit_video*_check.jpg` | #21 · helmet and vest, the AI against the eye on random crops | `ppe.py --audit` |
+| `weights/ppe_detector/` | #21 · the helmet / vest detector, fine-tuned on the CPU | `ppe.py --train` |
 | `output/warehouse_000/replay_3d.html` | #20 · the 30 s of video 1 in 3D, viewable from each CCTV | `replay_3d.py` |
 | `search_events.py` | #19 · questions in Indonesian → the moments, with video time and the CCTV that saw them | — |
 | `output/training_sets/` | #18 · a YOLO training set per camera angle, from the labels | `export_dataset.py` |
@@ -99,8 +106,8 @@ and the pallet truck (yellow) are where they are in the picture.*
 | `output/*/video*.json` | every figure behind the videos, with its truth comparison | `main.py` |
 
 Videos, training sets and model weights are rebuilt by the scripts and kept out
-of git; the cached detections are committed, so everything after detection
-reruns in minutes.
+of git; the cached detections and helmet / vest evidence are committed, so
+everything after them reruns in minutes.
 
 ![Video 2: CCTV 0003 large, its own count against the labels, and a plan of what it sees](docs/video2_one_camera.jpg)
 
@@ -108,11 +115,21 @@ reruns in minutes.
 people, the labels 18; the curve under the plan follows both counts over the
 window. P74, pink, has just walked against the declared one-way aisle — one of
 the two wrong-way walks the AI flagged in this window, both of which the ground
-truth has too (it has a third the AI missed).*
+truth has too (it has a third the AI missed). H and R are each person's helmet
+and vest (#21): P31 wears both and P68 a helmet only, both read right; P69's
+lime vest is missed (red R) and P62's dark cap is taken for a helmet (green H)
+— the two kinds of mistake the check in #21 counts. Grey: too small to judge.*
 
 ![Video 3: the real warehouse, the three verified cameras large, each person's helmet and vest, and the camera check](docs/video3_real.jpg)
 
-*@@V3CAPTION@@*
+*Video 3, second 20: the real warehouse's three verified cameras. P1, in the
+white hoodie, carries the same name in CCTV 0000 and CCTV 0006: one identity
+across cameras. Nobody here wears a helmet or a vest, and every judged person
+shows two red chips; what the PPE check has to get right on this site is not
+to invent PPE on ordinary clothes — the striped hoodie (P3), the yellow T-shirt
+(P10), the red jacket (P2). The panel takes the floor plan's place: people and
+the robot R5, how closely the cameras agree on a person (0.18 m), the camera
+check, and the latest events.*
 
 ## The data
 
@@ -223,9 +240,10 @@ fine positions, over at least 2 s of track.
 
 ## The twenty analytics
 
-The numbering is the list the project set out to cover. "Truth" is the same
-analytic computed by the same code from the labels, restricted to what the 15
-cameras show (a perfect detector's ceiling); the whole-building figure is in
+The numbering is the list the project set out to cover; #21, helmet and vest,
+came after and runs in videos 2 and 3. "Truth" is the same analytic computed by
+the same code from the labels, restricted to what the 15 cameras show (a
+perfect detector's ceiling); the whole-building figure is in
 `video1_live_ops.json`.
 
 | # | Analytic | Where | Video 1 (30 s), AI | Truth |
@@ -250,6 +268,7 @@ cameras show (a perfect detector's ceiling); the whole-building figure is in
 | 18 | Training set per camera angle, and the training | `export_dataset.py`, `train_detector.py` | 912 frames, 3 angle groups; YOLO11n in 30 min on CPU | forklifts found 24 % → 51 % |
 | 19 | Event search in Indonesian | `search_events.py` | see below | — |
 | 20 | 3D replay | `replay_3d.html` | see above | — |
+| 21 | Helmet and vest per person, violations | videos 2 and 3: H/R chips, ticker; #19 | video 2: 34 violations, 24 real by eye | no PPE labels: checked by eye, [below](#21--helmet-and-vest-apd) |
 
 ![#18: one labelled training frame per camera-angle group](docs/training_sets_preview.jpg)
 
@@ -277,35 +296,85 @@ terlama*) — with no language model, and whatever it did not understand it says
 ## #21 · Helmet and vest (APD)
 
 Videos 2 and 3 also track, for every person, whether they wear a helmet and a
-high-visibility vest.
+high-visibility vest: two chips beside each person's name, **H** (helmet) and
+**R** (*rompi*, vest), green when worn, red when not, grey when the person is
+too small to judge.
 
 **The detector.** [Construction-PPE](https://docs.ultralytics.com/datasets/detect/construction-ppe/),
 Ultralytics' dataset of 1,132 photos of construction workers labelled helmet,
-vest, no_helmet and eight other classes, fine-tunes YOLO11n on the CPU
-(@@PPE_TRAIN@@). On the dataset's own held-out test split: @@PPE_TEST@@.
+vest and nine other classes, fine-tunes YOLO11n on the CPU (12 epochs at
+640 px, backbone frozen, 38 minutes on 4 cores). On the dataset's own held-out
+test split it finds 87 % of the helmets at 92 % precision and 87 % of the vests
+at 78 % (mAP50 0.90 and 0.89).
 
-**Where it looks.** A helmet on a person 60 px tall in a 1080p CCTV frame is
-about eight pixels, so the detector never reads the whole frame. Every person
+**Where it looks.** A helmet on a person 100 px tall in a 1080p CCTV frame is
+about twelve pixels, so the detector never reads the whole frame. Every person
 the pipeline already tracks is cut out with a margin, scaled up to 320 px and
 read on its own, where a helmet is the size the detector learned on. A helmet
-counts when its box sits on the head, a vest when it sits on the torso.
-@@PPE_VEST_RULE@@ A person shorter than 60 px, or cut by the top of the frame,
-is not judged, and their chips stay grey.
+counts when its box sits on the person's head, a vest when it sits on the
+torso — and only when no other person in the frame is nearer to it. A person
+shorter than 100 px, or cut by the top of the frame, is not judged: among the
+calibration crops below, the detector found none of the eight helmets on
+people under that height and all eight above it.
+
+**A vest needs a second opinion.** Trained on construction photos, the
+detector calls a vest on 38 % of the real warehouse's person crops — a
+red-and-navy striped hoodie, a yellow T-shirt, red jackets — where nobody wears
+one. So every vest is checked by [CLIP](https://github.com/openai/CLIP)
+(ViT-B/32), asked in plain words which of nine garments the person wears: a
+high-visibility safety vest, a reflective safety vest, a T-shirt, a hoodie, a
+jacket, a sweater, a shirt, overalls, a long-sleeve top. A vest counts when the
+detector finds it *and* CLIP gives the two vests together at least 20 %. On
+the real warehouse that cuts the vests claimed from 38 % of the crops to 0.9 %.
 
 **Over time, per person.** A person's status is the majority of their judged
 frames over the last two seconds, and over the whole window for the summary —
 per tracked identity, so in the real warehouse it follows a person from camera
 to camera. Two seconds or more without a helmet or a vest is a violation: it
 appears in the ticker and in the event search (#19, *"siapa yang tanpa helm"*).
+Judging takes 0.06 s per person crop on 4 CPU cores, detector and CLIP together.
 
-**How right it is.** The recordings carry no PPE labels, so each verdict was
-checked by eye on random crops (`python ppe.py --video 2 --video 3 --audit`):
+**How right it is.** The recordings carry no PPE labels, so crops of tracked
+people were drawn at random and labelled by eye from sheets that show no AI
+verdict (`output/*/ppe_audit_*_blind.jpg`; the labels are in
+`output/*/ppe_audit_*.json`). A *calibration* sample set the rules above. A
+*check* sample was drawn after they were fixed, and labelled and committed
+before the AI was scored on it, so its figures are the measurement:
 
-@@PPE_AUDIT@@
+| Check sample, live status as the video shows it | Video 2, simulation (33 crops) | Video 3, real warehouse (24 crops) |
+|---|---|---|
+| **Helmet: right** | **24 of 26** | **24 of 24** |
+| — worn, and found | 6 of 8 | nobody wears one |
+| — not worn, and said so | 18 of 18 | 24 of 24 |
+| **Vest: right** | **22 of 28** | **24 of 24** |
+| — worn, and found | 7 of 12 | nobody wears one |
+| — not worn, and said so | 15 of 16 | 24 of 24 |
 
-![Random crops of video 2 with the AI's helmet (H) and vest (R) verdicts, as checked by eye](docs/ppe_audit_video2.jpg)
+In video 2, five crops had no live status yet (fewer than three judged frames
+in the last two seconds), and on two the eye could not tell red curly hair
+from a red helmet. Single frames, without the two-second majority: helmet
+right on 25 of 31, vest on 25 of 33.
 
-@@PPE_RESULTS@@
+![The check sample of video 2: the AI's helmet (H) and vest (R) above each crop, the eye's below, a red frame where they differ](docs/ppe_audit_video2_check.jpg)
+
+*The check sample of video 2 (`docs/ppe_audit_video3_check.jpg` is the real
+warehouse's). The red frames: helmets missed on people just over the 100 px
+floor and once on a large one; white, pale and lime vests missed; a dark cap
+taken for a helmet, and a lavender T-shirt for a vest.*
+
+**What it gets wrong.** In the simulation, vests that are not orange — pale
+orange, lime and white reflective ones — are found in fewer than half of their
+wearer's frames, so the wearer shows a red R and raises "tanpa rompi"; the
+whole-window summary in `video2_one_camera.json` undercounts vests for the same
+reason. One man's dark cap is read as a helmet now and then. In the real
+warehouse the AI claims a helmet on 3.1 % of its 5,100 judged person crops and
+a vest on 0.9 %, every one of them false.
+
+**Every violation, checked** (by eye on the person when it is reported, after
+the AI, so not blind; `output/*/ppe_violation_check.json`): video 2 raises 34,
+of which 24 are real, 7 are not (five vests and two helmets the AI missed) and
+3 cannot be told from the picture. Video 3 raises 28, all real — nobody there
+wears a helmet or a vest.
 
 ## Accuracy
 
@@ -366,6 +435,14 @@ from where they stand; lines A and B: 6 and 6 crossings against 6 and 5.
 - **Not real time on a CPU.** 0.45 s per camera frame for people; live
   operation of 15 cameras needs a GPU, or the small fine-tuned model for all
   classes.
+- **Helmet and vest (#21) are read from photos of other sites.** The detector
+  learned on construction photos, so in the simulation it misses about half the
+  vests that are not orange and some helmets on people near 100 px, and every
+  miss is a false "tanpa helm / rompi" (7 of video 2's 34 violations). People
+  under 100 px are not judged at all. The real warehouse shows that ordinary
+  clothes no longer pass for vests, but nobody there wears PPE, so how well it
+  finds PPE on a real site is not measured here; a few hundred labelled crops
+  from the site itself would be the next step, as #18 was for the forklifts.
 
 ## Run it
 
@@ -382,17 +459,17 @@ python detect.py --survey warehouse_027     # choose the real recording's busies
 python detect.py --scene warehouse_027      # ~15 min
 python align_real.py                        # check and correct the real cameras against each other
 python geometry_check.py --scene warehouse_027              # its cameras' 1 m floor grid, verified ones in colour
-python ppe.py --train                       # #21: Construction-PPE, fine-tune YOLO11n, ~45 min on 4 cores
-python ppe.py --video 2 --video 3 --audit   # #21: helmet / vest on every tracked person, and the by-eye audit
+python ppe.py --train                       # #21: Construction-PPE, fine-tune YOLO11n, ~40 min on 4 cores
+python ppe.py --video 2 --video 3 --audit   # #21: helmet / vest per person crop, ~7 min; the check by eye
 python main.py                              # analytics, accuracy and the three videos
 python report.py                            # docs/accuracy_report.jpg
 python replay_3d.py                         # #20
 python search_events.py "nyaris tertabrak terdekat"         # #19
 ```
 
-With the committed detection cache, `python main.py` alone rebuilds every
-figure and video in about ten minutes (the videos need the recordings:
-`fetch_data.py` first).
+With the committed detection and helmet / vest caches, `python main.py` alone
+rebuilds every figure and video in about ten minutes (the videos need the
+recordings: `fetch_data.py` first).
 
 ## Files
 

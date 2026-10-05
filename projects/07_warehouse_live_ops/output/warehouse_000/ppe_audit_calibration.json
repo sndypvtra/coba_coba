@@ -1,5 +1,6 @@
 {
  "video": 2,
+ "sample": "calibration",
  "crops": [
   {
    "camera": "Camera_0003",

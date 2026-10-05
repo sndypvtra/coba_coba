@@ -259,54 +259,68 @@ def build() -> Path:
 
 
 def _ppe_band(S: Sheet, v2: dict | None, v3: dict | None) -> None:
-    """#21 across the bottom: the PPE detector's test split, the by-eye audit, and what it found per video."""
+    """#21 across the bottom: the PPE detector's test split, the blind check by eye, false alarms, violations."""
     from config import OUTPUT
     T = S.T
     info_p = OUTPUT / "ppe_detector.json"
     if not info_p.exists():
         return
     info = json.loads(info_p.read_text())
+    scores = {v: json.loads(p.read_text()) for v, p in ((2, output_dir("warehouse_000") / "ppe_audit_score.json"),
+                                                         (3, output_dir("warehouse_027") / "ppe_audit_score.json"))
+              if p.exists()}
     y0 = 1066
     cv2.line(S.img, (40, y0 - 12), (W - 40, y0 - 12), dr.FAINT, 1)
     x = 40
-    S.head(13, "APD: DETEKTOR HELM & ROMPI (#21)", x, y0)
-    T.add(f"YOLO11n dilatih {info['minutes_on_cpu']:.0f} menit di CPU pada Construction-PPE "
-          f"(Ultralytics); diuji pada split test-nya sendiri", (x, y0 + 30), 13, dr.MUTED)
+    S.head(13, "APD: HELM & ROMPI (#21)", x, y0)
+    T.add(f"YOLO11n dilatih {info['minutes_on_cpu']:.0f} menit di CPU pada Construction-PPE (Ultralytics);",
+          (x, y0 + 30), 13, dr.MUTED)
+    T.add("split test-nya sendiri, tidak dipakai melatih:", (x, y0 + 48), 13, dr.MUTED)
     pc = info["test_split"]["per_class"]
     rows = [[name, pct(pc[k]["precision"]), pct(pc[k]["recall"]), pct(pc[k]["mAP50"])]
-            for k, name in (("helmet", "Helm"), ("vest", "Rompi"), ("no_helmet", "Tanpa helm")) if k in pc]
-    S.table(x, y0 + 56, [x + 330, x + 430, x + 530], rows, ["", "presisi", "recall", "mAP50"])
+            for k, name in (("helmet", "Helm"), ("vest", "Rompi")) if k in pc]
+    y = S.table(x, y0 + 74, [x + 330, x + 430, x + 530], rows, ["", "presisi", "recall", "mAP50"])
+    T.add("Di CCTV: tiap orang ≥ 100 px dipotong dan dibaca sendiri; rompi harus disetujui CLIP", (x, y + 4), 12,
+          dr.MUTED)
+    T.add("(ViT-B/32) yang memilih di antara 9 jenis pakaian.", (x, y + 20), 12, dr.MUTED)
 
     x = 650
-    S.head(14, "APD DICEK MATA: POTONGAN ORANG ACAK", x, y0)
-    T.add("label mata dibuat sebelum melihat putusan AI; status live = mayoritas 2 detik terakhir", (x, y0 + 30),
-          13, dr.MUTED)
+    S.head(14, "DICEK MATA: SAMPEL UJI BUTA", x, y0)
+    T.add("diambil dan dilabel setelah aturan tetap, sebelum putusan AI dilihat; status live (mayoritas 2 s)",
+          (x, y0 + 30), 12, dr.MUTED)
     rows = []
-    for v, scene in ((2, "warehouse_000"), (3, "warehouse_027")):
-        sp = output_dir(scene) / "ppe_audit_score.json"
-        if not sp.exists():
+    for v in (2, 3):
+        sc = scores.get(v, {}).get("check")
+        if not sc:
             continue
-        sc = json.loads(sp.read_text())
         for item, name in (("helmet", "helm"), ("vest", "rompi")):
             a = sc[f"{item}_live"]
-            rows.append([f"Video {v}, {name}", f"{a['correct']}/{a['labelled']}", a["worn_found"], a["not_worn_found"]])
-    S.table(x, y0 + 56, [x + 300, x + 420, x + 560], rows, ["", "benar", "pakai terdeteksi", "tidak pakai terdeteksi"],
+            rows.append([f"Video {v}, {name}", f"{a['correct']}/{a['labelled']}", a["worn_found"],
+                         a["not_worn_found"]])
+    S.table(x, y0 + 56, [x + 300, x + 440, x + 600], rows, ["", "benar", "dipakai: ketemu", "tidak: benar"],
             size=13, step=21)
 
     x = 1310
-    S.head(15, "APD PER ORANG", x, y0)
+    S.head(15, "ALARM PALSU & PELANGGARAN", x, y0)
     y = y0 + 34
-    for v, data in ((2, v2), (3, v3)):
-        sm = (data or {}).get("ppe")
-        if not sm:
+    a3 = scores.get(3, {}).get("all_crops_called_worn")
+    if a3:
+        n = f"{a3['judged_crops']:,}".replace(",", ".")
+        T.add(f"Gudang asli, tak ada yang memakai APD: dari {n} potongan", (x, y), 13, dr.INK)
+        T.add(f"AI bilang helm {100 * a3['helmet']:.1f}% · rompi {100 * a3['vest']:.1f}% "
+              f"(detektor saja: {100 * a3['vest_detector_alone']:.0f}%)".replace(".", ","), (x, y + 19), 14, dr.INK,
+              True)
+        y += 52
+    for v, scene in ((2, "warehouse_000"), (3, "warehouse_027")):
+        cp = output_dir(scene) / "ppe_violation_check.json"
+        if not cp.exists():
             continue
-        viol = sm["violations"]
-        T.add(f"Video {v}: {sm['people_judged']} orang dinilai · helm {sm['with_helmet']} · rompi {sm['with_vest']}",
-              (x, y), 14, dr.INK, True)
-        T.add(f"{sum(e['what'] == 'helm' for e in viol)} pelanggaran tanpa helm, "
-              f"{sum(e['what'] == 'rompi' for e in viol)} tanpa rompi (≥ 2 detik)", (x + 12, y + 20), 13, dr.MUTED)
-        y += 50
-    T.add("gudang asli: tidak ada yang memakai APD, jadi yang diuji di sana adalah alarm palsu", (x, y + 4), 12,
+        vs = [e["verdict"] for e in json.loads(cp.read_text())["events"]]
+        T.add(f"Video {v}: {len(vs)} pelanggaran (≥ 2 s tanpa helm / rompi), dicek mata:", (x, y), 13, dr.INK)
+        T.add(f"{vs.count('real')} nyata · {vs.count('false')} salah · {vs.count('cannot tell')} tak bisa dipastikan",
+              (x + 12, y + 19), 13, dr.GOOD if vs.count("false") == 0 else dr.WARN, True)
+        y += 46
+    T.add("salah di video 2: rompi pucat, hijau muda dan putih yang tak terdeteksi, 2 helm", (x, y + 2), 12,
           dr.MUTED)
 
 

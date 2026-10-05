@@ -1,0 +1,106 @@
+{
+ "calibration": {
+  "crops": 24,
+  "helmet_frame": {
+   "labelled": 23,
+   "correct": 22,
+   "accuracy": 0.957,
+   "worn_found": "0/0",
+   "not_worn_found": "22/23",
+   "false_alarm": 1,
+   "missed": 0,
+   "not_known_yet": 0,
+   "not_judged_too_small": 1
+  },
+  "helmet_live": {
+   "labelled": 23,
+   "correct": 23,
+   "accuracy": 1.0,
+   "worn_found": "0/0",
+   "not_worn_found": "23/23",
+   "false_alarm": 0,
+   "missed": 0,
+   "not_known_yet": 0,
+   "not_judged_too_small": 1
+  },
+  "helmet_unlabelled": 0,
+  "vest_frame": {
+   "labelled": 23,
+   "correct": 23,
+   "accuracy": 1.0,
+   "worn_found": "0/0",
+   "not_worn_found": "23/23",
+   "false_alarm": 0,
+   "missed": 0,
+   "not_known_yet": 0,
+   "not_judged_too_small": 1
+  },
+  "vest_live": {
+   "labelled": 23,
+   "correct": 23,
+   "accuracy": 1.0,
+   "worn_found": "0/0",
+   "not_worn_found": "23/23",
+   "false_alarm": 0,
+   "missed": 0,
+   "not_known_yet": 0,
+   "not_judged_too_small": 1
+  },
+  "vest_unlabelled": 0
+ },
+ "check": {
+  "crops": 24,
+  "helmet_frame": {
+   "labelled": 24,
+   "correct": 24,
+   "accuracy": 1.0,
+   "worn_found": "0/0",
+   "not_worn_found": "24/24",
+   "false_alarm": 0,
+   "missed": 0,
+   "not_known_yet": 0,
+   "not_judged_too_small": 0
+  },
+  "helmet_live": {
+   "labelled": 24,
+   "correct": 24,
+   "accuracy": 1.0,
+   "worn_found": "0/0",
+   "not_worn_found": "24/24",
+   "false_alarm": 0,
+   "missed": 0,
+   "not_known_yet": 0,
+   "not_judged_too_small": 0
+  },
+  "helmet_unlabelled": 0,
+  "vest_frame": {
+   "labelled": 24,
+   "correct": 24,
+   "accuracy": 1.0,
+   "worn_found": "0/0",
+   "not_worn_found": "24/24",
+   "false_alarm": 0,
+   "missed": 0,
+   "not_known_yet": 0,
+   "not_judged_too_small": 0
+  },
+  "vest_live": {
+   "labelled": 24,
+   "correct": 24,
+   "accuracy": 1.0,
+   "worn_found": "0/0",
+   "not_worn_found": "24/24",
+   "false_alarm": 0,
+   "missed": 0,
+   "not_known_yet": 0,
+   "not_judged_too_small": 0
+  },
+  "vest_unlabelled": 0
+ },
+ "all_crops_called_worn": {
+  "judged_crops": 5100,
+  "helmet": 0.0306,
+  "vest": 0.0092,
+  "vest_detector_alone": 0.3769
+ }
+}

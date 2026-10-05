@@ -1,0 +1,222 @@
+{
+ "how": "every violation the video reports, checked by eye on the person's crop when it is reported (after the AI, so not blind)",
+ "events": [
+  {
+   "gid": 2,
+   "what": "helm",
+   "start_t": 0.2,
+   "verdict": "real"
+  },
+  {
+   "gid": 3,
+   "what": "rompi",
+   "start_t": 0.2,
+   "verdict": "real"
+  },
+  {
+   "gid": 4,
+   "what": "rompi",
+   "start_t": 0.2,
+   "verdict": "real"
+  },
+  {
+   "gid": 6,
+   "what": "helm",
+   "start_t": 0.2,
+   "verdict": "real",
+   "note": "yellow ear defenders"
+  },
+  {
+   "gid": 6,
+   "what": "rompi",
+   "start_t": 0.2,
+   "verdict": "real"
+  },
+  {
+   "gid": 7,
+   "what": "helm",
+   "start_t": 0.2,
+   "verdict": "cannot tell",
+   "note": "hidden behind a pillar"
+  },
+  {
+   "gid": 7,
+   "what": "rompi",
+   "start_t": 0.2,
+   "verdict": "cannot tell",
+   "note": "hidden behind a pillar"
+  },
+  {
+   "gid": 13,
+   "what": "rompi",
+   "start_t": 0.6,
+   "verdict": "real"
+  },
+  {
+   "gid": 13,
+   "what": "helm",
+   "start_t": 1.0,
+   "verdict": "real"
+  },
+  {
+   "gid": 5,
+   "what": "helm",
+   "start_t": 1.5,
+   "verdict": "real"
+  },
+  {
+   "gid": 5,
+   "what": "rompi",
+   "start_t": 1.5,
+   "verdict": "real"
+  },
+  {
+   "gid": 16,
+   "what": "helm",
+   "start_t": 3.1,
+   "verdict": "real"
+  },
+  {
+   "gid": 16,
+   "what": "rompi",
+   "start_t": 3.1,
+   "verdict": "real"
+  },
+  {
+   "gid": 21,
+   "what": "helm",
+   "start_t": 4.5,
+   "verdict": "real"
+  },
+  {
+   "gid": 15,
+   "what": "helm",
+   "start_t": 5.2,
+   "verdict": "false",
+   "note": "yellow helmet on a person about 100 px tall"
+  },
+  {
+   "gid": 15,
+   "what": "rompi",
+   "start_t": 5.2,
+   "verdict": "real"
+  },
+  {
+   "gid": 29,
+   "what": "helm",
+   "start_t": 6.4,
+   "verdict": "cannot tell",
+   "note": "red head: curly red hair or a red helmet"
+  },
+  {
+   "gid": 29,
+   "what": "rompi",
+   "start_t": 6.4,
+   "verdict": "false",
+   "note": "white reflective vest"
+  },
+  {
+   "gid": 21,
+   "what": "rompi",
+   "start_t": 6.8,
+   "verdict": "false",
+   "note": "pale orange vest"
+  },
+  {
+   "gid": 35,
+   "what": "helm",
+   "start_t": 7.6,
+   "verdict": "real",
+   "note": "yellow ear defenders"
+  },
+  {
+   "gid": 35,
+   "what": "rompi",
+   "start_t": 7.6,
+   "verdict": "real"
+  },
+  {
+   "gid": 31,
+   "what": "rompi",
+   "start_t": 8.0,
+   "verdict": "false",
+   "note": "pale yellow vest"
+  },
+  {
+   "gid": 62,
+   "what": "rompi",
+   "start_t": 15.8,
+   "verdict": "real"
+  },
+  {
+   "gid": 62,
+   "what": "helm",
+   "start_t": 16.4,
+   "verdict": "real",
+   "note": "dark cap, not a helmet"
+  },
+  {
+   "gid": 69,
+   "what": "helm",
+   "start_t": 16.9,
+   "verdict": "real"
+  },
+  {
+   "gid": 69,
+   "what": "rompi",
+   "start_t": 16.9,
+   "verdict": "false",
+   "note": "lime vest"
+  },
+  {
+   "gid": 68,
+   "what": "rompi",
+   "start_t": 17.2,
+   "verdict": "real"
+  },
+  {
+   "gid": 31,
+   "what": "helm",
+   "start_t": 20.2,
+   "verdict": "false",
+   "note": "orange helmet"
+  },
+  {
+   "gid": 31,
+   "what": "rompi",
+   "start_t": 20.8,
+   "verdict": "false",
+   "note": "pale yellow vest"
+  },
+  {
+   "gid": 93,
+   "what": "helm",
+   "start_t": 23.6,
+   "verdict": "real"
+  },
+  {
+   "gid": 101,
+   "what": "helm",
+   "start_t": 24.4,
+   "verdict": "real"
+  },
+  {
+   "gid": 101,
+   "what": "rompi",
+   "start_t": 24.4,
+   "verdict": "real"
+  },
+  {
+   "gid": 102,
+   "what": "helm",
+   "start_t": 26.2,
+   "verdict": "real"
+  },
+  {
+   "gid": 102,
+   "what": "rompi",
+   "start_t": 26.2,
+   "verdict": "real"
+  }
+ ]
+}

@@ -155,6 +155,409 @@
   },
   "heat_points": 2211
  },
+ "ppe": {
+  "people_judged": 18,
+  "with_helmet": 0,
+  "with_vest": 0,
+  "rule": "people >= 100 px tall; helmet / vest box on the head / torso of the person crop at score >= 0.3, and for a vest CLIP's safety-vest share >= 0.2; a person's status is the majority of their judged frames (live: the last 2 s); a violation is 2 s or more without",
+  "violations": [
+   {
+    "gid": 1,
+    "what": "helm",
+    "start_t": 0.2,
+    "end_t": 29.9,
+    "x": 1.94,
+    "y": 1.53,
+    "cams": [
+     "Camera_0005"
+    ]
+   },
+   {
+    "gid": 1,
+    "what": "rompi",
+    "start_t": 0.2,
+    "end_t": 29.9,
+    "x": 1.94,
+    "y": 1.53,
+    "cams": [
+     "Camera_0005"
+    ]
+   },
+   {
+    "gid": 2,
+    "what": "helm",
+    "start_t": 0.2,
+    "end_t": 29.9,
+    "x": -1.95,
+    "y": 3.01,
+    "cams": [
+     "Camera_0000",
+     "Camera_0005",
+     "Camera_0006"
+    ]
+   },
+   {
+    "gid": 2,
+    "what": "rompi",
+    "start_t": 0.2,
+    "end_t": 29.9,
+    "x": -1.95,
+    "y": 3.01,
+    "cams": [
+     "Camera_0000",
+     "Camera_0005",
+     "Camera_0006"
+    ]
+   },
+   {
+    "gid": 3,
+    "what": "rompi",
+    "start_t": 0.2,
+    "end_t": 29.9,
+    "x": 2.3,
+    "y": 4.83,
+    "cams": [
+     "Camera_0000",
+     "Camera_0006"
+    ]
+   },
+   {
+    "gid": 4,
+    "what": "helm",
+    "start_t": 0.2,
+    "end_t": 29.9,
+    "x": -2.44,
+    "y": 5.13,
+    "cams": [
+     "Camera_0000",
+     "Camera_0005",
+     "Camera_0006"
+    ]
+   },
+   {
+    "gid": 4,
+    "what": "rompi",
+    "start_t": 0.2,
+    "end_t": 29.9,
+    "x": -2.44,
+    "y": 5.13,
+    "cams": [
+     "Camera_0000",
+     "Camera_0005",
+     "Camera_0006"
+    ]
+   },
+   {
+    "gid": 6,
+    "what": "helm",
+    "start_t": 0.2,
+    "end_t": 29.9,
+    "x": -0.6,
+    "y": 6.79,
+    "cams": [
+     "Camera_0000",
+     "Camera_0006"
+    ]
+   },
+   {
+    "gid": 6,
+    "what": "rompi",
+    "start_t": 0.2,
+    "end_t": 29.9,
+    "x": -0.6,
+    "y": 6.79,
+    "cams": [
+     "Camera_0000",
+     "Camera_0006"
+    ]
+   },
+   {
+    "gid": 7,
+    "what": "helm",
+    "start_t": 0.2,
+    "end_t": 10.9,
+    "x": 3.54,
+    "y": 6.67,
+    "cams": [
+     "Camera_0000"
+    ]
+   },
+   {
+    "gid": 7,
+    "what": "rompi",
+    "start_t": 0.2,
+    "end_t": 10.9,
+    "x": 3.54,
+    "y": 6.67,
+    "cams": [
+     "Camera_0000"
+    ]
+   },
+   {
+    "gid": 8,
+    "what": "helm",
+    "start_t": 0.2,
+    "end_t": 29.9,
+    "x": -8.31,
+    "y": 1.79,
+    "cams": [
+     "Camera_0006"
+    ]
+   },
+   {
+    "gid": 8,
+    "what": "rompi",
+    "start_t": 0.2,
+    "end_t": 29.9,
+    "x": -8.31,
+    "y": 1.79,
+    "cams": [
+     "Camera_0006"
+    ]
+   },
+   {
+    "gid": 12,
+    "what": "helm",
+    "start_t": 1.2,
+    "end_t": 3.5,
+    "x": null,
+    "y": null,
+    "cams": []
+   },
+   {
+    "gid": 12,
+    "what": "rompi",
+    "start_t": 1.2,
+    "end_t": 3.5,
+    "x": null,
+    "y": null,
+    "cams": []
+   },
+   {
+    "gid": 3,
+    "what": "helm",
+    "start_t": 3.7,
+    "end_t": 23.5,
+    "x": 2.14,
+    "y": 4.73,
+    "cams": [
+     "Camera_0000",
+     "Camera_0005",
+     "Camera_0006"
+    ]
+   },
+   {
+    "gid": 13,
+    "what": "helm",
+    "start_t": 3.9,
+    "end_t": 6.9,
+    "x": null,
+    "y": null,
+    "cams": []
+   },
+   {
+    "gid": 13,
+    "what": "rompi",
+    "start_t": 3.9,
+    "end_t": 6.9,
+    "x": null,
+    "y": null,
+    "cams": []
+   },
+   {
+    "gid": 10,
+    "what": "rompi",
+    "start_t": 9.5,
+    "end_t": 17.4,
+    "x": 3.54,
+    "y": 6.97,
+    "cams": [
+     "Camera_0000"
+    ]
+   },
+   {
+    "gid": 10,
+    "what": "helm",
+    "start_t": 9.5,
+    "end_t": 29.9,
+    "x": 3.54,
+    "y": 6.97,
+    "cams": [
+     "Camera_0000"
+    ]
+   },
+   {
+    "gid": 18,
+    "what": "helm",
+    "start_t": 10.2,
+    "end_t": 12.3,
+    "x": null,
+    "y": null,
+    "cams": []
+   },
+   {
+    "gid": 18,
+    "what": "rompi",
+    "start_t": 10.2,
+    "end_t": 12.3,
+    "x": null,
+    "y": null,
+    "cams": []
+   },
+   {
+    "gid": 24,
+    "what": "helm",
+    "start_t": 17.4,
+    "end_t": 19.6,
+    "x": null,
+    "y": null,
+    "cams": []
+   },
+   {
+    "gid": 24,
+    "what": "rompi",
+    "start_t": 17.4,
+    "end_t": 19.6,
+    "x": null,
+    "y": null,
+    "cams": []
+   },
+   {
+    "gid": 10,
+    "what": "rompi",
+    "start_t": 18.6,
+    "end_t": 29.9,
+    "x": 3.89,
+    "y": 7.65,
+    "cams": [
+     "Camera_0000"
+    ]
+   },
+   {
+    "gid": 27,
+    "what": "helm",
+    "start_t": 21.9,
+    "end_t": 23.9,
+    "x": null,
+    "y": null,
+    "cams": []
+   },
+   {
+    "gid": 27,
+    "what": "rompi",
+    "start_t": 21.9,
+    "end_t": 23.9,
+    "x": null,
+    "y": null,
+    "cams": []
+   },
+   {
+    "gid": 3,
+    "what": "helm",
+    "start_t": 24.9,
+    "end_t": 27.0,
+    "x": 1.84,
+    "y": 4.14,
+    "cams": [
+     "Camera_0000",
+     "Camera_0005",
+     "Camera_0006"
+    ]
+   }
+  ]
+ },
+ "ppe_per_person": {
+  "P1": {
+   "helmet": false,
+   "vest": false,
+   "judged_frames": 299
+  },
+  "P2": {
+   "helmet": false,
+   "vest": false,
+   "judged_frames": 300
+  },
+  "P3": {
+   "helmet": false,
+   "vest": false,
+   "judged_frames": 297
+  },
+  "P4": {
+   "helmet": false,
+   "vest": false,
+   "judged_frames": 300
+  },
+  "P6": {
+   "helmet": false,
+   "vest": false,
+   "judged_frames": 300
+  },
+  "P7": {
+   "helmet": false,
+   "vest": false,
+   "judged_frames": 84
+  },
+  "P8": {
+   "helmet": false,
+   "vest": false,
+   "judged_frames": 297
+  },
+  "P9": {
+   "helmet": false,
+   "vest": false,
+   "judged_frames": 3
+  },
+  "P10": {
+   "helmet": false,
+   "vest": false,
+   "judged_frames": 207
+  },
+  "P11": {
+   "helmet": false,
+   "vest": false,
+   "judged_frames": 3
+  },
+  "P12": {
+   "helmet": false,
+   "vest": false,
+   "judged_frames": 9
+  },
+  "P13": {
+   "helmet": false,
+   "vest": false,
+   "judged_frames": 16
+  },
+  "P18": {
+   "helmet": false,
+   "vest": false,
+   "judged_frames": 7
+  },
+  "P24": {
+   "helmet": false,
+   "vest": false,
+   "judged_frames": 8
+  },
+  "P25": {
+   "helmet": false,
+   "vest": false,
+   "judged_frames": 3
+  },
+  "P27": {
+   "helmet": false,
+   "vest": false,
+   "judged_frames": 7
+  },
+  "P35": {
+   "helmet": false,
+   "vest": false,
+   "judged_frames": 3
+  },
+  "P36": {
+   "helmet": false,
+   "vest": false,
+   "judged_frames": 4
+  }
+ },
  "checks": {
   "camera_agreement": {
    "rule": "same instant, floor both cameras place people on (≤ 0.25 m/px), optimal pairs within 3.0 m",

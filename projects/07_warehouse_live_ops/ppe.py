@@ -2,25 +2,38 @@
 """APD: helmet and vest on every tracked person, from Ultralytics' Construction-PPE.
 
 The detector. Ultralytics publishes Construction-PPE (1,132 training photos of
-construction workers, labelled helmet, vest, no_helmet and eight more classes).
-YOLO11n is fine-tuned on it here, on the CPU, and compiled to OpenVINO.
+construction workers, labelled helmet, vest and nine more classes). YOLO11n is
+fine-tuned on it here, on the CPU, and compiled to OpenVINO.
 
-Where it looks. A helmet on a person 60 px tall in a 1920 x 1080 CCTV frame is
-about eight pixels - nothing a detector reading the whole frame can find. So
-every person box the pipeline already tracks is cut out with a margin, scaled
-up, and the PPE detector reads that crop instead: there the helmet is ~40 px,
-the size it learned on. A helmet counts when its box sits on the head (top
-third of the crop), a vest when it sits on the torso. A person under 60 px
-tall, or cut by the frame's top edge, is not judged at all.
+Where it looks. A helmet on a person 100 px tall in a 1920 x 1080 CCTV frame
+is about twelve pixels - nothing a detector reading the whole frame can find.
+So every person box the pipeline already tracks is cut out with a margin,
+scaled up, and the PPE detector reads that crop instead, where a helmet is the
+size it learned on. A helmet or vest box belongs to the person whose head or
+torso it sits on, and only when no other person in the frame is nearer.
+
+A vest needs a second opinion. Trained on construction photos, the detector
+also takes a striped hoodie or a yellow T-shirt for a vest. CLIP (ViT-B/32) is
+asked which of nine garments the person wears, in plain words; the two
+safety-vest descriptions together must reach CLIP_VEST.
+
+Too small to judge. Under MIN_PERSON_PX the detector found none of the helmets
+in the by-eye check, so such a person is not judged at all (grey), and neither
+is one cut by the frame's top edge.
 
 Over time. One frame's answer is noisy (a head turned away, an arm across a
 vest), so a person's status is the majority of their judged frames over the
 last two seconds, and over the whole window for the summary - per tracked
 identity, so a person keeps one status from camera to camera.
 
-    python ppe.py --train          # download Construction-PPE, fine-tune YOLO11n (~1 h on 4 cores)
-    python ppe.py --video 2        # helmet/vest evidence for video 2's camera, cached
-    python ppe.py --video 3        # and for the real warehouse's verified cameras
+The check by eye. The recordings carry no PPE labels. Random crops are drawn
+(--audit), a person labels them from a sheet that shows no AI verdict, and the
+labels are stored beside the crops; only then is the AI scored against them.
+The "calibration" sample set the rules above; the "check" sample, drawn and
+labelled after the rules were fixed, is the measurement.
+
+    python ppe.py --train                       # Construction-PPE, fine-tune YOLO11n (~40 min on 4 cores)
+    python ppe.py --video 2 --video 3 --audit   # evidence per person crop, cached; the audit sheets and scores
 """
 
 from __future__ import annotations
@@ -45,14 +58,23 @@ DATA_DIR = INPUT / "construction-ppe"
 DATA_URL = "https://github.com/ultralytics/assets/releases/download/v0.0.0/construction-ppe.zip"
 NAMES = ["helmet", "gloves", "vest", "boots", "goggles", "none", "Person", "no_helmet", "no_goggle",
          "no_gloves", "no_boots"]
-HELMET, VEST, NO_HELMET = NAMES.index("helmet"), NAMES.index("vest"), NAMES.index("no_helmet")
+HELMET, VEST = NAMES.index("helmet"), NAMES.index("vest")
 SETTINGS = dict(epochs=12, imgsz=640, batch=16, freeze=10, close_mosaic=2, workers=3, cache="ram",
                 device="cpu", plots=False, amp=False, seed=0, deterministic=True)
 TARGET = WEIGHTS / "ppe_detector"
 CROP_SIZE = 320          # crops are read at this size (the person fills most of it)
-MIN_PERSON_PX = 60       # shorter than this in the CCTV frame: too small to judge
 MARGIN = 0.12            # crop margin around the person box, as a share of its height
-CONF = 0.30              # a helmet / vest / no-helmet box below this score is not evidence
+CONF = 0.30              # a helmet / vest box below this score is not evidence
+# Calibration sample, video 2: of the people under 100 px wearing a helmet the
+# detector found 0 of 8, of those over it 8 of 8 (and white vests: 1 of 8 under).
+MIN_PERSON_PX = 100
+CLIP_MODEL = "ViT-B/32"  # OpenAI CLIP via the ultralytics/CLIP package; ~340 MB, downloaded on first use
+GARMENTS = ("a high-visibility safety vest", "a reflective safety vest", "a t-shirt", "a hoodie", "a jacket",
+            "a sweater", "a shirt", "overalls", "a long-sleeve top")
+VEST_WORDS = 2           # the first two garments are the vest
+# Calibration sample: the six real-warehouse "vests" (striped hoodie, yellow
+# T-shirt, red jacket) got 0.00-0.12 from CLIP, the simulation's vests 0.08-0.99.
+CLIP_VEST = 0.20
 
 
 # ------------------------------------------------------------------ training
@@ -77,28 +99,44 @@ def data_yaml() -> Path:
     return y
 
 
+def _epochs_done(results_csv: Path) -> int:
+    try:
+        return max(0, len(results_csv.read_text().strip().splitlines()) - 1)
+    except OSError:
+        return 0
+
+
 def train() -> dict:
+    """Fine-tune, then score on the test split and compile for the CPU.
+
+    A run that already finished all its epochs is not trained again (delete
+    output/training_runs/ppe_detector to start over); only the test and the
+    export are redone.
+    """
     from ultralytics import YOLO
     from train_detector import base_weights, _train_minutes
     y = data_yaml()
     runs = OUTPUT / "training_runs"
+    run = runs / "ppe_detector"
     t0 = time.time()
-    YOLO(str(base_weights())).train(data=str(y), project=str(runs), name="ppe_detector", exist_ok=True,
-                                    verbose=False, **SETTINGS)
-    best = runs / "ppe_detector" / "weights" / "best.pt"
+    if _epochs_done(run / "results.csv") < SETTINGS["epochs"] or not (run / "weights" / "best.pt").exists():
+        YOLO(str(base_weights())).train(data=str(y), project=str(runs), name="ppe_detector", exist_ok=True,
+                                        verbose=False, **SETTINGS)
     TARGET.mkdir(parents=True, exist_ok=True)
-    shutil.copy(best, TARGET / "ppe_detector.pt")
+    shutil.copy(run / "weights" / "best.pt", TARGET / "ppe_detector.pt")
     model = YOLO(str(TARGET / "ppe_detector.pt"))
     # the held-out test split, never used in training or for choosing the epoch
     m = model.val(data=str(y), split="test", imgsz=SETTINGS["imgsz"], device="cpu", plots=False, verbose=False)
     per_class = {NAMES[int(c)]: {"precision": round(float(p), 3), "recall": round(float(r), 3),
                                  "mAP50": round(float(a50), 3)}
                  for c, p, r, a50 in zip(m.box.ap_class_index, m.box.p, m.box.r, m.box.ap50)}
-    exported = Path(model.export(format="openvino", imgsz=CROP_SIZE, dynamic=False, verbose=False))
     dst = TARGET / "ppe_detector_openvino_model"
     if dst.exists():
         shutil.rmtree(dst)
-    shutil.move(str(exported), str(dst))
+    # Ultralytics writes the export beside the weights, which is already where it belongs
+    exported = Path(model.export(format="openvino", imgsz=CROP_SIZE, dynamic=False, verbose=False))
+    if exported.resolve() != dst.resolve():
+        shutil.move(str(exported), str(dst))
     info = {"dataset": "Ultralytics Construction-PPE (AGPL-3.0): 1,132 train / 143 val / 141 test photos",
             "base": "yolo11n.pt", "settings": {k: v for k, v in SETTINGS.items() if k not in ("workers", "cache")},
             "minutes_on_cpu": _train_minutes(runs / "ppe_detector" / "results.csv", t0),
@@ -128,56 +166,110 @@ def crop_box(box, w: int, h: int) -> tuple[int, int, int, int]:
     return (int(max(0, cx - half_w)), int(max(0, y1 - m)), int(min(w, cx + half_w)), int(min(h, y2 + m)))
 
 
-def evidence(model, frame: np.ndarray, box) -> tuple[float, float, float]:
-    """(helmet, vest, no_helmet) scores for one person: the best box of each on its head or torso."""
+def _owner(x: float, y: float, boxes: np.ndarray, torso: bool) -> int:
+    """The person whose head (or torso) is nearest to the point, in body heights."""
+    h = np.maximum(boxes[:, 3] - boxes[:, 1], 1)
+    ax = (boxes[:, 0] + boxes[:, 2]) / 2
+    ay = boxes[:, 1] + (0.40 if torso else 0.08) * h
+    return int(np.argmin(np.hypot(x - ax, y - ay) / h))
+
+
+def detector_evidence(model, frame: np.ndarray, boxes: np.ndarray, i: int) -> tuple[float, float]:
+    """(helmet, vest) for person i of the frame's person boxes: the best box on their head / torso."""
     h, w = frame.shape[:2]
-    cx1, cy1, cx2, cy2 = crop_box(box, w, h)
+    x1, y1, x2, y2 = boxes[i]
+    cx1, cy1, cx2, cy2 = crop_box(boxes[i], w, h)
     crop = frame[cy1:cy2, cx1:cx2]
     if crop.size == 0:
-        return 0.0, 0.0, 0.0
+        return 0.0, 0.0
     r = model.predict(crop, imgsz=CROP_SIZE, conf=0.10, iou=0.5, verbose=False)[0].boxes
     if r is None or not len(r):
-        return 0.0, 0.0, 0.0
-    xyxy, conf, cls = r.xyxy.cpu().numpy(), r.conf.cpu().numpy(), r.cls.cpu().numpy().astype(int)
-    # where the person is inside the crop
-    px1, py1, px2, py2 = box[0] - cx1, box[1] - cy1, box[2] - cx1, box[3] - cy1
-    ph, pw = py2 - py1, px2 - px1
-    out = {HELMET: 0.0, VEST: 0.0, NO_HELMET: 0.0}
-    for (x1, y1, x2, y2), c, k in zip(xyxy, conf, cls):
-        if k not in out:
+        return 0.0, 0.0
+    ph, pw = max(y2 - y1, 1), x2 - x1
+    out = [0.0, 0.0]
+    for (a, b, c, d), s, k in zip(r.xyxy.cpu().numpy(), r.conf.cpu().numpy(), r.cls.cpu().numpy().astype(int)):
+        if k not in (HELMET, VEST):
             continue
-        mx, my = (x1 + x2) / 2, (y1 + y2) / 2
-        if not px1 - 0.15 * pw <= mx <= px2 + 0.15 * pw:
+        mx, my = cx1 + (a + c) / 2, cy1 + (b + d) / 2          # in the frame
+        if not x1 - 0.15 * pw <= mx <= x2 + 0.15 * pw:
             continue
-        rel = (my - py1) / max(ph, 1)
-        on_head = -0.15 <= rel <= 0.33
-        on_torso = 0.15 <= rel <= 0.75
-        if (k in (HELMET, NO_HELMET) and on_head) or (k == VEST and on_torso):
-            out[k] = max(out[k], float(c))
-    return out[HELMET], out[VEST], out[NO_HELMET]
+        rel = (my - y1) / ph
+        torso = k == VEST
+        if not (0.15 <= rel <= 0.75 if torso else -0.15 <= rel <= 0.33):
+            continue
+        if _owner(mx, my, boxes, torso) != i:                  # someone else's helmet / vest
+            continue
+        out[int(torso)] = max(out[int(torso)], float(s))
+    return out[0], out[1]
 
 
-def run_video(video: int) -> list[Path]:
-    """Evidence for every person row of the cached detections the video uses, cached per camera."""
-    from detect import load_detections
-    from scene import load_cameras, video_path
+class VestCheck:
+    """CLIP's share for "a safety vest" among nine garments, per person."""
+
+    def __init__(self):
+        import clip
+        import torch
+        self.torch = torch
+        self.model, self.pre = clip.load(CLIP_MODEL, device="cpu")
+        with torch.no_grad():
+            t = self.model.encode_text(clip.tokenize([f"a photo of a person wearing {g}" for g in GARMENTS]))
+        self.text = t / t.norm(dim=-1, keepdim=True)
+
+    def __call__(self, frame: np.ndarray, boxes: np.ndarray) -> np.ndarray:
+        from PIL import Image
+        ims = []
+        for x1, y1, x2, y2 in boxes:
+            m = int(0.05 * (y2 - y1))
+            crop = frame[max(0, int(round(y1)) - m):int(round(y2)) + m, max(0, int(round(x1)) - m):int(round(x2)) + m]
+            ims.append(self.pre(Image.fromarray(cv2.cvtColor(crop, cv2.COLOR_BGR2RGB))))
+        with self.torch.no_grad():
+            f = self.model.encode_image(self.torch.stack(ims))
+            f = f / f.norm(dim=-1, keepdim=True)
+            p = (100 * f @ self.text.T).softmax(-1).numpy()
+        return p[:, :VEST_WORDS].sum(1)
+
+
+def worn(e) -> tuple[bool, bool]:
+    """(helmet, vest) from one sighting's evidence row (helmet score, vest score, CLIP vest share)."""
+    return bool(e[0] >= CONF), bool(e[1] >= CONF and e[2] >= CLIP_VEST)
+
+
+def _window(video: int) -> tuple[str, dict, list[str]]:
+    from scene import load_cameras
     scene = "warehouse_000" if video == 2 else "warehouse_027"
     sel = json.loads((output_dir(scene) / "selection.json").read_text())
     win = sel["video2_one_camera"] if video == 2 else sel["video3_real"]
     cams = [win["camera"]] if video == 2 else sorted(load_cameras(scene))
-    model, paths = None, []
+    return scene, win, cams
+
+
+def judged_rows(rows: np.ndarray, classes: list[str]) -> np.ndarray:
+    """Person rows big enough to judge and not cut by the frame's top edge."""
+    return (rows[:, 7] == classes.index("person")) & ((rows[:, 5] - rows[:, 3]) >= MIN_PERSON_PX) & (rows[:, 3] > 3)
+
+
+def run_video(video: int) -> list[Path]:
+    """Evidence for every person row of the cached detections the video uses, cached per camera.
+
+    Rows: helmet score, vest score, CLIP vest share; NaN = not judged.
+    """
+    from detect import load_detections
+    from scene import video_path
+    scene, win, cams = _window(video)
+    model, vest_check, paths = None, None, []
     for cid in cams:
         path = ppe_path(scene, cid, win["start_frame"], win["end_frame"])
         paths.append(path)
         if path.exists():
             continue
         model = model or load_runtime()
+        vest_check = vest_check or VestCheck()
         rows, classes = load_detections(scene, cid, win["start_frame"], win["end_frame"])
-        k = classes.index("person")
-        out = np.full((len(rows), 3), np.nan, np.float32)        # helmet, vest, no_helmet; NaN = not judged
-        want = np.nonzero((rows[:, 7] == k) & ((rows[:, 5] - rows[:, 3]) >= MIN_PERSON_PX) & (rows[:, 3] > 3))[0]
+        person = rows[:, 7] == classes.index("person")
+        judge = judged_rows(rows, classes)
+        out = np.full((len(rows), 3), np.nan, np.float32)
         by_frame: dict[int, list[int]] = {}
-        for i in want:
+        for i in np.nonzero(person)[0]:
             by_frame.setdefault(int(rows[i, 0]), []).append(int(i))
         cap = cv2.VideoCapture(str(video_path(scene, cid)))
         cap.set(cv2.CAP_PROP_POS_FRAMES, win["start_frame"])
@@ -186,9 +278,15 @@ def run_video(video: int) -> list[Path]:
             ok, img = cap.read()
             if not ok:
                 break
-            for i in by_frame.get(f, []):
-                out[i] = evidence(model, img, rows[i, 2:6])
-                n += 1
+            idx = by_frame.get(f, [])
+            mine = [i for i in idx if judge[i]]
+            if not mine:
+                continue
+            boxes = rows[idx, 2:6]
+            for i in mine:
+                out[i, :2] = detector_evidence(model, img, boxes, idx.index(i))
+            out[mine, 2] = vest_check(img, rows[mine, 2:6])
+            n += len(mine)
         cap.release()
         path.parent.mkdir(parents=True, exist_ok=True)
         np.save(path, out)
@@ -217,16 +315,15 @@ def per_frame(res, detections: dict, evidence: dict, track_offset: int = 0) -> d
             continue
         k = classes.index("person")
         for i in np.nonzero((rows[:, 7] == k) & (rows[:, 1] >= 0) & np.isfinite(ev[:, 0]))[0]:
-            index[(cid, int(rows[i, 0]), int(rows[i, 1]) + track_offset)] = ev[i]
+            index[(cid, int(rows[i, 0]), int(rows[i, 1]) + track_offset)] = worn(ev[i])
     out: dict[int, dict[int, tuple]] = {}
     for f, blobs in res.blobs.items():
         for b in blobs:
             if b.cls != "person":
                 continue
-            evs = [index[(m.cam, f, m.track)] for m in b.members if (m.cam, f, m.track) in index]
-            if evs:
-                e = np.max(np.array(evs), axis=0)
-                out.setdefault(f, {})[b.gid] = (bool(e[0] >= CONF), bool(e[1] >= CONF))
+            ws = [index[(m.cam, f, m.track)] for m in b.members if (m.cam, f, m.track) in index]
+            if ws:
+                out.setdefault(f, {})[b.gid] = (any(h for h, _ in ws), any(v for _, v in ws))
     return out
 
 
@@ -275,7 +372,8 @@ def summary(final: dict, events: list) -> dict:
     return {"people_judged": n,
             "with_helmet": sum(v["helmet"] for v in final.values()),
             "with_vest": sum(v["vest"] for v in final.values()),
-            "rule": f"helmet / vest box on the head / torso of the person crop at score >= {CONF}; a person's "
+            "rule": f"people >= {MIN_PERSON_PX} px tall; helmet / vest box on the head / torso of the person "
+                    f"crop at score >= {CONF}, and for a vest CLIP's safety-vest share >= {CLIP_VEST}; a person's "
                     f"status is the majority of their judged frames (live: the last {WINDOW_S:g} s); a violation "
                     f"is {VIOLATION_S:g} s or more without",
             "violations": events}
@@ -290,35 +388,43 @@ def load_evidence(scene: str, cam: str, start: int, end: int) -> np.ndarray | No
     return np.load(p) if p.exists() else None
 
 
-AUDIT_N = {2: 48, 3: 24}
+# ------------------------------------------------------------- the check by eye
+SAMPLES = {"calibration": {2: 48, 3: 24}, "check": {2: 48, 3: 24}}
+SEEDS = {"calibration": 0, "check": 1}
 
 
-def audit_sample(video: int, seed: int = 0) -> list[dict]:
-    """Random person crops of the video's window for the by-eye check, fixed once drawn.
+def audit_path(video: int, sample: str) -> Path:
+    scene = "warehouse_000" if video == 2 else "warehouse_027"
+    return output_dir(scene) / f"ppe_audit_{sample}.json"
 
-    At most two per tracked person, at least MIN_PERSON_PX tall and not cut by
-    the frame's top: the crops the detector is asked to judge. Stored in
-    output/<scene>/ppe_audit.json; the labels a person gives them by eye go
-    beside them in the same file.
+
+def audit_sample(video: int, sample: str) -> list[dict]:
+    """Random person crops of the video's window for the check by eye, fixed once drawn.
+
+    At most two per tracked person. The calibration sample (drawn first, at
+    the then 60 px floor) set the rules; the check sample is drawn from the
+    crops the final rules judge, away from every calibration crop (not the
+    same track within a second), and is the one that measures them.
     """
     from detect import load_detections
-    from scene import load_cameras
-    scene = "warehouse_000" if video == 2 else "warehouse_027"
-    path = output_dir(scene) / "ppe_audit.json"
+    path = audit_path(video, sample)
     if path.exists():
         return json.loads(path.read_text())["crops"]
-    sel = json.loads((output_dir(scene) / "selection.json").read_text())
-    win = sel["video2_one_camera"] if video == 2 else sel["video3_real"]
-    cams = [win["camera"]] if video == 2 else sorted(load_cameras(scene))
+    scene, win, cams = _window(video)
+    avoid = []
+    if sample == "check":
+        cal = audit_path(video, "calibration")
+        avoid = json.loads(cal.read_text())["crops"] if cal.exists() else []
     pool = []
     for cid in cams:
         rows, classes = load_detections(scene, cid, win["start_frame"], win["end_frame"])
-        k = classes.index("person")
-        ok = (rows[:, 7] == k) & (rows[:, 1] >= 0) & ((rows[:, 5] - rows[:, 3]) >= MIN_PERSON_PX) & (rows[:, 3] > 3)
-        for i in np.nonzero(ok)[0]:
-            pool.append({"camera": cid, "frame": int(rows[i, 0]), "track": int(rows[i, 1]),
+        for i in np.nonzero(judged_rows(rows, classes) & (rows[:, 1] >= 0))[0]:
+            f, tid = int(rows[i, 0]), int(rows[i, 1])
+            if any(a["camera"] == cid and a["track"] == tid and abs(a["frame"] - f) <= 30 for a in avoid):
+                continue
+            pool.append({"camera": cid, "frame": f, "track": tid,
                          "box": [round(float(v), 1) for v in rows[i, 2:6]], "row": int(i)})
-    rng = np.random.default_rng(seed)
+    rng = np.random.default_rng(SEEDS[sample])
     rng.shuffle(pool)
     picks, per_track = [], {}
     for p in pool:
@@ -326,18 +432,10 @@ def audit_sample(video: int, seed: int = 0) -> list[dict]:
         if per_track.get(key, 0) < 2:
             per_track[key] = per_track.get(key, 0) + 1
             picks.append(p)
-        if len(picks) == AUDIT_N[video]:
+        if len(picks) == SAMPLES[sample][video]:
             break
-    path.write_text(json.dumps({"video": video, "crops": picks, "labels": None}, indent=1))
+    path.write_text(json.dumps({"video": video, "sample": sample, "crops": picks, "labels": None}, indent=1))
     return picks
-
-
-def _audit(video: int) -> tuple[str, dict, list[dict]]:
-    scene = "warehouse_000" if video == 2 else "warehouse_027"
-    sel = json.loads((output_dir(scene) / "selection.json").read_text())
-    win = sel["video2_one_camera"] if video == 2 else sel["video3_real"]
-    data = json.loads((output_dir(scene) / "ppe_audit.json").read_text())
-    return scene, win, data
 
 
 def _track_majority(rows: np.ndarray, ev: np.ndarray, i: int, video_fps: float) -> tuple[bool, bool] | None:
@@ -347,39 +445,44 @@ def _track_majority(rows: np.ndarray, ev: np.ndarray, i: int, video_fps: float) 
                       & np.isfinite(ev[:, 0]))[0]
     if len(near) < MIN_JUDGED:
         return None
-    return bool(np.mean(ev[near, 0] >= CONF) >= 0.5), bool(np.mean(ev[near, 1] >= CONF) >= 0.5)
+    w = np.array([worn(ev[j]) for j in near])
+    return bool(w[:, 0].mean() >= 0.5), bool(w[:, 1].mean() >= 0.5)
 
 
-def audit_score(video: int) -> dict:
-    """The AI against the by-eye labels of the audit crops, per item (helmet, vest).
+def audit_score(video: int, sample: str) -> dict:
+    """The AI against the by-eye labels of a sample's crops, per item (helmet, vest).
 
     Two readings: the single frame the crop is from, and the live status the
     video shows (majority of the person's judged frames in the last WINDOW_S).
-    Crops a person could not label (null) are left out and counted.
+    Crops a person could not label (null), and crops the rules do not judge
+    (too small), are left out and counted.
     """
     from detect import load_detections
     from world import FPS
-    scene, win, data = _audit(video)
+    scene, win, _ = _window(video)
+    data = json.loads(audit_path(video, sample).read_text())
     labels = data.get("labels")
     if not labels:
-        raise SystemExit(f"{scene}/ppe_audit.json has no labels yet")
-    cache, out = {}, {"crops": len(labels)}
-    rows_of = {}
+        raise SystemExit(f"{audit_path(video, sample).name} has no labels yet: label its sheet by eye first")
+    cache = {}
     for c in data["crops"]:
         if c["camera"] not in cache:
             cache[c["camera"]] = (load_detections(scene, c["camera"], win["start_frame"], win["end_frame"])[0],
                                   load_evidence(scene, c["camera"], win["start_frame"], win["end_frame"]))
-        rows_of[id(c)] = cache[c["camera"]]
+    out = {"crops": len(labels)}
     for k, item in enumerate(("helmet", "vest")):
         for reading in ("frame", "live"):
-            tp = tn = fp = fn = unknown = 0
+            tp = tn = fp = fn = unknown = small = 0
             for c, lab in zip(data["crops"], labels):
                 truth = lab[item]
                 if truth is None:
                     continue
-                rows, ev = rows_of[id(c)]
+                rows, ev = cache[c["camera"]]
+                if not np.isfinite(ev[c["row"], 0]):
+                    small += 1
+                    continue
                 if reading == "frame":
-                    said = bool(ev[c["row"], k] >= CONF)
+                    said = worn(ev[c["row"]])[k]
                 else:
                     st = _track_majority(rows, ev, c["row"], FPS * STRIDE)
                     if st is None:
@@ -391,35 +494,58 @@ def audit_score(video: int) -> dict:
                 fp += (not truth) and said
                 fn += truth and (not said)
             n = tp + tn + fp + fn
-            out[f"{item}_{reading}"] = {"labelled": n, "correct": tp + tn, "accuracy": round((tp + tn) / n, 3) if n else None,
+            out[f"{item}_{reading}"] = {"labelled": n, "correct": tp + tn,
+                                        "accuracy": round((tp + tn) / n, 3) if n else None,
                                         "worn_found": f"{tp}/{tp + fn}", "not_worn_found": f"{tn}/{tn + fp}",
-                                        "false_alarm": fp, "missed": fn, "not_known_yet": unknown}
+                                        "false_alarm": fp, "missed": fn, "not_known_yet": unknown,
+                                        "not_judged_too_small": small}
         out[f"{item}_unlabelled"] = sum(lab[item] is None for lab in labels)
     return out
 
 
-def audit_sheet(video: int) -> Path:
-    """The audit crops with the AI's verdict and the by-eye label, misses outlined in red."""
+def worn_shares(video: int) -> dict:
+    """Share of all judged crops the AI calls helmet / vest, and the detector alone without CLIP's check.
+
+    In the real recording nobody wears either (every audit crop says so), so
+    there every one of these is a false alarm.
+    """
+    scene, win, cams = _window(video)
+    ev = []
+    for cid in cams:
+        e = load_evidence(scene, cid, win["start_frame"], win["end_frame"])
+        ev.append(e[np.isfinite(e[:, 0])])
+    ev = np.concatenate(ev)
+    w = np.array([worn(e) for e in ev])
+    return {"judged_crops": int(len(ev)), "helmet": round(float(w[:, 0].mean()), 4),
+            "vest": round(float(w[:, 1].mean()), 4), "vest_detector_alone": round(float((ev[:, 1] >= CONF).mean()), 4)}
+
+
+def audit_sheet(video: int, sample: str, blind: bool = False) -> Path:
+    """The sample's crops; with the AI's verdict and the by-eye label unless blind (for labelling)."""
     import draw as dr
     from config import DOCS
     from scene import video_path
-    scene, win, data = _audit(video)
+    scene, win, _ = _window(video)
+    data = json.loads(audit_path(video, sample).read_text())
     labels = data.get("labels") or [{"helmet": None, "vest": None}] * len(data["crops"])
     evs = {}
     cw, ch, cols = 196, 300, 8
     n = len(data["crops"])
     sheet = np.full((64 + ch * ((n + cols - 1) // cols), cw * cols, 3), dr.BG, np.uint8)
     T = dr.Texts()
-    T.add(f"Audit APD video {video}: {n} potongan orang acak. Atas: putusan AI pada frame itu. "
-          f"Bawah: label mata (dibuat sebelum melihat AI).", (10, 10), 16, dr.INK, True)
-    T.add("H = helm, R = rompi. Hijau = dipakai, merah = tidak, abu = tak bisa dinilai. Bingkai merah = AI salah.",
-          (10, 34), 14, dr.MUTED)
+    name = {"calibration": "sampel kalibrasi (aturan ditetapkan di sini)",
+            "check": "sampel uji (diambil dan dilabel setelah aturan tetap)"}[sample]
+    if blind:
+        T.add(f"Video {video}, {name}: {n} potongan orang acak, untuk dilabel mata (tanpa putusan AI).",
+              (10, 10), 16, dr.INK, True)
+    else:
+        T.add(f"Audit APD video {video}, {name}: {n} potongan orang acak. Atas: putusan AI pada frame itu. "
+              f"Bawah: label mata.", (10, 10), 16, dr.INK, True)
+        T.add("H = helm, R = rompi. Hijau = dipakai, merah = tidak, abu = tak dinilai (terlalu kecil) / tak bisa "
+              "dipastikan mata. Bingkai merah = AI salah.", (10, 34), 14, dr.MUTED)
     caps = {}
-    mark = lambda v: {True: "ya", False: "tidak", None: "?"}[v]
+    mark = {True: "ya", False: "tidak", None: "?"}
     for k, (c, lab) in enumerate(zip(data["crops"], labels)):
-        if c["camera"] not in evs:
-            evs[c["camera"]] = load_evidence(scene, c["camera"], win["start_frame"], win["end_frame"])
-        e = evs[c["camera"]][c["row"]]
         cap = caps.setdefault(c["camera"], cv2.VideoCapture(str(video_path(scene, c["camera"]))))
         cap.set(cv2.CAP_PROP_POS_FRAMES, c["frame"])
         ok, img = cap.read()
@@ -432,15 +558,23 @@ def audit_sheet(video: int) -> Path:
                           interpolation=cv2.INTER_CUBIC)
         bx = [int((c["box"][0] - x1) * s), int((c["box"][1] - y1) * s), int((c["box"][2] - x1) * s),
               int((c["box"][3] - y1) * s)]
-        cv2.rectangle(crop, (bx[0], bx[1]), (bx[2], bx[3]), dr.FAINT, 1)
+        cv2.rectangle(crop, (bx[0], bx[1]), (bx[2], bx[3]), dr.WARN if blind else dr.FAINT, 1)
         gx, gy = (k % cols) * cw, 64 + (k // cols) * ch
         ox = gx + (cw - crop.shape[1]) // 2
         sheet[gy + 28:gy + 28 + crop.shape[0], ox:ox + crop.shape[1]] = crop
-        said = (bool(e[0] >= CONF), bool(e[1] >= CONF))
-        wrong = any(lab[it] is not None and lab[it] != said[j] for j, it in enumerate(("helmet", "vest")))
+        T.add(f"#{k + 1}", (gx + 8, gy + 7), 13, dr.MUTED, True)
+        if blind:
+            T.add(f"{c['camera'].replace('Camera_', 'CCTV ')} · {int(c['box'][3] - c['box'][1])} px",
+                  (gx + 48, gy + 8), 11, dr.MUTED)
+            continue
+        if c["camera"] not in evs:
+            evs[c["camera"]] = load_evidence(scene, c["camera"], win["start_frame"], win["end_frame"])
+        e = evs[c["camera"]][c["row"]]
+        said = worn(e) if np.isfinite(e[0]) else (None, None)
+        wrong = any(lab[it] is not None and said[j] is not None and lab[it] != said[j]
+                    for j, it in enumerate(("helmet", "vest")))
         if wrong:
             cv2.rectangle(sheet, (gx + 2, gy + 2), (gx + cw - 3, gy + ch - 3), dr.BAD, 2)
-        T.add(f"#{k + 1}", (gx + 8, gy + 7), 13, dr.MUTED, True)
         T.add("AI", (gx + 52, gy + 7), 12, dr.MUTED, True)
         T.add("H", (gx + 76, gy + 6), 13, dr.INK, True, bg=dr.CHIP[said[0]], pad=2)
         T.add("R", (gx + 100, gy + 6), 13, dr.INK, True, bg=dr.CHIP[said[1]], pad=2)
@@ -448,11 +582,12 @@ def audit_sheet(video: int) -> Path:
         T.add("mata", (gx + 8, yb + 2), 12, dr.MUTED, True)
         T.add("H", (gx + 52, yb), 13, dr.INK, True, bg=dr.CHIP[lab["helmet"]], pad=2)
         T.add("R", (gx + 76, yb), 13, dr.INK, True, bg=dr.CHIP[lab["vest"]], pad=2)
-        T.add(f"{mark(lab['helmet'])}/{mark(lab['vest'])}", (gx + 100, yb + 2), 12, dr.MUTED)
+        T.add(f"{mark[lab['helmet']]}/{mark[lab['vest']]}", (gx + 100, yb + 2), 12, dr.MUTED)
     for cap in caps.values():
         cap.release()
     T.flush(sheet)
-    out = DOCS / f"ppe_audit_video{video}.jpg"
+    # the labelling sheet is working material, kept beside the labels it produced
+    out = output_dir(scene) / f"ppe_audit_{sample}_blind.jpg" if blind else DOCS / f"ppe_audit_video{video}_{sample}.jpg"
     cv2.imwrite(str(out), sheet, [cv2.IMWRITE_JPEG_QUALITY, 88])
     return out
 
@@ -462,19 +597,27 @@ def main() -> int:
     ap.add_argument("--train", action="store_true")
     ap.add_argument("--video", type=int, choices=[2, 3], action="append")
     ap.add_argument("--audit", action="store_true",
-                    help="score the AI against the by-eye labels of the audit crops, and draw the audit sheet")
+                    help="draw the audit samples, and score the AI against their by-eye labels once they exist")
     args = ap.parse_args()
     if args.train:
         train()
     for v in args.video or []:
         run_video(v)
-        if args.audit:
-            audit_sample(v)
-            print(audit_sheet(v))
-            score = audit_score(v)
-            scene = "warehouse_000" if v == 2 else "warehouse_027"
-            (output_dir(scene) / "ppe_audit_score.json").write_text(json.dumps(score, indent=1))
-            print(json.dumps(score, indent=1))
+        if not args.audit:
+            continue
+        scores = {}
+        for sample in SAMPLES:
+            audit_sample(v, sample)
+            if not json.loads(audit_path(v, sample).read_text()).get("labels"):
+                print(f"{audit_path(v, sample).name}: label the crops on {audit_sheet(v, sample, blind=True)} "
+                      f"by eye and store them under \"labels\" first")
+                continue
+            print(audit_sheet(v, sample))
+            scores[sample] = audit_score(v, sample)
+        scores["all_crops_called_worn"] = worn_shares(v)
+        scene = "warehouse_000" if v == 2 else "warehouse_027"
+        (output_dir(scene) / "ppe_audit_score.json").write_text(json.dumps(scores, indent=1))
+        print(json.dumps(scores, indent=1))
     if not args.train and not args.video:
         ap.print_help()
     return 0

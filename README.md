@@ -31,7 +31,7 @@ measured by running the code in this repository, not estimated.
 | **4** | [Bottling line](projects/04_bottle_fill_volume) | Measure dispensed volume | **1,001 mL** · 66.7 % of nominal |
 | **5** | [Cafe, two rooms](projects/05_cafe_dwell_time) | Occupancy and per-person dwell time | **14** / **12** visitors · mean dwell **17.9 s** / **24.6 s** |
 | **6** | [Warehouse, four cameras](projects/06_warehouse_3d) | Locate people in 3D, one floor plan, operational KPIs | median error **0.181 m** vs the dataset's own 3D truth |
-| **7** | [Warehouse live ops, fifteen cameras](projects/07_warehouse_live_ops) | One live floor plan, 20 operations analytics, each checked against ground truth | position error **0.19 m**; line counts and walking share match the truth |
+| **7** | [Warehouse live ops, fifteen cameras](projects/07_warehouse_live_ops) | One live floor plan, 20 operations analytics, each checked against ground truth; helmet and vest per person | position error **0.19 m**; line counts and walking share match the truth; helmet right on **24 of 26** blind-checked crops |
 
 Each project's own README carries its method, its measured figures and what
 breaks it, and is written to stand on its own if the folder is lifted into a
@@ -453,7 +453,7 @@ projects/
   04_bottle_fill_volume/    dispensed millilitres, colour and geometry
   05_cafe_dwell_time/       occupancy and per-person dwell
   06_warehouse_3d/          four cameras -> one floor plan in metres
-  07_warehouse_live_ops/    fifteen cameras -> one live plan, 20 analytics vs truth
+  07_warehouse_live_ops/    fifteen cameras -> one live plan, 20 analytics vs truth, helmet/vest
 
     every project has these
       main.py               the entry point, and only the sequence of steps

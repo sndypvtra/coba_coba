@@ -1,0 +1,78 @@
+{
+ "dataset": "Ultralytics Construction-PPE (AGPL-3.0): 1,132 train / 143 val / 141 test photos",
+ "base": "yolo11n.pt",
+ "settings": {
+  "epochs": 12,
+  "imgsz": 640,
+  "batch": 16,
+  "freeze": 10,
+  "close_mosaic": 2,
+  "device": "cpu",
+  "plots": false,
+  "amp": false,
+  "seed": 0,
+  "deterministic": true
+ },
+ "minutes_on_cpu": 37.9,
+ "test_split": {
+  "mAP50_all": 0.508,
+  "per_class": {
+   "helmet": {
+    "precision": 0.915,
+    "recall": 0.87,
+    "mAP50": 0.903
+   },
+   "gloves": {
+    "precision": 0.826,
+    "recall": 0.699,
+    "mAP50": 0.746
+   },
+   "vest": {
+    "precision": 0.781,
+    "recall": 0.865,
+    "mAP50": 0.885
+   },
+   "boots": {
+    "precision": 0.731,
+    "recall": 0.668,
+    "mAP50": 0.722
+   },
+   "goggles": {
+    "precision": 0.808,
+    "recall": 0.731,
+    "mAP50": 0.766
+   },
+   "none": {
+    "precision": 0.56,
+    "recall": 0.391,
+    "mAP50": 0.411
+   },
+   "Person": {
+    "precision": 0.796,
+    "recall": 0.831,
+    "mAP50": 0.851
+   },
+   "no_helmet": {
+    "precision": 0.355,
+    "recall": 0.1,
+    "mAP50": 0.141
+   },
+   "no_goggle": {
+    "precision": 0.683,
+    "recall": 0.03,
+    "mAP50": 0.085
+   },
+   "no_gloves": {
+    "precision": 1.0,
+    "recall": 0.0,
+    "mAP50": 0.074
+   },
+   "no_boots": {
+    "precision": 1.0,
+    "recall": 0.0,
+    "mAP50": 0.0
+   }
+  }
+ },
+ "crop_inference_size": 320
+}
