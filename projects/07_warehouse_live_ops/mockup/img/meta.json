@@ -1,0 +1,687 @@
+{
+ "plan_raw": {
+  "zones": [
+   {
+    "name": "Staging A",
+    "kind": "area",
+    "points": [
+     [
+      604,
+      506
+     ],
+     [
+      804,
+      506
+     ],
+     [
+      804,
+      473
+     ],
+     [
+      604,
+      473
+     ]
+    ]
+   },
+   {
+    "name": "Area kerja timur",
+    "kind": "area",
+    "points": [
+     [
+      672,
+      677
+     ],
+     [
+      859,
+      677
+     ],
+     [
+      859,
+      518
+     ],
+     [
+      672,
+      518
+     ]
+    ]
+   },
+   {
+    "name": "Area utara",
+    "kind": "area",
+    "points": [
+     [
+      373,
+      322
+     ],
+     [
+      532,
+      322
+     ],
+     [
+      532,
+      135
+     ],
+     [
+      373,
+      135
+     ]
+    ]
+   },
+   {
+    "name": "Area selatan",
+    "kind": "area",
+    "points": [
+     [
+      607,
+      957
+     ],
+     [
+      765,
+      957
+     ],
+     [
+      765,
+      771
+     ],
+     [
+      607,
+      771
+     ]
+    ]
+   },
+   {
+    "name": "Jalur forklift tengah",
+    "kind": "vehicle_lane",
+    "points": [
+     [
+      392,
+      617
+     ],
+     [
+      793,
+      617
+     ],
+     [
+      793,
+      588
+     ],
+     [
+      392,
+      588
+     ]
+    ]
+   },
+   {
+    "name": "Lorong satu arah",
+    "kind": "one_way",
+    "points": [
+     [
+      602,
+      640
+     ],
+     [
+      639,
+      640
+     ],
+     [
+      639,
+      509
+     ],
+     [
+      602,
+      509
+     ]
+    ]
+   }
+  ],
+  "lines": [
+   {
+    "name": "A · Lintasan timur",
+    "a": [
+     812,
+     453
+    ],
+    "b": [
+     812,
+     640
+    ]
+   },
+   {
+    "name": "B · Lintasan area kerja",
+    "a": [
+     700,
+     537
+    ],
+    "b": [
+     840,
+     537
+    ]
+   },
+   {
+    "name": "C · Penyeberangan jalur forklift",
+    "a": [
+     532,
+     603
+    ],
+    "b": [
+     765,
+     603
+    ]
+   }
+  ],
+  "cameras": {
+   "Camera_0000": [
+    28,
+    860
+   ],
+   "Camera_0001": [
+    351,
+    373
+   ],
+   "Camera_0003": [
+    942,
+    523
+   ],
+   "Camera_0005": [
+    620,
+    428
+   ],
+   "Camera_0006": [
+    25,
+    942
+   ],
+   "Camera_0007": [
+    811,
+    884
+   ],
+   "Camera_0008": [
+    456,
+    421
+   ],
+   "Camera_0010": [
+    644,
+    670
+   ],
+   "Camera_0011": [
+    573,
+    158
+   ],
+   "Camera_0012": [
+    34,
+    950
+   ],
+   "Camera_0013": [
+    253,
+    134
+   ],
+   "Camera_0014": [
+    667,
+    477
+   ],
+   "Camera_0015": [
+    946,
+    519
+   ],
+   "Camera_0017": [
+    131,
+    135
+   ],
+   "Camera_0019": [
+    473,
+    685
+   ]
+  }
+ },
+ "events_v1": [
+  {
+   "t": 2.0,
+   "kind": "near_miss",
+   "severity": "high",
+   "title": "Nyaris tertabrak forklift",
+   "detail": "P14 & forklift F12 · di lintasan forklift",
+   "cams": [
+    "CAM 0001"
+   ],
+   "img": "snap_v1_0.jpg"
+  },
+  {
+   "t": 5.6,
+   "kind": "lane",
+   "severity": "medium",
+   "title": "Pejalan kaki di jalur forklift",
+   "detail": "P18 · Jalur forklift tengah",
+   "cams": [
+    "CAM 0005"
+   ],
+   "img": "snap_v1_1.jpg"
+  },
+  {
+   "t": 7.9,
+   "kind": "lane",
+   "severity": "medium",
+   "title": "Pejalan kaki di jalur forklift",
+   "detail": "P18 · Jalur forklift tengah",
+   "cams": [
+    "CAM 0005"
+   ],
+   "img": "snap_v1_2.jpg"
+  },
+  {
+   "t": 15.0,
+   "kind": "idle",
+   "severity": "info",
+   "title": "Diam lama di satu titik",
+   "detail": "P22 · 24 s",
+   "cams": [
+    "CAM 0000"
+   ],
+   "img": "snap_v1_3.jpg"
+  },
+  {
+   "t": 17.0,
+   "kind": "lane",
+   "severity": "medium",
+   "title": "Pejalan kaki di jalur forklift",
+   "detail": "P91 · Jalur forklift tengah",
+   "cams": [
+    "CAM 0005"
+   ],
+   "img": "snap_v1_4.jpg"
+  },
+  {
+   "t": 20.9,
+   "kind": "idle",
+   "severity": "info",
+   "title": "Diam lama di satu titik",
+   "detail": "P3 · 16 s · Area kerja timur",
+   "cams": [
+    "CAM 0003",
+    "CAM 0015"
+   ],
+   "img": "snap_v1_5.jpg"
+  },
+  {
+   "t": 23.9,
+   "kind": "lane",
+   "severity": "medium",
+   "title": "Pejalan kaki di jalur forklift",
+   "detail": "P18 · Jalur forklift tengah",
+   "cams": [
+    "CAM 0001",
+    "CAM 0005",
+    "CAM 0010"
+   ],
+   "img": "snap_v1_6.jpg"
+  },
+  {
+   "t": 26.0,
+   "kind": "lane",
+   "severity": "medium",
+   "title": "Pejalan kaki di jalur forklift",
+   "detail": "P163 · Jalur forklift tengah",
+   "cams": [
+    "CAM 0005"
+   ],
+   "img": "snap_v1_7.jpg"
+  }
+ ],
+ "events_v2": [
+  {
+   "t": 2.2,
+   "kind": "ppe",
+   "severity": "medium",
+   "title": "Tanpa helm & rompi",
+   "detail": "P6 · tanpa helm & rompi",
+   "cams": [
+    "CAM 0003"
+   ],
+   "img": "snap_v2_0.jpg"
+  },
+  {
+   "t": 2.2,
+   "kind": "ppe",
+   "severity": "medium",
+   "title": "Tanpa rompi",
+   "detail": "P3 · tanpa rompi",
+   "cams": [
+    "CAM 0003"
+   ],
+   "img": "snap_v2_1.jpg"
+  },
+  {
+   "t": 2.2,
+   "kind": "ppe",
+   "severity": "medium",
+   "title": "Tanpa helm",
+   "detail": "P2 · tanpa helm",
+   "cams": [
+    "CAM 0003"
+   ],
+   "img": "snap_v2_2.jpg"
+  },
+  {
+   "t": 2.2,
+   "kind": "ppe",
+   "severity": "medium",
+   "title": "Tanpa rompi",
+   "detail": "P4 · tanpa rompi",
+   "cams": [
+    "CAM 0003"
+   ],
+   "img": "snap_v2_3.jpg"
+  },
+  {
+   "t": 2.6,
+   "kind": "ppe",
+   "severity": "medium",
+   "title": "Tanpa helm & rompi",
+   "detail": "P13 · tanpa helm & rompi",
+   "cams": [
+    "CAM 0003"
+   ],
+   "img": "snap_v2_4.jpg"
+  },
+  {
+   "t": 3.0,
+   "kind": "wrong_way",
+   "severity": "medium",
+   "title": "Melawan arah di lorong satu arah",
+   "detail": "P9 · Lorong satu arah",
+   "cams": [
+    "CAM 0003"
+   ],
+   "img": "snap_v2_5.jpg"
+  },
+  {
+   "t": 3.5,
+   "kind": "ppe",
+   "severity": "medium",
+   "title": "Tanpa helm & rompi",
+   "detail": "P5 · tanpa helm & rompi",
+   "cams": [
+    "CAM 0003"
+   ],
+   "img": "snap_v2_6.jpg"
+  },
+  {
+   "t": 6.5,
+   "kind": "ppe",
+   "severity": "medium",
+   "title": "Tanpa helm",
+   "detail": "P20 · tanpa helm",
+   "cams": [
+    "CAM 0003"
+   ],
+   "img": "snap_v2_7.jpg"
+  },
+  {
+   "t": 9.6,
+   "kind": "ppe",
+   "severity": "medium",
+   "title": "Tanpa helm & rompi",
+   "detail": "P34 · tanpa helm & rompi",
+   "cams": [
+    "CAM 0003"
+   ],
+   "img": "snap_v2_8.jpg"
+  },
+  {
+   "t": 10.9,
+   "kind": "ppe",
+   "severity": "medium",
+   "title": "Tanpa rompi",
+   "detail": "P30 · tanpa rompi",
+   "cams": [
+    "CAM 0003"
+   ],
+   "img": "snap_v2_9.jpg"
+  },
+  {
+   "t": 12.7,
+   "kind": "lane",
+   "severity": "medium",
+   "title": "Pejalan kaki di jalur forklift",
+   "detail": "P4 · Jalur forklift tengah",
+   "cams": [
+    "CAM 0003"
+   ],
+   "img": "snap_v2_10.jpg"
+  },
+  {
+   "t": 17.8,
+   "kind": "ppe",
+   "severity": "medium",
+   "title": "Tanpa rompi",
+   "detail": "P60 · tanpa rompi",
+   "cams": [
+    "CAM 0003"
+   ],
+   "img": "snap_v2_11.jpg"
+  },
+  {
+   "t": 18.9,
+   "kind": "ppe",
+   "severity": "medium",
+   "title": "Tanpa helm & rompi",
+   "detail": "P67 · tanpa helm & rompi",
+   "cams": [
+    "CAM 0003"
+   ],
+   "img": "snap_v2_12.jpg"
+  },
+  {
+   "t": 19.2,
+   "kind": "ppe",
+   "severity": "medium",
+   "title": "Tanpa rompi",
+   "detail": "P66 · tanpa rompi",
+   "cams": [
+    "CAM 0003"
+   ],
+   "img": "snap_v2_13.jpg"
+  },
+  {
+   "t": 19.8,
+   "kind": "wrong_way",
+   "severity": "medium",
+   "title": "Melawan arah di lorong satu arah",
+   "detail": "P72 · Lorong satu arah",
+   "cams": [
+    "CAM 0003"
+   ],
+   "img": "snap_v2_14.jpg"
+  },
+  {
+   "t": 22.2,
+   "kind": "ppe",
+   "severity": "medium",
+   "title": "Tanpa helm",
+   "detail": "P30 · tanpa helm",
+   "cams": [
+    "CAM 0003"
+   ],
+   "img": "snap_v2_15.jpg"
+  },
+  {
+   "t": 25.6,
+   "kind": "ppe",
+   "severity": "medium",
+   "title": "Tanpa helm",
+   "detail": "P88 · tanpa helm",
+   "cams": [
+    "CAM 0003"
+   ],
+   "img": "snap_v2_16.jpg"
+  },
+  {
+   "t": 26.4,
+   "kind": "ppe",
+   "severity": "medium",
+   "title": "Tanpa helm & rompi",
+   "detail": "P96 · tanpa helm & rompi",
+   "cams": [
+    "CAM 0003"
+   ],
+   "img": "snap_v2_17.jpg"
+  },
+  {
+   "t": 28.2,
+   "kind": "ppe",
+   "severity": "medium",
+   "title": "Tanpa helm & rompi",
+   "detail": "P97 · tanpa helm & rompi",
+   "cams": [
+    "CAM 0003"
+   ],
+   "img": "snap_v2_18.jpg"
+  }
+ ],
+ "events_v3": [
+  {
+   "t": 2.2,
+   "kind": "ppe",
+   "severity": "medium",
+   "title": "Tanpa helm & rompi",
+   "detail": "P1 · tanpa helm & rompi",
+   "cams": [
+    "CAM 0005"
+   ],
+   "img": "snap_v3_0.jpg"
+  },
+  {
+   "t": 2.2,
+   "kind": "ppe",
+   "severity": "medium",
+   "title": "Tanpa helm & rompi",
+   "detail": "P2 · tanpa helm & rompi",
+   "cams": [
+    "CAM 0000",
+    "CAM 0005",
+    "CAM 0006"
+   ],
+   "img": "snap_v3_1.jpg"
+  },
+  {
+   "t": 2.2,
+   "kind": "ppe",
+   "severity": "medium",
+   "title": "Tanpa rompi",
+   "detail": "P3 · tanpa rompi",
+   "cams": [
+    "CAM 0000",
+    "CAM 0006"
+   ],
+   "img": "snap_v3_2.jpg"
+  },
+  {
+   "t": 2.2,
+   "kind": "ppe",
+   "severity": "medium",
+   "title": "Tanpa helm & rompi",
+   "detail": "P4 · tanpa helm & rompi",
+   "cams": [
+    "CAM 0000",
+    "CAM 0005",
+    "CAM 0006"
+   ],
+   "img": "snap_v3_3.jpg"
+  },
+  {
+   "t": 2.2,
+   "kind": "ppe",
+   "severity": "medium",
+   "title": "Tanpa helm & rompi",
+   "detail": "P6 · tanpa helm & rompi",
+   "cams": [
+    "CAM 0000",
+    "CAM 0006"
+   ],
+   "img": "snap_v3_4.jpg"
+  },
+  {
+   "t": 2.2,
+   "kind": "ppe",
+   "severity": "medium",
+   "title": "Tanpa helm & rompi",
+   "detail": "P8 · tanpa helm & rompi",
+   "cams": [
+    "CAM 0006"
+   ],
+   "img": "snap_v3_5.jpg"
+  },
+  {
+   "t": 3.9,
+   "kind": "ppe",
+   "severity": "medium",
+   "title": "Tanpa helm & rompi",
+   "detail": "P7 · tanpa helm & rompi",
+   "cams": [
+    "CAM 0000"
+   ],
+   "img": "snap_v3_6.jpg"
+  },
+  {
+   "t": 11.5,
+   "kind": "ppe",
+   "severity": "medium",
+   "title": "Tanpa helm & rompi",
+   "detail": "P10 · tanpa helm & rompi",
+   "cams": [
+    "CAM 0000"
+   ],
+   "img": "snap_v3_7.jpg"
+  },
+  {
+   "t": 15.0,
+   "kind": "idle",
+   "severity": "info",
+   "title": "Diam lama di satu titik",
+   "detail": "P6 · 17 s",
+   "cams": [
+    "CAM 0000",
+    "CAM 0006"
+   ],
+   "img": "snap_v3_8.jpg"
+  },
+  {
+   "t": 20.0,
+   "kind": "crowd",
+   "severity": "low",
+   "title": "Kerumunan",
+   "detail": "4 orang dalam radius 2 m",
+   "cams": [
+    "CAM 0000",
+    "CAM 0005",
+    "CAM 0006"
+   ],
+   "img": "snap_v3_9.jpg"
+  },
+  {
+   "t": 21.5,
+   "kind": "idle",
+   "severity": "info",
+   "title": "Diam lama di satu titik",
+   "detail": "P4 · 23 s",
+   "cams": [
+    "CAM 0005",
+    "CAM 0006"
+   ],
+   "img": "snap_v3_10.jpg"
+  },
+  {
+   "t": 22.8,
+   "kind": "idle",
+   "severity": "info",
+   "title": "Diam lama di satu titik",
+   "detail": "P2 · 22 s",
+   "cams": [
+    "CAM 0000",
+    "CAM 0005",
+    "CAM 0006"
+   ],
+   "img": "snap_v3_11.jpg"
+  }
+ ],
+ "calib_0003": 3.8,
+ "calib_0004": 51.9
+}

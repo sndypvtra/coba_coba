@@ -105,6 +105,7 @@ and the pallet truck (yellow) are where they are in the picture.*
 | `output/training_sets/` | #18 · a YOLO training set per camera angle, from the labels | `export_dataset.py` |
 | `weights/site_detector_warehouse_000/` | #18 · a detector fine-tuned on it, on the CPU | `train_detector.py` |
 | `output/*/video*.json` | every figure behind the videos, with its truth comparison | `main.py` |
+| `mockup/pages/*.png` | **The product, page by page, for the investor deck:** 23 mockups of the web app (admin), the realtime dashboard, the super-admin console and the supervisor's phone app, built on this PoC's own pictures; the concept, features, roles and pricing in [`mockup/KONSEP.md`](mockup/KONSEP.md) (Indonesian) | `mockup/assets.py`, `mockup/build.py` |
 
 Videos, training sets and model weights are rebuilt by the scripts and kept out
 of git; the cached detections and helmet / vest evidence are committed, so
@@ -595,6 +596,8 @@ recordings: `fetch_data.py` first).
 | `search_events.py` | #19 |
 | `ppe.py` | #21: the helmet / vest detector, its crops, the per-person status, the audit |
 | `replay_3d.py`, `replay_template.html` | #20 |
+| `mockup/assets.py` | the PoC's pictures for the mockups: camera views, light and dark floor plans, snapshots, calibration checks |
+| `mockup/build.py` | the 23 mockup pages as HTML, rendered to 1920×1080 by headless Chromium; business figures on them are illustrative and say so |
 
 ## Credits
 
@@ -604,4 +607,4 @@ recordings: `fetch_data.py` first).
 - PPE data: [Construction-PPE](https://docs.ultralytics.com/datasets/detect/construction-ppe/), Ultralytics, AGPL-3.0
 - 3D replay: [three.js](https://threejs.org/)
 - Vest check: [CLIP](https://github.com/openai/CLIP) ViT-B/32 (OpenAI, MIT), via `ultralytics/CLIP`
-- Dashboard type and icons: [Inter](https://rsms.me/inter/) (SIL OFL 1.1) and [Material Symbols](https://fonts.google.com/icons) (Apache 2.0), bundled in `assets/fonts` with their licences
+- Dashboard type and icons: [Inter](https://rsms.me/inter/) (SIL OFL 1.1) and [Material Symbols](https://fonts.google.com/icons) (Apache 2.0), bundled in `assets/fonts` with their licences; the mockups' icon subset is in `mockup/fonts`
