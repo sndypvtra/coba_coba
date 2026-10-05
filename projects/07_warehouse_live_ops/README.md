@@ -89,8 +89,8 @@ and the pallet truck (yellow) are where they are in the picture.*
 | Output | What it shows | Made by |
 |---|---|---|
 | `output/warehouse_000/video1_live_ops.mp4` | **Video 1 · live ops.** 4 of the 15 verified CCTV, the whole floor plan, the live panel. 30 s, the busiest of the recording | `main.py` |
-| `output/warehouse_000/video2_one_camera.mp4` | **Video 2 · one CCTV.** The busiest camera large: its count against the labels, lines, zones, dwell | `main.py` |
-| `output/warehouse_027/video3_real.mp4` | **Video 3 · real warehouse.** The verified real cameras, a floor plan painted by those cameras, the camera check | `main.py` |
+| `output/warehouse_000/video2_one_camera.mp4` | **Video 2 · one CCTV.** The busiest camera large: its count against the labels, lines, zones, dwell, each person's helmet and vest (#21) | `main.py` |
+| `output/warehouse_027/video3_real.mp4` | **Video 3 · real warehouse.** The three verified real cameras large, one identity per person across them, each person's helmet and vest, the camera check; no floor plan ([why](#why-video-3-has-no-floor-plan)) | `main.py` |
 | `docs/accuracy_report.jpg` | Every number above, measured against the ground truth | `report.py` |
 | `output/warehouse_000/replay_3d.html` | #20 · the 30 s of video 1 in 3D, viewable from each CCTV | `replay_3d.py` |
 | `search_events.py` | #19 · questions in Indonesian → the moments, with video time and the CCTV that saw them | — |
@@ -110,13 +110,9 @@ window. P74, pink, has just walked against the declared one-way aisle — one of
 the two wrong-way walks the AI flagged in this window, both of which the ground
 truth has too (it has a third the AI missed).*
 
-![Video 3: the real warehouse, three verified cameras, the camera check, and a floor plan painted by the cameras](docs/video3_real.jpg)
+![Video 3: the real warehouse, the three verified cameras large, each person's helmet and vest, and the camera check](docs/video3_real.jpg)
 
-*Video 3, second 15: the real warehouse. The three cameras that passed the
-check, and in the fourth slot the check itself: as shipped, the cameras place the
-same person 0.70 m apart; verified and shifted, 0.18 m. The plan is painted from
-those cameras' own pictures of the floor, so its yellow lanes continue across
-camera seams.*
+*@@V3CAPTION@@*
 
 ## The data
 
@@ -129,12 +125,32 @@ camera seams.*
 | Cameras | 19, 1920×1080, 30 fps, 5 min | 7, 1920×1080, 30 fps, 60 s |
 | Calibration | intrinsics, extrinsics, projection matrix | the same, estimated with VGGT |
 | Ground truth | 3D position, size and heading of every person and vehicle, and its 2D box in every camera, every frame | none |
-| Floor plan | `map.png`, tied to metres by a scale and an offset | none: painted from its own cameras |
+| Floor plan | `map.png`, tied to metres by a scale and an offset | none, and none could be made that deserves trust ([why](#why-video-3-has-no-floor-plan)) |
 | Window used | 23–53 s (video 1), 116–146 s (video 2) | 5–35 s |
 | How it was chosen | from the labels: most people walking, most forklifts moving, most people near moving forklifts | most people, counted once a second in every camera |
 
 `python fetch_data.py` downloads both (≈ 3.6 GB) from the dataset's public
 repository.
+
+### Why video 3 has no floor plan
+
+The real recording ships no floor plan, and none could be made from it that
+deserves to be trusted. Three ways were tried on the three verified cameras:
+
+1. **Painting the floor from the cameras' pictures** — each plan pixel coloured
+   by the camera that sees it finest, kept only where two cameras agree. The
+   yellow lane paint and the floor markers come out and line up across camera
+   seams, but every rack and wall is smeared across the floor: a calibration
+   knows where the floor is, not what stands on it.
+2. **Keeping only floor-coloured pixels.** The cardboard on the racks and the
+   white wall pass for floor, and reflections punch holes in it.
+3. **A diagram** — the floor the cameras see as one outline, the lane paint as
+   straight lines. Clean, and unrecognisable.
+
+Three cameras 2.7–3 m up, looking along the floor, cannot tell floor from rack.
+A plan that showed people in the wrong place relative to the racks would be
+worse than none, so video 3 shows the verified cameras large instead. Its
+positions are still measured: two cameras place the same person 0.18 m apart.
 
 ## How a box becomes a dot on the plan
 
@@ -258,6 +274,39 @@ a zone), time (*setelah detik 10, antara 5 dan 20 detik*) and order (*terdekat,
 terlama*) — with no language model, and whatever it did not understand it says.
 `--clip` cuts each moment out of the rendered video.
 
+## #21 · Helmet and vest (APD)
+
+Videos 2 and 3 also track, for every person, whether they wear a helmet and a
+high-visibility vest.
+
+**The detector.** [Construction-PPE](https://docs.ultralytics.com/datasets/detect/construction-ppe/),
+Ultralytics' dataset of 1,132 photos of construction workers labelled helmet,
+vest, no_helmet and eight other classes, fine-tunes YOLO11n on the CPU
+(@@PPE_TRAIN@@). On the dataset's own held-out test split: @@PPE_TEST@@.
+
+**Where it looks.** A helmet on a person 60 px tall in a 1080p CCTV frame is
+about eight pixels, so the detector never reads the whole frame. Every person
+the pipeline already tracks is cut out with a margin, scaled up to 320 px and
+read on its own, where a helmet is the size the detector learned on. A helmet
+counts when its box sits on the head, a vest when it sits on the torso.
+@@PPE_VEST_RULE@@ A person shorter than 60 px, or cut by the top of the frame,
+is not judged, and their chips stay grey.
+
+**Over time, per person.** A person's status is the majority of their judged
+frames over the last two seconds, and over the whole window for the summary —
+per tracked identity, so in the real warehouse it follows a person from camera
+to camera. Two seconds or more without a helmet or a vest is a violation: it
+appears in the ticker and in the event search (#19, *"siapa yang tanpa helm"*).
+
+**How right it is.** The recordings carry no PPE labels, so each verdict was
+checked by eye on random crops (`python ppe.py --video 2 --video 3 --audit`):
+
+@@PPE_AUDIT@@
+
+![Random crops of video 2 with the AI's helmet (H) and vest (R) verdicts, as checked by eye](docs/ppe_audit_video2.jpg)
+
+@@PPE_RESULTS@@
+
 ## Accuracy
 
 ![The accuracy report](docs/accuracy_report.jpg)
@@ -332,7 +381,9 @@ python detect.py --scene warehouse_000 --detector site      # ~15 min
 python detect.py --survey warehouse_027     # choose the real recording's busiest 30 s
 python detect.py --scene warehouse_027      # ~15 min
 python align_real.py                        # check and correct the real cameras against each other
-python geometry_check.py --scene warehouse_027              # repaint its plan from the verified cameras
+python geometry_check.py --scene warehouse_027              # its cameras' 1 m floor grid, verified ones in colour
+python ppe.py --train                       # #21: Construction-PPE, fine-tune YOLO11n, ~45 min on 4 cores
+python ppe.py --video 2 --video 3 --audit   # #21: helmet / vest on every tracked person, and the by-eye audit
 python main.py                              # analytics, accuracy and the three videos
 python report.py                            # docs/accuracy_report.jpg
 python replay_3d.py                         # #20
@@ -362,6 +413,7 @@ figure and video in about ten minutes (the videos need the recordings:
 | `report.py` | the accuracy picture |
 | `export_dataset.py`, `train_detector.py` | #18 |
 | `search_events.py` | #19 |
+| `ppe.py` | #21: the helmet / vest detector, its crops, the per-person status, the audit |
 | `replay_3d.py`, `replay_template.html` | #20 |
 
 ## Credits
@@ -369,4 +421,5 @@ figure and video in about ten minutes (the videos need the recordings:
 - Data: [NVIDIA PhysicalAI-SmartSpaces](https://huggingface.co/datasets/nvidia/PhysicalAI-SmartSpaces), CC BY 4.0
 - Detectors: [YOLOE](https://docs.ultralytics.com/models/yoloe/) (`yoloe-11l-seg`) and [YOLO11](https://docs.ultralytics.com/models/yolo11/) (`yolo11n`), via Ultralytics; OpenVINO for CPU inference
 - Tracker: [TrackTrack](https://openaccess.thecvf.com/content/CVPR2025/html/Shim_Focusing_on_Tracks_for_Online_Multi-Object_Tracking_CVPR_2025_paper.html) (CVPR 2025) via Ultralytics, ReID `yolo26n-reid`
+- PPE data: [Construction-PPE](https://docs.ultralytics.com/datasets/detect/construction-ppe/), Ultralytics, AGPL-3.0
 - 3D replay: [three.js](https://threejs.org/)

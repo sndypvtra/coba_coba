@@ -375,6 +375,13 @@ def load_detections(scene: str, cam: str, start: int, end: int,
     return z["rows"], list(z["classes"])
 
 
+def track_offset(detector: str, cls: str) -> int:
+    """What load_detections adds to a class's track ids under `detector` (only "hybrid" renumbers)."""
+    if detector != "hybrid":
+        return 0
+    return 100_000 * sorted(set(HYBRID.values())).index(HYBRID[cls])
+
+
 VEHICLES = ("forklift", "pallet_truck", "robot")
 
 

@@ -21,11 +21,9 @@ Synthetic scene (labels and a floor plan ship with it):
      floor markings and rack bases must fall on the plan's own.
 
 Real scene (no labels, no plan): a one-metre grid is drawn on each camera's
-floor, and the plan is painted from the cameras themselves. Whether two cameras
-put the same person in the same place can only be measured once people are
-detected: `align_real.py` does that, shifts each camera to agree with the
-others, and keeps only the cameras that then agree. Run after it, this paints
-the plan from those cameras alone, at their corrected positions.
+floor. Whether two cameras put the same person in the same place can only be
+measured once people are detected: `align_real.py` does that, shifts each
+camera to agree with the others, and keeps only the cameras that then agree.
 
     python geometry_check.py                   # both scenes
     python geometry_check.py --scene warehouse_027
@@ -46,7 +44,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import draw as dr  # noqa: E402
 from config import DOCS, output_dir  # noqa: E402
 from scene import (Camera, FloorPlan, Labels, building_mask, dataset_plan,  # noqa: E402
-                   floor_mosaic, input_dir, load_cameras, video_path)
+                   input_dir, load_cameras, video_path)
 
 MAX_SCALE = 0.10      # m per pixel: beyond this, one pixel is over 10 cm of floor
 SHOW_FRAME = {"warehouse_000": 1800, "warehouse_027": 900}
@@ -332,45 +330,18 @@ def floor_grid(cam: Camera, img: np.ndarray, colour, step_m: float = 1.0) -> np.
 
 
 def check_real(scene: str) -> dict:
+    """The real recording has no labels and no floor plan: a one-metre grid on each camera's floor.
+
+    Whether two cameras put the same person in the same place is measured once
+    people are detected (align_real.py); cameras it could not verify are drawn
+    in red here. No plan is painted: three cameras looking along the floor from
+    under three metres cannot tell floor from rack, and a plan that cannot be
+    trusted is worse than none (README).
+    """
     raw = load_cameras(scene, aligned=False)
     cams = load_cameras(scene)                 # verified and shifted, once align_real.py has run
     ids = sorted(cams)
-    path = output_dir(scene) / "camera_alignment.json"
-    rejected = json.loads(path.read_text())["rejected"] if path.exists() else {}
-    bgs = {c: background(scene, c) for c in ids}
-    plan, owner = floor_mosaic(cams, bgs)
-    cv2.imwrite(str(output_dir(scene) / "floor_plan.png"), plan.image)
-    np.save(output_dir(scene) / "floor_plan_affine.npy", plan.A)
-
     T = dr.Texts()
-    pic = plan.image.copy()
-    marks = {c: tuple(int(v) for v in plan.to_px(cams[c].centre[0], cams[c].centre[1])) for c in ids}
-    for c in rejected:                         # where the shipped calibration puts them, in red
-        marks[c] = tuple(int(v) for v in plan.to_px(raw[c].centre[0], raw[c].centre[1]))
-    taken = [(u - 9, v - 9, u + 9, v + 9) for u, v in marks.values()]
-    for k, cid in enumerate(ids):
-        cam = cams[cid]
-        colour = dr.CAMERA_COLOURS[k % len(dr.CAMERA_COLOURS)]
-        fp = cam.footprint(MAX_SCALE)
-        if len(fp):
-            poly = np.stack(plan.to_px(fp[:, 0], fp[:, 1]), 1).astype(np.int32)
-            cv2.polylines(pic, [poly], True, colour, 2, cv2.LINE_AA)
-    for k, cid in enumerate(ids):
-        colour = dr.CAMERA_COLOURS[k % len(dr.CAMERA_COLOURS)]
-        cu, cv_ = marks[cid]
-        if 0 <= cu < pic.shape[1] and 0 <= cv_ < pic.shape[0]:
-            cv2.circle(pic, (cu, cv_), 8, colour, -1, cv2.LINE_AA)
-            dr.place_label(T, cid.replace("Camera_", "CCTV "), (cu, cv_), 18, colour, taken,
-                           pic.shape[1], pic.shape[0], 11)
-    for cid in sorted(rejected):
-        cu, cv_ = marks[cid]
-        if 0 <= cu < pic.shape[1] and 0 <= cv_ < pic.shape[0]:
-            cv2.circle(pic, (cu, cv_), 6, dr.BAD, -1, cv2.LINE_AA)
-            dr.place_label(T, cid.replace("Camera_", "") + " tidak dipakai", (cu, cv_), 15, dr.BAD, taken,
-                           pic.shape[1], pic.shape[0], 9)
-    T.flush(pic)
-    cv2.imwrite(str(DOCS / f"geometry_{scene}_plan.jpg"), pic, [cv2.IMWRITE_JPEG_QUALITY, 88])
-
     tiles = []
     for cid in sorted(raw):
         used = cid in cams
@@ -384,14 +355,11 @@ def check_real(scene: str) -> dict:
         tiles.append(np.full_like(tiles[0], dr.BG))
     sheet = np.vstack([np.hstack(tiles[i:i + 2]) for i in range(0, len(tiles), 2)])
     cv2.imwrite(str(DOCS / f"geometry_{scene}_cameras.jpg"), sheet, [cv2.IMWRITE_JPEG_QUALITY, 85])
-
     err_file = input_dir(scene) / "vggt_reprojection_error.txt"
     return {"cameras": {c: {"mount_height_m": round(raw[c].mount_height_m, 2),
                             "tilt_deg": round(raw[c].tilt_deg, 1),
                             "hfov_deg": round(raw[c].hfov_deg, 1),
                             "used": c in cams} for c in sorted(raw)},
-            "plan_px_per_m": plan.px_per_m,
-            "floor_painted_m2": round(float((owner >= 0).sum()) / plan.px_per_m ** 2, 1),
             "vggt_report": err_file.read_text() if err_file.exists() else ""}
 
 

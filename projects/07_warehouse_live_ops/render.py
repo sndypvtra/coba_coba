@@ -284,8 +284,12 @@ def project_poly(cam: Camera, pts, step_m: float = 0.1) -> list[np.ndarray]:
 
 def tile(img: np.ndarray, cam: Camera, rows: np.ndarray, classes: list[str], frame: int, fr: Frame,
          key_to_gid: dict, placed: set, colour, size: tuple[int, int], zones, lines,
-         title: str, big: bool = False) -> np.ndarray:
-    """One camera, scaled to `size`, with everything tying it to the plan."""
+         title: str, big: bool = False, ppe: dict | None = None, echoes: bool = True) -> np.ndarray:
+    """One camera, scaled to `size`, with everything tying it to the plan.
+
+    `ppe`, when given, is each person's live helmet / vest status: the label
+    then carries an H and an R chip (green worn, red not, grey not known yet).
+    """
     tw, th = size
     s = tw / cam.width
     out = cv2.resize(img, (tw, th), interpolation=cv2.INTER_AREA)
@@ -327,15 +331,19 @@ def tile(img: np.ndarray, cam: Camera, rows: np.ndarray, classes: list[str], fra
             lab = f"{TAG[cls]}{gid}"
             if cls == "forklift" and o.reliable:
                 lab += f" {kmh(o.speed)}"
-            labels.append((lab, (x1, y1, x2, y2), col))
+            labels.append((lab, (x1, y1, x2, y2), col, gid if cls == "person" else None))
         else:
             # seen, but not on the plan (feet out of frame, too far, not yet confirmed)
             cv2.rectangle(out, (x1, y1), (x2, y2), dr.MUTED, 1, cv2.LINE_AA)
     # nearest first: the label of the biggest box is the one that keeps its place
-    for lab, box, col in sorted(labels, key=lambda t: -(t[1][3] - t[1][1])):
-        dr.box_label(T, lab, box, fs, col, taken, tw, th)
+    for lab, box, col, pgid in sorted(labels, key=lambda t: -(t[1][3] - t[1][1])):
+        if ppe is not None and pgid is not None:
+            helm, vest = ppe.get(pgid, (None, None))
+            dr.box_label_chips(T, lab, [("H", helm), ("R", vest)], box, fs, col, taken, tw, th)
+        else:
+            dr.box_label(T, lab, box, fs, col, taken, tw, th)
     # echoes: objects other cameras placed, drawn at their floor point in this view
-    for o in fr.objects:
+    for o in (fr.objects if echoes else []):
         if o.gid in here:
             continue
         uv = cam.to_image(np.array([[o.x, o.y, 0.0]]))[0]

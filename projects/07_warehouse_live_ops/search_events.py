@@ -40,6 +40,8 @@ VIDEOS = {1: ("warehouse_000", "video1_live_ops"), 2: ("warehouse_000", "video2_
 
 # multi-word phrases are tried first, so "jalur forklift" is not read as "forklift"
 WORDS = [
+    ("ppe", ["tanpa helm", "tanpa rompi", "tidak pakai helm", "tidak pakai rompi", "tidak memakai helm",
+             "tidak memakai rompi", "pelanggaran apd", "apd", "ppe", "helm", "rompi"]),
     ("lane", ["jalur forklift", "jalur kendaraan", "masuk jalur", "di jalur", "lajur forklift"]),
     ("wrong_way", ["salah arah", "lawan arah", "berlawanan arah", "melawan arah", "wrong way"]),
     ("near_miss", ["nyaris", "hampir tertabrak", "hampir ditabrak", "tertabrak", "ditabrak", "tabrakan",
@@ -51,7 +53,7 @@ WORDS = [
 ]
 NAME = {"near_miss": "nyaris tertabrak", "speeding": "forklift ngebut", "idle": "diam lama",
         "crossing": "melintas garis", "lane": "masuk jalur forklift", "wrong_way": "salah arah",
-        "crowd": "kerumunan"}
+        "crowd": "kerumunan", "ppe": "pelanggaran APD"}
 GENERIC = {"area", "zona", "jalur", "lorong", "contoh", "garis", "tengah", "forklift"}
 
 
@@ -86,6 +88,12 @@ def load_events(video: int) -> tuple[list[dict], dict]:
     for e in a["#13_wrong_way"]["events"]:
         ev.append({"type": "wrong_way", "t": e["t"], "who": [f"P{e['gid']}"], "x": e["x"], "y": e["y"],
                    "cams": e.get("cams", []), "value": 0, "detail": e["zone"]})
+    if data.get("ppe"):
+        from ppe import VIOLATION_S
+        for e in data["ppe"]["violations"]:
+            ev.append({"type": "ppe", "t": e["start_t"] + VIOLATION_S, "who": [f"P{e['gid']}"], "x": e.get("x"),
+                       "y": e.get("y"), "cams": e.get("cams", []), "what": e["what"], "value": e["end_t"] - e["start_t"],
+                       "detail": f"tanpa {e['what']} {e['end_t'] - e['start_t']:.0f} s".replace(".", ",")})
     for e in a["#7_congestion"].get("events", []):
         ev.append({"type": "crowd", "t": e["start_t"], "who": [f"P{g}" for g in e["people"]],
                    "x": e["x"], "y": e["y"], "cams": e.get("cams", []), "value": e["people_max"],
@@ -154,6 +162,11 @@ def parse(q: str, scene: str) -> dict:
         want["dir"] = "in"
     if take(r"\bkeluar\b"):
         want["dir"] = "out"
+    # which piece of APD, when the question names one
+    if "ppe" in want["types"]:
+        q2 = q.lower()
+        want["what"] = "helm" if "helm" in q2 and "rompi" not in q2 else "rompi" if "rompi" in q2 and \
+            "helm" not in q2 else None
     if want["dir"] and not want["types"]:
         want["types"].append("crossing")
     for order, pats in (("value_asc", [r"terdekat", r"paling dekat"]),
@@ -170,7 +183,7 @@ def parse(q: str, scene: str) -> dict:
               "carikan", "semua", "kejadian", "momen", "detik", "s", "berapa", "tolong", "lihat", "dilihat",
               "the", "yg", "nya", "sekitar", "area", "zona", "dekat", "seseorang", "pekerja", "lama", "kali",
               "ini", "itu", "video", "rekaman", "cctv", "kamera", "lewat", "terjadi", "saja", "mana",
-              "bagaimana", "tunjukkan", "list", "daftar", "waktu", "jam"}
+              "bagaimana", "tunjukkan", "list", "daftar", "waktu", "jam", "pelanggaran", "memakai", "pakai"}
     want["unknown"] = [w for w in re.findall(r"[a-z0-9:]+", text) if w not in filler]
     return want
 
@@ -185,6 +198,8 @@ def search(events: list[dict], want: dict) -> list[dict]:
         if want["cams"] and not any(c in e["cams"] for c in want["cams"]):
             continue
         if want["lines"] and e.get("line") not in want["lines"]:
+            continue
+        if e["type"] == "ppe" and want.get("what") and e.get("what") != want["what"]:
             continue
         if want["dir"] and e["type"] == "crossing" and e["dir"] != want["dir"]:
             continue
@@ -233,7 +248,8 @@ def clip(video: int, e: dict, n: int, folder: Path) -> Path:
 
 
 def describe(want: dict) -> str:
-    parts = [", ".join(NAME[t] for t in want["types"]) or "semua jenis kejadian"]
+    parts = [", ".join(NAME[t] + (f" ({want['what']})" if t == "ppe" and want.get("what") else "")
+                       for t in want["types"]) or "semua jenis kejadian"]
     if want["who"]:
         parts.append("melibatkan " + ", ".join(want["who"]))
     if want["zones"]:

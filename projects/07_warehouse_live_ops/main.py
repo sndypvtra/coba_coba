@@ -32,18 +32,18 @@ import sys
 import time
 from pathlib import Path
 
-import cv2
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import analytics as an  # noqa: E402
 import evaluate as ev  # noqa: E402
+import ppe  # noqa: E402
 import videos as V  # noqa: E402
 import world as wd  # noqa: E402
 from config import SOURCES, STRIDE, output_dir  # noqa: E402
-from detect import DETECTORS, HYBRID, cache_path, load_detections, static_scores  # noqa: E402
-from scene import FloorPlan, Labels, building_test, dataset_plan, load_cameras, video_path  # noqa: E402
+from detect import DETECTORS, HYBRID, cache_path, load_detections, static_scores, track_offset  # noqa: E402
+from scene import Labels, building_test, dataset_plan, load_cameras, video_path  # noqa: E402
 
 SOURCE = {"warehouse_000": "NVIDIA PhysicalAI-SmartSpaces 2026 · Warehouse_000 (simulasi)",
           "warehouse_027": "NVIDIA PhysicalAI-SmartSpaces 2026 · Warehouse_027 (gudang asli)"}
@@ -100,6 +100,34 @@ def _scores(run: dict, labels: Labels, used: list[str], frames: list[int],
         "boxes_in_the_pictures": ev.detector_quality(run["detections"], labels, frames),
         "analytics_vs_truth": ev.analytics_vs_truth(run["summary"], truth_seen, truth_all),
     }
+
+
+def _locate(events: list[dict], afr: list, res: wd.Result) -> None:
+    """Where each PPE violation is, and which cameras see the person, when it is reported."""
+    for e in events:
+        t = e["start_t"] + ppe.VIOLATION_S
+        fr = min(afr, key=lambda f: abs(f.t - t))
+        o = next((o for o in fr.objects if o.gid == e["gid"]), None)
+        b = next((b for b in res.blobs.get(fr.frame, []) if b.gid == e["gid"]), None)
+        e["x"], e["y"] = (round(o.x, 2), round(o.y, 2)) if o else (None, None)
+        e["cams"] = sorted(b.cams) if b else []
+
+
+def _ppe(scene: str, res: wd.Result, cams: list[str], frames: list[int], detector: str):
+    """Helmet / vest per tracked person, from ppe.py's cached crops - or None if it has not run.
+
+    The evidence rows line up with the zero-shot detector's cache, which is
+    where every person box comes from, whichever detector drew the vehicles;
+    under "hybrid" those people carry renumbered track ids, so the lookup does too.
+    """
+    start, end = frames[0], frames[-1] + STRIDE
+    evidence = {c: ppe.load_evidence(scene, c, start, end) for c in cams}
+    if any(e is None for e in evidence.values()):
+        return None
+    people = {c: load_detections(scene, c, start, end, "zero_shot") for c in cams}
+    judged = ppe.per_frame(res, people, evidence, track_offset(detector, "person"))
+    live, final, events = ppe.statuses(frames, judged, wd.FPS)
+    return {"live": live, "final": final, "events": events}
 
 
 def _frames_json(path: Path, afr: list, res: wd.Result, cams: list[str]) -> None:
@@ -193,18 +221,24 @@ def run_video2(report: dict, detector: str, do_render: bool = True) -> None:
         series.append((int(((r[:, 5] - r[:, 3]) >= 40).sum()), int((lab[:, 0] == f).sum())))
     truth_seen = an.analyse(scene, ev.truth_result(labels, frames, cams=[cid]), {}, STRIDE)[1]
     truth_all = an.analyse(scene, ev.truth_result(labels, frames), {}, STRIDE)[1]
+    apd = _ppe(scene, res, [cid], frames, detector)
+    if apd:
+        _locate(apd["events"], run["frames"], res)
     acc = {"detector": detector,
            "#1_count_vs_labels": ev.camera_counts(dets, labels, frames)[cid],
            "people_on_plan_from_this_camera": ev.plan_accuracy(res, labels, [cid], "person"),
            "boxes_in_the_picture": ev.detector_quality(dets, labels, frames),
            "analytics_vs_truth": ev.analytics_vs_truth(run["summary"], truth_seen, truth_all)}
-    report["video2"] = {"window": v2, "analytics": run["summary"], "accuracy": acc}
+    report["video2"] = {"window": v2, "analytics": run["summary"], "accuracy": acc,
+                        "ppe": ppe.summary(apd["final"], apd["events"]) if apd else None,
+                        "ppe_per_person": {f"P{g}": v for g, v in sorted(apd["final"].items())} if apd else None}
     _json(output_dir(scene) / "video2_one_camera.json", report["video2"])
     if do_render:
         ctx = {"scene": scene, "cams": allcams, "plan": dataset_plan(scene), "camera": cid,
                "result": res, "frames": run["frames"], "summary": run["summary"], "detections": dets,
                "stride": STRIDE, "video_path": lambda c: video_path(scene, c), "source_note": SOURCE[scene],
-               "count_series": series, "geometry": geo["cameras"][cid], "detector_note": DETECTOR_NAME[detector]}
+               "count_series": series, "geometry": geo["cameras"][cid], "detector_note": DETECTOR_NAME[detector],
+               "ppe_live": apd["live"] if apd else None, "ppe_events": apd["events"] if apd else []}
         V.video_one_camera(ctx, output_dir(scene) / "video2_one_camera.mp4")
 
 
@@ -223,32 +257,27 @@ def run_video3(report: dict, do_render: bool = True) -> None:
     res, afr, summary = run["result"], run["frames"], run["summary"]
     agree = ev.camera_agreement(res.sightings, cams)
     heights = ev.label_heights(res)
-    busiest = sorted(used, key=lambda c: -summary["#1_people_per_camera"][c]["mean"])[:4]
-    plan = FloorPlan(cv2.imread(str(output_dir(scene) / "floor_plan.png")),
-                     np.load(output_dir(scene) / "floor_plan_affine.npy"), True)
-    pts = np.array([[o.x, o.y] for fr in afr for o in fr.objects]).reshape(-1, 2)
-    if len(pts):
-        x0, y0 = np.percentile(pts, 1, axis=0) - 3
-        x1, y1 = np.percentile(pts, 99, axis=0) + 3
-    else:
-        x0, y0, x1, y1 = -10, -10, 10, 10
-    span = max(x1 - x0, y1 - y0)
-    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
-    bounds = (cx - span / 2, cy - span / 2, cx + span / 2, cy + span / 2)
+    busiest = sorted(used, key=lambda c: -summary["#1_people_per_camera"][c]["mean"])[:3]
+    apd = _ppe(scene, res, used, frames, "zero_shot")
+    if apd:
+        _locate(apd["events"], afr, res)
     report["video3"] = {"window": v3, "shown": busiest, "used": used, "cameras_total": total,
                         "analytics": summary,
+                        "ppe": ppe.summary(apd["final"], apd["events"]) if apd else None,
+                        "ppe_per_person": {f"P{g}": v for g, v in sorted(apd["final"].items())} if apd else None,
                         "checks": {"camera_agreement": agree, "person_height": heights,
                                    "camera_alignment": alignment,
                                    "lift_rejections": {f"{c}: {r}": n for (c, r), n in
                                                        sorted(run["rejects"].items())}}}
     _json(output_dir(scene) / "video3_real.json", report["video3"])
     if do_render:
-        ctx = {"scene": scene, "cams": cams, "plan": plan, "plan_bounds": bounds, "shown": busiest,
+        ctx = {"scene": scene, "cams": cams, "shown": busiest,
                "used": used, "result": res, "frames": afr, "summary": summary, "detections": run["detections"],
                "stride": STRIDE, "video_path": lambda c: video_path(scene, c),
                "source_note": SOURCE[scene], "agreement": agree["all_pairs"]["median_m"],
                "agreement_within": agree["all_pairs"]["within_0_5_m_pct"], "alignment": alignment,
-               "cameras_total": total}
+               "cameras_total": total, "ppe_live": apd["live"] if apd else None,
+               "ppe_events": apd["events"] if apd else []}
         V.video_real(ctx, output_dir(scene) / "video3_real.mp4")
 
 

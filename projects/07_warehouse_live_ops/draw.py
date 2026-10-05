@@ -129,6 +129,28 @@ def place_label(T: Texts, text: str, at: tuple[int, int], size: int, colour, tak
     T.add(text, (best[0] + 1, best[1] + 1), size, colour, bold, bg=bg, pad=1)
 
 
+CHIP = {True: bgr("#16a34a"), False: bgr("#dc2626"), None: bgr("#52525b")}
+
+
+def box_label_chips(T: Texts, text: str, chips: list[tuple[str, bool | None]], box, size: int, colour,
+                    taken: list, w: int, h: int) -> None:
+    """A box label followed by small lettered chips: green worn, red not worn, grey not known yet."""
+    x1, y1, x2, y2 = (int(v) for v in box)
+    gap = 3
+    tw0 = T.width(text, size, True) + 2
+    cw = [T.width(c, size - 1, True) + 6 for c, _ in chips]
+    tw, th = tw0 + sum(cw) + gap * len(chips), size + 4
+    cands = [(x1, y1 - th - 1), (x2 - tw, y1 - th - 1), (x1, y2 + 1), (x1 + 1, y1 + 1)]
+    cands = [(min(max(0, x), w - tw), min(max(0, y), h - th)) for x, y in cands]
+    bx = _best_spot(cands, tw, th, taken, w, h)
+    taken.append(bx)
+    T.add(text, (bx[0] + 1, bx[1] + 1), size, colour, True, bg=BG, pad=1)
+    x = bx[0] + tw0 + gap
+    for (c, state), wdt in zip(chips, cw):
+        T.add(c, (x + 3, bx[1] + 2), size - 1, INK, True, bg=CHIP[state], pad=2)
+        x += wdt + gap
+
+
 def box_label(T: Texts, text: str, box, size: int, colour, taken: list, w: int, h: int, bg=BG) -> None:
     """Label a box: above its left corner, else above its right one, below it, or just inside its top.
 

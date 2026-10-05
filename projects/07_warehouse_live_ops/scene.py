@@ -205,13 +205,11 @@ class FloorPlan:
     """A top-down picture of the floor and the transform that ties it to metres.
 
     `A` is the 3 x 3 affine map world (x, y, 1) -> plan pixel (u, v, 1). For the
-    dataset's map.png it comes from the published scale and translation; for a
-    scene without one, it is whatever frame the plan was built in.
+    dataset's map.png it comes from the published scale and translation.
     """
 
     image: np.ndarray
     A: np.ndarray
-    built_from_cameras: bool = False
 
     def __post_init__(self):
         self.A_inv = np.linalg.inv(self.A)
@@ -236,13 +234,13 @@ class FloorPlan:
         c0, c1 = int(max(0, np.floor(min(us)))), int(min(self.image.shape[1], np.ceil(max(us))))
         r0, r1 = int(max(0, np.floor(min(vs)))), int(min(self.image.shape[0], np.ceil(max(vs))))
         T = np.array([[1, 0, -c0], [0, 1, -r0], [0, 0, 1.0]])
-        return FloorPlan(self.image[r0:r1, c0:c1].copy(), T @ self.A, self.built_from_cameras)
+        return FloorPlan(self.image[r0:r1, c0:c1].copy(), T @ self.A)
 
     def resized(self, scale: float) -> "FloorPlan":
         img = cv2.resize(self.image, None, fx=scale, fy=scale,
                          interpolation=cv2.INTER_AREA if scale < 1 else cv2.INTER_LINEAR)
         S = np.diag([scale, scale, 1.0])
-        return FloorPlan(img, S @ self.A, self.built_from_cameras)
+        return FloorPlan(img, S @ self.A)
 
 
 def dataset_plan(scene: str) -> FloorPlan:
@@ -287,69 +285,6 @@ def building_mask(plan: FloorPlan) -> np.ndarray:
     if n < 2:
         return np.ones(m.shape, bool)
     return lab == 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
-
-
-def floor_mosaic(cams: dict[str, Camera], frames: dict[str, np.ndarray],
-                 px_per_m: float = 40.0, max_scale: float = 0.06,
-                 margin_m: float = 1.0, agree_tol: float = 38.0,
-                 trust_scale: float = 0.022) -> tuple[FloorPlan, np.ndarray]:
-    """A floor plan for a site that has none, painted from its own cameras.
-
-    Every plan pixel is a floor point. Laying a camera image onto the floor is
-    only right for things that *are* on the floor: a rack or a wall gets smeared
-    away from the lens, differently in every camera. So a pixel is kept only
-    where that cannot have happened - where two cameras that both see it agree on
-    its colour, or where one camera sees it from so close (finer than
-    `trust_scale` m/px) that it is almost certainly floor. The rest stays dark.
-    The finest camera paints each kept pixel. Returns the plan and the index of
-    the camera that painted each pixel (-1 where none did).
-    """
-    ids = list(cams)
-    # bounds: where any camera images the floor finely enough
-    pts = []
-    for c in cams.values():
-        g = np.linspace(-60, 60, 241)
-        xs, ys = np.meshgrid(g + c.centre[0], g + c.centre[1])
-        m = c.sees(xs, ys, max_scale)
-        pts.append(np.stack([xs[m], ys[m]], 1))
-    pts = np.concatenate(pts)
-    x0, y0 = pts.min(0) - margin_m
-    x1, y1 = pts.max(0) + margin_m
-    W = int(np.ceil((x1 - x0) * px_per_m))
-    Hh = int(np.ceil((y1 - y0) * px_per_m))
-    A = np.array([[px_per_m, 0, -x0 * px_per_m], [0, -px_per_m, y1 * px_per_m], [0, 0, 1.0]])
-    plan = FloorPlan(np.zeros((Hh, W, 3), np.uint8), A, built_from_cameras=True)
-
-    uu, vv = np.meshgrid(np.arange(W) + 0.5, np.arange(Hh) + 0.5)
-    xs, ys = plan.to_world(uu, vv)
-    layers, scales = [], []
-    for cid in ids:
-        c = cams[cid]
-        uv = c.to_image(np.stack([xs.ravel(), ys.ravel(), np.zeros(xs.size)], 1))
-        ok = np.isfinite(uv).all(1) & (uv[:, 0] >= 0) & (uv[:, 0] < c.width - 1) \
-            & (uv[:, 1] >= 0) & (uv[:, 1] < c.height - 1)
-        sc = np.full(xs.size, np.inf)
-        sc[ok] = c.floor_scale(uv[ok, 0], uv[ok, 1])
-        mapx = np.nan_to_num(uv[:, 0].reshape(Hh, W), nan=-1).astype(np.float32)
-        mapy = np.nan_to_num(uv[:, 1].reshape(Hh, W), nan=-1).astype(np.float32)
-        layers.append(cv2.remap(frames[cid], mapx, mapy, cv2.INTER_LINEAR).astype(np.float32))
-        scales.append(sc.reshape(Hh, W))
-    scales = np.stack(scales)                       # (cams, H, W)
-    seen = scales <= max_scale
-    agreed = np.zeros((Hh, W), bool)
-    for a in range(len(ids)):
-        for b in range(a + 1, len(ids)):
-            both = seen[a] & seen[b]
-            if both.any():
-                diff = np.abs(layers[a] - layers[b]).mean(axis=2)
-                agreed |= both & (diff < agree_tol)
-    keep = agreed | (scales <= trust_scale).any(axis=0)
-    best = np.where(seen, scales, np.inf).argmin(axis=0)
-    owner = np.where(keep & seen.any(axis=0), best, -1)
-    for k in range(len(ids)):
-        m = owner == k
-        plan.image[m] = layers[k][m].astype(np.uint8)
-    return plan, owner
 
 
 # ---------------------------------------------------------------------- labels
