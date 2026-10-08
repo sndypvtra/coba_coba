@@ -32,6 +32,7 @@ measured by running the code in this repository, not estimated.
 | **5** | [Cafe, two rooms](projects/05_cafe_dwell_time) | Occupancy and per-person dwell time | **14** / **12** visitors · mean dwell **17.9 s** / **24.6 s** |
 | **6** | [Warehouse, four cameras](projects/06_warehouse_3d) | Locate people in 3D, one floor plan, operational KPIs | median error **0.181 m** vs the dataset's own 3D truth |
 | **7** | [Warehouse live ops, fifteen cameras](projects/07_warehouse_live_ops) | One live floor plan, 20 operations analytics, each checked against ground truth; helmet and vest per person | position error **0.19 m**; line counts and walking share match the truth; helmet right on **24 of 26** blind-checked crops |
+| **8** | [Pack completeness, synthetic line](projects/08_pack_completeness) | A rendered conveyor clip of 10-can trays, some packed with 9, as data for completeness checks | 15 s clip · 3 short trays · the true count for every tray in every frame |
 
 Each project's own README carries its method, its measured figures and what
 breaks it, and is written to stand on its own if the folder is lifted into a
@@ -454,6 +455,7 @@ projects/
   05_cafe_dwell_time/       occupancy and per-person dwell
   06_warehouse_3d/          four cameras -> one floor plan in metres
   07_warehouse_live_ops/    fifteen cameras -> one live plan, 20 analytics vs truth, helmet/vest
+  08_pack_completeness/     a Blender-rendered line of 10-can trays, some short, with per-frame truth
 
     every project has these
       main.py               the entry point, and only the sequence of steps

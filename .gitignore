@@ -63,3 +63,8 @@ projects/07_warehouse_live_ops/output/training_sets/
 # Fonts, icons, extracted video frames and intermediate HTML for tools/build_mockups.py.
 # All of it is fetched or derived on the first run; only docs/mockup/*.png is kept.
 tools/.mockup_cache/
+
+# project 08: rendered frames are regenerable (python render.py resumes)
+projects/08_pack_completeness/output/frames/
+projects/08_pack_completeness/output/test_*.jpg
+projects/08_pack_completeness/output/render.log
