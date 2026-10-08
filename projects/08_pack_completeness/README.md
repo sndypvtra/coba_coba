@@ -64,3 +64,10 @@ needs footage from that line before anyone trusts its numbers.
 `blister/` takes a real capsule-packing clip (Mixkit #4750) and empties one
 pocket in three different strips, so each of those strips holds 9 of 10; the
 truth per frame is `output/blister_truth.json`. See `blister/README.md`.
+
+## Third clip: packing station, boxes of 20
+
+`packing/` renders a robot placing products one by one into boxes of 20 from a
+fixed camera; the second box leaves with 18 because of two feeder gaps. Truth per
+frame (count, filled and missed slots, slot positions) is in
+`packing/output/packing_station_truth.json`. See `packing/README.md`.
