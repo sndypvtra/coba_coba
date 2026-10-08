@@ -68,3 +68,5 @@ tools/.mockup_cache/
 projects/08_pack_completeness/output/frames/
 projects/08_pack_completeness/output/test_*.jpg
 projects/08_pack_completeness/output/render.log
+# the rendered clip itself is kept: 2.5 MB, and re-rendering it costs ~2 h of CPU
+!projects/08_pack_completeness/output/pack_line.mp4
