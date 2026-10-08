@@ -70,3 +70,7 @@ projects/08_pack_completeness/output/test_*.jpg
 projects/08_pack_completeness/output/render.log
 # the rendered clip itself is kept: 2.5 MB, and re-rendering it costs ~2 h of CPU
 !projects/08_pack_completeness/output/pack_line.mp4
+projects/08_pack_completeness/packing/output/frames/
+projects/08_pack_completeness/packing/output/test_*.jpg
+projects/08_pack_completeness/packing/output/render.log
+!projects/08_pack_completeness/packing/output/packing_station.mp4
