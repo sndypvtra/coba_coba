@@ -58,3 +58,9 @@ are, with shadows and motion blur; but there is no dust, no label print, no
 dents, no sensor noise and no flicker from factory lights. That is enough to
 build and demonstrate the counting logic. A model meant for a real line still
 needs footage from that line before anyone trusts its numbers.
+
+## Second clip: real blister footage, edited
+
+`blister/` takes a real capsule-packing clip (Mixkit #4750) and empties one
+pocket in three different strips, so each of those strips holds 9 of 10; the
+truth per frame is `output/blister_truth.json`. See `blister/README.md`.
