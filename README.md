@@ -32,7 +32,7 @@ measured by running the code in this repository, not estimated.
 | **5** | [Cafe, two rooms](projects/05_cafe_dwell_time) | Occupancy and per-person dwell time | **14** / **12** visitors · mean dwell **17.9 s** / **24.6 s** |
 | **6** | [Warehouse, four cameras](projects/06_warehouse_3d) | Locate people in 3D, one floor plan, operational KPIs | median error **0.181 m** vs the dataset's own 3D truth |
 | **7** | [Warehouse live ops, fifteen cameras](projects/07_warehouse_live_ops) | One live floor plan, 20 operations analytics, each checked against ground truth; helmet and vest per person | position error **0.19 m**; line counts and walking share match the truth; helmet right on **24 of 26** blind-checked crops |
-| **8** | [Pack completeness, synthetic line](projects/08_pack_completeness) | Rendered clips for completeness checks: a line of 10-can trays (some with 9) and a packing station where a robot fills boxes of 20 (one leaves with 18) | 15 s + 34 s clips · the true count for every tray and box in every frame |
+| **8** | [Pack completeness, synthetic line](projects/08_pack_completeness) | Rendered clips for completeness checks: a line of 10-can trays (some with 9) and a packing station where a robot fills boxes of 20 (one leaves with 18) | 15 s + 34 s clips · QC dashboards counting from the pixels · 7/7 trays and 3/3 boxes judged right |
 
 Each project's own README carries its method, its measured figures and what
 breaks it, and is written to stand on its own if the folder is lifted into a

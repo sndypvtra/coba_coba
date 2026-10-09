@@ -71,3 +71,11 @@ truth per frame is `output/blister_truth.json`. See `blister/README.md`.
 fixed camera; the second box leaves with 18 because of two feeder gaps. Truth per
 frame (count, filled and missed slots, slot positions) is in
 `packing/output/packing_station_truth.json`. See `packing/README.md`.
+
+## Analytics on both clips
+
+`analytics/` counts from the pixels and turns it into two QC dashboards,
+`output/analytics/line_qc.mp4` and `output/analytics/packing_qc.mp4`: short packs
+caught with the empty slot and a snapshot, root cause (where cans go missing,
+feeder gaps behind empty picks), KPIs, and a score against the ground truth.
+See `analytics/README.md`.

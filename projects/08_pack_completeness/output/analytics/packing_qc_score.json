@@ -1,0 +1,48 @@
+{
+ "station_frames": 750,
+ "station_frames_count_differs": 178,
+ "count_lag_frames": [
+  4
+ ],
+ "count_lag_s": 0.16,
+ "boxes_judged": 3,
+ "boxes_correct": 3,
+ "verdicts": [
+  {
+   "box": 1,
+   "count": 20,
+   "truth_count": 20,
+   "empty": [],
+   "truth_empty": [],
+   "correct": true
+  },
+  {
+   "box": 2,
+   "count": 18,
+   "truth_count": 18,
+   "empty": [
+    6,
+    14
+   ],
+   "truth_empty": [
+    6,
+    14
+   ],
+   "correct": true
+  },
+  {
+   "box": 3,
+   "count": 20,
+   "truth_count": 20,
+   "empty": [],
+   "truth_empty": [],
+   "correct": true
+  }
+ ],
+ "empty_picks_found": 2,
+ "empty_picks_in_truth": 2,
+ "feeder_warning_before_release_frames": [
+  12,
+  12
+ ]
+}

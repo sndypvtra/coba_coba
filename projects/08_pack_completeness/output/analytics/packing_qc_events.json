@@ -1,0 +1,65 @@
+[
+ {
+  "frame": 101,
+  "t": 4.0,
+  "severity": "info",
+  "kind": "box_ok",
+  "ref": 1,
+  "title": "Kardus #1 lengkap",
+  "detail": "20/20 · lanjut ke penutupan"
+ },
+ {
+  "frame": 232,
+  "t": 9.24,
+  "severity": "low",
+  "kind": "feeder_gap",
+  "ref": 2,
+  "title": "Celah suplai di feeder",
+  "detail": "Stopper kosong · slot B2 kardus #2 berisiko"
+ },
+ {
+  "frame": 284,
+  "t": 11.32,
+  "severity": "medium",
+  "kind": "missed",
+  "ref": 2,
+  "title": "Pick kosong · slot B2",
+  "detail": "Kardus #2 · robot jalan tanpa produk · sebab: celah feeder"
+ },
+ {
+  "frame": 360,
+  "t": 14.36,
+  "severity": "low",
+  "kind": "feeder_gap",
+  "ref": 2,
+  "title": "Celah suplai di feeder",
+  "detail": "Stopper kosong · slot C5 kardus #2 berisiko"
+ },
+ {
+  "frame": 412,
+  "t": 16.44,
+  "severity": "medium",
+  "kind": "missed",
+  "ref": 2,
+  "title": "Pick kosong · slot C5",
+  "detail": "Kardus #2 · robot jalan tanpa produk · sebab: celah feeder"
+ },
+ {
+  "frame": 461,
+  "t": 18.4,
+  "severity": "high",
+  "kind": "box_short",
+  "ref": 2,
+  "title": "Kardus #2 keluar kurang 2",
+  "detail": "18/20 · slot B2, C5 kosong · tahan & lengkapi"
+ },
+ {
+  "frame": 821,
+  "t": 32.8,
+  "severity": "info",
+  "kind": "box_ok",
+  "ref": 3,
+  "title": "Kardus #3 lengkap",
+  "detail": "20/20 · lanjut ke penutupan"
+ }
+]

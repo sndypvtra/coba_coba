@@ -38,7 +38,11 @@ python render.py --truth-only           # only the truth file
 ```
 
 Frames go to `output/frames/` and are skipped if already there, so an
-interrupted render resumes. About 14 s a frame on a 4-core CPU, so 3+ hours.
+interrupted render resumes (`--start` picks the first frame). About 14 s a frame
+on a 4-core CPU, so 3+ hours. The rendered clip is kept in the repository as
+`output/packing_station.mp4` (2,9 MB).
+
+The analytics run on it is in `../analytics/`: `../output/analytics/packing_qc.mp4`.
 
 ## Ground truth
 

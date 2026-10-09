@@ -64,10 +64,8 @@ with nothing there while the box still needs products is a feeder gap.
 |---|---|---|
 | Packs judged | 7 trays, 7 correct (count and empty slot) | 3 boxes, 3 correct (count and empty slots) |
 | Short packs | 3 of 3 found | 1 of 1 found (18/20, slots B2 and C5) |
-| Per frame | 181 of 181 in-zone readings right | count follows the truth 4 frames (0,16 s) late, by design (the head must lift first) |
+| Per frame | 181 of 181 in-zone readings right | over 750 frames at the station the count follows the truth exactly 4 frames (0,16 s) late, every time: the head has to lift off the product first |
 | Root cause | – | 2 of 2 empty picks found; feeder gap raised 12 frames (0,5 s) before each empty pick was released |
-
-The packing column is filled in from `packing_qc_score.json` after the full run.
 
 ## Limits
 
