@@ -1,0 +1,65 @@
+[
+ {
+  "frame": 20,
+  "t": 0.63,
+  "severity": "info",
+  "kind": "tray_ok",
+  "ref": 1,
+  "title": "Tray #1 lengkap",
+  "detail": "10/10 kaleng · lolos"
+ },
+ {
+  "frame": 89,
+  "t": 2.93,
+  "severity": "high",
+  "kind": "tray_short",
+  "ref": 2,
+  "title": "Tray #2 kurang 1 kaleng",
+  "detail": "9/10 · slot A2 kosong · tandai reject"
+ },
+ {
+  "frame": 154,
+  "t": 5.1,
+  "severity": "info",
+  "kind": "tray_ok",
+  "ref": 3,
+  "title": "Tray #3 lengkap",
+  "detail": "10/10 kaleng · lolos"
+ },
+ {
+  "frame": 222,
+  "t": 7.37,
+  "severity": "high",
+  "kind": "tray_short",
+  "ref": 4,
+  "title": "Tray #4 kurang 1 kaleng",
+  "detail": "9/10 · slot A3 kosong · tandai reject"
+ },
+ {
+  "frame": 285,
+  "t": 9.47,
+  "severity": "info",
+  "kind": "tray_ok",
+  "ref": 5,
+  "title": "Tray #5 lengkap",
+  "detail": "10/10 kaleng · lolos"
+ },
+ {
+  "frame": 350,
+  "t": 11.63,
+  "severity": "info",
+  "kind": "tray_ok",
+  "ref": 6,
+  "title": "Tray #6 lengkap",
+  "detail": "10/10 kaleng · lolos"
+ },
+ {
+  "frame": 413,
+  "t": 13.73,
+  "severity": "high",
+  "kind": "tray_short",
+  "ref": 7,
+  "title": "Tray #7 kurang 1 kaleng",
+  "detail": "9/10 · slot B5 kosong · tandai reject"
+ }
+]

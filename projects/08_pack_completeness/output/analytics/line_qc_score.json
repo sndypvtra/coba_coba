@@ -1,0 +1,85 @@
+{
+ "readings_in_zone": 181,
+ "readings_wrong": 0,
+ "trays_judged": 7,
+ "trays_correct": 7,
+ "short_trays_found": 3,
+ "short_trays_in_truth_judged": 3,
+ "verdicts": [
+  {
+   "tray": 1,
+   "truth_tray": 2,
+   "count": 10,
+   "truth_count": 10,
+   "empty_slots": [],
+   "truth_empty_slots": [],
+   "correct": true
+  },
+  {
+   "tray": 2,
+   "truth_tray": 3,
+   "count": 9,
+   "truth_count": 9,
+   "empty_slots": [
+    3
+   ],
+   "truth_empty_slots": [
+    3
+   ],
+   "correct": true
+  },
+  {
+   "tray": 3,
+   "truth_tray": 4,
+   "count": 10,
+   "truth_count": 10,
+   "empty_slots": [],
+   "truth_empty_slots": [],
+   "correct": true
+  },
+  {
+   "tray": 4,
+   "truth_tray": 5,
+   "count": 9,
+   "truth_count": 9,
+   "empty_slots": [
+    5
+   ],
+   "truth_empty_slots": [
+    5
+   ],
+   "correct": true
+  },
+  {
+   "tray": 5,
+   "truth_tray": 6,
+   "count": 10,
+   "truth_count": 10,
+   "empty_slots": [],
+   "truth_empty_slots": [],
+   "correct": true
+  },
+  {
+   "tray": 6,
+   "truth_tray": 7,
+   "count": 10,
+   "truth_count": 10,
+   "empty_slots": [],
+   "truth_empty_slots": [],
+   "correct": true
+  },
+  {
+   "tray": 7,
+   "truth_tray": 8,
+   "count": 9,
+   "truth_count": 9,
+   "empty_slots": [
+    8
+   ],
+   "truth_empty_slots": [
+    8
+   ],
+   "correct": true
+  }
+ ]
+}
