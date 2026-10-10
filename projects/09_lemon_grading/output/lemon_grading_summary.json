@@ -1,0 +1,448 @@
+{
+ "read": 70,
+ "note": "a lemon that turns or is briefly hidden can be read twice; the grade mix is the figure to use, not the count",
+ "raw_track_ids": 152,
+ "stitched": 33,
+ "frames": 306,
+ "fps": 30.0,
+ "min_frames": 8,
+ "grades": [
+  {
+   "name": "Grade A · hijau",
+   "hue_from": 106.0,
+   "destination": "ekspor / supermarket"
+  },
+  {
+   "name": "Grade B · hijau kekuningan",
+   "hue_from": 97.0,
+   "destination": "pasar lokal"
+  },
+  {
+   "name": "Grade C · kuning",
+   "hue_from": -999.0,
+   "destination": "olahan: jus, sirup"
+  }
+ ],
+ "lemons": [
+  {
+   "tid": 1,
+   "frame": 8,
+   "hue": 75.5,
+   "grade": "C"
+  },
+  {
+   "tid": 4,
+   "frame": 8,
+   "hue": 103.8,
+   "grade": "B"
+  },
+  {
+   "tid": 2,
+   "frame": 8,
+   "hue": 111.0,
+   "grade": "A"
+  },
+  {
+   "tid": 3,
+   "frame": 8,
+   "hue": 99.3,
+   "grade": "B"
+  },
+  {
+   "tid": 8,
+   "frame": 8,
+   "hue": 88.9,
+   "grade": "C"
+  },
+  {
+   "tid": 7,
+   "frame": 8,
+   "hue": 98.3,
+   "grade": "B"
+  },
+  {
+   "tid": 6,
+   "frame": 8,
+   "hue": 112.1,
+   "grade": "A"
+  },
+  {
+   "tid": 5,
+   "frame": 8,
+   "hue": 108.1,
+   "grade": "A"
+  },
+  {
+   "tid": 9,
+   "frame": 22,
+   "hue": 102.3,
+   "grade": "B"
+  },
+  {
+   "tid": 15,
+   "frame": 24,
+   "hue": 110.3,
+   "grade": "A"
+  },
+  {
+   "tid": 10,
+   "frame": 28,
+   "hue": 112.2,
+   "grade": "A"
+  },
+  {
+   "tid": 18,
+   "frame": 40,
+   "hue": 80.0,
+   "grade": "C"
+  },
+  {
+   "tid": 22,
+   "frame": 45,
+   "hue": 109.7,
+   "grade": "A"
+  },
+  {
+   "tid": 23,
+   "frame": 47,
+   "hue": 100.8,
+   "grade": "B"
+  },
+  {
+   "tid": 25,
+   "frame": 51,
+   "hue": 100.2,
+   "grade": "B"
+  },
+  {
+   "tid": 27,
+   "frame": 56,
+   "hue": 113.7,
+   "grade": "A"
+  },
+  {
+   "tid": 28,
+   "frame": 56,
+   "hue": 95.7,
+   "grade": "C"
+  },
+  {
+   "tid": 26,
+   "frame": 57,
+   "hue": 95.7,
+   "grade": "C"
+  },
+  {
+   "tid": 31,
+   "frame": 65,
+   "hue": 101.1,
+   "grade": "B"
+  },
+  {
+   "tid": 32,
+   "frame": 68,
+   "hue": 101.8,
+   "grade": "B"
+  },
+  {
+   "tid": 33,
+   "frame": 69,
+   "hue": 98.8,
+   "grade": "B"
+  },
+  {
+   "tid": 36,
+   "frame": 70,
+   "hue": 83.1,
+   "grade": "C"
+  },
+  {
+   "tid": 37,
+   "frame": 76,
+   "hue": 107.1,
+   "grade": "A"
+  },
+  {
+   "tid": 35,
+   "frame": 83,
+   "hue": 110.0,
+   "grade": "A"
+  },
+  {
+   "tid": 41,
+   "frame": 94,
+   "hue": 88.8,
+   "grade": "C"
+  },
+  {
+   "tid": 40,
+   "frame": 96,
+   "hue": 105.4,
+   "grade": "B"
+  },
+  {
+   "tid": 45,
+   "frame": 102,
+   "hue": 102.0,
+   "grade": "B"
+  },
+  {
+   "tid": 47,
+   "frame": 104,
+   "hue": 98.7,
+   "grade": "B"
+  },
+  {
+   "tid": 49,
+   "frame": 107,
+   "hue": 110.6,
+   "grade": "A"
+  },
+  {
+   "tid": 50,
+   "frame": 110,
+   "hue": 95.3,
+   "grade": "C"
+  },
+  {
+   "tid": 52,
+   "frame": 112,
+   "hue": 112.7,
+   "grade": "A"
+  },
+  {
+   "tid": 53,
+   "frame": 116,
+   "hue": 117.2,
+   "grade": "A"
+  },
+  {
+   "tid": 55,
+   "frame": 116,
+   "hue": 100.7,
+   "grade": "B"
+  },
+  {
+   "tid": 54,
+   "frame": 116,
+   "hue": 105.5,
+   "grade": "B"
+  },
+  {
+   "tid": 57,
+   "frame": 119,
+   "hue": 111.0,
+   "grade": "A"
+  },
+  {
+   "tid": 56,
+   "frame": 126,
+   "hue": 101.6,
+   "grade": "B"
+  },
+  {
+   "tid": 61,
+   "frame": 140,
+   "hue": 103.2,
+   "grade": "B"
+  },
+  {
+   "tid": 63,
+   "frame": 142,
+   "hue": 94.5,
+   "grade": "C"
+  },
+  {
+   "tid": 70,
+   "frame": 156,
+   "hue": 104.0,
+   "grade": "B"
+  },
+  {
+   "tid": 72,
+   "frame": 158,
+   "hue": 109.6,
+   "grade": "A"
+  },
+  {
+   "tid": 83,
+   "frame": 184,
+   "hue": 112.5,
+   "grade": "A"
+  },
+  {
+   "tid": 81,
+   "frame": 185,
+   "hue": 105.0,
+   "grade": "B"
+  },
+  {
+   "tid": 85,
+   "frame": 185,
+   "hue": 92.2,
+   "grade": "C"
+  },
+  {
+   "tid": 84,
+   "frame": 185,
+   "hue": 111.0,
+   "grade": "A"
+  },
+  {
+   "tid": 78,
+   "frame": 186,
+   "hue": 84.4,
+   "grade": "C"
+  },
+  {
+   "tid": 92,
+   "frame": 203,
+   "hue": 108.6,
+   "grade": "A"
+  },
+  {
+   "tid": 93,
+   "frame": 207,
+   "hue": 100.7,
+   "grade": "B"
+  },
+  {
+   "tid": 94,
+   "frame": 208,
+   "hue": 102.4,
+   "grade": "B"
+  },
+  {
+   "tid": 95,
+   "frame": 208,
+   "hue": 86.4,
+   "grade": "C"
+  },
+  {
+   "tid": 97,
+   "frame": 216,
+   "hue": 107.3,
+   "grade": "A"
+  },
+  {
+   "tid": 99,
+   "frame": 229,
+   "hue": 107.4,
+   "grade": "A"
+  },
+  {
+   "tid": 103,
+   "frame": 233,
+   "hue": 101.3,
+   "grade": "B"
+  },
+  {
+   "tid": 106,
+   "frame": 234,
+   "hue": 111.2,
+   "grade": "A"
+  },
+  {
+   "tid": 102,
+   "frame": 235,
+   "hue": 77.5,
+   "grade": "C"
+  },
+  {
+   "tid": 110,
+   "frame": 240,
+   "hue": 97.7,
+   "grade": "B"
+  },
+  {
+   "tid": 111,
+   "frame": 252,
+   "hue": 97.7,
+   "grade": "B"
+  },
+  {
+   "tid": 113,
+   "frame": 257,
+   "hue": 108.0,
+   "grade": "A"
+  },
+  {
+   "tid": 118,
+   "frame": 259,
+   "hue": 97.5,
+   "grade": "B"
+  },
+  {
+   "tid": 117,
+   "frame": 260,
+   "hue": 82.6,
+   "grade": "C"
+  },
+  {
+   "tid": 121,
+   "frame": 261,
+   "hue": 107.3,
+   "grade": "A"
+  },
+  {
+   "tid": 120,
+   "frame": 262,
+   "hue": 109.7,
+   "grade": "A"
+  },
+  {
+   "tid": 127,
+   "frame": 273,
+   "hue": 74.7,
+   "grade": "C"
+  },
+  {
+   "tid": 130,
+   "frame": 275,
+   "hue": 109.1,
+   "grade": "A"
+  },
+  {
+   "tid": 136,
+   "frame": 284,
+   "hue": 106.3,
+   "grade": "A"
+  },
+  {
+   "tid": 128,
+   "frame": 284,
+   "hue": 86.7,
+   "grade": "C"
+  },
+  {
+   "tid": 139,
+   "frame": 288,
+   "hue": 105.6,
+   "grade": "B"
+  },
+  {
+   "tid": 137,
+   "frame": 290,
+   "hue": 113.8,
+   "grade": "A"
+  },
+  {
+   "tid": 140,
+   "frame": 290,
+   "hue": 102.2,
+   "grade": "B"
+  },
+  {
+   "tid": 138,
+   "frame": 295,
+   "hue": 111.2,
+   "grade": "A"
+  },
+  {
+   "tid": 145,
+   "frame": 305,
+   "hue": 99.4,
+   "grade": "B"
+  }
+ ]
+}

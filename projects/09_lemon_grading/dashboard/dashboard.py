@@ -33,6 +33,9 @@ VIDEO = ROOT / "input" / "lemon_wash.mp4"
 OUT = ROOT / "output"
 K = 1280 / 1920
 MIN_FRAMES = 8
+STITCH_GAP = 15        # frames: a track that ends and one that starts this soon after...
+STITCH_IOU = 0.40      # ...at this box overlap and...
+STITCH_HUE = 10.0      # ...this close in colour are the same lemon, re-found after its segment flickered
 LIME = (132, 204, 22)
 
 # (name, short, lower hue bound in degrees, colour, where it goes). Green fruit has the highest hue angle.
@@ -41,6 +44,51 @@ GRADES = [
     ("Grade B · hijau kekuningan", "B", 97.0, LIME, "pasar lokal"),
     ("Grade C · kuning", "C", -999.0, YELLOW, "olahan: jus, sirup"),
 ]
+
+
+def iou(a, b):
+    ix = max(0, min(a[2], b[2]) - max(a[0], b[0]))
+    iy = max(0, min(a[3], b[3]) - max(a[1], b[1]))
+    i = ix * iy
+    u = (a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - i
+    return i / u if u else 0.0
+
+
+def stitch(tr):
+    """Join a track that ends to one that starts right after in the same place with the same colour."""
+    first, last, fbox, lbox, hues = {}, {}, {}, {}, {}
+    for fr in tr["frames"]:
+        for o in fr["objects"]:
+            t = o["tid"]
+            if t not in first:
+                first[t], fbox[t] = fr["frame"], o["box"]
+            last[t], lbox[t] = fr["frame"], o["box"]
+            hues.setdefault(t, []).append(o["hue"])
+    med = {t: float(np.median(h)) for t, h in hues.items()}
+    root, taken = {}, set()
+
+    def find(t):
+        while t in root:
+            t = root[t]
+        return t
+    for t in sorted(first, key=first.get):
+        best = None
+        for o in last:
+            if o == t or o in taken:
+                continue
+            gap = first[t] - last[o]
+            if 0 < gap <= STITCH_GAP and abs(med[t] - med[o]) <= STITCH_HUE:
+                ov = iou(fbox[t], lbox[o])
+                if ov >= STITCH_IOU and (best is None or ov > best[0]):
+                    best = (ov, o)
+        if best:
+            root[t] = best[1]
+            taken.add(best[1])
+    for fr in tr["frames"]:
+        for o in fr["objects"]:
+            o["raw_tid"] = o["tid"]
+            o["tid"] = find(o["tid"])
+    return len(root)
 
 
 def grade(h):
@@ -59,6 +107,8 @@ class LemonBoard:
         self.board = ui.board(B.CARDS)
         self.thumbs = {}
         self.zone_y = tr["zone_y"] * 1080 * K
+        self.raw_ids = len({o["tid"] for fr in tr["frames"] for o in fr["objects"]})
+        self.stitched = stitch(tr)
         seen, reads = {}, {}
         self.inspected = {}                     # tid -> frame it reached MIN_FRAMES
         for fr in tr["frames"]:
@@ -128,7 +178,7 @@ class LemonBoard:
             x0, y0, x1, y1 = (v * K for v in o["box"])
             B.chip(c, ((x0 + x1) / 2, (y0 + y1) / 2), f"#{o['tid']} · {short}", col, None, anchor="mm", size=12)
         n = sum(1 for fr_ in self.inspected.values() if fr_ <= f)
-        B.corner_chips(c, "CAM 01 · Mesin cuci lemon", [f"Terinspeksi: {n}", "Rekaman nyata · distabilkan"])
+        B.corner_chips(c, "CAM 01 · Mesin cuci lemon", [f"Terbaca: {n}", "Rekaman nyata · distabilkan"])
         c.rrect((8, B.VH - 38, 520, B.VH - 8), 8, fill=alpha(BG, 0.75))
         c.legend((18, B.VH - 23), [("bar", GRADES[0][3], "A · hijau"), ("bar", GRADES[1][3], "B · hijau kekuningan"),
                                    ("bar", GRADES[2][3], "C · kuning")], 12)
@@ -158,10 +208,12 @@ class LemonBoard:
 
     def kpis(self, c, done, t):
         n = len(done)
-        c.kpi(B.KPI_BOXES[0], "nutrition", "Lemon terinspeksi", str(n), "baris depan, tiap buah sekali", LIME)
-        rate = n / t * 3600 if t > 1 and n else None
-        c.kpi(B.KPI_BOXES[1], "speed", "Laju inspeksi", f"{num(rate, 0)}/jam" if rate else "–",
-              f"perkiraan dari {num(t, 1)} s rekaman" if rate else "menunggu lemon pertama", CYAN)
+        c.kpi(B.KPI_BOXES[0], "nutrition", "Lemon terbaca", str(n), "baris depan · bisa terbaca 2×",
+              LIME)
+        i = min(int(round(t * self.fps)), len(self.tr["frames"]) - 1)
+        now = len(self.tr["frames"][i]["objects"])
+        avg = float(np.mean([len(fr["objects"]) for fr in self.tr["frames"][:i + 1]]))
+        c.kpi(B.KPI_BOXES[1], "view_module", "Lemon di zona", str(now), f"rata-rata {num(avg, 1)} per gambar", CYAN)
         a = sum(1 for tid in done if self.cls(tid) == 0)
         c.kpi(B.KPI_BOXES[2], "check_circle", "Grade A (hijau)", f"{num(100 * a / n, 0)}%" if n else "–",
               f"{a} dari {n} lemon · ekspor / supermarket" if n else "belum ada", GREEN)
@@ -197,7 +249,7 @@ class LemonBoard:
                "regular", TEXT_3, anchor="lm")
 
     def history(self, c, done):
-        y = c.card_title(B.BL, "Lemon terakhir terinspeksi", "history", "terbaru di kiri")
+        y = c.card_title(B.BL, "Lemon terakhir terbaca", "history", "terbaru di kiri")
         x0, _, x1, y1 = B.BL
         tw, gap = 78, 9
         x = x0 + 16
@@ -216,7 +268,7 @@ class LemonBoard:
                    anchor="mm")
 
     def hue_strip(self, c, done):
-        y = c.card_title(B.BR, "Sebaran warna lemon terinspeksi", "palette", "batas grade di garis putus")
+        y = c.card_title(B.BR, "Sebaran warna lemon terbaca", "palette", "batas grade di garis putus")
         x0, _, x1, y1 = B.BR
         lo, hi = 80.0, 125.0
         sx0, sx1, sy = x0 + 30, x1 - 30, y + 70
@@ -253,7 +305,8 @@ def main():
     tr = json.loads((OUT / "tracks.json").read_text())
     frames, fps = B.read_video(VIDEO)
     lb = LemonBoard(tr, len(frames))
-    summary = {"inspected": len(lb.order), "frames": len(frames), "fps": fps, "min_frames": MIN_FRAMES,
+    summary = {"read": len(lb.order), "note": "a lemon that turns or is briefly hidden can be read twice; "
+               "the grade mix is the figure to use, not the count", "raw_track_ids": lb.raw_ids, "stitched": lb.stitched, "frames": len(frames), "fps": fps, "min_frames": MIN_FRAMES,
                "grades": [{"name": g[0], "hue_from": g[2], "destination": g[4]} for g in GRADES],
                "lemons": [{"tid": tid, "frame": lb.inspected[tid], "hue": round(lb.hue[tid], 1),
                            "grade": GRADES[lb.cls(tid)][1]} for tid in lb.order]}

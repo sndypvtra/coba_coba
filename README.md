@@ -19,20 +19,21 @@
 
 ## What this is
 
-Seven projects on fixed-camera footage, each in its own folder under
+Nine projects on fixed-camera footage, each in its own folder under
 [`projects/`](projects), each run with `python main.py`. Every figure below was
 measured by running the code in this repository, not estimated.
 
 |  | Case | Task | Headline result |
 |:--:|---|---|---|
-| **1** | [Citrus sorting line](projects/01_citrus_counting) | Count oranges past a line | **5** counted · 32 tracks |
-| **2** | [Tomato grading line](projects/02_tomato_grading) | Count tomatoes past a line | **16** counted · 50 tracks |
-| **3** | [Parcel unloading belt](projects/03_parcel_dimensioning) | Count and dimension mixed packages | **8** counted · 21 dimensioned, 19 footprints corrected |
-| **4** | [Bottling line](projects/04_bottle_fill_volume) | Measure dispensed volume | **1,001 mL** · 66.7 % of nominal |
+| **1** | [Citrus sorting line](projects/01_citrus_counting) | Count oranges past a line; flow dashboard: gaps between fruit and feed-gap warnings | **5** counted · 32 tracks · longest feed gap 3.7 s |
+| **2** | [Tomato grading line](projects/02_tomato_grading) | Count tomatoes past a line and grade ripeness by colour | **16** counted · 11 ripe, 4 half-ripe, 1 green · 13/16 blind-checked before calibration |
+| **3** | [Parcel unloading belt](projects/03_parcel_dimensioning) | Count and dimension mixed packages; dispatch dashboard | **8** counted · 21 dimensioned, 19 footprints corrected |
+| **4** | [Bottling line](projects/04_bottle_fill_volume) | Measure the fill against the thread-line target; fill dashboard | fill **67 %** of target when the clip ends, still filling at ~18 %/s |
 | **5** | [Cafe, two rooms](projects/05_cafe_dwell_time) | Occupancy and per-person dwell time | **14** / **12** visitors · mean dwell **17.9 s** / **24.6 s** |
 | **6** | [Warehouse, four cameras](projects/06_warehouse_3d) | Locate people in 3D, one floor plan, operational KPIs | median error **0.181 m** vs the dataset's own 3D truth |
 | **7** | [Warehouse live ops, fifteen cameras](projects/07_warehouse_live_ops) | One live floor plan, 20 operations analytics, each checked against ground truth; helmet and vest per person | position error **0.19 m**; line counts and walking share match the truth; helmet right on **24 of 26** blind-checked crops |
 | **8** | [Pack completeness, synthetic line](projects/08_pack_completeness) | Rendered clips for completeness checks: a line of 10-can trays (some with 9) and a packing station where a robot fills boxes of 20 (one leaves with 18) | 15 s + 34 s clips · QC dashboards counting from the pixels · 7/7 trays and 3/3 boxes judged right |
+| **9** | [Lemon grading, washer](projects/09_lemon_grading) | Outline every lemon, follow it, grade its colour A / B / C | **70** read · 39 % green, 39 % green-yellow, 23 % yellow · 21/24 blind-checked |
 
 Each project's own README carries its method, its measured figures and what
 breaks it, and is written to stand on its own if the folder is lifted into a
@@ -456,6 +457,7 @@ projects/
   06_warehouse_3d/          four cameras -> one floor plan in metres
   07_warehouse_live_ops/    fifteen cameras -> one live plan, 20 analytics vs truth, helmet/vest
   08_pack_completeness/     Blender-rendered can-tray line and packing station (boxes of 20), with per-frame truth
+  09_lemon_grading/         lemon colour grading at a washer: FastSAM, tracking, CIELAB hue
 
     every project has these
       main.py               the entry point, and only the sequence of steps

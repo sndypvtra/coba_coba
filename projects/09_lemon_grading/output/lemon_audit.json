@@ -1,0 +1,134 @@
+{
+ "method": "24 inspected lemons picked at random, cropped at their sharpest frame, shuffled and lettered (lemon_audit_blind.jpg), graded A/B/C by eye before the letters were matched to tracks",
+ "n": 24,
+ "agree": 21,
+ "thresholds_deg": {
+  "A_from": 106.0,
+  "B_from": 97.0
+ },
+ "thresholds_set": "before the check, unchanged after it",
+ "disagreements": "3, all between grade A and grade B (green vs green-yellow); none between green and yellow",
+ "caption": "Uji buta vs mata: 21/24 grade sama · 3 beda tipis A/B, tak ada hijau↔kuning",
+ "grades": [
+  {
+   "letter": "A",
+   "tid": 127,
+   "eye": "C"
+  },
+  {
+   "letter": "B",
+   "tid": 52,
+   "eye": "A"
+  },
+  {
+   "letter": "C",
+   "tid": 32,
+   "eye": "B"
+  },
+  {
+   "letter": "D",
+   "tid": 118,
+   "eye": "B"
+  },
+  {
+   "letter": "E",
+   "tid": 81,
+   "eye": "B"
+  },
+  {
+   "letter": "F",
+   "tid": 27,
+   "eye": "A"
+  },
+  {
+   "letter": "G",
+   "tid": 138,
+   "eye": "A"
+  },
+  {
+   "letter": "H",
+   "tid": 137,
+   "eye": "A"
+  },
+  {
+   "letter": "I",
+   "tid": 111,
+   "eye": "B"
+  },
+  {
+   "letter": "J",
+   "tid": 10,
+   "eye": "A"
+  },
+  {
+   "letter": "K",
+   "tid": 139,
+   "eye": "A"
+  },
+  {
+   "letter": "L",
+   "tid": 18,
+   "eye": "C"
+  },
+  {
+   "letter": "M",
+   "tid": 121,
+   "eye": "A"
+  },
+  {
+   "letter": "N",
+   "tid": 83,
+   "eye": "A"
+  },
+  {
+   "letter": "O",
+   "tid": 33,
+   "eye": "A"
+  },
+  {
+   "letter": "P",
+   "tid": 145,
+   "eye": "B"
+  },
+  {
+   "letter": "Q",
+   "tid": 130,
+   "eye": "A"
+  },
+  {
+   "letter": "R",
+   "tid": 41,
+   "eye": "C"
+  },
+  {
+   "letter": "S",
+   "tid": 36,
+   "eye": "C"
+  },
+  {
+   "letter": "T",
+   "tid": 55,
+   "eye": "B"
+  },
+  {
+   "letter": "U",
+   "tid": 136,
+   "eye": "B"
+  },
+  {
+   "letter": "V",
+   "tid": 53,
+   "eye": "A"
+  },
+  {
+   "letter": "W",
+   "tid": 2,
+   "eye": "A"
+  },
+  {
+   "letter": "X",
+   "tid": 110,
+   "eye": "B"
+  }
+ ]
+}
