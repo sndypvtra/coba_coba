@@ -1,14 +1,15 @@
-"""Find every peach on the sizer, follow it, and note which ones touch another.
+"""Find every peach on the sizer and follow it.
 
-    python dashboard/segment.py      # -> output/tracks.json (~15 min on 4 CPU cores)
+    python dashboard/segment.py      # -> output/tracks.json (~30 min on 4 CPU cores)
 
 FastSAM cuts each frame into objects without being told what they are; a segment
 is a peach if most of its pixels are peach-coloured (red to orange-yellow,
 saturated), it is a plausible size, and it lies on the machine (below the feed
 belt and the people at the back). FastSAM was chosen over the zero-shot detector
-because it separates peaches that touch, which is exactly what this analysis
-looks for; the detector, prompted "peach", found nothing, and prompted "apple"
-it boxed queued fruit in pairs.
+because it gives each peach its own outline even where peaches touch, so the
+colour read stays on one fruit; the detector, prompted "peach", found nothing,
+and prompted "apple" it boxed queued fruit in pairs. Which segments touch is
+kept in the output as well ("touch").
 
 Peaches roll fast along the lanes, so following them by mask overlap alone
 breaks; each track predicts where its peach will be from its last two

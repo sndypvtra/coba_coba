@@ -1,0 +1,359 @@
+{
+ "caption": "Cek buta oleh mata: 18 dari 24 sama, sisanya selisih 1 kelas",
+ "method": "24 graded peaches, three crops each (start, middle and end of the grading zone), shuffled and lettered (output/peach_audit_blind.jpg), graded by eye against the same bounds before the letters were matched",
+ "check": {
+  "red_hue_deg": 36,
+  "sample": "fresh: none of the first check's peaches; 10 Extra, 10 Class I, 4 Class II as graded by the system, shuffled",
+  "same": 18,
+  "of": 24,
+  "two_classes_apart": 0,
+  "rows": [
+   {
+    "letter": "A",
+    "tid": 122,
+    "red_share": 0.881,
+    "system": "Kelas I",
+    "eye": "Extra"
+   },
+   {
+    "letter": "B",
+    "tid": 162,
+    "red_share": 0.982,
+    "system": "Extra",
+    "eye": "Extra"
+   },
+   {
+    "letter": "C",
+    "tid": 301,
+    "red_share": 1.0,
+    "system": "Extra",
+    "eye": "Extra"
+   },
+   {
+    "letter": "D",
+    "tid": 69,
+    "red_share": 0.963,
+    "system": "Extra",
+    "eye": "Extra"
+   },
+   {
+    "letter": "E",
+    "tid": 404,
+    "red_share": 0.998,
+    "system": "Extra",
+    "eye": "Extra"
+   },
+   {
+    "letter": "F",
+    "tid": 758,
+    "red_share": 0.696,
+    "system": "Kelas I",
+    "eye": "Kelas I"
+   },
+   {
+    "letter": "G",
+    "tid": 593,
+    "red_share": 0.989,
+    "system": "Extra",
+    "eye": "Extra"
+   },
+   {
+    "letter": "H",
+    "tid": 545,
+    "red_share": 1.0,
+    "system": "Extra",
+    "eye": "Extra"
+   },
+   {
+    "letter": "I",
+    "tid": 52,
+    "red_share": 0.512,
+    "system": "Kelas II",
+    "eye": "Kelas II"
+   },
+   {
+    "letter": "J",
+    "tid": 532,
+    "red_share": 1.0,
+    "system": "Extra",
+    "eye": "Extra"
+   },
+   {
+    "letter": "K",
+    "tid": 107,
+    "red_share": 0.979,
+    "system": "Extra",
+    "eye": "Extra"
+   },
+   {
+    "letter": "L",
+    "tid": 338,
+    "red_share": 1.0,
+    "system": "Extra",
+    "eye": "Extra"
+   },
+   {
+    "letter": "M",
+    "tid": 427,
+    "red_share": 0.751,
+    "system": "Kelas I",
+    "eye": "Kelas I"
+   },
+   {
+    "letter": "N",
+    "tid": 650,
+    "red_share": 0.773,
+    "system": "Kelas I",
+    "eye": "Kelas I"
+   },
+   {
+    "letter": "O",
+    "tid": 196,
+    "red_share": 0.874,
+    "system": "Kelas I",
+    "eye": "Kelas I"
+   },
+   {
+    "letter": "P",
+    "tid": 3,
+    "red_share": 0.752,
+    "system": "Kelas I",
+    "eye": "Kelas I"
+   },
+   {
+    "letter": "Q",
+    "tid": 484,
+    "red_share": 0.712,
+    "system": "Kelas I",
+    "eye": "Kelas I"
+   },
+   {
+    "letter": "R",
+    "tid": 116,
+    "red_share": 0.558,
+    "system": "Kelas II",
+    "eye": "Kelas I"
+   },
+   {
+    "letter": "S",
+    "tid": 185,
+    "red_share": 0.653,
+    "system": "Kelas I",
+    "eye": "Kelas I"
+   },
+   {
+    "letter": "T",
+    "tid": 195,
+    "red_share": 0.75,
+    "system": "Kelas I",
+    "eye": "Kelas I"
+   },
+   {
+    "letter": "U",
+    "tid": 272,
+    "red_share": 0.517,
+    "system": "Kelas II",
+    "eye": "Kelas I"
+   },
+   {
+    "letter": "V",
+    "tid": 580,
+    "red_share": 0.688,
+    "system": "Kelas I",
+    "eye": "Extra"
+   },
+   {
+    "letter": "W",
+    "tid": 224,
+    "red_share": 0.956,
+    "system": "Extra",
+    "eye": "Kelas I"
+   },
+   {
+    "letter": "X",
+    "tid": 163,
+    "red_share": 0.501,
+    "system": "Kelas II",
+    "eye": "Kelas I"
+   }
+  ]
+ },
+ "first_check": {
+  "red_hue_deg": 30,
+  "sample": "random 24",
+  "same": 14,
+  "of": 24,
+  "two_classes_apart": 0,
+  "finding": "9 of the 10 disagreements had the system one class lower than the eye; the pixel images showed lit red skin at hue 30-37 deg counted as not red, while yellow ground colour sits at 44-60 deg, so the red pixel bound moved from 30 to 36 deg. Grade bounds (90 %, 60 %) unchanged. This check's peaches were then excluded from the next.",
+  "rows": [
+   {
+    "letter": "A",
+    "tid": 264,
+    "red_share": 0.698,
+    "system": "Kelas I",
+    "eye": "Extra"
+   },
+   {
+    "letter": "B",
+    "tid": 256,
+    "red_share": 0.988,
+    "system": "Extra",
+    "eye": "Extra"
+   },
+   {
+    "letter": "C",
+    "tid": 66,
+    "red_share": 1.0,
+    "system": "Extra",
+    "eye": "Extra"
+   },
+   {
+    "letter": "D",
+    "tid": 457,
+    "red_share": 0.999,
+    "system": "Extra",
+    "eye": "Extra"
+   },
+   {
+    "letter": "E",
+    "tid": 420,
+    "red_share": 0.732,
+    "system": "Kelas I",
+    "eye": "Extra"
+   },
+   {
+    "letter": "F",
+    "tid": 108,
+    "red_share": 0.781,
+    "system": "Kelas I",
+    "eye": "Kelas I"
+   },
+   {
+    "letter": "G",
+    "tid": 50,
+    "red_share": 0.999,
+    "system": "Extra",
+    "eye": "Extra"
+   },
+   {
+    "letter": "H",
+    "tid": 277,
+    "red_share": 0.63,
+    "system": "Kelas I",
+    "eye": "Extra"
+   },
+   {
+    "letter": "I",
+    "tid": 629,
+    "red_share": 1.0,
+    "system": "Extra",
+    "eye": "Extra"
+   },
+   {
+    "letter": "J",
+    "tid": 149,
+    "red_share": 0.865,
+    "system": "Kelas I",
+    "eye": "Kelas I"
+   },
+   {
+    "letter": "K",
+    "tid": 16,
+    "red_share": 0.956,
+    "system": "Extra",
+    "eye": "Extra"
+   },
+   {
+    "letter": "L",
+    "tid": 359,
+    "red_share": 0.661,
+    "system": "Kelas I",
+    "eye": "Kelas I"
+   },
+   {
+    "letter": "M",
+    "tid": 495,
+    "red_share": 0.882,
+    "system": "Kelas I",
+    "eye": "Extra"
+   },
+   {
+    "letter": "N",
+    "tid": 699,
+    "red_share": 0.303,
+    "system": "Kelas II",
+    "eye": "Kelas II"
+   },
+   {
+    "letter": "O",
+    "tid": 549,
+    "red_share": 0.673,
+    "system": "Kelas I",
+    "eye": "Extra"
+   },
+   {
+    "letter": "P",
+    "tid": 138,
+    "red_share": 0.481,
+    "system": "Kelas II",
+    "eye": "Kelas I"
+   },
+   {
+    "letter": "Q",
+    "tid": 651,
+    "red_share": 0.994,
+    "system": "Extra",
+    "eye": "Extra"
+   },
+   {
+    "letter": "R",
+    "tid": 753,
+    "red_share": 0.829,
+    "system": "Kelas I",
+    "eye": "Extra"
+   },
+   {
+    "letter": "S",
+    "tid": 598,
+    "red_share": 0.601,
+    "system": "Kelas I",
+    "eye": "Extra"
+   },
+   {
+    "letter": "T",
+    "tid": 41,
+    "red_share": 0.81,
+    "system": "Kelas I",
+    "eye": "Extra"
+   },
+   {
+    "letter": "U",
+    "tid": 350,
+    "red_share": 1.0,
+    "system": "Extra",
+    "eye": "Extra"
+   },
+   {
+    "letter": "V",
+    "tid": 481,
+    "red_share": 0.658,
+    "system": "Kelas I",
+    "eye": "Extra"
+   },
+   {
+    "letter": "W",
+    "tid": 344,
+    "red_share": 0.972,
+    "system": "Extra",
+    "eye": "Extra"
+   },
+   {
+    "letter": "X",
+    "tid": 300,
+    "red_share": 0.3,
+    "system": "Kelas II",
+    "eye": "Kelas II"
+   }
+  ]
+ }
+}

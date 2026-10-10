@@ -1,0 +1,1235 @@
+{
+ "seconds": 8.14,
+ "graded": 172,
+ "per_minute": 1268,
+ "duplicate_crossings_dropped": 3,
+ "grades": [
+  {
+   "name": "Extra · merah ≥ 90%",
+   "red_share_from": 0.9,
+   "destination": "kemasan premium / ekspor",
+   "count": 142,
+   "share": 0.826
+  },
+  {
+   "name": "Kelas I · merah 60–90%",
+   "red_share_from": 0.6,
+   "destination": "kemasan reguler",
+   "count": 24,
+   "share": 0.14
+  },
+  {
+   "name": "Kelas II · merah < 60%",
+   "red_share_from": 0.0,
+   "destination": "pasar lokal / olahan",
+   "count": 6,
+   "share": 0.035
+  }
+ ],
+ "peaches": [
+  {
+   "tid": 36,
+   "lane": 2,
+   "frame": 4,
+   "red_share": 0.949,
+   "grade": "Extra"
+  },
+  {
+   "tid": 3,
+   "lane": 4,
+   "frame": 5,
+   "red_share": 0.752,
+   "grade": "Kelas I"
+  },
+  {
+   "tid": 21,
+   "lane": 1,
+   "frame": 5,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 41,
+   "lane": 1,
+   "frame": 9,
+   "red_share": 0.998,
+   "grade": "Extra"
+  },
+  {
+   "tid": 11,
+   "lane": 3,
+   "frame": 10,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 6,
+   "lane": 2,
+   "frame": 11,
+   "red_share": 0.998,
+   "grade": "Extra"
+  },
+  {
+   "tid": 7,
+   "lane": 4,
+   "frame": 12,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 46,
+   "lane": 3,
+   "frame": 13,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 50,
+   "lane": 1,
+   "frame": 14,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 48,
+   "lane": 4,
+   "frame": 15,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 12,
+   "lane": 3,
+   "frame": 16,
+   "red_share": 0.994,
+   "grade": "Extra"
+  },
+  {
+   "tid": 16,
+   "lane": 3,
+   "frame": 19,
+   "red_share": 0.998,
+   "grade": "Extra"
+  },
+  {
+   "tid": 61,
+   "lane": 1,
+   "frame": 19,
+   "red_share": 0.923,
+   "grade": "Extra"
+  },
+  {
+   "tid": 63,
+   "lane": 3,
+   "frame": 23,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 58,
+   "lane": 2,
+   "frame": 24,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 9,
+   "lane": 4,
+   "frame": 25,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 57,
+   "lane": 1,
+   "frame": 28,
+   "red_share": 0.985,
+   "grade": "Extra"
+  },
+  {
+   "tid": 70,
+   "lane": 3,
+   "frame": 30,
+   "red_share": 0.884,
+   "grade": "Kelas I"
+  },
+  {
+   "tid": 88,
+   "lane": 2,
+   "frame": 31,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 66,
+   "lane": 4,
+   "frame": 32,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 45,
+   "lane": 3,
+   "frame": 33,
+   "red_share": 0.996,
+   "grade": "Extra"
+  },
+  {
+   "tid": 85,
+   "lane": 1,
+   "frame": 33,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 81,
+   "lane": 4,
+   "frame": 36,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 75,
+   "lane": 2,
+   "frame": 38,
+   "red_share": 0.991,
+   "grade": "Extra"
+  },
+  {
+   "tid": 97,
+   "lane": 1,
+   "frame": 38,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 87,
+   "lane": 5,
+   "frame": 39,
+   "red_share": 0.953,
+   "grade": "Extra"
+  },
+  {
+   "tid": 83,
+   "lane": 3,
+   "frame": 40,
+   "red_share": 0.999,
+   "grade": "Extra"
+  },
+  {
+   "tid": 52,
+   "lane": 4,
+   "frame": 42,
+   "red_share": 0.512,
+   "grade": "Kelas II"
+  },
+  {
+   "tid": 107,
+   "lane": 1,
+   "frame": 43,
+   "red_share": 0.979,
+   "grade": "Extra"
+  },
+  {
+   "tid": 34,
+   "lane": 2,
+   "frame": 44,
+   "red_share": 0.998,
+   "grade": "Extra"
+  },
+  {
+   "tid": 44,
+   "lane": 3,
+   "frame": 44,
+   "red_share": 0.992,
+   "grade": "Extra"
+  },
+  {
+   "tid": 106,
+   "lane": 1,
+   "frame": 48,
+   "red_share": 0.712,
+   "grade": "Kelas I"
+  },
+  {
+   "tid": 104,
+   "lane": 3,
+   "frame": 50,
+   "red_share": 0.982,
+   "grade": "Extra"
+  },
+  {
+   "tid": 53,
+   "lane": 5,
+   "frame": 52,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 153,
+   "lane": 2,
+   "frame": 53,
+   "red_share": 0.892,
+   "grade": "Kelas I"
+  },
+  {
+   "tid": 138,
+   "lane": 5,
+   "frame": 56,
+   "red_share": 0.799,
+   "grade": "Kelas I"
+  },
+  {
+   "tid": 148,
+   "lane": 1,
+   "frame": 56,
+   "red_share": 0.998,
+   "grade": "Extra"
+  },
+  {
+   "tid": 69,
+   "lane": 2,
+   "frame": 57,
+   "red_share": 0.963,
+   "grade": "Extra"
+  },
+  {
+   "tid": 155,
+   "lane": 1,
+   "frame": 60,
+   "red_share": 0.956,
+   "grade": "Extra"
+  },
+  {
+   "tid": 110,
+   "lane": 5,
+   "frame": 62,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 160,
+   "lane": 4,
+   "frame": 63,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 108,
+   "lane": 3,
+   "frame": 64,
+   "red_share": 0.95,
+   "grade": "Extra"
+  },
+  {
+   "tid": 178,
+   "lane": 2,
+   "frame": 64,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 126,
+   "lane": 5,
+   "frame": 66,
+   "red_share": 0.775,
+   "grade": "Kelas I"
+  },
+  {
+   "tid": 139,
+   "lane": 5,
+   "frame": 69,
+   "red_share": 0.962,
+   "grade": "Extra"
+  },
+  {
+   "tid": 170,
+   "lane": 2,
+   "frame": 69,
+   "red_share": 0.998,
+   "grade": "Extra"
+  },
+  {
+   "tid": 116,
+   "lane": 4,
+   "frame": 70,
+   "red_share": 0.558,
+   "grade": "Kelas II"
+  },
+  {
+   "tid": 163,
+   "lane": 5,
+   "frame": 71,
+   "red_share": 0.501,
+   "grade": "Kelas II"
+  },
+  {
+   "tid": 111,
+   "lane": 5,
+   "frame": 76,
+   "red_share": 0.995,
+   "grade": "Extra"
+  },
+  {
+   "tid": 196,
+   "lane": 3,
+   "frame": 77,
+   "red_share": 0.874,
+   "grade": "Kelas I"
+  },
+  {
+   "tid": 175,
+   "lane": 5,
+   "frame": 79,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 162,
+   "lane": 4,
+   "frame": 80,
+   "red_share": 0.982,
+   "grade": "Extra"
+  },
+  {
+   "tid": 149,
+   "lane": 3,
+   "frame": 82,
+   "red_share": 0.975,
+   "grade": "Extra"
+  },
+  {
+   "tid": 216,
+   "lane": 5,
+   "frame": 82,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 217,
+   "lane": 4,
+   "frame": 83,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 179,
+   "lane": 3,
+   "frame": 85,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 195,
+   "lane": 5,
+   "frame": 85,
+   "red_share": 0.75,
+   "grade": "Kelas I"
+  },
+  {
+   "tid": 225,
+   "lane": 5,
+   "frame": 89,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 229,
+   "lane": 2,
+   "frame": 89,
+   "red_share": 0.964,
+   "grade": "Extra"
+  },
+  {
+   "tid": 185,
+   "lane": 4,
+   "frame": 90,
+   "red_share": 0.653,
+   "grade": "Kelas I"
+  },
+  {
+   "tid": 218,
+   "lane": 3,
+   "frame": 90,
+   "red_share": 0.655,
+   "grade": "Kelas I"
+  },
+  {
+   "tid": 122,
+   "lane": 5,
+   "frame": 92,
+   "red_share": 0.881,
+   "grade": "Kelas I"
+  },
+  {
+   "tid": 240,
+   "lane": 4,
+   "frame": 93,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 256,
+   "lane": 2,
+   "frame": 94,
+   "red_share": 0.998,
+   "grade": "Extra"
+  },
+  {
+   "tid": 252,
+   "lane": 5,
+   "frame": 95,
+   "red_share": 0.913,
+   "grade": "Extra"
+  },
+  {
+   "tid": 197,
+   "lane": 3,
+   "frame": 97,
+   "red_share": 0.996,
+   "grade": "Extra"
+  },
+  {
+   "tid": 271,
+   "lane": 5,
+   "frame": 98,
+   "red_share": 0.973,
+   "grade": "Extra"
+  },
+  {
+   "tid": 258,
+   "lane": 4,
+   "frame": 100,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 154,
+   "lane": 3,
+   "frame": 104,
+   "red_share": 0.997,
+   "grade": "Extra"
+  },
+  {
+   "tid": 243,
+   "lane": 5,
+   "frame": 104,
+   "red_share": 0.999,
+   "grade": "Extra"
+  },
+  {
+   "tid": 275,
+   "lane": 2,
+   "frame": 104,
+   "red_share": 0.992,
+   "grade": "Extra"
+  },
+  {
+   "tid": 300,
+   "lane": 4,
+   "frame": 106,
+   "red_share": 0.591,
+   "grade": "Kelas II"
+  },
+  {
+   "tid": 290,
+   "lane": 5,
+   "frame": 109,
+   "red_share": 0.909,
+   "grade": "Extra"
+  },
+  {
+   "tid": 204,
+   "lane": 4,
+   "frame": 110,
+   "red_share": 0.97,
+   "grade": "Extra"
+  },
+  {
+   "tid": 297,
+   "lane": 2,
+   "frame": 110,
+   "red_share": 0.992,
+   "grade": "Extra"
+  },
+  {
+   "tid": 224,
+   "lane": 3,
+   "frame": 112,
+   "red_share": 0.956,
+   "grade": "Extra"
+  },
+  {
+   "tid": 293,
+   "lane": 5,
+   "frame": 112,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 267,
+   "lane": 4,
+   "frame": 113,
+   "red_share": 0.731,
+   "grade": "Kelas I"
+  },
+  {
+   "tid": 248,
+   "lane": 5,
+   "frame": 115,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 307,
+   "lane": 2,
+   "frame": 116,
+   "red_share": 0.957,
+   "grade": "Extra"
+  },
+  {
+   "tid": 310,
+   "lane": 5,
+   "frame": 118,
+   "red_share": 0.933,
+   "grade": "Extra"
+  },
+  {
+   "tid": 342,
+   "lane": 3,
+   "frame": 118,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 324,
+   "lane": 4,
+   "frame": 119,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 350,
+   "lane": 5,
+   "frame": 122,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 291,
+   "lane": 3,
+   "frame": 124,
+   "red_share": 0.829,
+   "grade": "Kelas I"
+  },
+  {
+   "tid": 301,
+   "lane": 5,
+   "frame": 125,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 272,
+   "lane": 4,
+   "frame": 126,
+   "red_share": 0.517,
+   "grade": "Kelas II"
+  },
+  {
+   "tid": 338,
+   "lane": 3,
+   "frame": 127,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 329,
+   "lane": 5,
+   "frame": 128,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 373,
+   "lane": 3,
+   "frame": 131,
+   "red_share": 0.741,
+   "grade": "Kelas I"
+  },
+  {
+   "tid": 344,
+   "lane": 2,
+   "frame": 132,
+   "red_share": 0.981,
+   "grade": "Extra"
+  },
+  {
+   "tid": 362,
+   "lane": 5,
+   "frame": 132,
+   "red_share": 0.712,
+   "grade": "Kelas I"
+  },
+  {
+   "tid": 264,
+   "lane": 4,
+   "frame": 133,
+   "red_share": 0.974,
+   "grade": "Extra"
+  },
+  {
+   "tid": 378,
+   "lane": 5,
+   "frame": 135,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 368,
+   "lane": 5,
+   "frame": 138,
+   "red_share": 0.998,
+   "grade": "Extra"
+  },
+  {
+   "tid": 371,
+   "lane": 5,
+   "frame": 141,
+   "red_share": 0.918,
+   "grade": "Extra"
+  },
+  {
+   "tid": 308,
+   "lane": 4,
+   "frame": 143,
+   "red_share": 0.957,
+   "grade": "Extra"
+  },
+  {
+   "tid": 277,
+   "lane": 3,
+   "frame": 144,
+   "red_share": 0.874,
+   "grade": "Kelas I"
+  },
+  {
+   "tid": 403,
+   "lane": 5,
+   "frame": 145,
+   "red_share": 0.991,
+   "grade": "Extra"
+  },
+  {
+   "tid": 408,
+   "lane": 2,
+   "frame": 145,
+   "red_share": 0.994,
+   "grade": "Extra"
+  },
+  {
+   "tid": 296,
+   "lane": 4,
+   "frame": 146,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 379,
+   "lane": 5,
+   "frame": 148,
+   "red_share": 0.888,
+   "grade": "Kelas I"
+  },
+  {
+   "tid": 449,
+   "lane": 4,
+   "frame": 152,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 413,
+   "lane": 3,
+   "frame": 154,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 405,
+   "lane": 5,
+   "frame": 155,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 433,
+   "lane": 2,
+   "frame": 155,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 372,
+   "lane": 4,
+   "frame": 156,
+   "red_share": 0.989,
+   "grade": "Extra"
+  },
+  {
+   "tid": 420,
+   "lane": 5,
+   "frame": 158,
+   "red_share": 0.992,
+   "grade": "Extra"
+  },
+  {
+   "tid": 454,
+   "lane": 4,
+   "frame": 159,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 457,
+   "lane": 2,
+   "frame": 160,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 482,
+   "lane": 3,
+   "frame": 160,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 427,
+   "lane": 5,
+   "frame": 161,
+   "red_share": 0.751,
+   "grade": "Kelas I"
+  },
+  {
+   "tid": 484,
+   "lane": 3,
+   "frame": 163,
+   "red_share": 0.712,
+   "grade": "Kelas I"
+  },
+  {
+   "tid": 415,
+   "lane": 5,
+   "frame": 165,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 480,
+   "lane": 2,
+   "frame": 166,
+   "red_share": 0.998,
+   "grade": "Extra"
+  },
+  {
+   "tid": 446,
+   "lane": 3,
+   "frame": 167,
+   "red_share": 0.976,
+   "grade": "Extra"
+  },
+  {
+   "tid": 440,
+   "lane": 5,
+   "frame": 168,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 404,
+   "lane": 4,
+   "frame": 169,
+   "red_share": 0.998,
+   "grade": "Extra"
+  },
+  {
+   "tid": 359,
+   "lane": 4,
+   "frame": 172,
+   "red_share": 0.933,
+   "grade": "Extra"
+  },
+  {
+   "tid": 499,
+   "lane": 2,
+   "frame": 172,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 478,
+   "lane": 3,
+   "frame": 173,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 470,
+   "lane": 5,
+   "frame": 174,
+   "red_share": 0.998,
+   "grade": "Extra"
+  },
+  {
+   "tid": 386,
+   "lane": 3,
+   "frame": 177,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 495,
+   "lane": 2,
+   "frame": 177,
+   "red_share": 0.991,
+   "grade": "Extra"
+  },
+  {
+   "tid": 490,
+   "lane": 5,
+   "frame": 178,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 481,
+   "lane": 3,
+   "frame": 179,
+   "red_share": 0.989,
+   "grade": "Extra"
+  },
+  {
+   "tid": 486,
+   "lane": 4,
+   "frame": 180,
+   "red_share": 0.998,
+   "grade": "Extra"
+  },
+  {
+   "tid": 554,
+   "lane": 3,
+   "frame": 184,
+   "red_share": 0.88,
+   "grade": "Kelas I"
+  },
+  {
+   "tid": 532,
+   "lane": 5,
+   "frame": 185,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 497,
+   "lane": 5,
+   "frame": 188,
+   "red_share": 0.993,
+   "grade": "Extra"
+  },
+  {
+   "tid": 557,
+   "lane": 4,
+   "frame": 189,
+   "red_share": 0.982,
+   "grade": "Extra"
+  },
+  {
+   "tid": 519,
+   "lane": 3,
+   "frame": 190,
+   "red_share": 0.957,
+   "grade": "Extra"
+  },
+  {
+   "tid": 518,
+   "lane": 5,
+   "frame": 191,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 549,
+   "lane": 2,
+   "frame": 191,
+   "red_share": 0.859,
+   "grade": "Kelas I"
+  },
+  {
+   "tid": 509,
+   "lane": 4,
+   "frame": 193,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 595,
+   "lane": 3,
+   "frame": 193,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 552,
+   "lane": 3,
+   "frame": 197,
+   "red_share": 0.961,
+   "grade": "Extra"
+  },
+  {
+   "tid": 543,
+   "lane": 5,
+   "frame": 198,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 585,
+   "lane": 2,
+   "frame": 198,
+   "red_share": 0.998,
+   "grade": "Extra"
+  },
+  {
+   "tid": 571,
+   "lane": 4,
+   "frame": 199,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 597,
+   "lane": 5,
+   "frame": 201,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 581,
+   "lane": 3,
+   "frame": 203,
+   "red_share": 0.999,
+   "grade": "Extra"
+  },
+  {
+   "tid": 545,
+   "lane": 5,
+   "frame": 204,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 558,
+   "lane": 4,
+   "frame": 205,
+   "red_share": 0.984,
+   "grade": "Extra"
+  },
+  {
+   "tid": 580,
+   "lane": 3,
+   "frame": 206,
+   "red_share": 0.688,
+   "grade": "Kelas I"
+  },
+  {
+   "tid": 627,
+   "lane": 2,
+   "frame": 208,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 629,
+   "lane": 4,
+   "frame": 209,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 651,
+   "lane": 3,
+   "frame": 210,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 566,
+   "lane": 5,
+   "frame": 211,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 609,
+   "lane": 3,
+   "frame": 214,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 647,
+   "lane": 2,
+   "frame": 214,
+   "red_share": 0.994,
+   "grade": "Extra"
+  },
+  {
+   "tid": 593,
+   "lane": 4,
+   "frame": 215,
+   "red_share": 0.989,
+   "grade": "Extra"
+  },
+  {
+   "tid": 598,
+   "lane": 5,
+   "frame": 217,
+   "red_share": 0.991,
+   "grade": "Extra"
+  },
+  {
+   "tid": 589,
+   "lane": 4,
+   "frame": 219,
+   "red_share": 0.926,
+   "grade": "Extra"
+  },
+  {
+   "tid": 650,
+   "lane": 3,
+   "frame": 219,
+   "red_share": 0.773,
+   "grade": "Kelas I"
+  },
+  {
+   "tid": 657,
+   "lane": 4,
+   "frame": 225,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 660,
+   "lane": 3,
+   "frame": 226,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 706,
+   "lane": 5,
+   "frame": 227,
+   "red_share": 0.941,
+   "grade": "Extra"
+  },
+  {
+   "tid": 644,
+   "lane": 2,
+   "frame": 228,
+   "red_share": 0.994,
+   "grade": "Extra"
+  },
+  {
+   "tid": 721,
+   "lane": 4,
+   "frame": 228,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 620,
+   "lane": 3,
+   "frame": 230,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 695,
+   "lane": 4,
+   "frame": 232,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 669,
+   "lane": 5,
+   "frame": 234,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 699,
+   "lane": 4,
+   "frame": 235,
+   "red_share": 0.411,
+   "grade": "Kelas II"
+  },
+  {
+   "tid": 734,
+   "lane": 2,
+   "frame": 235,
+   "red_share": 0.978,
+   "grade": "Extra"
+  },
+  {
+   "tid": 654,
+   "lane": 3,
+   "frame": 236,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 720,
+   "lane": 5,
+   "frame": 237,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 758,
+   "lane": 5,
+   "frame": 241,
+   "red_share": 0.696,
+   "grade": "Kelas I"
+  },
+  {
+   "tid": 743,
+   "lane": 4,
+   "frame": 242,
+   "red_share": 1.0,
+   "grade": "Extra"
+  },
+  {
+   "tid": 748,
+   "lane": 2,
+   "frame": 242,
+   "red_share": 0.977,
+   "grade": "Extra"
+  },
+  {
+   "tid": 753,
+   "lane": 3,
+   "frame": 242,
+   "red_share": 0.997,
+   "grade": "Extra"
+  },
+  {
+   "tid": 765,
+   "lane": 5,
+   "frame": 244,
+   "red_share": 1.0,
+   "grade": "Extra"
+  }
+ ]
+}
