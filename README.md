@@ -39,9 +39,9 @@ measured by running the code in this repository, not estimated.
 | **12** | [Lemon colour grading, two chains](projects/12_lime_grading) | Detect, follow and count lemons on two chains; colour degree on the OECD chart, colour lots of 3 degrees, event log (boxes only) | **87** counted · all within the standard (1–9), 69 % in lot 4–6 · 18/24 within 1 degree |
 
 **Factory mockup.** [`projects/factory_mockup`](projects/factory_mockup) turns cases 3, 4, 8, 11 and 12
-into four products on one platform (Produce Grading, Fill Level Inspection, Pack Count QC, Parcel
-Dimensioning): 22 web-app and TV-dashboard pages for the pitch deck, and the deck prompt in
-`factory_mockup.md`.
+into four products, each its own web app (Produce Grading, Fill Level Inspection, Pack Count QC, Parcel
+Dimensioning): 6–7 web-app and TV-dashboard pages per app for the pitch deck, and a deck prompt per app in
+`apps/<app>/<app>.md`.
 
 Each project's own README carries its method, its measured figures and what
 breaks it, and is written to stand on its own if the folder is lifted into a
@@ -469,7 +469,7 @@ projects/
   10_peach_sizer/           peach USDA colour rules on a six-line sizer: FastSAM, tracking, red share
   11_tomato_ripeness/       tomato USDA colour classes per line: YOLOE boxes, TrackTrack, count gate, lot check
   12_lime_grading/          lemon colour degree on the OECD chart, two chains: YOLOE boxes, TrackTrack, count gate
-  factory_mockup/           web-app and TV-dashboard pages of the four factory products, and the deck prompt
+  factory_mockup/           one web app per factory product (4 apps): mockup pages and a deck prompt each
 
     every project has these
       main.py               the entry point, and only the sequence of steps

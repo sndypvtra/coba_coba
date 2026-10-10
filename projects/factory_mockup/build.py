@@ -28,6 +28,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 P = HERE.parent
 sys.path.insert(0, str(HERE))
+sys.modules.setdefault("build", sys.modules[__name__])
 
 import tv  # noqa: E402
 from look import (CSS, I, USED, avatar, bd, card, hbars, img, kpi, legend, lines, num, sev, spark,  # noqa: E402
@@ -126,50 +127,54 @@ def poc() -> str:
 
 
 # ------------------------------------------------------------------ shells
-NAV = [
-    ("Pantau", [("dashboard", "Ringkasan", "overview"), ("videocam", "Live View", "live"),
-                ("live_tv", "Dashboard TV", "tv")]),
-    ("Kualitas", [("report", "Reject & Kejadian", "events"), ("fact_check", "Laporan Lot & Batch", "lots"),
-                  ("description", "Laporan Shift", "reports")]),
-    ("Pengaturan", [("tune", "Spesifikasi Produk", "specs"), ("photo_camera", "Line & Kamera", "cameras"),
-                    ("campaign", "Alert & Integrasi", "alerts")]),
-    ("Admin", [("group", "Pengguna & Role", "users"), ("factory", "Pabrik", "plants"),
-               ("receipt_long", "Langganan", "billing")]),
-]
+def _nav(quality: list, spec: tuple) -> list:
+    return [("Pantau", [("dashboard", "Ringkasan", "overview"), ("videocam", "Live Monitoring", "live"),
+                        ("live_tv", "Dashboard TV", "tv")]),
+            ("Kualitas", quality),
+            ("Pengaturan", [spec, ("settings_input_component", "Kamera, Alert & Integrasi", "settings")]),
+            ("Admin", [("group", "Pengguna & Role", "users"), ("factory", "Pabrik", "plants")])]
+
+
+# each product is its own web app, with its own menu in the words of that line
+NAVS = {
+    "grading": _nav([("fact_check", "Laporan Lot", "lots"), ("report", "Riwayat Off-colour", "events"),
+                     ("description", "Laporan Shift", "reports")], ("tune", "Standar Grade", "specs")),
+    "fill": _nav([("report", "Reject & Giveaway", "events"), ("description", "Laporan Shift", "reports")],
+                 ("tune", "Spesifikasi SKU", "specs")),
+    "pack": _nav([("report", "Reject & Rework", "events"), ("description", "Laporan Shift", "reports")],
+                 ("tune", "Spesifikasi Kemasan", "specs")),
+    "parcel": _nav([("list_alt", "Log Paket", "events"), ("local_shipping", "Muat & Tagihan", "lots"),
+                    ("description", "Laporan Shift", "reports")], ("tune", "Kelas Ukuran", "specs")),
+}
+SEARCH = {"grading": "Cari lot, line, kelas warna…", "fill": "Cari SKU, nozzle, reject…",
+          "pack": "Cari tray, kardus, slot, reject…", "parcel": "Cari paket, truk, pelanggan…"}
+BADGE = {"grading": 3, "fill": 4, "pack": 5, "parcel": 1}
 
 
 def sidebar(active: str, product: str, user: tuple) -> str:
     icon, name, colour, tone, _ = PRODUCTS[product]
     groups = []
-    for title, items in NAV:
+    for title, items in NAVS[product]:
         rows = []
         for ic, label, key in items:
             extra = ""
             if key == "events":
-                extra = '<span class="nb">5</span>'
+                extra = f'<span class="nb">{BADGE[product]}</span>'
             if key == "tv":
                 extra = I("open_in_new", size=16).replace('class="i"', 'class="i ext"')
             rows.append(f'<div class="ni{" on" if key == active else ""}">{I(ic, key == active)}{label}{extra}</div>')
         groups.append(f'<div class="ng"><div class="t">{title}</div>{"".join(rows)}</div>')
-    switch = "".join(
-        f'<div class="row" style="gap:9px;padding:6px 8px;border-radius:7px;font-size:12.5px;'
-        f'{"background:rgba(255,255,255,.07);color:#fff;font-weight:600" if k == product else "color:#8b99ad"}">'
-        f'<span style="width:22px;height:22px;border-radius:6px;display:grid;place-items:center;background:{v[2]}">'
-        f'{I(v[0], True, 15, "#fff")}</span>{v[1]}</div>' for k, v in PRODUCTS.items())
     uname, role, utone = user
-    return (f'<aside class="side"><div class="brand"><span class="logo">{I("precision_manufacturing", True, 21)}</span>'
-            f'<div><b>{BRAND}</b><small>Web App</small></div></div>'
-            f'<div class="ng" style="margin-top:8px"><div class="t">Produk</div>{switch}</div>'
+    return (f'<aside class="side"><div class="brand"><span class="logo" style="background:{colour}">{I(icon, True, 21)}</span>'
+            f'<div><b>{name}</b><small>by {BRAND}</small></div></div>'
             f'{"".join(groups)}<div class="sfoot">{avatar(uname, 34)}<div class="grow"><b>{uname}</b>{bd(role, utone)}</div>'
             f'{I("unfold_more", size=18, color="#5f6f86")}</div></aside>')
 
 
 def topbar(product: str, site=("Pabrik A · Cikarang", "PT Contoh Industri"), shift="Shift 1 · 07–15 · 10:42") -> str:
-    icon, name, colour, tone, _ = PRODUCTS[product]
     return (f'<header class="top"><div class="sel">{I("factory", size=20, color="var(--text-2)")}'
             f'<div><b>{site[0]}</b><small>{site[1]}</small></div>{I("expand_more", size=18, color="var(--text-3)")}</div>'
-            f'<span class="chip" style="color:{colour};border-color:{colour}33;background:{colour}10">{I(icon, True, 16)}{name}</span>'
-            f'<div class="search" style="width:440px">{I("search", size=19)}<span class="ell">Cari lot, SKU, line, reject…</span>'
+            f'<div class="search" style="width:520px">{I("search", size=19)}<span class="ell">{SEARCH[product]}</span>'
             f'<span class="kbd">Ctrl K</span></div>'
             f'<div class="right"><span class="chip ok"><span class="dot"></span>Semua line online</span>'
             f'<span class="chip">{I("schedule", size=16)}{shift}</span><span class="iconbtn">{I("notifications")}<span class="nd"></span></span>'
@@ -219,105 +224,8 @@ ROLES = [
 
 
 # ================================================================== slides: platform
-def p00_product_map() -> str:
-    feats = {
-        "grading": ["Kelas warna per buah, per line", "Kelas tomat USDA · bagan lemon OECD", "Cek lot terhadap toleransi",
-                    "Alert off-colour & hold lot"],
-        "fill": ["Level isi per botol, per nozzle", "Target & toleransi per SKU", "Sinyal reject untuk underfill",
-                 "Pantau giveaway (overfill)"],
-        "pack": ["Jumlah isi per tray / kardus", "Posisi slot yang kosong", "Hold & rework untuk short pack",
-                 "Root cause: feeder gap / empty pick"],
-        "parcel": ["P × L × T & volume per paket", "Kelas ukuran S / M / L", "Berat volumetrik",
-                   "Manual check untuk ukuran dekat batas"],
-    }
-    proof = {"grading": "41 tomat · 87 lemon di-grade; cek blind 75/78 dan 18/24 (±1 derajat)",
-             "fill": "level isi diukur tiap frame, 67% di akhir klip; flow rate dan waktu ke target",
-             "pack": "7/7 tray dan 3/3 kardus benar vs data kebenaran (simulasi 3D)",
-             "parcel": "8/8 paket terhitung; karton uji terbaca 340,5 mm vs 340 mm"}
-    pics = {"grading": [("tomato", "Tomat · USDA"), ("lemon", "Lemon · OECD")], "fill": [("fill", "Mesin pengisi botol")],
-            "pack": [("tray", "Tray kaleng"), ("packing", "Robot packing station")], "parcel": [("parcel", "Belt paket")]}
-    cards = []
-    for k, (icon, name, colour, tone, desc) in PRODUCTS.items():
-        ps = pics[k]
-        h = 300 if len(ps) == 1 else 146
-        pic = "".join(tile(im(kind, 1), lab, colour, style=f"height:{h}px") for kind, lab in ps)
-        cards.append(
-            f'<section class="card" style="padding:20px 22px;gap:12px"><div class="row" style="gap:12px">'
-            f'<span class="it {tone}" style="width:46px;height:46px">{I(icon, True, 25)}</span>'
-            f'<div class="grow"><b style="font-size:18px;display:block">{name}</b><span class="mut" style="font-size:12.5px">{desc}</span></div></div>'
-            + f'<div style="display:flex;flex-direction:column;gap:8px;margin:4px 0">{pic}</div>'
-            + "".join(f'<div class="row" style="gap:9px;font-size:13.5px">{I("check_circle", True, 18, colour)}{f}</div>' for f in feats[k])
-            + f'<div style="margin-top:auto;padding-top:12px;border-top:1px solid var(--hair);font-size:12.5px" class="sec">'
-              f'{poc()} {proof[k]}</div></section>')
-    shared = [("web", "Web App", "Ringkasan · Live View · Reject · Laporan lot · Spesifikasi · Pengguna"),
-              ("live_tv", "Dashboard TV", "satu layar per line, untuk area produksi"),
-              ("smartphone", "Alert ke HP", "WhatsApp, push, email ke orang yang tepat"),
-              ("hub", "Integrasi", "Sinyal reject ke PLC · MES · ERP · WMS · API"),
-              ("badge", "5 role", "Super Admin · Plant Admin · QC Manager · Line Supervisor · Viewer")]
-    sh = "".join(f'<div class="row" style="gap:12px;flex:1"><span class="it slate">{I(ic, True, 19)}</span><div>'
-                 f'<b style="font-size:14px;display:block">{a}</b><span class="mut" style="font-size:12px">{b}</span></div></div>'
-                 for ic, a, b in shared)
-    flow = [("videocam", "Kamera di line", "CCTV yang ada atau kamera industri"),
-            ("memory", "Edge AI box", "deteksi, lacak, ukur · < 1 detik"),
-            ("cloud", "Cloud Factory Vision", "spesifikasi, lot, bukti, laporan"),
-            ("devices", "Web · TV · HP · PLC", "tindakan yang tepat, saat itu juga")]
-    fl = "".join(f'<div class="row" style="gap:10px;flex:1"><span class="it blue">{I(ic, True, 19)}</span><div><b style="font-size:13.5px;display:block">{a}</b>'
-                 f'<span class="mut" style="font-size:12px">{b}</span></div></div>'
-                 + (I("arrow_forward", size=20, color="var(--text-3)") if k < 3 else "") for k, (ic, a, b) in enumerate(flow))
-    body = (grid("repeat(4,1fr)", cards, 20, "flex:1;min-height:0")
-            + f'<section class="card" style="padding:16px 22px;flex-direction:row;align-items:center;gap:18px">'
-              f'<b style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);white-space:nowrap">Platform bersama</b>{sh}</section>'
-            + f'<section class="card" style="padding:14px 22px;flex-direction:row;align-items:center;gap:16px">'
-              f'<b style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);white-space:nowrap">Alur data</b>{fl}</section>')
-    return slide("Peta produk", "Empat produk inspeksi, satu platform",
-                 "Setiap produk dijual sendiri, per line. Semuanya memakai web app, dashboard TV, alert, pengguna dan integrasi yang sama, "
-                 f"jadi pabrik bisa mulai dari satu produk lalu menambah yang lain. {poc()} = sudah terbukti di proof of concept.", body)
 
 
-def p01_roles() -> str:
-    cards = "".join(
-        f'<section class="card" style="padding:16px 18px;gap:8px"><div class="row"><span class="it {r[2]}">{I(r[0], True, 19)}</span>'
-        f'<b style="font-size:16px">{r[1]}</b></div><div class="sec" style="font-size:13px">{r[3]}</div>'
-        f'<div class="row mut" style="font-size:12.5px;gap:6px">{I("location_on", size=16)}{r[4]}</div></section>' for r in ROLES)
-    F, E, V, N = "full", "edit", "view", "none"
-    cap = [
-        ("Live View & Dashboard TV", [V + "*", F, F, F, V]),
-        ("Tinjau reject & kejadian", [N, F, F, E, V]),
-        ("Hold, release atau sortir ulang lot", [N, F, F, E, N]),
-        ("Override reject (dengan alasan)", [N, F, F, N, N]),
-        ("Ekspor bukti & sertifikat lot", [N, F, F, N, V]),
-        ("Laporan shift & lot", [N, F, F, V, V]),
-        ("Spesifikasi produk, standar grade, toleransi", [N, F, E, N, N]),
-        ("Line, kamera & kalibrasi", [E + "*", F, V, V, N]),
-        ("Alert & eskalasi", [N, F, E, N, N]),
-        ("Integrasi PLC / MES / ERP & API", [N, F, N, N, N]),
-        ("Pengguna, role & SSO", [E, F, N, N, N]),
-        ("Langganan & invoice", [F, V, N, N, N]),
-        ("Pelanggan, produk aktif, edge & update model AI", [F, N, N, N, N]),
-        ("Audit log", [F, V, N, N, N]),
-    ]
-    mark = {F: (I("check_circle", True, 20, "#0f172a"), "Kelola"), E: (I("edit_square", False, 19, "#0f172a"), "Terbatas"),
-            V: (I("visibility", False, 19, "#64748b"), "Lihat"), N: ('<span style="color:#cbd5e1;font-size:18px">—</span>', "")}
-    head = "".join(f'<th style="text-align:center;width:170px">{bd(r[1], r[2], r[0])}</th>' for r in ROLES)
-    rows = []
-    for nm, cells in cap:
-        tds = []
-        for c in cells:
-            m, label = mark[c.rstrip("*")]
-            tds.append(f'<td style="text-align:center"><span class="row" style="justify-content:center;gap:6px">{m}'
-                       f'<span class="mut" style="font-size:12px">{label}{"*" if c.endswith("*") else ""}</span></span></td>')
-        rows.append(f'<tr><td style="font-weight:500">{nm}</td>{"".join(tds)}</tr>')
-    table = (f'<section class="card" style="flex:1;min-height:0"><table class="tbl"><thead><tr><th>Fitur</th>{head}</tr></thead>'
-             f'<tbody>{"".join(rows)}</tbody></table></section>')
-    notes = (f'<div class="row" style="gap:28px;font-size:13px;color:var(--text-2)">'
-             f'<span class="row" style="gap:6px">{mark[F][0]} Kelola = buat, ubah, hapus</span>'
-             f'<span class="row" style="gap:6px">{mark[E][0]} Terbatas = hanya line sendiri / perlu persetujuan</span>'
-             f'<span class="row" style="gap:6px">{mark[V][0]} Hanya melihat</span>'
-             f'<span class="row" style="gap:6px">{I("lock", True, 18, "#6d28d9")}* Super Admin hanya dengan izin Plant Admin, berbatas waktu, dan tercatat di audit log</span></div>')
-    body = f'<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px">{cards}</div>{table}{notes}'
-    return slide("Role & hak akses", "QC Manager memegang standar, line yang menjalankan",
-                 "Hak akses per role, per pabrik dan per line. Data tiap pelanggan terpisah (multi-tenant); "
-                 "vendor tidak bisa melihat kamera pabrik tanpa izin yang tercatat.", body)
 
 
 # ================================================================== Produce Grading
@@ -388,7 +296,7 @@ def p03_grading_live() -> str:
                    icon="photo_library", right="Light Red")
             + card("", f'<div class="col" style="gap:8px">{btn("Hold lot", "pause_circle", "pri")}{btn("Sortir ulang di line T2", "sync")}'
                        f'{btn("Release sebagai Mixed Color", "label")}</div>'))
-    body = (ph("Live View", "Overlay AI di setiap kamera: kelas per buah, count gate, nomor line",
+    body = (ph("Live Monitoring", "Overlay AI di setiap kamera: kelas per buah, count gate, nomor line",
                '<span class="seg"><span>' + I("crop_square") + '1</span><span>' + I("grid_view") + '4</span><span class="on">'
                + I("view_quilt") + '1+3</span></span>' + btn("Layar penuh", "fullscreen"))
             + f'<div style="display:grid;grid-template-columns:1fr 420px;gap:18px;flex:1;min-height:0">'
@@ -446,7 +354,7 @@ def p06_grading_lot() -> str:
         ("—", "Cek ulang setelah sortir", "menunggu", "#cbd5e1")]), icon="history")
     body = (ph("Lot T-1012-07 · Tomat", "Line T1–T4 · Shift 1 · 10:21–10:42 · 41 tomat terhitung (klip PoC)",
                btn("Ekspor sertifikat lot (PDF)", "picture_as_pdf") + btn("Kirim ke QA pembeli", "send"),
-               crumb=f'Laporan Lot & Batch {I("chevron_right", size=16)} T-1012-07')
+               crumb=f'Laporan Lot {I("chevron_right", size=16)} T-1012-07')
             + grid("1fr 1fr 560px", [comp, check, perc]) + grid("1fr 520px", [ev, audit])
             + grid("1fr 520px", [spread, hist]))
     return app("grading", "lots", body)
@@ -500,7 +408,7 @@ def p07_grading_standards() -> str:
         ("30 Sep", "Kartu referensi dicetak ulang", "Andi Wijaya · Line Supervisor", "#64748b"),
         ("28 Sep", "Kelas tomat USDA diimpor", "Rina Hartono · Plant Admin", "#2563eb")]), icon="history",
         right='<span class="lnk">Audit log ' + I("chevron_right", size=16) + '</span>')
-    body = (ph("Spesifikasi Produk · Standar grade", "Pilih standar per line; QC Manager mengatur limit dan mengujinya dulu di rekaman",
+    body = (ph("Standar Grade", "Pilih standar per line; QC Manager mengatur limit dan mengujinya dulu di rekaman",
                btn("Impor spec pembeli", "upload")) + grid("520px 1fr", [left, detail]) + test
             + grid("1fr 1fr", [oecd, changes]))
     return app("grading", "specs", body)
@@ -536,7 +444,7 @@ def p08_fill_overview() -> str:
         ("10:12", "Line F2 · nozzle 2 · 323 mL", "di-reject · PLC", "#dc2626"),
         ("10:04", "Line F1 · 9 botol · tangki rendah", "alert · Line Supervisor", "#f59e0b")]), icon="report",
         right='<span class="lnk">Semua reject ' + I("chevron_right", size=16) + '</span>')
-    live = card("Live · Line F1 · nozzle 1", tile(im("fill"), "F1 · Mesin pengisi · CAM 01", "#2563eb", "67%", style="height:205px")
+    live = card("Live · Line F1 · nozzle 1", tile(im("fill"), "F1 · Mesin pengisi · CAM 06", "#2563eb", "67%", style="height:205px")
                 + f'<div class="mut" style="font-size:12px;margin-top:8px">{poc()} level isi diukur tiap frame dari bentuk botol</div>',
                 icon="videocam")
     body = (ph("Ringkasan · Fill Level Inspection", "Hari ini · Shift 1 · line F1–F2",
@@ -569,7 +477,7 @@ def p10_fill_spec() -> str:
         <span>Bentuk botol</span><span>diukur dari 3 botol kosong {status("Pass")}</span>
         <span>Tinggi → volume</span><span>dari outline botol {poc()}</span>
         <span>Nozzle</span><span><span class="inp" style="width:110px">8 per line</span></span>
-        <span>Kamera</span><span>CAM 01 · tampak samping, backlight</span></div></div></div>''',
+        <span>Kamera</span><span>CAM 06 · tampak samping, backlight</span></div></div></div>''',
                 icon="rule", right=f'{btn("Uji di rekaman", "play_circle", "sm")}{btn("Simpan", "check", "sm pri")}')
     gv = card("Giveaway minggu ini · Line F1", lines([("Rata-rata overfill", [3.6, 3.4, 3.9, 3.1, 2.8, 2.6, 2.4], "#d97706")],
                                                     ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"], 1000, 330, hi=5, ticks=5,
@@ -588,7 +496,7 @@ def p10_fill_spec() -> str:
         ("Kam", "Garis target diturunkan 2 mm", "Dewi Lestari · QC Manager", "#2563eb"),
         ("Sel", "Sinyal reject diuji", "Rina Hartono · Plant Admin", "#16a34a"),
         ("Sen", "Toleransi diatur ±2%", "Dewi Lestari · QC Manager", "#2563eb")]), icon="history")
-    body = (ph("Spesifikasi Produk · Aturan isi", "Target, toleransi, dan tindakan per SKU; bentuk botol mengubah tinggi cairan menjadi volume",
+    body = (ph("Spesifikasi SKU · Aturan isi", "Target, toleransi, dan tindakan per SKU; bentuk botol mengubah tinggi cairan menjadi volume",
                btn("Impor daftar SKU", "upload")) + grid("440px 1fr", [left, spec])
             + grid("1fr 560px", [gv, f'<div class="col" style="gap:18px">{pr}{chg}</div>']))
     return app("fill", "specs", body)
@@ -671,7 +579,7 @@ def p14_pack_reject() -> str:
       <div class="row" style="gap:8px">{I("pending", True, 18, "#d97706")}Alert jika 2 feeder gap dalam 5 menit</div></div>''', icon="build")
     body = (ph("Reject · Kardus #2 kurang 2", "Packing station P1 · 10:41 · di-hold di outfeed, di-rework lalu di-release",
                btn("Override (perlu QC Manager)", "gavel") + btn("Tutup", "check", "pri"),
-               crumb=f'Reject & Kejadian {I("chevron_right", size=16)} P1-0412')
+               crumb=f'Reject & Rework {I("chevron_right", size=16)} P1-0412')
             + grid("1fr 560px 460px", [f'<div class="col" style="gap:18px">{det}{capa}</div>', ev, card("Timeline", steps + f'''
       <div class="sect" style="margin-top:14px">Penyebab sama minggu ini</div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
@@ -764,191 +672,45 @@ def p17_parcel_load() -> str:
     body = (ph("Outbound · Rencana muat & tagihan", "Volume terukur per paket dipakai untuk muat truk dan tagihan berat volumetrik",
                btn("Ekspor ke TMS / WMS", "sync_alt") + btn("Kirim data invoice", "receipt_long", "pri"))
             + grid("620px 1fr", [tk, bil], 18) + grid("1fr 1fr", [chk, bill]) + grid("620px 1fr", [dest, gap7]))
-    return app("parcel", "reports", body)
+    return app("parcel", "lots", body)
 
 
 # ================================================================== shared pages
-def p18_alerts() -> str:
-    rules = [("nutrition", "#16a34a", "Produce Grading", "Off-colour lot di atas limit", "Hold lot · WhatsApp QC Manager", "High"),
-             ("nutrition", "#16a34a", "Produce Grading", "Lemon warna derajat 10", "Reject di line · dicatat", "Medium"),
-             ("local_drink", "#2563eb", "Fill Level", "Botol di bawah toleransi", "Sinyal reject ke PLC · dicatat", "High"),
-             ("local_drink", "#2563eb", "Fill Level", "3 reject di satu nozzle dalam 10 menit", "WhatsApp Line Supervisor", "Medium"),
-             ("inventory_2", "#d97706", "Pack Count QC", "Tray / kardus kurang isi", "Alihkan ke lane rework · alert", "High"),
-             ("inventory_2", "#d97706", "Pack Count QC", "2 feeder gap dalam 5 menit", "Alert Maintenance", "Low"),
-             ("package_2", "#7c3aed", "Parcel Dimensioning", "Ukuran dekat batas kelas", "Masuk antrean manual check", "Low")]
-    sv = {"High": "high", "Medium": "medium", "Low": "low"}
-    rows = "".join(f'<tr><td><span class="row" style="gap:8px">{I(ic, True, 18, c)}{p}</span></td><td><b>{a}</b></td>'
-                   f'<td class="sec">{b}</td><td>{sev(sv[s])}</td><td>{tg(True)}</td></tr>' for ic, c, p, a, b, s in rules)
-    rc = card("Aturan alert", f'<table class="tbl cp"><thead><tr><th>Produk</th><th>Kapan</th><th>Lalu</th><th>Tingkat</th><th>Aktif</th></tr></thead>'
-              f'<tbody>{rows}</tbody></table>', icon="rule", right=btn("Aturan baru", "add", "sm"), cb_style="padding:10px 6px 6px")
-    ints = [("settings_input_component", "PLC / SCADA", "OPC UA · Modbus TCP · output digital ke rejector", "Terhubung"),
-            ("factory", "MES", "lot, SKU, dan hasil per shift", "Terhubung"),
-            ("account_tree", "ERP", "SAP · Oracle · Odoo · catatan batch & kualitas", "Tersedia"),
-            ("warehouse", "WMS / TMS", "dimensi paket, muat truk", "Tersedia"),
-            ("chat", "WhatsApp Business", "alert berfoto ke orang yang tepat", "Terhubung"),
-            ("webhook", "Webhook & REST API", "setiap kejadian dan pengukuran, real time", "Terhubung")]
-    ir = "".join(f'<div class="ev"><span class="it slate">{I(ic, True, 19)}</span><div class="grow"><div class="t1">{a}</div>'
-                 f'<div class="t2">{b}</div></div>{status("Online" if d == "Terhubung" else "Tersedia", "#079455" if d == "Terhubung" else "#94a3b8")}</div>'
-                 for ic, a, b, d in ints)
-    ic = card("Integrasi", ir, icon="hub")
-    esc = card("Eskalasi", f'''<div class="col" style="gap:10px;font-size:13.5px">
-      <div class="row" style="gap:10px">{bd("Tinggi", "red", "error")}<span>Line Supervisor langsung → QC Manager setelah 5 menit → Plant Admin setelah 15 menit</span></div>
-      <div class="row" style="gap:10px">{bd("Sedang", "amber", "warning")}<span>Line Supervisor · ringkasan shift ke QC Manager</span></div>
-      <div class="row" style="gap:10px">{bd("Rendah", "blue", "info")}<span>Hanya di laporan shift</span></div></div>''', icon="campaign")
-    wa = card("Contoh pesan WhatsApp", f'''<div style="background:#e7f6e7;border-radius:12px;padding:12px;font-size:13px;line-height:1.45">
-      <b>Factory Vision · Pabrik A</b><br>{I("error", True, 16, "#dc2626")} <b>Kardus #2 keluar kurang 2</b> · Packing station P1 · 10:41<br>
-      18/20 · slot B2, C5 kosong · di-hold di outfeed<img class="thumb" src="../img/snap_box_461.jpg" style="width:100%;height:230px;object-fit:cover;margin-top:8px">
-      <div class="mut" style="margin-top:6px">Balas 1 = saya tangani · 2 = alarm palsu</div></div>''', icon="chat")
-    sent = card("Alert terkirim hari ini", history([
-        ("10:41", "Kardus #2 keluar kurang 2 · P1", "WhatsApp · Andi Wijaya · dibaca dalam 9 detik", "#dc2626"),
-        ("10:38", "Lot T-1012-07 off-colour 17%", "WhatsApp · Dewi Lestari · dibaca dalam 1 menit", "#dc2626"),
-        ("10:04", "9 underfill · Line F1 · tangki rendah", "WhatsApp · Andi Wijaya · dibaca dalam 20 detik", "#f59e0b"),
-        ("09:12", "Feeder gap · P1", "email · Maintenance", "#2563eb")]), icon="send", right="24 terkirim · 0 terlewat")
-    body = (ph("Alert & Integrasi", "Satu set aturan untuk semua produk: siapa diberi tahu, apa yang dilakukan line, sistem mana yang menerima data")
-            + grid("1fr 560px", [f'<div class="col" style="gap:18px">{rc}{esc}{sent}</div>', f'<div class="col" style="gap:18px">{ic}{wa}</div>'], 18, "flex:1;min-height:0"))
-    return app("pack", "alerts", body, user=("Rina Hartono", "Plant Admin", "blue"))
 
 
-def p19_cameras() -> str:
-    cams = [("CAM 01", "T1–T4 · Packing tomat", "grading", "Online", "30 fps", "Pass", "06:58"),
-            ("CAM 02", "L1–L2 · Chain lemon", "grading", "Online", "30 fps", "Pass", "06:59"),
-            ("CAM 03", "C1 · Ujung line kaleng", "pack", "Online", "30 fps", "Pass", "07:01"),
-            ("CAM 04", "P1 · Robot packing", "pack", "Online", "25 fps", "Pass", "07:01"),
-            ("CAM 05", "OB1 · Belt outbound", "parcel", "Online", "30 fps", "Pass", "07:03"),
-            ("CAM 06", "F1 · Filler nozzle 1–4", "fill", "Online", "25 fps", "Pass", "07:04"),
-            ("CAM 07", "F1 · Filler nozzle 5–8", "fill", "Cek", "25 fps", "Silau di lensa", "07:04"),
-            ("CAM 08", "F2 · Filler", "fill", "Jeda", "—", "Line berhenti", "—")]
-    rows = "".join(f'<tr><td><span class="cam">{I("videocam", True)}{a}</span></td><td><b>{b}</b></td>'
-                   f'<td><span class="row" style="gap:6px">{I(PRODUCTS[c][0], True, 17, PRODUCTS[c][2])}{PRODUCTS[c][1]}</span></td>'
-                   f'<td>{status(d, {"Online": "#079455", "Cek": "#d97706", "Jeda": "#94a3b8"}[d])}</td><td class="tn">{e}</td>'
-                   f'<td>{bd(f, "green" if f == "Pass" else "amber" if d == "Cek" else "slate")}</td><td class="mut tn">{g}</td></tr>'
-                   for a, b, c, d, e, f, g in cams)
-    cc = card("Kamera", f'<table class="tbl cp"><thead><tr><th>Kamera</th><th>Line</th><th>Produk</th><th>Status</th><th>Frame rate</th>'
-              f'<th>Cek gambar</th><th>Cek terakhir</th></tr></thead><tbody>{rows}</tbody></table>', icon="photo_camera",
-              right=btn("Tambah kamera (RTSP / ONVIF)", "add", "sm"), cb_style="padding:10px 6px 6px")
-    edges = [("Edge box 01", "CAM 01–04", "41%", "18 ms"), ("Edge box 02", "CAM 05–08", "33%", "21 ms")]
-    er = "".join(f'<div class="ev"><span class="it green">{I("memory", True, 19)}</span><div class="grow"><div class="t1">{a}</div>'
-                 f'<div class="t2">{b} · GPU {c} · latency {d}</div></div>{status("Online")}</div>' for a, b, c, d in edges)
-    ec = card("Edge AI box", er + f'<div class="mut" style="font-size:12px;margin-top:8px">Update model AI dipasang vendor line demi line, bisa di-rollback.</div>',
-              icon="memory")
-    setup = card("Kamera baru · cek CAM 07", f'''<div style="display:grid;grid-template-columns:1fr;gap:14px">
-      <img class="thumb" src="{im("fill", 1)}" style="width:100%;height:200px;object-fit:cover">
-      <div class="col" style="gap:8px;font-size:13.5px">
-      <div class="row" style="gap:8px">{I("check_circle", True, 18, "#079455")}Produk fokus di titik inspeksi</div>
-      <div class="row" style="gap:8px">{I("check_circle", True, 18, "#079455")}Frame rate ≥ 25 fps</div>
-      <div class="row" style="gap:8px">{I("warning", True, 18, "#d97706")}Silau di sisi kanan lensa — pasang filter polarisasi atau geser 10 cm</div>
-      <div class="row" style="gap:8px">{I("radio_button_unchecked", False, 18, "#94a3b8")}Cek warna dengan kartu referensi</div></div></div>''',
-                  icon="center_focus_strong", right=status("Cek", "#d97706"))
-    up7 = card("Uptime kamera · 7 hari, saat line jalan", hbars([(a, v, "#16a34a" if v >= 99 else "#d97706") for a, v in [
-        ("CAM 01 · T1–T4", 99.8), ("CAM 02 · L1–L2", 99.6), ("CAM 03 · C1", 99.9), ("CAM 04 · P1", 99.7),
-        ("CAM 05 · OB1", 99.5), ("CAM 06 · F1", 99.9), ("CAM 07 · F1", 97.2)]], vmax=100, label_w=150, fmt=lambda v: f"{num(v, 1)}%"),
-        icon="monitor_heart")
-    guide = card("Posisi kamera · yang perlu disiapkan pabrik", f'''<div class="col" style="gap:9px;font-size:13.5px">
-      <div class="row" style="gap:8px">{I("check_circle", True, 18, "#079455")}Dudukan tetap di atas atau samping line; tidak di-pan/zoom saat line jalan</div>
-      <div class="row" style="gap:8px">{I("check_circle", True, 18, "#079455")}Cahaya merata di produk; backlight untuk botol</div>
-      <div class="row" style="gap:8px">{I("check_circle", True, 18, "#079455")}Jaringan ke edge box (PoE) dan listrik untuk box</div>
-      <div class="row" style="gap:8px">{I("check_circle", True, 18, "#079455")}Kamera IP yang ada bisa dipakai jika lolos cek gambar</div></div>''',
-                  icon="checklist")
-    body = (ph("Line & Kamera", "Setiap kamera dicek sebelum dipakai: fokus, frame rate, silau, warna",
-               btn("Jalankan semua cek", "fact_check")) + cc + grid("1fr 1fr 1fr", [setup, f'<div class="col" style="gap:18px">{ec}{guide}</div>', up7]))
-    return app("fill", "cameras", body, user=("Rina Hartono", "Plant Admin", "blue"))
 
 
-def p20_multi_plant() -> str:
-    plants = [("Pabrik A · Cikarang", ["grading", "fill", "pack", "parcel"], "99,2%", "0,14%", "1", "+2,5 mL"),
-              ("Pabrik B · Surabaya", ["fill", "pack"], "98,7%", "0,22%", "0", "+3,8 mL"),
-              ("Pabrik C · Medan", ["grading"], "96,4%", "—", "2", "—"),
-              ("DC Jakarta", ["parcel"], "—", "—", "0", "—")]
-    rows = "".join(f'<tr><td><b>{a}</b></td><td><span class="row" style="gap:4px">'
-                   + "".join(f'<span class="it {PRODUCTS[p][3]}" style="width:26px;height:26px">{I(PRODUCTS[p][0], True, 15)}</span>' for p in ps)
-                   + f'</span></td><td class="tn">{b}</td><td class="tn">{c}</td><td class="tn">{d}</td><td class="tn">{e}</td>'
-                     f'<td>{spark(sp)}</td></tr>' for (a, ps, b, c, d, e), sp in zip(plants, [[6, 5, 5, 4, 4, 3, 3], [4, 5, 4, 4, 5, 4, 4],
-                                                                                         [3, 4, 4, 5, 6, 6, 7], [2, 2, 3, 2, 2, 2, 2]]))
-    tb = card("Semua pabrik · minggu ini", f'<table class="tbl"><thead><tr><th>Pabrik</th><th>Produk</th><th>First-pass quality</th>'
-              f'<th>Short-pack rate</th><th>Lot di-hold</th><th>Rata-rata overfill</th><th>Reject · 7 hari</th></tr></thead><tbody>{rows}</tbody></table>',
-              icon="factory", cb_style="padding:10px 6px 6px")
-    comp = card("First-pass quality · 12 minggu", lines([("Pabrik A", [97.1, 97.5, 97.8, 98.0, 98.2, 98.4, 98.6, 98.7, 98.9, 99.0, 99.1, 99.2], "#2563eb"),
-                                                        ("Pabrik B", [97.8, 97.9, 98.0, 98.0, 98.2, 98.3, 98.4, 98.4, 98.5, 98.6, 98.6, 98.7], "#d97706"),
-                                                        ("Pabrik C", [95.0, 95.2, 95.1, 95.6, 95.8, 95.7, 96.0, 96.1, 96.2, 96.3, 96.3, 96.4], "#16a34a")],
-                                                       [f"M{i}" for i in range(29, 41)], 900, 280, lo=94, hi=100, ticks=3,
-                                                       fmt=lambda v: f"{v:.0f}%", end_labels=True, R=70), icon="monitoring")
-    att = card("Perlu perhatian", "".join(
-        f'<div class="ev"><span class="it {t}">{I(ic, True, 18)}</span><div class="grow"><div class="t1">{a}</div><div class="t2">{b}</div></div></div>'
-        for ic, t, a, b in [("pause_circle", "amber", "Pabrik C · 2 lot lemon di-hold", "lot warna 7–9 naik sejak Selasa"),
-                            ("water_drop", "amber", "Pabrik B · overfill +3,8 mL", "di atas sasaran +2 mL di line F2"),
-                            ("warning", "amber", "Pabrik A · CAM 07 silau di lensa", "nozzle 5–8 dicek manual sejak 07:04")]), icon="priority_high")
-    rep = card("Laporan mingguan ke kantor pusat", f'''<div class="kv"><span>Dikirim</span><span>setiap Senin 07:00 · PDF + Excel</span>
-      <span>Kepada</span><span>Plant manager, QC, Operations Director</span>
-      <span>Isi</span><span>ukuran yang sama untuk setiap pabrik dan produk</span></div>''', icon="mail", right=tg(True))
-    body = (ph("Pabrik", "Satu tampilan untuk kantor pusat: semua pabrik, semua produk, ukuran yang sama",
-               '<span class="seg"><span>Hari ini</span><span class="on">Minggu ini</span><span>Bulan ini</span></span>')
-            + tb + grid("1fr 560px", [comp, f'<div class="col" style="gap:18px">{att}{rep}</div>']))
-    return app("grading", "plants", body, user=("Budi Santoso", "Viewer", "slate"))
 
 
-def p21_rollout() -> str:
-    pilot = {"grading": "Keputusan lot dan kelas warna sama dengan QC pabrik pada sampel blind (PoC: 75/78 tomat)",
-             "fill": "Setiap botol di bawah toleransi di-reject; level isi per nozzle dibandingkan dengan check weigher",
-             "pack": "Setiap tray/kardus kurang isi di-hold sebelum disegel, dengan slot kosongnya (PoC: 7/7 tray, 3/3 kardus)",
-             "parcel": "P × L × T dalam ±1 cm dari meteran pada 100 paket (karton uji PoC: 340,5 vs 340 mm)"}
-    prods = []
-    for k, (icon, name, colour, tone, desc) in PRODUCTS.items():
-        unit = {"grading": "per line", "fill": "per line pengisian", "pack": "per line atau station", "parcel": "per belt"}[k]
-        prods.append(f'<section class="card" style="padding:20px 22px;gap:10px"><div class="row" style="gap:12px">'
-                     f'<span class="it {tone}" style="width:42px;height:42px">{I(icon, True, 23)}</span><b style="font-size:17px">{name}</b></div>'
-                     f'<div class="sec" style="font-size:13px">{desc}</div>'
-                     f'<div class="row" style="gap:8px;font-size:13.5px;margin-top:auto">{I("receipt_long", False, 18, "var(--text-3)")}'
-                     f'<span>Langganan bulanan <b>{unit}</b></span></div>'
-                     f'<div style="border-top:1px solid var(--hair);padding-top:10px;font-size:13px"><div class="sect" style="margin:0 0 6px">Target lolos pilot</div>'
-                     f'{pilot[k]}</div></section>')
-    inc = [("Termasuk di setiap produk", ["Web App & Dashboard TV", "Alert lewat WhatsApp, push, email", "Klip bukti disimpan 30 hari",
-                                          "Laporan shift & lot, PDF / Excel", "Pengguna & role, audit log"]),
-           ("Add-on", ["Integrasi sinyal reject ke PLC", "Konektor MES / ERP / WMS", "Tampilan multi-pabrik untuk kantor pusat",
-                       "Klip bukti 90 hari", "Opsi on-premise"])]
-    ic = "".join(f'<section class="card" style="padding:20px 22px;gap:9px"><b style="font-size:16px">{t}</b>'
-                 + "".join(f'<div class="row" style="gap:9px;font-size:13.5px">{I("check_circle", True, 18, "#2563eb")}{f}</div>' for f in fs)
-                 + '</section>' for t, fs in inc)
-    steps = [("search", "1 · Line survey", "1 minggu", "posisi kamera, cahaya, kecepatan line, standar yang dipakai"),
-             ("science", "2 · Pilot", "30 hari", "1 produk di 1 line · laporan akurasi vs QC manual"),
-             ("rocket_launch", "3 · Go-live", "2 minggu", "koneksi PLC / MES, aturan alert, training"),
-             ("add_business", "4 · Expand", "per kuartal", "line lain, produk berikutnya, pabrik lain")]
-    st = "".join(f'<div class="row" style="gap:12px;flex:1;align-items:flex-start"><span class="it blue" style="width:40px;height:40px">{I(ic, True, 21)}</span>'
-                 f'<div><b style="font-size:14.5px">{a}</b> <span class="mut">· {b}</span><div class="sec" style="font-size:12.5px;margin-top:3px">{c}</div></div></div>'
-                 + (I("arrow_forward", size=20, color="var(--text-3)") if k < 3 else "") for k, (ic, a, b, c) in enumerate(steps))
-    who = [("Disiapkan pabrik", "factory", ["Titik dudukan dan listrik di setiap titik inspeksi", "Jaringan dari line ke edge box",
-                                              "Satu orang QC untuk cek blind selama pilot", "Standar atau spec pembeli yang dipakai"]),
-           ("Disiapkan Factory Vision", "precision_manufacturing", ["Kamera, lampu, dan edge box, terpasang dan tersetel",
-                                                                     "Setting standar, limit, dan aturan alert",
-                                                                     "Laporan akurasi di akhir pilot", "Support dan update model AI"])]
-    split = "".join(f'<section class="card" style="padding:18px 22px;gap:9px"><div class="row" style="gap:10px">{I(ic, True, 20, "#2563eb")}'
-                    f'<b style="font-size:16px">{t}</b></div>'
-                    + "".join(f'<div class="row" style="gap:9px;font-size:13.5px">{I("check_circle", True, 18, "#16a34a")}{f}</div>' for f in fs)
-                    + '</section>' for t, ic, fs in who)
-    body = (grid("repeat(4,1fr)", prods, 20)
-            + f'<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">{ic}</div>'
-            + f'<section class="card" style="padding:18px 24px;flex-direction:row;align-items:center;gap:16px">{st}</section>'
-            + f'<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">{split}</div>'
-            + f'<section class="card" style="padding:16px 24px;flex-direction:row;align-items:center;gap:14px;background:#0f172a;border-color:#0f172a;color:#e9eef4">'
-              f'{I("handshake", True, 24, "#93c5fd")}<span style="font-size:15px"><b>Harga per line, dihitung setelah line survey.</b> '
-              f'Biaya pilot dikreditkan ke kontrak bila pabrik melanjutkan.</span></section>')
-    return slide("Paket & rollout", "Mulai dari satu produk di satu line, lalu kembangkan",
-                 "Setiap produk adalah langganan bulanan per line, di platform yang sama. Mulai dengan pilot 30 hari di line "
-                 "yang paling banyak menimbulkan reject, komplain, atau giveaway.", body)
 
 
-TV = dict(tv.PAGES)   # the TV dashboards: their own layout, with the PoC camera picture in it (tv.py)
-PAGE_FUNCS = [
-    ("00_product_map", p00_product_map), ("01_roles_access", p01_roles),
-    ("02_grading_overview", p02_grading_overview), ("03_grading_live_view", p03_grading_live),
-    ("04_grading_tv_tomato", TV["04_grading_tv_tomato"]), ("05_grading_tv_lemon", TV["05_grading_tv_lemon"]),
-    ("06_grading_lot_report", p06_grading_lot), ("07_grading_standards", p07_grading_standards),
-    ("08_fill_overview", p08_fill_overview), ("09_fill_tv", TV["09_fill_tv"]), ("10_fill_spec", p10_fill_spec),
-    ("11_pack_overview", p11_pack_overview), ("12_pack_tv_trays", TV["12_pack_tv_trays"]),
-    ("13_pack_tv_packing", TV["13_pack_tv_packing"]), ("14_pack_reject_detail", p14_pack_reject),
-    ("15_parcel_overview", p15_parcel_overview), ("16_parcel_tv", TV["16_parcel_tv"]), ("17_parcel_load_billing", p17_parcel_load),
-    ("18_alerts_integrations", p18_alerts), ("19_lines_cameras", p19_cameras), ("20_plants", p20_multi_plant),
-    ("21_plans_rollout", p21_rollout),
-]
+APP_DIR = HERE / "apps"
+
+
+def apps() -> dict:
+    """Each product is its own web app: its pages, in the order they are told, and where they are written."""
+    import extra as X   # imports build, so it is loaded here and not at the top
+    T = dict(tv.PAGES)
+    return {
+        "produce_grading": [
+            ("01_ringkasan", p02_grading_overview), ("02_live_monitoring", p03_grading_live),
+            ("03_dashboard_tv_tomat", T["04_grading_tv_tomato"]), ("04_dashboard_tv_lemon", T["05_grading_tv_lemon"]),
+            ("05_laporan_lot", p06_grading_lot), ("06_standar_grade", p07_grading_standards),
+            ("07_kamera_alert_integrasi", lambda: X.settings("grading"))],
+        "fill_level_inspection": [
+            ("01_ringkasan", p08_fill_overview), ("02_live_monitoring", X.live_fill), ("03_dashboard_tv", T["09_fill_tv"]),
+            ("04_reject_giveaway", X.fill_events), ("05_spesifikasi_sku", p10_fill_spec),
+            ("06_kamera_alert_integrasi", lambda: X.settings("fill"))],
+        "pack_count_qc": [
+            ("01_ringkasan", p11_pack_overview), ("02_live_monitoring", X.live_pack),
+            ("03_dashboard_tv_tray", T["12_pack_tv_trays"]), ("04_dashboard_tv_packing", T["13_pack_tv_packing"]),
+            ("05_detail_reject", p14_pack_reject), ("06_spesifikasi_kemasan", X.pack_spec),
+            ("07_kamera_alert_integrasi", lambda: X.settings("pack"))],
+        "parcel_dimensioning": [
+            ("01_ringkasan", p15_parcel_overview), ("02_live_monitoring", X.live_parcel), ("03_dashboard_tv", T["16_parcel_tv"]),
+            ("04_muat_tagihan", p17_parcel_load), ("05_kelas_ukuran", X.parcel_spec),
+            ("06_kamera_alert_integrasi", lambda: X.settings("parcel"))],
+    }
 
 
 # ------------------------------------------------------------------ rendering
@@ -992,23 +754,25 @@ def shoot(html: Path, png: Path, scale: float = 1.0) -> None:
 
 
 def main(argv: list[str]) -> int:
+    """python build.py [app ...] [--icons] [--1x] [--no-shot]; an app is named by any part of its folder name."""
     HTML.mkdir(exist_ok=True)
-    PAGES.mkdir(exist_ok=True)
     want = [a for a in argv if not a.startswith("--")]
     built = []
-    for slug, fn in PAGE_FUNCS:
-        page = fn()
-        if want and not any(slug.startswith(w) for w in want):
+    for slug, pages in apps().items():
+        if want and not any(w in slug for w in want):
             continue
-        path = HTML / f"{slug}.html"
-        path.write_text(page)
-        built.append((slug, path))
+        out = APP_DIR / slug / "pages"
+        out.mkdir(parents=True, exist_ok=True)
+        for name, fn in pages:
+            path = HTML / f"{slug}__{name}.html"
+            path.write_text(fn())
+            built.append((slug, name, path, out / f"{name}.png"))
     if "--icons" in argv:
         fetch_icons()
     if "--no-shot" not in argv:
-        for slug, path in built:
-            shoot(path, PAGES / f"{slug}.png", 1.0 if "--1x" in argv else 2.0)
-            print("page", slug)
+        for slug, name, path, png in built:
+            shoot(path, png, 1.0 if "--1x" in argv else 2.0)
+            print("page", slug, name)
     return 0
 
 

@@ -17,9 +17,15 @@ P = HERE.parent
 META = json.loads((HERE / "img" / "meta.json").read_text())
 WM_POC = "Mockup konsep · angka ilustrasi · gambar kamera dan angka bertanda PoC: hasil proof of concept"
 
-TABS = [("nutrition", "Tomat · USDA", "tomato"), ("nutrition", "Lemon · OECD", "lemon"), ("local_drink", "Fill Level", "fill"),
-        ("inventory_2", "Tray kaleng", "tray"), ("precision_manufacturing", "Robot packing", "packing"),
-        ("package_2", "Paket", "parcel")]
+# each product's TV rotates through its own views only; views not in the PoC are shown as tabs, never as screens
+APPS = {"tomato": "grading", "lemon": "grading", "fill": "fill", "tray": "pack", "packing": "pack", "parcel": "parcel"}
+TABS = {"grading": [("nutrition", "Tomat · USDA", "tomato"), ("nutrition", "Lemon · OECD", "lemon"), ("monitoring", "Tren lot", "-")],
+        "fill": [("local_drink", "Line F1 · nozzle 1–8", "fill"), ("local_drink", "Line F2", "-"), ("water_drop", "Giveaway", "-")],
+        "pack": [("inventory_2", "Tray kaleng · C1", "tray"), ("precision_manufacturing", "Robot packing · P1", "packing"),
+                 ("grid_view", "Slot kosong", "-")],
+        "parcel": [("package_2", "Belt OB1", "parcel"), ("package_2", "Belt OB2", "-"), ("local_shipping", "Muat truk", "-")]}
+BRAND = {"grading": ("nutrition", "Produce Grading", "#16a34a"), "fill": ("local_drink", "Fill Level Inspection", "#2563eb"),
+         "pack": ("inventory_2", "Pack Count QC", "#d97706"), "parcel": ("package_2", "Parcel Dimensioning", "#7c3aed")}
 SEV_COL = {"high": "#ef4444", "medium": "#f59e0b", "low": "#3b82f6", "info": "#94a3b8"}
 SEV_ID = {"high": ("red", "Tinggi", "error"), "medium": ("amber", "Sedang", "warning"), "low": ("blue", "Rendah", "info"),
           "info": ("slate", "Info", "info")}
@@ -62,9 +68,11 @@ def doc(body: str) -> str:
 
 
 def page(active: str, crumb: str, body: str, footer: str) -> str:
-    tabs = "".join(f'<span class="{"on" if key == active else ""}">{I(ic, key == active)}{name}</span>' for ic, name, key in TABS)
-    top = (f'<header class="dtop"><span class="dlogo">{I("precision_manufacturing", True, 20, "#fff")}</span>'
-           f'<b class="dname">Factory Vision</b><span class="dcr">/ Pabrik A · Cikarang</span><span class="dcr on">/ {crumb}</span>'
+    prod = APPS[active]
+    ic0, name0, col0 = BRAND[prod]
+    tabs = "".join(f'<span class="{"on" if key == active else ""}">{I(ic, key == active)}{name}</span>' for ic, name, key in TABS[prod])
+    top = (f'<header class="dtop"><span class="dlogo" style="background:{col0}">{I(ic0, True, 20, "#fff")}</span>'
+           f'<b class="dname">{name0}</b><span class="dcr">/ Pabrik A · Cikarang</span><span class="dcr on">/ {crumb}</span>'
            f'<div class="right"><span class="dchip live"><span class="dot"></span>LIVE</span>'
            f'<span class="dchip">{I("schedule", size=16)}Shift 1 · 07–15</span><span class="dchip clock tn">10:42:07</span></div></header>')
     nav = (f'<nav class="dtabs">{tabs}<span class="rot">{I("autorenew", size=17)}Berganti otomatis tiap 30 detik {tg(True)}</span></nav>')
@@ -160,7 +168,7 @@ def tv_tomato() -> str:
     tl = timeline("Lini masa off-colour", [(t["frame"] / fps, "medium") for t in offs] + ([(breach, "high")] if breach else []), total)
     cam = camera("tomato_cam_133.jpg", "CAM 01 · Line packing tomat · 4 line",
                  [f"{n} terhitung", "Count gate: semua line"], [(c, col) for c, col in USDA])
-    return page("tomato", "Produce Grading · tomat",
+    return page("tomato", "Line tomat T1–T4",
                 layout(cam, kp, comp, ev, [byline, trend], tl),
                 "Gambar kamera dan angka: hasil PoC pada rekaman Pexels 8675103 (diputar ulang)")
 
@@ -225,7 +233,7 @@ def tv_lemon() -> str:
     tl = timeline("Di luar lot utama", [(t["frame"] / fps, "low") for t in outs], total)
     cam = camera("lemon_cam_245.jpg", "CAM 02 · Chain sortir lemon · 2 line", [f"{n} terhitung", "Count gate: kedua chain"],
                  [("Lot 1–3", "#facc15"), ("Lot 4–6", "#84cc16"), ("Lot 7–9", "#15803d"), ("10 · out of grade", "#ef4444")])
-    return page("lemon", "Produce Grading · lemon", layout(cam, kp, comp, ev, [byline, trend], tl),
+    return page("lemon", "Chain lemon L1–L2", layout(cam, kp, comp, ev, [byline, trend], tl),
                 "Gambar kamera dan angka: hasil PoC pada rekaman Pexels 32953325 (distabilkan)")
 
 
@@ -275,7 +283,7 @@ def tv_fill() -> str:
     tl = timeline("Lini masa siklus", [(e["t"], tx[e["title"]][2]) for e in s["events"]], total)
     cam = camera("fill_cam_232.jpg", "CAM 06 · Filler F1 · nozzle 1", ["Fase: mengisi", f"{100 * end:.0f}% · {num(end * ml)} mL"])
     right = curve
-    return page("fill", "Fill Level · Line F1", layout(cam, kp, right, ev, [rule, hv], tl),
+    return page("fill", "Line F1 · nozzle 1", layout(cam, kp, right, ev, [rule, hv], tl),
                 "Gambar kamera dan angka: hasil PoC pada rekaman Pexels 8720278 · klip berakhir di 67%, belum ada keputusan pass/reject")
 
 
@@ -339,7 +347,7 @@ def tv_tray() -> str:
     tl = timeline("Lini masa", [(e["t"], "high" if e["kind"] == "tray_short" else "info") for e in evs], total)
     cam = camera("tray_cam_440.jpg", "CAM 03 · Ujung line pengisian kaleng", ["Simulasi 3D", f"{n} tray · {len(short)} kurang"],
                  [("lengkap", "#22c55e"), ("kurang isi", "#ef4444"), ("sedang dicek", "#22d3ee")])
-    return page("tray", "Pack Count QC · line C1", layout(cam, kp, heat, ev, [last, cum], tl),
+    return page("tray", "Line kaleng C1", layout(cam, kp, heat, ev, [last, cum], tl),
                 "Gambar kamera dan angka: hasil PoC pada simulasi 3D dengan data kebenaran (7/7 tray benar)")
 
 
@@ -397,7 +405,7 @@ def tv_packing() -> str:
     tl = timeline("Lini masa", [(e["t"], e["severity"]) for e in evs], total)
     cam = camera("packing_cam_500.jpg", "CAM 04 · Robot packing station P1", ["Simulasi 3D", "Siklus 0,64 dtk"],
                  [("sedang diisi", "#22d3ee"), ("lengkap", "#22c55e"), ("kurang isi", "#ef4444")])
-    return page("packing", "Pack Count QC · station P1", layout(cam, kp, smap, ev, [hist, cause], tl),
+    return page("packing", "Packing station P1", layout(cam, kp, smap, ev, [hist, cause], tl),
                 "Gambar kamera dan angka: hasil PoC pada simulasi 3D dengan data kebenaran (3/3 kardus benar)")
 
 
@@ -446,7 +454,7 @@ def tv_parcel() -> str:
     tl = timeline("Lini masa", [(p["frame"] / fps, "medium" if p["mark"] == "?" else "info") for p in ps], total)
     cam = camera("parcel_cam_511.jpg", "CAM 05 · Belt bongkar truk", [f"{len(ps)} terhitung", "Count line"],
                  [("S · kecil", CLS_COL["S"]), ("M · sedang", CLS_COL["M"]), ("L · besar", CLS_COL["L"]), ("sedang diukur", "#94a3b8")])
-    return page("parcel", "Parcel Dimensioning · belt OB1", layout(cam, kp, tbl, ev, [mix, cv], tl),
+    return page("parcel", "Belt outbound OB1", layout(cam, kp, tbl, ev, [mix, cv], tl),
                 "Gambar kamera dan angka: hasil PoC pada rekaman Pexels 5370836")
 
 
