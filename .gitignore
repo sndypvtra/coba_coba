@@ -79,3 +79,4 @@ projects/08_pack_completeness/packing/output/render*.log
 !projects/02_tomato_grading/output/tomato_grading.mp4
 !projects/03_parcel_dimensioning/output/parcel_dimensioning.mp4
 !projects/04_bottle_fill_volume/output/fill_inspection.mp4
+!projects/09_lemon_grading/output/lemon_grading.mp4
