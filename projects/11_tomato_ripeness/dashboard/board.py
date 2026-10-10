@@ -85,12 +85,12 @@ def corner_chips(c, left, right):
         x = b[0] - 6
 
 
-def feed(c, events, t, thumbs, title="Kejadian terbaru", rows=4):
+def feed(c, events, t, thumbs, title="Event Log", rows=4, unit="events", empty="No events yet"):
     shown = [e for e in events if e.feed and e.t <= t]
     x0, y0, x1, y1 = FEED
-    y = c.card_title(FEED, title, "notifications", f"{len(shown)} kejadian")
+    y = c.card_title(FEED, title, "notifications", f"{len(shown)} {unit}")
     if not shown:
-        c.text(((x0 + x1) / 2, (y + y1) / 2), "Belum ada kejadian", 13, "regular", TEXT_3, anchor="mm")
+        c.text(((x0 + x1) / 2, (y + y1) / 2), empty, 13, "regular", TEXT_3, anchor="mm")
         return
     rh = (y1 - y - 12 - (rows - 1) * 8) // rows
     for k, ev in enumerate(reversed(shown[-rows:])):

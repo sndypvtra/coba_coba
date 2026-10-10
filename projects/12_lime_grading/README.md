@@ -33,8 +33,8 @@ shift.
 - **KPIs.** Limes counted and the rate, Grade A share, Grade B share, and the
   number of yellowing limes diverted to processing.
 - **Grade mix and destination.**
-- **Grade per line.** Each chain's load and grade mix side by side. When the
-  two chains are fed from different sources, a difference in quality shows here.
+- **Event Log.** Every yellowing lime as it passes the gate, newest first, with
+  a snapshot, its line and its hue, to divert to processing.
 - **Quality trend.** The share of Grade A and Grade C among the limes counted
   in the last 2 s, so a change in the incoming fruit is seen as it happens.
 - **Colour spread** of the counted limes against the grade bounds.
@@ -131,7 +131,7 @@ white balance needs the bounds checked again against a few graded limes.
 | `prepare.py` | download, stabilise and cut the inspection clip |
 | `dashboard/detect.py` | YOLOE boxes, TrackTrack, colour per box → `output/tracks.json` |
 | `dashboard/tracktrack.yaml` | the tracker's settings |
-| `dashboard/dashboard.py` | the gate, lines, grades, trend and the dashboard video |
+| `dashboard/dashboard.py` | the gate, lines, grades, trend, event log and the dashboard video |
 | `dashboard/ui.py`, `dashboard/board.py` | the dashboard's look and layout (Inter, Material Symbols in `dashboard/assets/fonts`) |
 
 ## Credits

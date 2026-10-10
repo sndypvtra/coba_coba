@@ -11,7 +11,8 @@ at GATE_Y; the line it is on is where it crosses. Its ripeness is the colour of
 its skin as a CIELAB hue angle, read inside its box on the frames where it is
 sharpest, and sorted into three classes by where it should go next: ripe fruit
 to the local market, half-ripe to distributors, unripe to the ripening room.
-The class bounds are in RIPENESS; how well they agree with grading by eye is in
+Every unripe tomato goes in the event log with a snapshot at the gate. The class
+bounds are in RIPENESS; how well they agree with grading by eye is in
 output/tomato_audit.json.
 """
 from __future__ import annotations
@@ -80,9 +81,21 @@ class TomatoBoard:
             self.hue[t] = float(np.median([h for _, h in rs[:max(3, len(rs) // 2)]]))
         self.grey = {t for t, v in chroma.items() if np.median(v) < MIN_CHROMA}
         self.count()
+        self.thumbs = {}
+        # the event log: every unripe tomato, the one the line has to act on, with a snapshot at the gate
         self.events = [B.Event(f, (f - 1) / self.fps, "medium", "eco", f"Tomat mentah · Line {ln}",
-                               f"hue {num(self.hue[t], 0)}° · arahkan ke ruang pemeraman", "unripe", feed=False)
+                               f"hue {num(self.hue[t], 0)}° · arahkan ke ruang pemeraman", "unripe",
+                               focus=self.box_at(t, f))
                        for f, t, ln in self.counted if self.cls(t) == 2]
+
+    def box_at(self, t, f):
+        """The tomato's box (picture coordinates) in the frame nearest to f where it was seen."""
+        best = None
+        for fr in self.tr["frames"]:
+            for o in fr["objects"]:
+                if o["tid"] == t and (best is None or abs(fr["frame"] - f) < abs(best[0] - f)):
+                    best = (fr["frame"], o["box"])
+        return [v * K for v in best[1]] if best else None
 
     def count(self):
         """One count per tomato, when its box centre crosses the gate going away from the camera."""
@@ -164,6 +177,9 @@ class TomatoBoard:
         f = i + 1
         t = i / self.fps
         vid = self.overlay(frame, i)
+        for ev in self.events:
+            if ev.frame == f and id(ev) not in self.thumbs and ev.focus:
+                self.thumbs[id(ev)] = B.crop_16x9(vid, ev.focus)
         img = self.board.copy()
         ui.paste_rounded(img, vid, (B.VX, B.VY), 10)
         done = self.done(f)
@@ -172,7 +188,7 @@ class TomatoBoard:
                  ["Rekaman nyata", "CAM 01"])
         self.kpis(c, done, t)
         self.dispatch(c, done)
-        self.per_line(c, f, done)
+        B.feed(c, self.events, t, self.thumbs, title="Event Log", unit="events", empty="No events yet")
         self.history(c, done)
         self.hue_strip(c, done)
         c.timeline(B.TL, t, self.total, self.events, title="Tomat mentah dialihkan")
@@ -219,33 +235,6 @@ class TomatoBoard:
             ry += 64
         c.text((x0 + 16, y1 - 18), "Kelas dari sudut hue warna kulit (CIELAB), dibaca di dalam kotak deteksi", 11,
                "regular", TEXT_3, anchor="lm")
-
-    def per_line(self, c, f, done):
-        """Load and ripeness mix per line."""
-        y = c.card_title(B.FEED, "Kematangan per line", "stacked_bar_chart", "jumlah terhitung · kelas")
-        x0, _, x1, y1 = B.FEED
-        cnt = [sum(1 for _, _, ln in done if ln == k) for k in range(1, N_LINES + 1)]
-        mix = [[sum(1 for _, t, ln in done if ln == k and self.cls(t) == g) for g in range(3)]
-               for k in range(1, N_LINES + 1)]
-        vmax = max(max(cnt), 1)
-        bx0, bx1 = x0 + 92, x1 - 150
-        ry = y + 24
-        for k in range(N_LINES):
-            c.text((x0 + 16, ry), f"Line {k + 1}", 13, "semibold", TEXT, anchor="lm")
-            c.rrect((bx0, ry - 8, bx1, ry + 8), 4, fill=SURFACE_2)
-            wtot = (bx1 - bx0) * cnt[k] / vmax
-            x = bx0
-            for g in range(3):
-                if mix[k][g]:
-                    w = wtot * mix[k][g] / cnt[k]
-                    c.rrect((x, ry - 8, x + max(w - 2, 2), ry + 8), 4, fill=RIPENESS[g][2])
-                    x += w
-            c.text((bx1 + 12, ry), f"{cnt[k]}", 14, "bold", TEXT, anchor="lm", tnum=True)
-            c.text((x1 - 16, ry), f"mentah {num(100 * mix[k][2] / cnt[k], 0)}%" if cnt[k] else "–", 12, "semibold",
-                   GREEN if mix[k][2] else TEXT_2, anchor="rm", tnum=True)
-            ry += 76
-        c.text((x0 + 16, y1 - 18), "Panjang bar = tomat terhitung per line · warna = kelas · kanan = porsi mentah", 11, "regular",
-               TEXT_3, anchor="lm")
 
     def history(self, c, done):
         y = c.card_title(B.BL, "Tomat terakhir terhitung", "history", "terbaru di kiri")

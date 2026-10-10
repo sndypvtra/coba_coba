@@ -36,9 +36,8 @@ class. The two the eye called ripe sit at 42.6° and 43.2°, right on the bound.
   half-ripe, and the number of unripe tomatoes to the ripening room.
 - **Shipping plan by ripeness.** One row per class with its destination and
   time to sale.
-- **Ripeness per line.** One bar per line: its length is how many tomatoes the
-  line carried, its colours are the ripeness mix, and the unripe share is on
-  the right.
+- **Event Log.** Every unripe tomato as it passes the gate, newest first, with a
+  snapshot, its line, its hue and where it must go.
 - **Last tomatoes counted.** Line, hue and class of each.
 - **Colour spread** of the counted tomatoes against the class bounds.
 - **Timeline** of the unripe tomatoes.

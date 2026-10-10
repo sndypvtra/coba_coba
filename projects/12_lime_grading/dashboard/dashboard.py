@@ -11,8 +11,9 @@ GATE_Y; the chain it is on (line 1 left, line 2 right) is where it crosses. Its
 grade is the colour of its skin as a CIELAB hue angle, read inside its box on
 the frames where it is sharpest: deep green limes are Grade A (export and
 supermarkets), light green Grade B (local market), yellowing limes Grade C
-(processing, juice). The bounds are in GRADES; how well they agree with grading
-by eye is in output/lime_audit.json.
+(processing, juice). Every yellowing lime goes in the event log with a snapshot
+at the gate. The bounds are in GRADES; how well they agree with grading by eye
+is in output/lime_audit.json.
 """
 from __future__ import annotations
 
@@ -82,9 +83,21 @@ class LimeBoard:
             self.hue[t] = float(np.median([h for _, h in rs[:max(3, len(rs) // 2)]]))
         self.grey = {t for t, v in chroma.items() if np.median(v) < MIN_CHROMA}
         self.count()
+        self.thumbs = {}
+        # the event log: every yellowing lime, the one the line has to divert, with a snapshot at the gate
         self.events = [B.Event(f, (f - 1) / self.fps, "medium", "call_split", f"Lime menguning · Line {ln}",
-                               f"hue {num(self.hue[t], 0)}° · alihkan ke olahan", "grade_c", feed=False)
+                               f"hue {num(self.hue[t], 0)}° · Grade C, alihkan ke olahan", "grade_c",
+                               focus=self.box_at(t, f))
                        for f, t, ln in self.counted if self.cls(t) == 2]
+
+    def box_at(self, t, f):
+        """The lime's box (picture coordinates) in the frame nearest to f where it was seen."""
+        best = None
+        for fr in self.tr["frames"]:
+            for o in fr["objects"]:
+                if o["tid"] == t and (best is None or abs(fr["frame"] - f) < abs(best[0] - f)):
+                    best = (fr["frame"], o["box"])
+        return [v * K for v in best[1]] if best else None
 
     def count(self):
         """One count per lime, when its box centre crosses the gate going away from the camera."""
@@ -162,6 +175,9 @@ class LimeBoard:
         f = i + 1
         t = i / self.fps
         vid = self.overlay(frame, i)
+        for ev in self.events:
+            if ev.frame == f and id(ev) not in self.thumbs and ev.focus:
+                self.thumbs[id(ev)] = B.crop_16x9(vid, ev.focus)
         img = self.board.copy()
         ui.paste_rounded(img, vid, (B.VX, B.VY), 10)
         done = self.done(f)
@@ -173,7 +189,7 @@ class LimeBoard:
                  ["Rekaman nyata", "CAM 01"])
         self.kpis(c, done, t)
         self.mix(c, done)
-        self.per_line(c, done)
+        B.feed(c, self.events, t, self.thumbs, title="Event Log", unit="events", empty="No events yet")
         self.trend_card(c, tb, a_s, c_s)
         self.hue_strip(c, done)
         c.timeline(B.TL, t, self.total, self.events, title="Lime menguning dialihkan")
@@ -232,39 +248,6 @@ class LimeBoard:
                    anchor="rm", tnum=True)
             ry += 64
         c.text((x0 + 16, y1 - 18), "Grade dari sudut hue warna kulit (CIELAB), dibaca di dalam kotak deteksi", 11,
-               "regular", TEXT_3, anchor="lm")
-
-    def per_line(self, c, done):
-        """Each chain's load and grade mix, side by side."""
-        y = c.card_title(B.FEED, "Grade per line", "stacked_bar_chart", "jumlah terhitung · grade")
-        x0, _, x1, y1 = B.FEED
-        cnt = [sum(1 for _, _, ln in done if ln == k) for k in range(1, N_LINES + 1)]
-        mix = [[sum(1 for _, t, ln in done if ln == k and self.cls(t) == g) for g in range(3)]
-               for k in range(1, N_LINES + 1)]
-        tot = max(1, sum(cnt))
-        ry = y + 20
-        for k in range(N_LINES):
-            c.text((x0 + 16, ry), f"Line {k + 1}", 16, "bold", TEXT, anchor="lm")
-            c.text((x0 + 92, ry), "rantai kiri" if k == 0 else "rantai kanan", 12, "regular", TEXT_3, anchor="lm")
-            c.text((x1 - 16, ry), f"{cnt[k]} lime · {num(100 * cnt[k] / tot, 0)}%" if sum(cnt) else "–", 13,
-                   "semibold", TEXT_2, anchor="rm", tnum=True)
-            bx0, bx1, by = x0 + 16, x1 - 16, ry + 22
-            c.rrect((bx0, by, bx1, by + 18), 4, fill=SURFACE_2)
-            x = bx0
-            for g in range(3):
-                if mix[k][g]:
-                    w = (bx1 - bx0) * mix[k][g] / cnt[k]
-                    c.rrect((x, by, x + w - 2, by + 18), 4, fill=GRADES[g][3])
-                    x += w
-            gx = x0 + 16
-            for g in range(3):
-                share = f"{num(100 * mix[k][g] / cnt[k], 0)}%" if cnt[k] else "–"
-                c.dot((gx + 6, by + 44), 5, GRADES[g][3])
-                c.text((gx + 16, by + 44), f"Grade {GRADES[g][1]}  {share}", 12, "medium", TEXT_2, anchor="lm",
-                       tnum=True)
-                gx += (x1 - x0 - 32) / 3
-            ry += 150
-        c.text((x0 + 16, y1 - 18), "Bandingkan mutu tiap line: pasokan dari sumber berbeda terlihat di sini", 11,
                "regular", TEXT_3, anchor="lm")
 
     def trend_card(self, c, tb, a_s, c_s):
