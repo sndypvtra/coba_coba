@@ -1,21 +1,23 @@
-"""Peach colour grading on the sizer, as a packhouse manager reads it, 1920 x 1080.
+"""Peach colour on the sizer against the USDA grade standards, as a packhouse manager reads it, 1920 x 1080.
 
     python dashboard/segment.py          # once: find and follow every peach (~30 min on 4 cores)
     python dashboard/colour.py           # once: red share of every peach on the lines
     python dashboard/dashboard.py        # -> output/peach_grading.mp4
     python dashboard/dashboard.py --still 120 244
 
-Buyers of red peaches and nectarines specify how much of the skin must be red:
-the more red, the better the grade and the price. Each peach is read on its line
-for as long as it is in view, turning on the rollers, and graded on the median
-red share of those frames, once it has left the picture:
+The colour rules are those of the United States Standards for Grades of Peaches
+(7 CFR 51.1210-51.1214, 2004):
 
-* Grade A: at least 90 % red, premium packs and export;
-* Grade B: 60 to 90 % red, regular packs;
-* Grade C: below 60 % red, diverted to processing.
+* U.S. Fancy: each peach shall have not less than one-third of its surface
+  showing blushed, pink or red colour; at most 10 % of a lot may fail it;
+* U.S. Extra No. 1: 50 % of the peaches in a lot, by count, shall have not less
+  than one-fourth of the surface showing blushed, pink or red colour;
+* U.S. No. 1 and No. 2 carry no colour requirement.
 
-The bounds are an example buyer specification, set before the blind check by
-eye in output/peach_audit.json and not changed after it.
+Each peach is read on its line for as long as it is in view, turning on the
+rollers, and its red share is the median of those frames. The grades also ask
+for freedom from defects, decay and bruises, which the camera does not judge:
+what this checks is the colour requirement of each grade, nothing else.
 
 The camera looks along six lines that fan out from the feed belt: line 1 runs
 down the left of the picture, lines 2 to 6 to the right, line 6 furthest away.
@@ -57,11 +59,16 @@ MIN_READS = 3           # colour reads before a peach shows a grade
 CRIMSON = (190, 18, 60)
 ROSE = (251, 113, 133)
 
-# (name, short, lowest red share, colour, where it goes). The reddest peaches are the best grade.
+FANCY = 1 / 3            # USDA U.S. Fancy: each peach >= 1/3 of the surface blushed, pink or red
+FANCY_TOL = 0.10         # ...at most 10 % of a lot may fail it
+EXTRA1 = 1 / 4           # USDA U.S. Extra No. 1: >= 50 % of the lot with >= 1/4 of the surface red
+EXTRA1_SHARE = 0.50
+
+# Colour class of one peach under the USDA rules. (name, short, lowest red share, colour, what it means)
 GRADES = [
-    ("Grade A · merah ≥ 90%", "A", 0.90, CRIMSON, "kemasan premium / ekspor"),
-    ("Grade B · merah 60–90%", "B", 0.60, ROSE, "kemasan reguler"),
-    ("Grade C · merah < 60%", "C", -1.0, AMBER, "dialihkan ke olahan"),
+    ("Fancy colour", "Fancy", FANCY, CRIMSON, "≥ ⅓ permukaan merah · syarat warna U.S. Fancy"),
+    ("Extra No. 1 colour", "Extra 1", EXTRA1, ROSE, "¼–⅓ permukaan merah · dihitung untuk U.S. Extra No. 1"),
+    ("Below colour requirement", "Below", -1.0, AMBER, "< ¼ permukaan merah · hanya U.S. No. 1 / No. 2"),
 ]
 
 
@@ -281,10 +288,12 @@ class PeachBoard:
     def make_events(self):
         ev = []
         for t in self.graded:
-            if self.cls(t) == 2:
+            if self.cls(t) > 0:
                 f = self.final_f[t]
-                ev.append(B.Event(f, (f - 1) / self.fps, "medium", "call_split", f"Grade C · Line {self.line[t]}",
-                                  f"{num(100 * self.share[t], 0)}% merah · dialihkan", "grade_c", feed=False))
+                ev.append(B.Event(f, (f - 1) / self.fps, "medium", "call_split",
+                                  f"{GRADES[self.cls(t)][0]} · Line {self.line[t]}",
+                                  f"{num(100 * self.share[t], 0)}% merah · gagal syarat warna U.S. Fancy", "off_colour",
+                                  feed=False))
         return ev
 
     # ---- the camera picture ------------------------------------------------
@@ -313,24 +322,24 @@ class PeachBoard:
         ui.dashed(img, np.array([[0, zy], [B.VW, zy]]), CYAN, 1, 10, 8)
         ui.dashed(img, np.array([[0, gy], [B.VW, gy]]), TEXT, 2, 12, 6)
         c = ui.Canvas(img)
-        c.pill((B.VW - 10, zy - 4), "Zona grading · warna dibaca selama buah di line", 11, (255, 255, 255),
+        c.pill((B.VW - 10, zy - 4), "Colour zone · read while the fruit turns on its line", 11, (255, 255, 255),
                alpha(CYAN, 0.85), "semibold", icon="filter_center_focus", pad=(8, 2), anchor="rb")
-        c.pill((300, gy - 4), "Gerbang hitung · semua line", 11, TEXT, alpha(BG, 0.85), "semibold", icon="counter_1",
+        c.pill((300, gy - 4), "Count gate · all lines", 11, TEXT, alpha(BG, 0.85), "semibold", icon="counter_1",
                pad=(8, 2), anchor="mb")
         for o, t, s in sorted(chips, key=lambda v: -grade(v[2])):
             col = GRADES[grade(s)][3]
             x0, y0, x1, y1 = (v * K for v in o["box"])
-            B.chip(c, ((x0 + x1) / 2, (y0 + y1) / 2), f"Line {self.line_disp(t)} · Grade {GRADES[grade(s)][1]}", col,
+            B.chip(c, ((x0 + x1) / 2, (y0 + y1) / 2), f"Line {self.line_disp(t)} · {GRADES[grade(s)][1]} · {num(100 * s, 0)}%", col,
                    None, anchor="mm", size=11)
         n_line = [sum(1 for cf, _, ln in self.counted if ln == k and cf <= f) for k in range(1, N_LINES + 1)]
         for k in range(1, N_LINES + 1):
             tx, ty = self.tag[k]
             c.pill((tx * K, ty * K), f"LINE {k} · {n_line[k - 1]}", 12, (20, 24, 30), alpha(TEXT, 0.92), "bold",
                    pad=(7, 3), anchor="rm" if k > 1 else "lm", tnum=True)
-        B.corner_chips(c, "CAM 01 · Sizer persik, 6 line", [f"Terhitung: {sum(n_line)}", "Rekaman nyata"])
-        c.rrect((8, B.VH - 38, 600, B.VH - 8), 8, fill=alpha(BG, 0.75))
-        c.legend((18, B.VH - 23), [("bar", GRADES[0][3], "Grade A ≥ 90%"), ("bar", GRADES[1][3], "Grade B 60–90%"),
-                                   ("bar", GRADES[2][3], "Grade C < 60%"), ("bar", TEXT_3, "sedang dibaca")], 12)
+        B.corner_chips(c, "CAM 01 · Peach sizer, 6 lines", [f"Counted: {sum(n_line)}", "Rekaman nyata"])
+        c.rrect((8, B.VH - 38, 700, B.VH - 8), 8, fill=alpha(BG, 0.75))
+        c.legend((18, B.VH - 23), [("bar", GRADES[0][3], "Fancy ≥ ⅓ red"), ("bar", GRADES[1][3], "Extra No. 1 ≥ ¼"),
+                                   ("bar", GRADES[2][3], "Below < ¼"), ("bar", TEXT_3, "reading")], 12)
         return c.bgr()
 
     # ---- the page ------------------------------------------------------------
@@ -342,40 +351,57 @@ class PeachBoard:
         ui.paste_rounded(img, vid, (B.VX, B.VY), 10)
         done = self.done(f)
         c = ui.Canvas(img)
-        c.topbar("Grading · warna persik", "Lini sortir persik · rekaman Pexels", "Putar ulang", t, self.total,
+        c.topbar("Colour grading · persik (USDA)", "Peach sizer line · rekaman Pexels", "Putar ulang", t, self.total,
                  ["Rekaman nyata", "CAM 01"])
         self.kpis(c, f, done, t)
         self.mix(c, done)
         self.per_line(c, f, done)
         self.history(c, done)
         self.red_strip(c, done)
-        c.timeline(B.TL, t, self.total, self.events, title="Grade C dialihkan")
+        c.timeline(B.TL, t, self.total, self.events, title="Below U.S. Fancy colour")
         return c.bgr()
+
+    def lot(self, done):
+        """Colour shares of the peaches graded so far, against the USDA lot rules."""
+        g = len(done)
+        fancy = sum(1 for x in done if self.share[x] >= FANCY)
+        quarter = sum(1 for x in done if self.share[x] >= EXTRA1)
+        return g, fancy, quarter
+
+    def verdict(self, done):
+        g, fancy, quarter = self.lot(done)
+        if not g:
+            return None, "menunggu persik pertama", TEXT_3
+        if fancy / g >= 1 - FANCY_TOL:
+            return "U.S. Fancy", f"{num(100 * fancy / g, 0)}% ≥ ⅓ merah · gagal {num(100 * (g - fancy) / g, 0)}% ≤ 10%", GREEN
+        if quarter / g >= EXTRA1_SHARE:
+            return "U.S. Extra No. 1", f"{num(100 * quarter / g, 0)}% ≥ ¼ merah · syarat ≥ 50%", AMBER
+        return "U.S. No. 1", "tidak memenuhi syarat warna Fancy / Extra No. 1", AMBER
 
     def kpis(self, c, f, done, t):
         n = sum(1 for cf, _, _ in self.counted if cf <= f)
         rate = n / t * 60 if t > 1 and n else None
-        c.kpi(B.KPI_BOXES[0], "nutrition", "Persik terhitung", str(n),
-              f"6 line · ≈ {num(rate, 0)}/menit, perkiraan dari {num(t, 1)} s" if rate else "6 line · gerbang hitung",
+        c.kpi(B.KPI_BOXES[0], "nutrition", "Peaches counted", str(n),
+              f"6 lines · ≈ {num(rate, 0)}/min, perkiraan dari {num(t, 1)} s" if rate else "6 lines · count gate",
               CRIMSON)
-        g = len(done)
-        a = sum(1 for x in done if self.cls(x) == 0)
-        c.kpi(B.KPI_BOXES[1], "verified", "Grade A", f"{num(100 * a / g, 0)}%" if g else "–",
-              f"{a} dari {g} tergrade · premium / ekspor" if g else "menunggu grade pertama", CRIMSON)
-        b = sum(1 for x in done if self.cls(x) == 1)
-        c.kpi(B.KPI_BOXES[2], "label", "Grade B", f"{num(100 * b / g, 0)}%" if g else "–",
-              f"{b} persik · kemasan reguler" if g else "menunggu grade pertama", ROSE)
-        y = sum(1 for x in done if self.cls(x) == 2)
-        c.kpi(B.KPI_BOXES[3], "call_split", "Grade C, dialihkan", str(y),
-              f"{num(100 * y / g, 0)}% · ke olahan, bukan kemasan" if y else "belum ada", AMBER,
-              value_fill=AMBER if y else TEXT)
+        g, fancy, quarter = self.lot(done)
+        ok = g and fancy / g >= 1 - FANCY_TOL
+        c.kpi(B.KPI_BOXES[1], "verified", "Meets U.S. Fancy colour", f"{num(100 * fancy / g, 0)}%" if g else "–",
+              f"{fancy} dari {g} · syarat lot ≥ 90% (toleransi 10%)" if g else "≥ ⅓ permukaan merah per buah",
+              CRIMSON, value_fill=TEXT if (ok or not g) else AMBER)
+        c.kpi(B.KPI_BOXES[2], "rule", "Extra No. 1 colour rule", f"{num(100 * quarter / g, 0)}%" if g else "–",
+              f"{quarter} buah ≥ ¼ merah · syarat lot ≥ 50%" if g else "≥ 50% lot dengan ≥ ¼ merah", ROSE)
+        below = g - quarter
+        c.kpi(B.KPI_BOXES[3], "call_split", "Below colour requirement", str(below),
+              f"{num(100 * below / g, 0)}% · < ¼ permukaan merah" if below else "belum ada · semua ≥ ¼ merah", AMBER,
+              value_fill=AMBER if below else TEXT)
 
     def mix(self, c, done):
-        y = c.card_title(B.MID, "Komposisi grade", "category", f"{len(done)} persik tergrade")
+        y = c.card_title(B.MID, "Grade Composition · USDA colour", "category", f"{len(done)} persik graded")
         x0, _, x1, y1 = B.MID
         counts = [sum(1 for t in done if self.cls(t) == k) for k in range(3)]
         n = max(1, len(done))
-        bx0, bx1, by = x0 + 16, x1 - 16, y + 14
+        bx0, bx1, by = x0 + 16, x1 - 16, y + 12
         x = bx0
         for k, v in enumerate(counts):
             if v:
@@ -384,53 +410,54 @@ class PeachBoard:
                 x += w
         if not done:
             c.rrect((bx0, by, bx1, by + 18), 4, fill=SURFACE_2)
-        ry = by + 52
-        for k, (name, short, lo, col, dest) in enumerate(GRADES):
+        ry = by + 46
+        for k, (name, short, lo, col, means) in enumerate(GRADES):
             c.dot((x0 + 24, ry), 6, col)
             c.text((x0 + 38, ry), name, 14, "semibold", TEXT, anchor="lm")
-            c.text((x0 + 38, ry + 22), f"→ {dest}", 12, "regular", TEXT_2, anchor="lm")
+            c.text((x0 + 38, ry + 20), means, 12, "regular", TEXT_2, anchor="lm")
             c.text((x1 - 16, ry), f"{counts[k]}", 20, "bold", TEXT, anchor="rm", tnum=True)
             c.text((x1 - 60, ry), f"{num(100 * counts[k] / n, 0)}%" if done else "–", 13, "medium", TEXT_2,
                    anchor="rm", tnum=True)
-            ry += 64
-        c.text((x0 + 16, y1 - 18), "Grade = bagian kulit berwarna merah, median selama buah berputar di line", 11,
+            ry += 54
+        grade_name, detail, col = self.verdict(done)
+        ly = ry - 18
+        c.rrect((x0 + 16, ly, x1 - 16, ly + 44), 8, fill=alpha(col, 0.12))
+        c.icon("check_circle" if col == GREEN else "inventory_2", (x0 + 36, ly + 22), 18, col)
+        c.text((x0 + 54, ly + 13), f"Lot colour: {grade_name}" if grade_name else "Lot colour: –", 13, "semibold",
+               TEXT, anchor="lm")
+        c.text((x0 + 54, ly + 31), detail, 11, "regular", TEXT_2, anchor="lm")
+        c.text((x0 + 16, y1 - 16), "USDA 7 CFR 51.1210–51.1214 · hanya syarat warna; cacat, busuk, memar tidak dinilai", 11,
                "regular", TEXT_3, anchor="lm")
 
     def per_line(self, c, f, done):
-        """Load and grade mix per line: where the fruit runs, and whether one line carries worse fruit."""
-        y = c.card_title(B.FEED, "Kualitas per line", "stacked_bar_chart", "jumlah terhitung · grade")
+        """Colour uniformity per line: the middle half of the red shares on each line, and its median."""
+        y = c.card_title(B.FEED, "Colour uniformity per line", "stacked_bar_chart", "sebaran % merah · garis = ⅓, ¼")
         x0, _, x1, y1 = B.FEED
         cnt = [sum(1 for cf, _, ln in self.counted if ln == k and cf <= f) for k in range(1, N_LINES + 1)]
-        mix = [[sum(1 for t in done if self.line[t] == k and self.cls(t) == g) for g in range(3)]
-               for k in range(1, N_LINES + 1)]
-        tot = max(1, sum(cnt))
-        vmax = max(max(cnt), 1)
-        bx0, bx1 = x0 + 92, x1 - 150
-        ry = y + 20
-        for k in range(N_LINES):
-            c.text((x0 + 16, ry), f"Line {k + 1}", 13, "semibold", TEXT, anchor="lm")
+        bx0, bx1 = x0 + 92, x1 - 140
+
+        def X(v):
+            return bx0 + (bx1 - bx0) * v
+        ry = y + 22
+        for k in range(1, N_LINES + 1):
+            sh = np.array([self.share[t] for t in done if self.line[t] == k])
+            c.text((x0 + 16, ry), f"Line {k}", 13, "semibold", TEXT, anchor="lm")
             c.rrect((bx0, ry - 8, bx1, ry + 8), 4, fill=SURFACE_2)
-            g = sum(mix[k])
-            wtot = (bx1 - bx0) * cnt[k] / vmax
-            x = bx0
-            for gi in range(3):
-                if g and mix[k][gi]:
-                    w = wtot * mix[k][gi] / g
-                    c.rrect((x, ry - 8, x + max(w - 2, 2), ry + 8), 4, fill=GRADES[gi][3])
-                    x += w
-            if cnt[k] and not g:
-                c.rrect((bx0, ry - 8, bx0 + wtot, ry + 8), 4, fill=alpha(TEXT_3, 0.6))
-            c.text((bx1 + 12, ry), f"{cnt[k]}", 14, "bold", TEXT, anchor="lm", tnum=True)
-            c.text((bx1 + 44, ry), f"{num(100 * cnt[k] / tot, 0)}%" if sum(cnt) else "–", 11, "regular", TEXT_3,
-                   anchor="lm", tnum=True)
-            c.text((x1 - 16, ry), f"A {num(100 * mix[k][0] / g, 0)}%" if g else "–", 12, "semibold", TEXT_2,
+            for b, colb in ((EXTRA1, ROSE), (FANCY, CRIMSON)):
+                c.d.line((X(b), ry - 10, X(b), ry + 10), fill=alpha(colb, 0.9), width=1)
+            if len(sh):
+                q1, med, q3 = np.percentile(sh, [25, 50, 75])
+                c.rrect((X(q1), ry - 6, max(X(q3), X(q1) + 4), ry + 6), 3, fill=alpha(GRADES[grade(med)][3], 0.55))
+                c.dot((X(med), ry), 5, GRADES[grade(med)][3])
+                c.text((bx1 + 12, ry), f"{num(100 * med, 0)}%", 13, "bold", TEXT, anchor="lm", tnum=True)
+            c.text((x1 - 16, ry), f"min {num(100 * sh.min(), 0)}%" if len(sh) else "–", 11, "regular", TEXT_3,
                    anchor="rm", tnum=True)
             ry += 52
-        c.text((x0 + 16, y1 - 18), "Panjang bar = persik terhitung per line · warna = grade · kanan = porsi Grade A",
-               11, "regular", TEXT_3, anchor="lm")
+        c.text((x0 + 16, y1 - 18), "Bar = 50% tengah persik di line itu · titik = median · kanan = persik paling sedikit merah", 11,
+               "regular", TEXT_3, anchor="lm")
 
     def history(self, c, done):
-        y = c.card_title(B.BL, "Persik terakhir tergrade", "history", "terbaru di kiri")
+        y = c.card_title(B.BL, "Last peaches graded", "history", "terbaru di kiri")
         x0, _, x1, y1 = B.BL
         tw, gap = 78, 9
         x = x0 + 16
@@ -445,7 +472,7 @@ class PeachBoard:
             c.d.arc((cx - r, cy - r, cx + r, cy + r), -90, -90 + 360 * self.share[t], fill=col, width=5)
             c.text((cx, cy), f"{num(100 * self.share[t], 0)}%", 11, "semibold", TEXT, anchor="mm", tnum=True)
             c.text((x + tw / 2, y + 100), "merah", 11, "regular", TEXT_2, anchor="mm")
-            c.pill((x + tw / 2, y + 124), f"Grade {short}", 10, (255, 255, 255), alpha(col, 0.95), "semibold",
+            c.pill((x + tw / 2, y + 124), short, 10, (255, 255, 255), alpha(col, 0.95), "semibold",
                    pad=(6, 2), anchor="mm")
             x += tw + gap
         if not done:
@@ -453,21 +480,20 @@ class PeachBoard:
                    anchor="mm")
 
     def red_strip(self, c, done):
-        y = c.card_title(B.BR, "Sebaran warna merah persik", "palette", "batas grade di garis putus")
+        y = c.card_title(B.BR, "Red colour spread", "palette", "batas USDA ¼ dan ⅓ di garis putus")
         x0, _, x1, y1 = B.BR
-        lo, hi = 0.0, 1.0
         sx0, sx1, sy = x0 + 30, x1 - 30, y + 70
 
         def X(s):
-            return sx0 + (sx1 - sx0) * (min(max(s, lo), hi) - lo) / (hi - lo)
-        bounds = [hi, GRADES[0][2], GRADES[1][2], lo]
+            return sx0 + (sx1 - sx0) * min(max(s, 0.0), 1.0)
+        bounds = [1.0, FANCY, EXTRA1, 0.0]
         for k in range(3):
             a, b = X(bounds[k + 1]), X(bounds[k])
             c.rrect((a, sy - 26, b, sy + 26), 6, fill=alpha(GRADES[k][3], 0.14))
-            c.text(((a + b) / 2, sy - 40), f"Grade {GRADES[k][1]}", 12, "semibold", TEXT_2, anchor="mm")
-        for b in (GRADES[0][2], GRADES[1][2]):
+            c.text(((a + b) / 2, sy - 40), GRADES[k][1], 12, "semibold", TEXT_2, anchor="mm")
+        for b, lab in ((FANCY, "⅓"), (EXTRA1, "¼")):
             c.d.line((X(b), sy - 30, X(b), sy + 30), fill=alpha(TEXT_3, 0.9), width=1)
-            c.text((X(b), sy + 42), f"{int(round(100 * b))}%", 10, "regular", TEXT_3, anchor="mm")
+            c.text((X(b), sy + 42), lab, 11, "semibold", TEXT_3, anchor="mm")
         rng = np.random.default_rng(3)
         for t in done:
             col = GRADES[self.cls(t)][3]
@@ -493,12 +519,15 @@ def main():
     pb = PeachBoard(tr, colour, len(frames))
     n, g = len(pb.counted), len(pb.graded)
     counts = [sum(1 for t in pb.graded if pb.cls(t) == k) for k in range(3)]
+    lot_name, lot_detail, _ = pb.verdict(pb.graded)
     summary = {"seconds": round(len(frames) / fps, 2), "counted": n, "graded": g,
                "per_minute": round(n / (len(frames) / fps) * 60), "duplicate_counts_dropped": pb.dropped,
                "track_pieces_stitched": pb.stitched, "gate_y": GATE_Y,
                "per_line": [sum(1 for _, _, ln in pb.counted if ln == k) for k in range(1, N_LINES + 1)],
-               "grades": [{"name": gr[0], "red_share_from": max(gr[2], 0.0), "destination": gr[4], "count": counts[k],
-                           "share": round(counts[k] / max(g, 1), 3)} for k, gr in enumerate(GRADES)],
+               "standard": "USDA United States Standards for Grades of Peaches, 7 CFR 51.1210-51.1214 (2004), colour only",
+               "colour_classes": [{"name": gr[0], "red_share_from": round(max(gr[2], 0.0), 3), "count": counts[k],
+                                   "share": round(counts[k] / max(g, 1), 3)} for k, gr in enumerate(GRADES)],
+               "lot_colour": {"meets": lot_name, "detail": lot_detail, "min_red_share": round(min(pb.share.values()), 3)},
                "peaches": [{"tid": t, "line": pb.line[t], "counted_frame": pb.count_f[t], "graded_frame": pb.final_f[t],
                             "reads": sum(1 for fr, _ in pb.reads[t] if fr <= pb.final_f[t]),
                             "red_share": round(pb.share[t], 3), "grade": GRADES[pb.cls(t)][1]} for t in pb.graded]}

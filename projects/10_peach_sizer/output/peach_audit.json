@@ -1,5 +1,5 @@
 {
- "caption": "Cek buta oleh mata: 19 dari 24 sama, sisanya selisih 1 grade",
+ "caption": "Cek mata 12 persik paling sedikit merah: 12/12 ≥ ⅓ merah · sama dengan sistem",
  "method": "24 graded peaches, three crops each from the frames the system read, shuffled and lettered (output/peach_audit_blind.jpg), graded by eye against the same bounds before the letters were matched. Every check used peaches not seen in an earlier one.",
  "final_check": {
   "setup": "red pixel hue < 38 deg, median of all reads while the peach is on its line, oversize segments not read",
@@ -759,5 +759,110 @@
     }
    ]
   }
- ]
+ ],
+ "usda_check": {
+  "question": "does each peach show at least one-third of its surface blushed, pink or red (USDA U.S. Fancy)?",
+  "sample": "the 12 peaches with the lowest red share the system read (0.48 and up), four crops each over their path, shuffled and lettered (output/peach_audit_usda_lowest.jpg), judged by eye before the letters were matched",
+  "same": 12,
+  "of": 12,
+  "rows": [
+   {
+    "letter": "A",
+    "tid": 343,
+    "red_share": 0.806,
+    "line": 1,
+    "system": "Fancy colour (>= 1/3)",
+    "eye": ">= 1/3 red"
+   },
+   {
+    "letter": "B",
+    "tid": 646,
+    "red_share": 0.558,
+    "line": 4,
+    "system": "Fancy colour (>= 1/3)",
+    "eye": ">= 1/3 red"
+   },
+   {
+    "letter": "C",
+    "tid": 333,
+    "red_share": 0.79,
+    "line": 2,
+    "system": "Fancy colour (>= 1/3)",
+    "eye": ">= 1/3 red"
+   },
+   {
+    "letter": "D",
+    "tid": 147,
+    "red_share": 0.8,
+    "line": 4,
+    "system": "Fancy colour (>= 1/3)",
+    "eye": ">= 1/3 red"
+   },
+   {
+    "letter": "E",
+    "tid": 52,
+    "red_share": 0.693,
+    "line": 3,
+    "system": "Fancy colour (>= 1/3)",
+    "eye": ">= 1/3 red"
+   },
+   {
+    "letter": "F",
+    "tid": 681,
+    "red_share": 0.481,
+    "line": 3,
+    "system": "Fancy colour (>= 1/3)",
+    "eye": ">= 1/3 red"
+   },
+   {
+    "letter": "G",
+    "tid": 659,
+    "red_share": 0.792,
+    "line": 2,
+    "system": "Fancy colour (>= 1/3)",
+    "eye": ">= 1/3 red"
+   },
+   {
+    "letter": "H",
+    "tid": 575,
+    "red_share": 0.772,
+    "line": 5,
+    "system": "Fancy colour (>= 1/3)",
+    "eye": ">= 1/3 red"
+   },
+   {
+    "letter": "I",
+    "tid": 221,
+    "red_share": 0.734,
+    "line": 1,
+    "system": "Fancy colour (>= 1/3)",
+    "eye": ">= 1/3 red"
+   },
+   {
+    "letter": "J",
+    "tid": 265,
+    "red_share": 0.555,
+    "line": 3,
+    "system": "Fancy colour (>= 1/3)",
+    "eye": ">= 1/3 red"
+   },
+   {
+    "letter": "K",
+    "tid": 436,
+    "red_share": 0.692,
+    "line": 4,
+    "system": "Fancy colour (>= 1/3)",
+    "eye": ">= 1/3 red"
+   },
+   {
+    "letter": "L",
+    "tid": 223,
+    "red_share": 0.616,
+    "line": 3,
+    "system": "Fancy colour (>= 1/3)",
+    "eye": ">= 1/3 red"
+   }
+  ],
+  "note": "the borderline of the USDA colour rule is 1/3; no peach in this lot comes near it, so the check is on the peaches closest to it"
+ }
 }
