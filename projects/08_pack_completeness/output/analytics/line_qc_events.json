@@ -5,8 +5,8 @@
   "severity": "info",
   "kind": "tray_ok",
   "ref": 1,
-  "title": "Tray #1 lengkap",
-  "detail": "10/10 kaleng · lolos"
+  "title": "Tray #1 complete",
+  "detail": "10/10 cans · pass"
  },
  {
   "frame": 89,
@@ -14,8 +14,8 @@
   "severity": "high",
   "kind": "tray_short",
   "ref": 2,
-  "title": "Tray #2 kurang 1 kaleng",
-  "detail": "9/10 · slot A2 kosong · tandai reject"
+  "title": "Tray #2 short 1 can",
+  "detail": "9/10 · slot A2 empty · flag reject"
  },
  {
   "frame": 154,
@@ -23,8 +23,8 @@
   "severity": "info",
   "kind": "tray_ok",
   "ref": 3,
-  "title": "Tray #3 lengkap",
-  "detail": "10/10 kaleng · lolos"
+  "title": "Tray #3 complete",
+  "detail": "10/10 cans · pass"
  },
  {
   "frame": 222,
@@ -32,8 +32,8 @@
   "severity": "high",
   "kind": "tray_short",
   "ref": 4,
-  "title": "Tray #4 kurang 1 kaleng",
-  "detail": "9/10 · slot A3 kosong · tandai reject"
+  "title": "Tray #4 short 1 can",
+  "detail": "9/10 · slot A3 empty · flag reject"
  },
  {
   "frame": 285,
@@ -41,8 +41,8 @@
   "severity": "info",
   "kind": "tray_ok",
   "ref": 5,
-  "title": "Tray #5 lengkap",
-  "detail": "10/10 kaleng · lolos"
+  "title": "Tray #5 complete",
+  "detail": "10/10 cans · pass"
  },
  {
   "frame": 350,
@@ -50,8 +50,8 @@
   "severity": "info",
   "kind": "tray_ok",
   "ref": 6,
-  "title": "Tray #6 lengkap",
-  "detail": "10/10 kaleng · lolos"
+  "title": "Tray #6 complete",
+  "detail": "10/10 cans · pass"
  },
  {
   "frame": 413,
@@ -59,7 +59,7 @@
   "severity": "high",
   "kind": "tray_short",
   "ref": 7,
-  "title": "Tray #7 kurang 1 kaleng",
-  "detail": "9/10 · slot B5 kosong · tandai reject"
+  "title": "Tray #7 short 1 can",
+  "detail": "9/10 · slot B5 empty · flag reject"
  }
 ]

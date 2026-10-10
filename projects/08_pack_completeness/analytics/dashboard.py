@@ -87,7 +87,7 @@ def corner_chips(c, left, right):
 def feed(c, events, t, thumbs, title="Event Log"):
     shown = [e for e in events if e.feed and e.t <= t]
     x0, y0, x1, y1 = FEED
-    y = c.card_title(FEED, title, "notifications", f"{len(shown)} events")
+    y = c.card_title(FEED, title, "notifications", f"{len(shown)} event{'' if len(shown) == 1 else 's'}")
     if not shown:
         c.text(((x0 + x1) / 2, (y + y1) / 2), "No events yet", 13, "regular", TEXT_3, anchor="mm")
         return
@@ -170,7 +170,7 @@ class LineBoard:
             else:
                 ui.lock_box(img, b, SLATE, 1, outline=0.35)
         c = ui.Canvas(img)
-        c.pill((VL.ZONE_X, 200), "Zona inspeksi", 12, (255, 255, 255), alpha(CYAN, 0.30), "semibold",
+        c.pill((VL.ZONE_X, 200), "Inspection zone", 12, (255, 255, 255), alpha(CYAN, 0.30), "semibold",
                icon="filter_center_focus", pad=(9, 3), anchor="mb")
         for t in s["trays"]:
             b, v = t["box"], t["verdict"]
@@ -178,9 +178,9 @@ class LineBoard:
             lx = max(8, b[0])
             if v is not None:
                 if v["ok"]:
-                    chip(c, (lx, b[1] - 8), f"#{t['tid']} · 10/10 · lolos", GREEN, "check_circle")
+                    chip(c, (lx, b[1] - 8), f"#{t['tid']} · 10/10 · pass", GREEN, "check_circle")
                 else:
-                    chip(c, (lx, b[1] - 8), f"#{t['tid']} · {v['count']}/10 · KURANG", RED, "production_quantity_limits")
+                    chip(c, (lx, b[1] - 8), f"#{t['tid']} · {v['count']}/10 · SHORT", RED, "production_quantity_limits")
                     pts = VL.slot_points(self.tpl, VL.anchored(b, v["box"]))
                     for k in v["empty"]:
                         x, y = pts[k]
@@ -190,7 +190,7 @@ class LineBoard:
                                    pad=(5, 1), anchor="mm")
             elif t["live"] is not None:
                 n = sum(t["live"])
-                chip(c, (lx, b[1] - 8), f"#{t['tid']} · memeriksa · {n}/10", CYAN, "fact_check")
+                chip(c, (lx, b[1] - 8), f"#{t['tid']} · checking · {n}/10", CYAN, "fact_check")
                 for k, (x, y) in enumerate(VL.slot_points(self.tpl, b)):
                     if t["live"][k]:
                         c.dot((x, y), 5, GREEN + (255,))
@@ -244,14 +244,14 @@ class LineBoard:
     def mid(self, c, s):
         heat = s["heat"]
         total = sum(heat)
-        y = c.card_title(MID, "Missing can positions", "grid_view", f"{total} events")
+        y = c.card_title(MID, "Missing can positions", "grid_view", f"{total} event{'' if total == 1 else 's'}")
         x0, _, x1, y1 = MID
         cw, chh, gap = 88, 58, 8
         gw = 5 * cw + 4 * gap
         gx = x0 + (x1 - x0 - gw) // 2
         gy = y + 30
-        c.text((gx, y + 12), "Baris A · belakang", 11, "regular", TEXT_3, anchor="lm")
-        c.text((gx + gw, y + 12), "arah jalan →", 11, "medium", TEXT_2, anchor="rm")
+        c.text((gx, y + 12), "Row A · back", 11, "regular", TEXT_3, anchor="lm")
+        c.text((gx + gw, y + 12), "belt direction →", 11, "medium", TEXT_2, anchor="rm")
         top = max(heat) if heat else 0
         for k in range(VL.EXPECTED):
             col, row = divmod(k, 2)
@@ -301,7 +301,7 @@ class LineBoard:
                 dy = y + 48 + rr * 14
                 c.dot((dx, dy), 4.5, GREEN if k not in j["empty"] else RED)
             c.text((x + tw / 2, y + 90), f"{j['count']}/10", 15, "bold", TEXT, anchor="mm", tnum=True)
-            c.pill((x + tw / 2, y + 116), "lolos" if j["ok"] else "reject", 10, (255, 255, 255), alpha(col, 0.9),
+            c.pill((x + tw / 2, y + 116), "pass" if j["ok"] else "reject", 10, (255, 255, 255), alpha(col, 0.9),
                    "semibold", pad=(7, 2), anchor="mm")
             x += tw + gap
         if not judged:
@@ -315,8 +315,8 @@ class LineBoard:
         sc = self.score
         x0, _, x1, y1 = BR
         lx = c.legend((x0 + 16, y1 - 16), [("bar", BLUE, "inspected"), ("bar", RED, "short")], 11)
-        c.text((x1 - 16, y1 - 16), f"Uji vs ground truth: {sc['trays_correct']}/{sc['trays_judged']} tray benar · "
-               f"{sc['readings_in_zone'] - sc['readings_wrong']}/{sc['readings_in_zone']} pembacaan",
+        c.text((x1 - 16, y1 - 16), f"Test vs ground truth: {sc['trays_correct']}/{sc['trays_judged']} trays right · "
+               f"{sc['readings_in_zone'] - sc['readings_wrong']}/{sc['readings_in_zone']} readings",
                11, "regular", TEXT_3, anchor="rm")
 
 

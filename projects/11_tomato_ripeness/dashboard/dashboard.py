@@ -254,7 +254,7 @@ class TomatoBoard:
     def mix(self, c, done):
         """How many tomatoes in each USDA colour class, and whether the lot may carry its main class's label."""
         n, off, green = self.lot(done)
-        y = c.card_title(B.MID, "Grade Composition · USDA colour classes", "category", f"{n} tomatoes")
+        y = c.card_title(B.MID, "Grade Composition · USDA colour classes", "category", f"{n} tomato{'' if n == 1 else 'es'}")
         x0, _, x1, y1 = B.MID
         cnt = [sum(1 for _, t, _ in done if self.cls(t) == k) for k in range(len(USDA))]
         vmax = max(max(cnt), 1)

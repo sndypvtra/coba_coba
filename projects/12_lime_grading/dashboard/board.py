@@ -88,7 +88,7 @@ def corner_chips(c, left, right):
 def feed(c, events, t, thumbs, title="Event Log", rows=4, unit="events", empty="No events yet"):
     shown = [e for e in events if e.feed and e.t <= t]
     x0, y0, x1, y1 = FEED
-    y = c.card_title(FEED, title, "notifications", f"{len(shown)} {unit}")
+    y = c.card_title(FEED, title, "notifications", f"{len(shown)} {unit[:-1] if len(shown) == 1 and unit.endswith('s') else unit}")
     if not shown:
         c.text(((x0 + x1) / 2, (y + y1) / 2), empty, 13, "regular", TEXT_3, anchor="mm")
         return

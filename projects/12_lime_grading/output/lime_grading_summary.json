@@ -27,7 +27,7 @@
  },
  "lots": [
   {
-   "name": "Lot warna 1–3",
+   "name": "Colour lot 1–3",
    "degrees": [
     1,
     3
@@ -36,7 +36,7 @@
    "share": 0.241
   },
   {
-   "name": "Lot warna 4–6",
+   "name": "Colour lot 4–6",
    "degrees": [
     4,
     6
@@ -45,7 +45,7 @@
    "share": 0.69
   },
   {
-   "name": "Lot warna 7–9",
+   "name": "Colour lot 7–9",
    "degrees": [
     7,
     9
@@ -63,7 +63,7 @@
    "share": 0.0
   }
  ],
- "main_lot": "Lot warna 4–6",
+ "main_lot": "Colour lot 4–6",
  "lemons": [
   {
    "tid": 7,
@@ -71,7 +71,7 @@
    "frame": 7,
    "hue": 110.3,
    "degree": 7,
-   "lot": "Lot warna 7–9"
+   "lot": "Colour lot 7–9"
   },
   {
    "tid": 9,
@@ -79,7 +79,7 @@
    "frame": 7,
    "hue": 102.7,
    "degree": 5,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 2,
@@ -87,7 +87,7 @@
    "frame": 10,
    "hue": 106.6,
    "degree": 6,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 6,
@@ -95,7 +95,7 @@
    "frame": 10,
    "hue": 97.2,
    "degree": 3,
-   "lot": "Lot warna 1–3"
+   "lot": "Colour lot 1–3"
   },
   {
    "tid": 14,
@@ -103,7 +103,7 @@
    "frame": 13,
    "hue": 95.5,
    "degree": 3,
-   "lot": "Lot warna 1–3"
+   "lot": "Colour lot 1–3"
   },
   {
    "tid": 20,
@@ -111,7 +111,7 @@
    "frame": 14,
    "hue": 96.1,
    "degree": 3,
-   "lot": "Lot warna 1–3"
+   "lot": "Colour lot 1–3"
   },
   {
    "tid": 16,
@@ -119,7 +119,7 @@
    "frame": 18,
    "hue": 101.7,
    "degree": 5,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 19,
@@ -127,7 +127,7 @@
    "frame": 19,
    "hue": 104.7,
    "degree": 5,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 22,
@@ -135,7 +135,7 @@
    "frame": 23,
    "hue": 104.0,
    "degree": 5,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 25,
@@ -143,7 +143,7 @@
    "frame": 26,
    "hue": 103.5,
    "degree": 5,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 26,
@@ -151,7 +151,7 @@
    "frame": 30,
    "hue": 103.7,
    "degree": 5,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 29,
@@ -159,7 +159,7 @@
    "frame": 33,
    "hue": 98.3,
    "degree": 4,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 30,
@@ -167,7 +167,7 @@
    "frame": 34,
    "hue": 102.8,
    "degree": 5,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 32,
@@ -175,7 +175,7 @@
    "frame": 36,
    "hue": 100.4,
    "degree": 4,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 35,
@@ -183,7 +183,7 @@
    "frame": 39,
    "hue": 98.1,
    "degree": 4,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 38,
@@ -191,7 +191,7 @@
    "frame": 45,
    "hue": 98.4,
    "degree": 4,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 40,
@@ -199,7 +199,7 @@
    "frame": 48,
    "hue": 102.7,
    "degree": 5,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 43,
@@ -207,7 +207,7 @@
    "frame": 51,
    "hue": 98.7,
    "degree": 4,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 41,
@@ -215,7 +215,7 @@
    "frame": 52,
    "hue": 109.2,
    "degree": 7,
-   "lot": "Lot warna 7–9"
+   "lot": "Colour lot 7–9"
   },
   {
    "tid": 42,
@@ -223,7 +223,7 @@
    "frame": 54,
    "hue": 88.1,
    "degree": 1,
-   "lot": "Lot warna 1–3"
+   "lot": "Colour lot 1–3"
   },
   {
    "tid": 44,
@@ -231,7 +231,7 @@
    "frame": 58,
    "hue": 106.0,
    "degree": 6,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 45,
@@ -239,7 +239,7 @@
    "frame": 59,
    "hue": 96.1,
    "degree": 3,
-   "lot": "Lot warna 1–3"
+   "lot": "Colour lot 1–3"
   },
   {
    "tid": 46,
@@ -247,7 +247,7 @@
    "frame": 63,
    "hue": 112.3,
    "degree": 7,
-   "lot": "Lot warna 7–9"
+   "lot": "Colour lot 7–9"
   },
   {
    "tid": 50,
@@ -255,7 +255,7 @@
    "frame": 66,
    "hue": 111.5,
    "degree": 7,
-   "lot": "Lot warna 7–9"
+   "lot": "Colour lot 7–9"
   },
   {
    "tid": 47,
@@ -263,7 +263,7 @@
    "frame": 68,
    "hue": 79.2,
    "degree": 1,
-   "lot": "Lot warna 1–3"
+   "lot": "Colour lot 1–3"
   },
   {
    "tid": 49,
@@ -271,7 +271,7 @@
    "frame": 68,
    "hue": 104.7,
    "degree": 5,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 53,
@@ -279,7 +279,7 @@
    "frame": 71,
    "hue": 97.6,
    "degree": 3,
-   "lot": "Lot warna 1–3"
+   "lot": "Colour lot 1–3"
   },
   {
    "tid": 52,
@@ -287,7 +287,7 @@
    "frame": 74,
    "hue": 97.3,
    "degree": 3,
-   "lot": "Lot warna 1–3"
+   "lot": "Colour lot 1–3"
   },
   {
    "tid": 57,
@@ -295,7 +295,7 @@
    "frame": 74,
    "hue": 95.9,
    "degree": 3,
-   "lot": "Lot warna 1–3"
+   "lot": "Colour lot 1–3"
   },
   {
    "tid": 54,
@@ -303,7 +303,7 @@
    "frame": 77,
    "hue": 105.1,
    "degree": 5,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 58,
@@ -311,7 +311,7 @@
    "frame": 80,
    "hue": 107.6,
    "degree": 6,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 61,
@@ -319,7 +319,7 @@
    "frame": 80,
    "hue": 106.7,
    "degree": 6,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 59,
@@ -327,7 +327,7 @@
    "frame": 83,
    "hue": 103.5,
    "degree": 5,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 60,
@@ -335,7 +335,7 @@
    "frame": 83,
    "hue": 106.9,
    "degree": 6,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 62,
@@ -343,7 +343,7 @@
    "frame": 86,
    "hue": 100.3,
    "degree": 4,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 63,
@@ -351,7 +351,7 @@
    "frame": 89,
    "hue": 98.7,
    "degree": 4,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 64,
@@ -359,7 +359,7 @@
    "frame": 89,
    "hue": 105.8,
    "degree": 6,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 66,
@@ -367,7 +367,7 @@
    "frame": 92,
    "hue": 104.9,
    "degree": 5,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 65,
@@ -375,7 +375,7 @@
    "frame": 95,
    "hue": 106.6,
    "degree": 6,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 67,
@@ -383,7 +383,7 @@
    "frame": 95,
    "hue": 104.0,
    "degree": 5,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 68,
@@ -391,7 +391,7 @@
    "frame": 107,
    "hue": 105.1,
    "degree": 5,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 70,
@@ -399,7 +399,7 @@
    "frame": 110,
    "hue": 100.5,
    "degree": 4,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 75,
@@ -407,7 +407,7 @@
    "frame": 121,
    "hue": 98.5,
    "degree": 4,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 77,
@@ -415,7 +415,7 @@
    "frame": 121,
    "hue": 94.8,
    "degree": 3,
-   "lot": "Lot warna 1–3"
+   "lot": "Colour lot 1–3"
   },
   {
    "tid": 76,
@@ -423,7 +423,7 @@
    "frame": 124,
    "hue": 99.8,
    "degree": 4,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 78,
@@ -431,7 +431,7 @@
    "frame": 127,
    "hue": 102.5,
    "degree": 5,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 79,
@@ -439,7 +439,7 @@
    "frame": 130,
    "hue": 102.5,
    "degree": 5,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 81,
@@ -447,7 +447,7 @@
    "frame": 140,
    "hue": 99.7,
    "degree": 4,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 80,
@@ -455,7 +455,7 @@
    "frame": 144,
    "hue": 102.8,
    "degree": 5,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 84,
@@ -463,7 +463,7 @@
    "frame": 144,
    "hue": 100.1,
    "degree": 4,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 88,
@@ -471,7 +471,7 @@
    "frame": 153,
    "hue": 110.1,
    "degree": 7,
-   "lot": "Lot warna 7–9"
+   "lot": "Colour lot 7–9"
   },
   {
    "tid": 93,
@@ -479,7 +479,7 @@
    "frame": 158,
    "hue": 99.4,
    "degree": 4,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 86,
@@ -487,7 +487,7 @@
    "frame": 162,
    "hue": 97.4,
    "degree": 3,
-   "lot": "Lot warna 1–3"
+   "lot": "Colour lot 1–3"
   },
   {
    "tid": 98,
@@ -495,7 +495,7 @@
    "frame": 164,
    "hue": 83.8,
    "degree": 1,
-   "lot": "Lot warna 1–3"
+   "lot": "Colour lot 1–3"
   },
   {
    "tid": 99,
@@ -503,7 +503,7 @@
    "frame": 165,
    "hue": 108.1,
    "degree": 6,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 100,
@@ -511,7 +511,7 @@
    "frame": 167,
    "hue": 106.1,
    "degree": 6,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 105,
@@ -519,7 +519,7 @@
    "frame": 170,
    "hue": 103.0,
    "degree": 5,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 103,
@@ -527,7 +527,7 @@
    "frame": 171,
    "hue": 101.5,
    "degree": 4,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 101,
@@ -535,7 +535,7 @@
    "frame": 173,
    "hue": 99.6,
    "degree": 4,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 108,
@@ -543,7 +543,7 @@
    "frame": 174,
    "hue": 100.1,
    "degree": 4,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 107,
@@ -551,7 +551,7 @@
    "frame": 177,
    "hue": 101.3,
    "degree": 4,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 106,
@@ -559,7 +559,7 @@
    "frame": 180,
    "hue": 100.8,
    "degree": 4,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 112,
@@ -567,7 +567,7 @@
    "frame": 182,
    "hue": 106.6,
    "degree": 6,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 110,
@@ -575,7 +575,7 @@
    "frame": 183,
    "hue": 100.7,
    "degree": 4,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 117,
@@ -583,7 +583,7 @@
    "frame": 185,
    "hue": 102.4,
    "degree": 5,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 116,
@@ -591,7 +591,7 @@
    "frame": 186,
    "hue": 104.6,
    "degree": 5,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 114,
@@ -599,7 +599,7 @@
    "frame": 188,
    "hue": 105.8,
    "degree": 6,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 118,
@@ -607,7 +607,7 @@
    "frame": 189,
    "hue": 94.2,
    "degree": 2,
-   "lot": "Lot warna 1–3"
+   "lot": "Colour lot 1–3"
   },
   {
    "tid": 119,
@@ -615,7 +615,7 @@
    "frame": 193,
    "hue": 106.8,
    "degree": 6,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 122,
@@ -623,7 +623,7 @@
    "frame": 195,
    "hue": 102.4,
    "degree": 5,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 120,
@@ -631,7 +631,7 @@
    "frame": 198,
    "hue": 105.3,
    "degree": 6,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 126,
@@ -639,7 +639,7 @@
    "frame": 202,
    "hue": 97.3,
    "degree": 3,
-   "lot": "Lot warna 1–3"
+   "lot": "Colour lot 1–3"
   },
   {
    "tid": 124,
@@ -647,7 +647,7 @@
    "frame": 205,
    "hue": 88.5,
    "degree": 1,
-   "lot": "Lot warna 1–3"
+   "lot": "Colour lot 1–3"
   },
   {
    "tid": 128,
@@ -655,7 +655,7 @@
    "frame": 207,
    "hue": 98.8,
    "degree": 4,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 134,
@@ -663,7 +663,7 @@
    "frame": 213,
    "hue": 82.6,
    "degree": 1,
-   "lot": "Lot warna 1–3"
+   "lot": "Colour lot 1–3"
   },
   {
    "tid": 130,
@@ -671,7 +671,7 @@
    "frame": 217,
    "hue": 94.5,
    "degree": 3,
-   "lot": "Lot warna 1–3"
+   "lot": "Colour lot 1–3"
   },
   {
    "tid": 131,
@@ -679,7 +679,7 @@
    "frame": 219,
    "hue": 81.9,
    "degree": 1,
-   "lot": "Lot warna 1–3"
+   "lot": "Colour lot 1–3"
   },
   {
    "tid": 137,
@@ -687,7 +687,7 @@
    "frame": 219,
    "hue": 95.8,
    "degree": 3,
-   "lot": "Lot warna 1–3"
+   "lot": "Colour lot 1–3"
   },
   {
    "tid": 136,
@@ -695,7 +695,7 @@
    "frame": 222,
    "hue": 104.8,
    "degree": 5,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 138,
@@ -703,7 +703,7 @@
    "frame": 229,
    "hue": 109.1,
    "degree": 7,
-   "lot": "Lot warna 7–9"
+   "lot": "Colour lot 7–9"
   },
   {
    "tid": 140,
@@ -711,7 +711,7 @@
    "frame": 231,
    "hue": 107.8,
    "degree": 6,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 141,
@@ -719,7 +719,7 @@
    "frame": 234,
    "hue": 99.3,
    "degree": 4,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 142,
@@ -727,7 +727,7 @@
    "frame": 235,
    "hue": 104.9,
    "degree": 5,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 139,
@@ -735,7 +735,7 @@
    "frame": 238,
    "hue": 94.9,
    "degree": 3,
-   "lot": "Lot warna 1–3"
+   "lot": "Colour lot 1–3"
   },
   {
    "tid": 144,
@@ -743,7 +743,7 @@
    "frame": 238,
    "hue": 105.6,
    "degree": 6,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 143,
@@ -751,7 +751,7 @@
    "frame": 241,
    "hue": 108.1,
    "degree": 6,
-   "lot": "Lot warna 4–6"
+   "lot": "Colour lot 4–6"
   },
   {
    "tid": 146,
@@ -759,7 +759,7 @@
    "frame": 244,
    "hue": 97.7,
    "degree": 3,
-   "lot": "Lot warna 1–3"
+   "lot": "Colour lot 1–3"
   }
  ]
 }

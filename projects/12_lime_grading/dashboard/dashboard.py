@@ -249,7 +249,7 @@ class LemonBoard:
         m = sum(1 for _, x, _ in done if self.lot(x) == self.main)
         c.kpi(B.KPI_BOXES[2], "inventory_2", f"Main lot · colour {LOTS[self.main][1]}–{LOTS[self.main][2]}",
               f"{num(100 * m / n, 0)}%" if n else "–",
-              f"{m} lemons · max 3 colour degrees per pack" if n else "waiting for the first lemon", LIME)
+              f"{m} lemon{'' if m == 1 else 's'} · max 3 colour degrees per pack" if n else "waiting for the first lemon", LIME)
         bad = sum(1 for _, x, _ in done if self.degree(x) == 10)
         c.kpi(B.KPI_BOXES[3], "block", "Out of Grade", str(bad),
               f"{num(100 * bad / n, 0)}% · colour 10, reject" if bad else "none · no colour 10", RED,
@@ -257,7 +257,7 @@ class LemonBoard:
 
     def mix(self, c, done):
         """How many lemons at each degree of the chart, the chart's own colours, the lots under them."""
-        y = c.card_title(B.MID, "Grade Composition · OECD colour chart", "category", f"{len(done)} lemons")
+        y = c.card_title(B.MID, "Grade Composition · OECD colour chart", "category", f"{len(done)} lemon{'' if len(done) == 1 else 's'}")
         x0, _, x1, y1 = B.MID
         cnt = [sum(1 for _, t, _ in done if self.degree(t) == d) for d in range(1, 11)]
         vmax = max(max(cnt), 1)

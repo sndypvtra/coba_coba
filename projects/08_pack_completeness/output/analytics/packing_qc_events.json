@@ -5,8 +5,8 @@
   "severity": "info",
   "kind": "box_ok",
   "ref": 1,
-  "title": "Kardus #1 lengkap",
-  "detail": "20/20 · lanjut ke penutupan"
+  "title": "Box #1 complete",
+  "detail": "20/20 · on to sealing"
  },
  {
   "frame": 232,
@@ -14,8 +14,8 @@
   "severity": "low",
   "kind": "feeder_gap",
   "ref": 2,
-  "title": "Celah suplai di feeder",
-  "detail": "Stopper kosong · slot B2 kardus #2 berisiko"
+  "title": "Feeder supply gap",
+  "detail": "Stopper empty · slot B2 of box #2 at risk"
  },
  {
   "frame": 284,
@@ -23,8 +23,8 @@
   "severity": "medium",
   "kind": "missed",
   "ref": 2,
-  "title": "Pick kosong · slot B2",
-  "detail": "Kardus #2 · robot jalan tanpa produk · sebab: celah feeder"
+  "title": "Empty pick · slot B2",
+  "detail": "Box #2 · robot moved without product · cause: feeder gap"
  },
  {
   "frame": 360,
@@ -32,8 +32,8 @@
   "severity": "low",
   "kind": "feeder_gap",
   "ref": 2,
-  "title": "Celah suplai di feeder",
-  "detail": "Stopper kosong · slot C5 kardus #2 berisiko"
+  "title": "Feeder supply gap",
+  "detail": "Stopper empty · slot C5 of box #2 at risk"
  },
  {
   "frame": 412,
@@ -41,8 +41,8 @@
   "severity": "medium",
   "kind": "missed",
   "ref": 2,
-  "title": "Pick kosong · slot C5",
-  "detail": "Kardus #2 · robot jalan tanpa produk · sebab: celah feeder"
+  "title": "Empty pick · slot C5",
+  "detail": "Box #2 · robot moved without product · cause: feeder gap"
  },
  {
   "frame": 461,
@@ -50,8 +50,8 @@
   "severity": "high",
   "kind": "box_short",
   "ref": 2,
-  "title": "Kardus #2 keluar kurang 2",
-  "detail": "18/20 · slot B2, C5 kosong · tahan & lengkapi"
+  "title": "Box #2 released short 2",
+  "detail": "18/20 · slot B2, C5 empty · hold & complete"
  },
  {
   "frame": 821,
@@ -59,7 +59,7 @@
   "severity": "info",
   "kind": "box_ok",
   "ref": 3,
-  "title": "Kardus #3 lengkap",
-  "detail": "20/20 · lanjut ke penutupan"
+  "title": "Box #3 complete",
+  "detail": "20/20 · on to sealing"
  }
 ]
