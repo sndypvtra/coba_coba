@@ -1,5 +1,5 @@
 {
- "caption": "Cek buta vs mata (kelas USDA): 75 dari 78 sama, sisanya selisih 1 kelas",
+ "caption": "Blind check vs eye (USDA classes): 75 of 78 same, the rest 1 class apart",
  "method": "every tomato shown on screen (78), two crops each at its sharpest frames with its box drawn, shuffled and coded (output/tomato_audit_blind.jpg), classed by eye on the USDA colour classes (7 CFR 51.1860) before any reading was matched",
  "class_bounds_deg": [
   62.1,

@@ -61,13 +61,13 @@ def analyse_line(frames, fps):
             v = t.verdict
             box = list(t.box)
             if v["ok"]:
-                events.append(Event(f, i / fps, "info", "check_circle", f"Tray #{t.tid} lengkap",
-                                    f"{v['count']}/10 kaleng · lolos", "tray_ok", t.tid, feed=False, focus=box))
+                events.append(Event(f, i / fps, "info", "check_circle", f"Tray #{t.tid} complete",
+                                    f"{v['count']}/10 cans · pass", "tray_ok", t.tid, feed=False, focus=box))
             else:
                 short = VL.EXPECTED - v["count"]
                 events.append(Event(f, i / fps, "high", "production_quantity_limits",
-                                    f"Tray #{t.tid} kurang {short} kaleng",
-                                    f"{v['count']}/10 · slot {_names(v['empty'], VL.slot_label)} kosong · tandai reject",
+                                    f"Tray #{t.tid} short {short} can",
+                                    f"{v['count']}/10 · slot {_names(v['empty'], VL.slot_label)} empty · flag reject",
                                     "tray_short", t.tid, focus=box))
         rate = None
         if len(judged) >= 2:
@@ -141,24 +141,24 @@ def analyse_pack(frames_hsv_for_cal, frame_iter, fps):
             focus = list(box.box) if box else None
             lab = VP.slot_label
             if e["kind"] == "feeder_gap":
-                events.append(Event(f, i / fps, "low", "conveyor_belt", "Celah suplai di feeder",
-                                    f"Stopper kosong · slot {lab(e['slot'])} kardus #{e['box']} berisiko",
+                events.append(Event(f, i / fps, "low", "conveyor_belt", "Feeder supply gap",
+                                    f"Stopper empty · slot {lab(e['slot'])} of box #{e['box']} at risk",
                                     "feeder_gap", e["box"], focus=list(cal.feeder_stop)))
             elif e["kind"] == "missed":
-                events.append(Event(f, i / fps, "medium", "report", f"Pick kosong · slot {lab(e['slot'])}",
-                                    f"Kardus #{e['box']} · robot jalan tanpa produk"
-                                    + (" · sebab: celah feeder" if e.get("feeder_gap", 0) >= VP.FEED_WARN else ""),
+                events.append(Event(f, i / fps, "medium", "report", f"Empty pick · slot {lab(e['slot'])}",
+                                    f"Box #{e['box']} · robot moved without product"
+                                    + (" · cause: feeder gap" if e.get("feeder_gap", 0) >= VP.FEED_WARN else ""),
                                     "missed", e["box"], focus=focus))
             elif e["kind"] == "released":
                 short = VP.EXPECTED - e["count"]
                 if short:
                     events.append(Event(f, i / fps, "high", "production_quantity_limits",
-                                        f"Kardus #{e['box']} keluar kurang {short}",
-                                        f"{e['count']}/20 · slot {_names(e['empty'], lab)} kosong · tahan & lengkapi",
+                                        f"Box #{e['box']} released short {short}",
+                                        f"{e['count']}/20 · slot {_names(e['empty'], lab)} empty · hold & complete",
                                         "box_short", e["box"], focus=focus))
                 else:
-                    events.append(Event(f, i / fps, "info", "check_circle", f"Kardus #{e['box']} lengkap",
-                                        "20/20 · lanjut ke penutupan", "box_ok", e["box"], feed=True, focus=focus))
+                    events.append(Event(f, i / fps, "info", "check_circle", f"Box #{e['box']} complete",
+                                        "20/20 · on to sealing", "box_ok", e["box"], feed=True, focus=focus))
         n_ev = len(ins.events)
         station = next((b for b in live if b.arrived is not None and b.left is None), None)
         if station is not None:

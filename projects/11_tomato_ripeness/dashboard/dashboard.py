@@ -58,12 +58,12 @@ GREEN_LIMIT = 0.05                    # ...of which at most 5 % green
 # a class runs from the midpoint with the class before it to the midpoint with the class after it.
 # (name, mean hue, colour on screen, what the USDA standard says of the surface)
 USDA = [
-    ("Red", 59.3, (220, 38, 38), "> 90% merah"),
-    ("Light Red", 64.9, (248, 113, 113), "> 60% merah muda–merah, ≤ 90% merah"),
-    ("Pink", 78.1, (244, 114, 182), "30–60% pink atau merah"),
-    ("Turning", 93.2, (251, 146, 60), "10–30% sudah berubah dari hijau"),
-    ("Breakers", 109.1, YELLOW, "≤ 10% sudah berubah dari hijau"),
-    ("Green", 113.3, GREEN, "seluruh permukaan hijau"),
+    ("Red", 59.3, (220, 38, 38), "> 90% red"),
+    ("Light Red", 64.9, (248, 113, 113), "> 60% pinkish-red or red, ≤ 90% red"),
+    ("Pink", 78.1, (244, 114, 182), "30–60% pink or red"),
+    ("Turning", 93.2, (251, 146, 60), "10–30% changed from green"),
+    ("Breakers", 109.1, YELLOW, "≤ 10% changed from green"),
+    ("Green", 113.3, GREEN, "fully green surface"),
 ]
 BOUNDS = [(USDA[k][1] + USDA[k + 1][1]) / 2 for k in range(len(USDA) - 1)]   # 62.1, 71.5, 85.7, 101.2, 111.2
 
@@ -108,7 +108,7 @@ class TomatoBoard:
             green = k == len(USDA) - 1
             self.events.append(B.Event(
                 f, (f - 1) / self.fps, "high" if green else "low", "eco" if green else "call_split",
-                f"{USDA[k][0]} · Line {ln}", f"hue {num(self.hue[t], 1)}° · off-colour untuk lot {USDA[self.main][0]}",
+                f"{USDA[k][0]} · Line {ln}", f"hue {num(self.hue[t], 1)}° · off-colour for lot {USDA[self.main][0]}",
                 "off_colour", focus=self.box_at(t, f)))
 
     def box_at(self, t, f):
@@ -193,7 +193,7 @@ class TomatoBoard:
             if k in self.gate_x:
                 c.pill((self.gate_x[k] * K, gy + 8), f"LINE {k} · {n_line[k - 1]}", 11, (20, 24, 30),
                        alpha(TEXT, 0.92), "bold", pad=(6, 2), anchor="mt", tnum=True)
-        B.corner_chips(c, "CAM 01 · Tomato packing line, 4 lines", [f"Counted: {sum(n_line)}", "Rekaman nyata"])
+        B.corner_chips(c, "CAM 01 · Tomato packing line, 4 lines", [f"Counted: {sum(n_line)}", "Real footage"])
         c.rrect((8, B.VH - 38, 700, B.VH - 8), 8, fill=alpha(BG, 0.75))
         c.legend((18, B.VH - 23), [("bar", u[2], u[0]) for u in USDA] + [("dot", TEXT, "✓ counted")], 12)
         return c.bgr()
@@ -215,8 +215,8 @@ class TomatoBoard:
         B.series_chart(img, tb, [(off_s, AMBER, True), ([100 * OFF_COLOUR_LIMIT] * len(off_s), RED, False)],
                        self.n, ymax)
         c = ui.Canvas(img)
-        c.topbar("Colour grading · tomat (USDA)", "Tomato packing line · rekaman Pexels", "Putar ulang", t, self.total,
-                 ["Rekaman nyata", "CAM 01"])
+        c.topbar("Produce Grading · tomato (USDA)", "Tomato packing line · Pexels footage", "Replay", t, self.total,
+                 ["Real footage", "CAM 01"])
         self.kpis(c, done, t)
         self.mix(c, done)
         B.feed(c, self.events, t, self.thumbs, title="Event Log", unit="events", empty="No events yet")
@@ -237,24 +237,24 @@ class TomatoBoard:
         n, off, green = self.lot(done)
         rate = n / t * 60 if t > 1 and n else None
         c.kpi(B.KPI_BOXES[0], "nutrition", "Tomatoes counted", str(n),
-              f"4 lines · ≈ {num(rate, 0)}/min, perkiraan dari {num(t, 1)} s" if rate else "4 lines · count gate", RED)
+              f"4 lines · ≈ {num(rate, 0)}/min, estimate from {num(t, 1)} s" if rate else "4 lines · count gate", RED)
         main = USDA[self.main]
         share = (n - off) / n if n else 0
         c.kpi(B.KPI_BOXES[1], "verified", f"Main colour class · {main[0]}", f"{num(100 * share, 0)}%" if n else "–",
-              f"{n - off} dari {n} · {main[3]}" if n else "menunggu tomat pertama", main[2])
+              f"{n - off} of {n} · {main[3]}" if n else "waiting for the first tomato", main[2])
         over = n >= 5 and off / n > OFF_COLOUR_LIMIT
         c.kpi(B.KPI_BOXES[2], "rule", "Off-colour", f"{num(100 * off / n, 0)}%" if n else "–",
-              ("melewati batas 10% · sortir, atau label Mixed Color" if over else "dalam batas 10% (USDA)") if n
-              else "batas 10% per lot (USDA)", AMBER, value_fill=AMBER if over else TEXT)
+              ("over the 10% limit · re-sort, or label Mixed Color" if over else "within the 10% limit (USDA)") if n
+              else "10% limit per lot (USDA)", AMBER, value_fill=AMBER if over else TEXT)
         g_over = n >= 5 and green / n > GREEN_LIMIT
         c.kpi(B.KPI_BOXES[3], "eco", "Green in lot", str(green),
-              f"{num(100 * green / n, 0)}% · batas 5% (USDA)" if n else "batas 5% per lot (USDA)", GREEN,
+              f"{num(100 * green / n, 0)}% · limit 5% (USDA)" if n else "5% limit per lot (USDA)", GREEN,
               value_fill=RED if g_over else TEXT)
 
     def mix(self, c, done):
         """How many tomatoes in each USDA colour class, and whether the lot may carry its main class's label."""
         n, off, green = self.lot(done)
-        y = c.card_title(B.MID, "Grade Composition · USDA colour classes", "category", f"{n} tomat")
+        y = c.card_title(B.MID, "Grade Composition · USDA colour classes", "category", f"{n} tomatoes")
         x0, _, x1, y1 = B.MID
         cnt = [sum(1 for _, t, _ in done if self.cls(t) == k) for k in range(len(USDA))]
         vmax = max(max(cnt), 1)
@@ -276,14 +276,14 @@ class TomatoBoard:
         c.rrect((x0 + 16, ly, x1 - 16, ly + 40), 8, fill=alpha(GREEN if ok else AMBER, 0.12))
         c.icon("check_circle" if ok else "warning", (x0 + 36, ly + 20), 18, GREEN if ok else AMBER)
         msg = (f"Lot label: {main} · off-colour {num(100 * off / n, 0)}% ≤ 10%" if ok and n else
-               f"Lot label: Mixed Color · off-colour {num(100 * off / n, 0)}% > 10%, sortir untuk label {main}"
-               if n else "Lot label: menunggu tomat pertama")
+               f"Lot label: Mixed Color · off-colour {num(100 * off / n, 0)}% > 10%, re-sort to label {main}"
+               if n else "Lot label: waiting for the first tomato")
         c.text((x0 + 54, ly + 20), c.fit(msg, 13, "semibold", x1 - x0 - 80), 13, "semibold", TEXT, anchor="lm")
-        c.text((x0 + 16, y1 - 16), "Sumber: USDA 7 CFR 51.1860–51.1861 · UNECE FFV-36 (warna seragam untuk Extra/Class I)",
+        c.text((x0 + 16, y1 - 16), "Source: USDA 7 CFR 51.1860–51.1861 · UNECE FFV-36 (uniform colour for Extra/Class I)",
                11, "regular", TEXT_3, anchor="lm")
 
     def off_card(self, c, tb, off_s, ymax):
-        c.card_title(B.BL, "Off-colour trend", "monitoring", "porsi off-colour dalam lot · batas 10%")
+        c.card_title(B.BL, "Off-colour trend", "monitoring", "off-colour share of the lot · limit 10%")
         step = 10 if ymax <= 60 else 20
         B.chart_axes(c, tb, ymax, list(range(0, int(ymax) + 1, step)), self.total, xstep=1,
                      fmt=lambda v: f"{v}%", xfmt=lambda s: f"{int(s)} s")
@@ -292,7 +292,7 @@ class TomatoBoard:
                                       ("bar", RED, "USDA limit 10%")], 12)
 
     def hue_strip(self, c, done):
-        y = c.card_title(B.BR, "Colour spread · hue angle", "palette", "batas kelas USDA di garis putus")
+        y = c.card_title(B.BR, "Colour spread · hue angle", "palette", "USDA class bounds dashed")
         x0, _, x1, y1 = B.BR
         lo, hi = 40.0, 120.0
         sx0, sx1, sy = x0 + 30, x1 - 30, y + 70

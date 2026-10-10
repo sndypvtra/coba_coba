@@ -59,10 +59,10 @@ SWATCH = [(235, 187, 43), (216, 190, 64), (205, 191, 59), (194, 183, 59), (184, 
           (148, 164, 59), (135, 146, 60), (109, 124, 58), (79, 101, 50)]   # the chart's lemons, degree 1 to 10
 # Colour lots of 3 adjacent degrees, as one consignment allows, and degree 10. (name, first, last, colour, looks)
 LOTS = [
-    ("Lot warna 1–3", 1, 3, YELLOW, "kuning"),
-    ("Lot warna 4–6", 4, 6, LIME, "kuning-hijau"),
-    ("Lot warna 7–9", 7, 9, DEEP, "hijau"),
-    ("Out of Grade", 10, 10, RED, "derajat 10 · terlalu hijau"),
+    ("Colour lot 1–3", 1, 3, YELLOW, "yellow"),
+    ("Colour lot 4–6", 4, 6, LIME, "yellow-green"),
+    ("Colour lot 7–9", 7, 9, DEEP, "green"),
+    ("Out of Grade", 10, 10, RED, "degree 10 · too green"),
 ]
 
 
@@ -108,8 +108,8 @@ class LemonBoard:
             if k == self.main:
                 continue
             name = LOTS[k][0]
-            detail = (f"warna {self.degree(t)} (OECD) · tolak, di luar standar" if k == 3 else
-                      f"warna {self.degree(t)} (OECD) · pisahkan dari {LOTS[self.main][0].lower()}")
+            detail = (f"colour {self.degree(t)} (OECD) · reject, out of grade" if k == 3 else
+                      f"colour {self.degree(t)} (OECD) · pack apart from {LOTS[self.main][0].lower()}")
             self.events.append(B.Event(f, (f - 1) / self.fps, "high" if k == 3 else "low",
                                        "block" if k == 3 else "call_split", f"{name} · Line {ln}", detail, "lot",
                                        focus=self.box_at(t, f)))
@@ -176,7 +176,7 @@ class LemonBoard:
             ui.lock_box(img, [v * K for v in o["box"]], LOTS[self.lot(t)][3], 2, fill=0.12 if done else 0.0)
         ui.dashed(img, np.array([[0, gy], [B.VW, gy]]), CYAN, 2, 12, 6)
         c = ui.Canvas(img)
-        c.pill((B.VW / 2, gy - 6), "Gerbang hitung · kedua line", 11, (255, 255, 255), alpha(CYAN, 0.85), "semibold",
+        c.pill((B.VW / 2, gy - 6), "Count gate · both lines", 11, (255, 255, 255), alpha(CYAN, 0.85), "semibold",
                icon="counter_1", pad=(8, 2), anchor="mb")
         # the ones outside the main lot on top: they are the ones the line has to act on
         for o in sorted(fr["objects"], key=lambda o: self.lot(o["tid"]) != self.main):
@@ -185,18 +185,18 @@ class LemonBoard:
                 continue
             col = LOTS[self.lot(t)][3]
             x0, y0 = o["box"][0] * K, o["box"][1] * K
-            B.chip(c, (max(6, x0), y0 - 4), f"Line {self.line[t]} · Warna {self.degree(t)} ✓", col, None, anchor="lb",
+            B.chip(c, (max(6, x0), y0 - 4), f"Line {self.line[t]} · Colour {self.degree(t)} ✓", col, None, anchor="lb",
                    size=11)
         n_line = [sum(1 for cf, _, ln in self.counted if ln == k and cf <= f) for k in range(1, N_LINES + 1)]
         c.pill((16, gy + 10), f"LINE 1 · {n_line[0]}", 12, (20, 24, 30), alpha(TEXT, 0.92), "bold", pad=(7, 3),
                anchor="lt", tnum=True)
         c.pill((B.VW - 16, gy + 10), f"LINE 2 · {n_line[1]}", 12, (20, 24, 30), alpha(TEXT, 0.92), "bold",
                pad=(7, 3), anchor="rt", tnum=True)
-        B.corner_chips(c, "CAM 01 · Rantai sortir lemon, 2 line", [f"Terhitung: {sum(n_line)}", "Rekaman nyata"])
+        B.corner_chips(c, "CAM 01 · Lemon sorting chains, 2 lines", [f"Counted: {sum(n_line)}", "Real footage"])
         c.rrect((8, B.VH - 38, 640, B.VH - 8), 8, fill=alpha(BG, 0.75))
-        c.legend((18, B.VH - 23), [("bar", LOTS[0][3], "warna 1–3"), ("bar", LOTS[1][3], "warna 4–6"),
-                                   ("bar", LOTS[2][3], "warna 7–9"), ("bar", LOTS[3][3], "10 · out of grade"),
-                                   ("dot", TEXT, "✓ terhitung")], 12)
+        c.legend((18, B.VH - 23), [("bar", LOTS[0][3], "colour 1–3"), ("bar", LOTS[1][3], "colour 4–6"),
+                                   ("bar", LOTS[2][3], "colour 7–9"), ("bar", LOTS[3][3], "10 · out of grade"),
+                                   ("dot", TEXT, "✓ counted")], 12)
         return c.bgr()
 
     # ---- the page ------------------------------------------------------------
@@ -214,14 +214,14 @@ class LemonBoard:
         series = self.trend(f)
         B.series_chart(img, tb, [(series[k], LOTS[k][3], k == self.main) for k in range(3)], self.n, 100)
         c = ui.Canvas(img)
-        c.topbar("Grading · warna lemon (OECD)", "Rantai sortir lemon · rekaman Pexels", "Putar ulang", t, self.total,
-                 ["Rekaman nyata", "CAM 01"])
+        c.topbar("Produce Grading · lemon (OECD)", "Lemon sorting chains · Pexels footage", "Replay", t, self.total,
+                 ["Real footage", "CAM 01"])
         self.kpis(c, done, t)
         self.mix(c, done)
         B.feed(c, self.events, t, self.thumbs, title="Event Log", unit="events", empty="No events yet")
         self.trend_card(c, tb, series)
         self.degree_strip(c, done)
-        c.timeline(B.TL, t, self.total, self.events, title="Di luar lot utama")
+        c.timeline(B.TL, t, self.total, self.events, title="Outside main lot")
         return c.bgr()
 
     def trend(self, f):
@@ -240,24 +240,24 @@ class LemonBoard:
     def kpis(self, c, done, t):
         n = len(done)
         rate = n / t * 60 if t > 1 and n else None
-        c.kpi(B.KPI_BOXES[0], "nutrition", "Lemon terhitung", str(n),
-              f"2 line · ≈ {num(rate, 0)}/menit, perkiraan dari {num(t, 1)} s" if rate else "2 line · gerbang hitung",
+        c.kpi(B.KPI_BOXES[0], "nutrition", "Lemons counted", str(n),
+              f"2 lines · ≈ {num(rate, 0)}/min, estimate from {num(t, 1)} s" if rate else "2 lines · count gate",
               LIME)
         ok = sum(1 for _, x, _ in done if self.degree(x) <= 9)
-        c.kpi(B.KPI_BOXES[1], "verified", "Sesuai standar warna", f"{num(100 * ok / n, 0)}%" if n else "–",
-              "warna 1–9 · Extra, Class I, Class II" if n else "menunggu lemon pertama", DEEP)
+        c.kpi(B.KPI_BOXES[1], "verified", "Within colour standard", f"{num(100 * ok / n, 0)}%" if n else "–",
+              "colour 1–9 · Extra, Class I, Class II" if n else "waiting for the first lemon", DEEP)
         m = sum(1 for _, x, _ in done if self.lot(x) == self.main)
-        c.kpi(B.KPI_BOXES[2], "inventory_2", f"Lot utama · warna {LOTS[self.main][1]}–{LOTS[self.main][2]}",
+        c.kpi(B.KPI_BOXES[2], "inventory_2", f"Main lot · colour {LOTS[self.main][1]}–{LOTS[self.main][2]}",
               f"{num(100 * m / n, 0)}%" if n else "–",
-              f"{m} lemon · maks. 3 derajat warna per kemasan" if n else "menunggu lemon pertama", LIME)
+              f"{m} lemons · max 3 colour degrees per pack" if n else "waiting for the first lemon", LIME)
         bad = sum(1 for _, x, _ in done if self.degree(x) == 10)
         c.kpi(B.KPI_BOXES[3], "block", "Out of Grade", str(bad),
-              f"{num(100 * bad / n, 0)}% · warna 10, tolak" if bad else "belum ada · tidak ada warna 10", RED,
+              f"{num(100 * bad / n, 0)}% · colour 10, reject" if bad else "none · no colour 10", RED,
               value_fill=RED if bad else TEXT)
 
     def mix(self, c, done):
         """How many lemons at each degree of the chart, the chart's own colours, the lots under them."""
-        y = c.card_title(B.MID, "Komposisi Grade · bagan warna OECD", "category", f"{len(done)} lemon")
+        y = c.card_title(B.MID, "Grade Composition · OECD colour chart", "category", f"{len(done)} lemons")
         x0, _, x1, y1 = B.MID
         cnt = [sum(1 for _, t, _ in done if self.degree(t) == d) for d in range(1, 11)]
         vmax = max(max(cnt), 1)
@@ -273,28 +273,28 @@ class LemonBoard:
         # the lots of 3 adjacent degrees, and degree 10 apart, past the limit the chart marks
         lx = gx0 + 9 * bw
         c.d.line((lx, top - 6, lx, base + 4), fill=alpha(RED, 0.9), width=1)
-        c.text((lx - 4, top - 8), "batas", 10, "regular", RED, anchor="rb")
+        c.text((lx - 4, top - 8), "limit", 10, "regular", RED, anchor="rb")
         for name, a, b, col, looks in LOTS:
             ax, bx_ = gx0 + (a - 1) * bw + 4, gx0 + b * bw - 4
             yy = base + 32
             c.rrect((ax, yy, bx_, yy + 4), 2, fill=col)
             share = sum(cnt[a - 1:b])
-            label = name.replace("Lot warna ", "Lot ") if a < 10 else "Out of Grade"
+            label = name.replace("Colour lot ", "Lot ") if a < 10 else "Out of Grade"
             c.text(((ax + bx_) / 2, yy + 16), f"{label} · {share}", 11, "semibold", TEXT_2, anchor="mm", tnum=True)
-        c.text((x0 + 16, y1 - 32), "Warna 1–9 boleh di Extra, Class I dan Class II · warna 10 di luar standar", 11,
+        c.text((x0 + 16, y1 - 32), "Colour 1–9 allowed in Extra, Class I and Class II · colour 10 out of grade", 11,
                "regular", TEXT_3, anchor="lm")
-        c.text((x0 + 16, y1 - 16), "Satu kemasan maks. 3 derajat warna berdekatan · sumber: OECD Citrus Fruits", 11,
+        c.text((x0 + 16, y1 - 16), "One pack holds max 3 adjacent colour degrees · source: OECD Citrus Fruits", 11,
                "regular", TEXT_3, anchor="lm")
 
     def trend_card(self, c, tb, series):
-        c.card_title(B.BL, "Tren lot warna", "monitoring", f"porsi lot, {num(TREND_WIN, 0)} s terakhir")
+        c.card_title(B.BL, "Colour lot trend", "monitoring", f"lot share, last {num(TREND_WIN, 0)} s")
         B.chart_axes(c, tb, 100, [0, 50, 100], self.total, xstep=1, fmt=lambda v: f"{v}%", xfmt=lambda s: f"{int(s)} s")
         x0, _, x1, y1 = B.BL
         c.legend((x0 + 16, y1 - 14), [("bar", LOTS[k][3], f"{LOTS[k][1]}–{LOTS[k][2]}  {num(series[k][-1], 0)}%")
                                       for k in range(3)], 12)
 
     def degree_strip(self, c, done):
-        y = c.card_title(B.BR, "Sebaran derajat warna", "palette", "bagan OECD · 1 kuning, 10 hijau tua")
+        y = c.card_title(B.BR, "Colour degree spread", "palette", "OECD chart · 1 yellow, 10 dark green")
         x0, _, x1, y1 = B.BR
         sx0, sx1, sy = x0 + 30, x1 - 30, y + 66
 

@@ -31,7 +31,7 @@ VIDEO = ROOT / "input" / "03_packages_conveyor.mp4"
 OUT = ROOT / "output"
 K = 1280 / 1920
 CLS_COL = {"S": CYAN, "M": BLUE, "L": VIOLET}
-CLS_NAME = {"S": "kecil", "M": "sedang", "L": "besar"}
+CLS_NAME = {"S": "small", "M": "medium", "L": "large"}
 SLIT_SCAN_TRUTH = 8
 
 
@@ -81,16 +81,16 @@ class ParcelBoard:
             s = self.size(tid, f)
             box = self.box_at(tid, f) or [0, 300, 400, 600]
             if s is None:
-                ev.append(B.Event(f, (f - 1) / self.fps, "low", "package_2", f"Paket #{tid} terhitung",
-                                  "ukuran belum terbaca", "counted", focus=box))
+                ev.append(B.Event(f, (f - 1) / self.fps, "low", "package_2", f"Parcel #{tid} counted",
+                                  "size not read yet", "counted", focus=box))
                 continue
             cls = f"{s['cls']}{s['mark']}"
             if s["mark"] == "?":
-                ev.append(B.Event(f, (f - 1) / self.fps, "medium", "straighten", f"Paket #{tid} · cek ukuran manual",
-                                  f"{dims(s)} · {num(s['volume_l'], 0)} L · kelas {cls} dekat batas", "check", focus=box))
+                ev.append(B.Event(f, (f - 1) / self.fps, "medium", "straighten", f"Parcel #{tid} · manual size check",
+                                  f"{dims(s)} · {num(s['volume_l'], 0)} L · class {cls} near the boundary", "check", focus=box))
             else:
                 ev.append(B.Event(f, (f - 1) / self.fps, "info", "package_2",
-                                  f"Paket #{tid} · {CLS_NAME[s['cls']]} ({s['cls']})",
+                                  f"Parcel #{tid} · {CLS_NAME[s['cls']]} ({s['cls']})",
                                   f"{dims(s)} · {num(s['volume_l'], 0)} L", "counted", focus=box))
         return ev
 
@@ -107,7 +107,7 @@ class ParcelBoard:
             done = o["tid"] in self.counted and self.counted[o["tid"]] <= f
             ui.lock_box(img, [v * K for v in o["box"]], col, 2, fill=0.10 if done else 0.0)
         c = ui.Canvas(img)
-        c.pill((ax + 6, min(ay, by) + 6), "Garis hitung", 11, (255, 255, 255), alpha(CYAN, 0.85), "semibold",
+        c.pill((ax + 6, min(ay, by) + 6), "Count line", 11, (255, 255, 255), alpha(CYAN, 0.85), "semibold",
                icon="filter_center_focus", pad=(7, 2), anchor="la")
         for o in sorted(objs, key=lambda o: o["box"][1]):
             s = self.size(o["tid"], f)
@@ -117,11 +117,11 @@ class ParcelBoard:
                 lab = f"#{o['tid']} · {dims(s)} · {num(s['volume_l'], 0)} L · {s['cls']}{s['mark']}" + (" ✓" if done else "")
                 B.chip(c, (max(6, x0), y0 - 4), lab, CLS_COL[s["cls"]], None, anchor="lb", size=11)
             else:
-                c.pill((max(6, x0), y0 - 4), f"#{o['tid']} · mengukur…", 10, TEXT, alpha(BG, 0.75), "medium",
+                c.pill((max(6, x0), y0 - 4), f"#{o['tid']} · measuring…", 10, TEXT, alpha(BG, 0.75), "medium",
                        pad=(6, 2), anchor="lb")
         n = sum(1 for fr in self.counted.values() if fr <= f)
-        B.corner_chips(c, "CAM 01 · Ban bongkar paket", [f"Terhitung: {n}", "Rekaman nyata"])
-        c.pill((B.VW - 10, B.VH - 12), "Tumpukan di belakang tidak dihitung · bukan di atas ban", 11, TEXT,
+        B.corner_chips(c, "CAM 01 · Unloading belt", [f"Counted: {n}", "Real footage"])
+        c.pill((B.VW - 10, B.VH - 12), "Stack at the back not counted · not on the belt", 11, TEXT,
                alpha(BG, 0.75), "medium", icon="visibility_off", pad=(8, 3), anchor="rb")
         return c.bgr()
 
@@ -149,19 +149,19 @@ class ParcelBoard:
         vmax = max(200.0, float(self.total_volume()) * 1.15)
         B.series_chart(img, cb, [(vol, VIOLET, True)], self.n, vmax)
         c = ui.Canvas(img)
-        c.topbar("Dimensioning · paket", "Ban bongkar paket · rekaman Pexels", "Putar ulang", t, self.total,
-                 ["Rekaman nyata", "CAM 01"])
+        c.topbar("Parcel Dimensioning", "Unloading belt · Pexels footage", "Replay", t, self.total,
+                 ["Real footage", "CAM 01"])
         cs = self.counted_sizes(f)
         self.kpis(c, cs, t)
         self.table(c, f)
         B.feed(c, self.events, t, self.thumbs)
         self.mix(c, cs)
-        c.card_title(B.BR, "Volume tertangani, kumulatif", "monitoring", f"{num(vol[-1], 0)} L")
+        c.card_title(B.BR, "Volume handled, cumulative", "monitoring", f"{num(vol[-1], 0)} L")
         step = 100 if vmax <= 600 else 200
         B.chart_axes(c, cb, vmax, list(range(0, int(vmax) + 1, step)), self.total, fmt=lambda v: f"{v} L")
         x0, _, x1, y1 = B.BR
-        c.text((x1 - 16, y1 - 16), f"Hitungan {len(self.order)} = hitungan manual {SLIT_SCAN_TRUTH} · karton uji "
-               "terbaca 340,5 mm, aslinya 340 mm", 11, "regular", TEXT_3, anchor="rm")
+        c.text((x1 - 16, y1 - 16), f"Count {len(self.order)} = manual count {SLIT_SCAN_TRUTH} · test carton "
+               "read 340.5 mm, actual 340 mm", 11, "regular", TEXT_3, anchor="rm")
         c.timeline(B.TL, t, self.total, self.events)
         return c.bgr()
 
@@ -170,23 +170,23 @@ class ParcelBoard:
 
     def kpis(self, c, cs, t):
         n = len(cs)
-        c.kpi(B.KPI_BOXES[0], "package_2", "Paket terhitung", str(n), "lewat garis hitung · diukur 3D", BLUE)
+        c.kpi(B.KPI_BOXES[0], "package_2", "Parcels counted", str(n), "past the count line · measured in 3D", BLUE)
         v = sum(s["volume_l"] for _, s in cs if s)
-        c.kpi(B.KPI_BOXES[1], "view_in_ar", "Volume tertangani", f"{num(v / 1000, 2)} m³",
-              f"{num(v, 0)} L · rata-rata {num(v / n, 0)} L/paket" if n else "menunggu paket pertama", VIOLET)
+        c.kpi(B.KPI_BOXES[1], "view_in_ar", "Volume handled", f"{num(v / 1000, 2)} m³",
+              f"{num(v, 0)} L · average {num(v / n, 0)} L/parcel" if n else "waiting for the first parcel", VIOLET)
         rate = n / t * 3600 if t > 1 and n else None
-        c.kpi(B.KPI_BOXES[2], "speed", "Laju bongkar", f"{num(rate, 0)}/jam" if rate else "–",
-              f"≈ {num(v / t * 3600 / 1000, 1)} m³/jam · perkiraan dari {num(t, 0)} s" if rate else "menunggu paket pertama",
+        c.kpi(B.KPI_BOXES[2], "speed", "Unloading rate", f"{num(rate, 0)}/h" if rate else "–",
+              f"≈ {num(v / t * 3600 / 1000, 1)} m³/h · estimate from {num(t, 0)} s" if rate else "waiting for the first parcel",
               CYAN)
         unsure = sum(1 for _, s in cs if s and s["mark"] == "?")
-        c.kpi(B.KPI_BOXES[3], "straighten", "Perlu cek manual", str(unsure),
-              "ukuran dekat batas kelas" if unsure else "semua kelas pasti", AMBER,
+        c.kpi(B.KPI_BOXES[3], "straighten", "Manual check needed", str(unsure),
+              "size near a class boundary" if unsure else "all classes certain", AMBER,
               value_fill=AMBER if unsure else TEXT)
 
     def table(self, c, f):
-        y = c.card_title(B.MID, "Paket terukur", "straighten", "ukuran final sebelum garis hitung")
+        y = c.card_title(B.MID, "Parcels measured", "straighten", "final size before the count line")
         x0, _, x1, y1 = B.MID
-        cols = [("Paket", 16), ("P × L × T", 92), ("Volume", 270), ("Kelas", 350), ("Status", 440)]
+        cols = [("Parcel", 16), ("L × W × H", 92), ("Volume", 270), ("Class", 350), ("Status", 440)]
         for name, dx in cols:
             c.text((x0 + dx, y + 6), name, 11, "medium", TEXT_3, anchor="lm")
         c.d.line((x0 + 14, y + 19, x1 - 14, y + 19), fill=ui.BORDER, width=1)
@@ -206,15 +206,15 @@ class ParcelBoard:
             c.pill((x0 + 350, ry), f"{s['cls']}{s['mark']}", 10, (255, 255, 255), alpha(CLS_COL[s['cls']], 0.9), "bold",
                    pad=(7, 2), anchor="lm")
             if done:
-                c.pill((x0 + 440, ry), "terhitung", 10, (255, 255, 255), alpha(GREEN, 0.85), "semibold", pad=(7, 2),
+                c.pill((x0 + 440, ry), "counted", 10, (255, 255, 255), alpha(GREEN, 0.85), "semibold", pad=(7, 2),
                        anchor="lm")
             else:
-                c.pill((x0 + 440, ry), "di ban", 10, TEXT, alpha(CYAN, 0.25), "semibold", pad=(7, 2), anchor="lm")
+                c.pill((x0 + 440, ry), "on belt", 10, TEXT, alpha(CYAN, 0.25), "semibold", pad=(7, 2), anchor="lm")
             ry += 34
-        c.text((x0 + 16, y1 - 18), "* ukuran ±10% (bagian atas karton kurang terlihat) · ? dekat batas kelas", 10, "regular", TEXT_3, anchor="lm")
+        c.text((x0 + 16, y1 - 18), "* size ±10% (carton top partly hidden) · ? near a class boundary", 10, "regular", TEXT_3, anchor="lm")
 
     def mix(self, c, cs):
-        y = c.card_title(B.BL, "Campuran ukuran", "category", "batas 30 cm dan 60 cm, sisi terpanjang")
+        y = c.card_title(B.BL, "Size mix", "category", "bounds 30 cm and 60 cm, longest side")
         x0, _, x1, y1 = B.BL
         n = max(1, len(cs))
         ry = y + 20
@@ -228,10 +228,10 @@ class ParcelBoard:
             w = (bx1 - bx0) * cnt / n
             if w > 2:
                 c.rrect((bx0, ry - 7, bx0 + w, ry + 7), 4, fill=CLS_COL[k])
-            c.text((bx1 + 12, ry), f"{cnt} paket", 12, "medium", TEXT, anchor="lm", tnum=True)
+            c.text((bx1 + 12, ry), f"{cnt} parcel{'' if cnt == 1 else 's'}", 12, "medium", TEXT, anchor="lm", tnum=True)
             c.text((x1 - 16, ry), f"{num(vol, 0)} L", 12, "regular", TEXT_2, anchor="rm", tnum=True)
             ry += 40
-        c.text((x0 + 16, y1 - 18), "Kelas ukuran menentukan tarif dan cara muat", 11, "regular", TEXT_3, anchor="lm")
+        c.text((x0 + 16, y1 - 18), "Size class sets the rate and how it is loaded", 11, "regular", TEXT_3, anchor="lm")
 
 
 def main():

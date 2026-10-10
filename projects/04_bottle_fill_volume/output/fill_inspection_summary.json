@@ -14,23 +14,23 @@
  "events": [
   {
    "t": 4.28,
-   "title": "Botol masuk posisi",
-   "detail": "4 botol di bawah nozzle · botol depan diukur"
+   "title": "Bottle in position",
+   "detail": "4 bottles under the nozzles · front bottle measured"
   },
   {
    "t": 5.64,
-   "title": "Pengisian dimulai · nozzle 1",
-   "detail": "1,4 s setelah botol di posisi"
+   "title": "Filling started · nozzle 1",
+   "detail": "1.4 s after the bottle was in position"
   },
   {
    "t": 8.72,
-   "title": "Setengah target tercapai",
-   "detail": "3,1 s sejak mulai · 76 mL/s"
+   "title": "Half of target reached",
+   "detail": "3.1 s since start · 76 mL/s"
   },
   {
    "t": 9.24,
-   "title": "Rekaman berakhir, siklus belum selesai",
-   "detail": "67% · target diperkirakan 1,9 s lagi · belum diputuskan"
+   "title": "Clip ends before the cycle does",
+   "detail": "67% · target expected in 1.9 s · no verdict yet"
   }
  ]
 }

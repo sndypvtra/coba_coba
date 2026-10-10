@@ -104,49 +104,49 @@
   {
    "t": 2.04,
    "severity": "info",
-   "title": "Paket #18 · sedang (M)",
+   "title": "Parcel #18 · medium (M)",
    "detail": "44×43×14 cm · 26 L"
   },
   {
    "t": 4.37,
    "severity": "info",
-   "title": "Paket #15 · sedang (M)",
+   "title": "Parcel #15 · medium (M)",
    "detail": "46×36×16 cm · 27 L"
   },
   {
    "t": 5.34,
    "severity": "medium",
-   "title": "Paket #20 · cek ukuran manual",
-   "detail": "28×23×10 cm · 7 L · kelas S? dekat batas"
+   "title": "Parcel #20 · manual size check",
+   "detail": "28×23×10 cm · 7 L · class S? near the boundary"
   },
   {
    "t": 6.47,
    "severity": "info",
-   "title": "Paket #1 · besar (L)",
+   "title": "Parcel #1 · large (L)",
    "detail": "69×46×37 cm · 117 L"
   },
   {
    "t": 8.68,
    "severity": "info",
-   "title": "Paket #23 · sedang (M)",
+   "title": "Parcel #23 · medium (M)",
    "detail": "39×34×11 cm · 14 L"
   },
   {
    "t": 10.34,
    "severity": "info",
-   "title": "Paket #4 · sedang (M)",
+   "title": "Parcel #4 · medium (M)",
    "detail": "38×35×14 cm · 19 L"
   },
   {
    "t": 14.01,
    "severity": "info",
-   "title": "Paket #24 · sedang (M)",
+   "title": "Parcel #24 · medium (M)",
    "detail": "38×31×27 cm · 32 L"
   },
   {
    "t": 15.28,
    "severity": "info",
-   "title": "Paket #28 · besar (L)",
+   "title": "Parcel #28 · large (L)",
    "detail": "75×54×34 cm · 140 L"
   }
  ]

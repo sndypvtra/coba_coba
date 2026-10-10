@@ -1,5 +1,5 @@
 {
- "caption": "Cek buta vs bagan OECD: ±1 derajat 18/24 · lot sama 17/24",
+ "caption": "Blind check vs OECD chart: 18/24 within ±1 degree · same lot 17/24",
  "method": "24 lemons picked at random across the degrees, two crops each with the counted box drawn, shuffled and lettered under the OECD chart (output/lime_audit_blind.jpg); each was matched to a chart degree by eye before the letters were matched",
  "degree_exact": 11,
  "degree_within_1": 18,

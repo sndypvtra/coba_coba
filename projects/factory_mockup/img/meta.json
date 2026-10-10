@@ -1,0 +1,73 @@
+{
+ "frames": {
+  "tomato": [
+   40,
+   80,
+   125
+  ],
+  "lemon": [
+   60,
+   150,
+   200,
+   240
+  ],
+  "fill": [
+   120,
+   180,
+   230
+  ],
+  "tray": [
+   95,
+   230,
+   440
+  ],
+  "packing": [
+   290,
+   500,
+   850
+  ],
+  "parcel": [
+   165,
+   300,
+   505
+  ]
+ },
+ "tomato_off": [
+  {
+   "img": "snap_tomato_1.jpg",
+   "line": 2,
+   "hue": 64.1,
+   "frame": 58
+  },
+  {
+   "img": "snap_tomato_2.jpg",
+   "line": 3,
+   "hue": 63.4,
+   "frame": 62
+  },
+  {
+   "img": "snap_tomato_3.jpg",
+   "line": 1,
+   "hue": 62.5,
+   "frame": 69
+  },
+  {
+   "img": "snap_tomato_4.jpg",
+   "line": 2,
+   "hue": 70.3,
+   "frame": 100
+  },
+  {
+   "img": "snap_tomato_5.jpg",
+   "line": 2,
+   "hue": 66.3,
+   "frame": 110
+  },
+  {
+   "img": "snap_tomato_6.jpg",
+   "line": 2,
+   "hue": 62.9,
+   "frame": 121
+  }
+ ]
+}

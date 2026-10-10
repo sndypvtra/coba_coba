@@ -84,12 +84,12 @@ def corner_chips(c, left, right):
         x = b[0] - 6
 
 
-def feed(c, events, t, thumbs, title="Kejadian terbaru"):
+def feed(c, events, t, thumbs, title="Event Log"):
     shown = [e for e in events if e.feed and e.t <= t]
     x0, y0, x1, y1 = FEED
-    y = c.card_title(FEED, title, "notifications", f"{len(shown)} kejadian")
+    y = c.card_title(FEED, title, "notifications", f"{len(shown)} events")
     if not shown:
-        c.text(((x0 + x1) / 2, (y + y1) / 2), "Belum ada kejadian", 13, "regular", TEXT_3, anchor="mm")
+        c.text(((x0 + x1) / 2, (y + y1) / 2), "No events yet", 13, "regular", TEXT_3, anchor="mm")
         return
     rows = 4
     rh = (y1 - y - 12 - (rows - 1) * 8) // rows
@@ -140,7 +140,7 @@ def encode(frames_iter, path, fps):
 
 # ---------------------------------------------------------------- can line
 class LineBoard:
-    TITLE = "Packing QC · tray kaleng"
+    TITLE = "Pack Count QC · can trays"
 
     def __init__(self, run, score, total_s):
         self.run, self.score, self.total = run, score, total_s
@@ -198,10 +198,10 @@ class LineBoard:
                     else:
                         c.d.ellipse((x - 22, y - 22, x + 22, y + 22), outline=RED + (255,), width=3)
             elif full and b[2] < zx0 + 40:
-                c.pill((lx, b[1] - 8), "menuju zona", 11, TEXT, alpha(BG, 0.7), "medium", pad=(7, 2), anchor="lb")
+                c.pill((lx, b[1] - 8), "to zone", 11, TEXT, alpha(BG, 0.7), "medium", pad=(7, 2), anchor="lb")
         in_zone = sum(1 for t in s["trays"] if t["live"] is not None)
-        corner_chips(c, f"{A.CAM} · Akhir lini pengisian kaleng",
-                     ["Arah belt →", f"Di zona: {in_zone} tray"])
+        corner_chips(c, f"{A.CAM} · End of can filling line",
+                     ["Belt →", f"In zone: {in_zone} tray"])
         return c.bgr()
 
     # the page ------------------------------------------------------------
@@ -218,21 +218,21 @@ class LineBoard:
         ymax = max(4, max(self.cum_all) + 1)
         series_chart(img, cb, [(self.cum_all[:i + 1], BLUE, True), (self.cum_short[:i + 1], RED, False)], self.n, ymax)
         c = ui.Canvas(img)
-        c.topbar(self.TITLE, "Pabrik simulasi · lini kaleng", "Putar ulang", t, self.total,
-                 ["Data simulasi 3D", A.CAM])
+        c.topbar(self.TITLE, "Simulated plant · can line", "Replay", t, self.total,
+                 ["3D simulation", A.CAM])
         judged = s["judged"]
         n = len(judged)
         short = [j for j in judged if not j["ok"]]
         missing = sum(VL.EXPECTED - j["count"] for j in short)
-        c.kpi(KPI_BOXES[0], "fact_check", "Tray diperiksa", str(n), f"{n - len(short)} lolos · {len(short)} kurang", BLUE)
-        pct = f"{num(100 * len(short) / n, 0)}% dari tray diperiksa · ditandai reject" if n else "belum ada tray diperiksa"
-        c.kpi(KPI_BOXES[1], "production_quantity_limits", "Tray kurang isi", str(len(short)), pct, RED,
+        c.kpi(KPI_BOXES[0], "fact_check", "Trays inspected", str(n), f"{n - len(short)} pass · {len(short)} short", BLUE)
+        pct = f"{num(100 * len(short) / n, 0)}% of trays inspected · flagged reject" if n else "no tray inspected yet"
+        c.kpi(KPI_BOXES[1], "production_quantity_limits", "Short trays", str(len(short)), pct, RED,
               value_fill=RED if short else TEXT)
-        c.kpi(KPI_BOXES[2], "remove_circle", "Kaleng kurang", str(missing),
-              f"dari {n * VL.EXPECTED} kaleng seharusnya", AMBER, value_fill=AMBER if missing else TEXT)
+        c.kpi(KPI_BOXES[2], "remove_circle", "Missing cans", str(missing),
+              f"of {n * VL.EXPECTED} cans expected", AMBER, value_fill=AMBER if missing else TEXT)
         r = s["rate_per_min"]
-        c.kpi(KPI_BOXES[3], "speed", "Laju lini", f"{num(r, 1)} tray/menit" if r else "–",
-              f"≈ {num(r * VL.EXPECTED, 0)} kaleng/menit, dari jarak antar tray" if r else "butuh 2 tray untuk menghitung",
+        c.kpi(KPI_BOXES[3], "speed", "Line speed", f"{num(r, 1)} trays/min" if r else "–",
+              f"≈ {num(r * VL.EXPECTED, 0)} cans/min, from the tray spacing" if r else "needs 2 trays to measure",
               CYAN)
         self.mid(c, s)
         feed(c, self.run.events, t, self.thumbs)
@@ -244,7 +244,7 @@ class LineBoard:
     def mid(self, c, s):
         heat = s["heat"]
         total = sum(heat)
-        y = c.card_title(MID, "Posisi kaleng yang hilang", "grid_view", f"{total} kejadian")
+        y = c.card_title(MID, "Missing can positions", "grid_view", f"{total} events")
         x0, _, x1, y1 = MID
         cw, chh, gap = 88, 58, 8
         gw = 5 * cw + 4 * gap
@@ -263,30 +263,30 @@ class LineBoard:
             c.text((cx + 8, cy + 7), VL.slot_label(k), 11, "semibold", TEXT_2 if not v else TEXT)
             c.text((cx + cw - 8, cy + chh - 8), f"{v}×" if v else "–", 16 if v else 13, "bold" if v else "regular",
                    TEXT if v else TEXT_3, anchor="rs", tnum=True)
-        c.text((gx, gy + 2 * chh + gap + 14), "Baris B · depan (dekat kamera)", 11, "regular", TEXT_3, anchor="lm")
+        c.text((gx, gy + 2 * chh + gap + 14), "Row B · front (near camera)", 11, "regular", TEXT_3, anchor="lm")
         # what it means
         ty = gy + 2 * chh + gap + 44
         if total == 0:
-            msg, sub = "Belum ada tray kurang.", "Setiap tray dicek 10 slot di zona inspeksi."
+            msg, sub = "No short tray yet.", "Every tray is checked for 10 slots in the inspection zone."
         elif top >= 2:
             k = heat.index(top)
-            msg = f"Slot {VL.slot_label(k)} kosong {top}× — pola berulang."
-            sub = f"Periksa jalur pengisi untuk kolom {k // 2 + 1} di mesin pengisi."
+            msg = f"Slot {VL.slot_label(k)} empty {top}× — repeating pattern."
+            sub = f"Check filler lane {k // 2 + 1} on the filling machine."
         elif total == 1:
-            msg = f"1 kejadian, di slot {VL.slot_label(heat.index(1))}."
-            sub = "Satu kejadian belum menunjukkan pola; pantau terus."
+            msg = f"1 event, at slot {VL.slot_label(heat.index(1))}."
+            sub = "One event is not a pattern yet; keep watching."
         else:
-            msg = f"{total} kejadian di {total} posisi berbeda."
-            sub = "Belum ada pola satu jalur pengisi; pantau terus."
+            msg = f"{total} events at {total} different positions."
+            sub = "No single filler lane pattern yet; keep watching."
         c.icon("insights", (x0 + 28, ty + 1), 18, BLUE)
         c.text((x0 + 44, ty), msg, 13, "semibold", TEXT, anchor="lm")
         c.text((x0 + 44, ty + 22), sub, 12, "regular", TEXT_2, anchor="lm")
         c.icon("rule", (x0 + 28, ty + 55), 18, TEXT_3)
-        c.text((x0 + 44, ty + 54), f"Standar 10 kaleng/tray · keputusan dari ±{self.reads} pembacaan di zona", 12, "regular",
+        c.text((x0 + 44, ty + 54), f"Standard 10 cans/tray · verdict from ±{self.reads} readings in the zone", 12, "regular",
                TEXT_2, anchor="lm")
 
     def history(self, c, judged):
-        y = c.card_title(BL, "Tray terakhir", "history", "terbaru di kiri")
+        y = c.card_title(BL, "Last trays", "history", "newest on the left")
         x0, _, x1, y1 = BL
         tw, gap = 78, 9
         x = x0 + 16
@@ -305,16 +305,16 @@ class LineBoard:
                    "semibold", pad=(7, 2), anchor="mm")
             x += tw + gap
         if not judged:
-            c.text(((x0 + x1) / 2, (y + y1) / 2), "Menunggu tray pertama melewati zona", 13, "regular", TEXT_3,
+            c.text(((x0 + x1) / 2, (y + y1) / 2), "Waiting for the first tray to pass the zone", 13, "regular", TEXT_3,
                    anchor="mm")
 
     def chart_text(self, c, cb, ymax, n, short):
-        y = c.card_title(BR, "Tray diperiksa, kumulatif", "monitoring", f"{n} diperiksa · {short} kurang")
+        y = c.card_title(BR, "Trays inspected, cumulative", "monitoring", f"{n} inspected · {short} short")
         step = 2 if ymax <= 10 else 5
         chart_axes(c, cb, ymax, list(range(0, ymax + 1, step)), self.total)
         sc = self.score
         x0, _, x1, y1 = BR
-        lx = c.legend((x0 + 16, y1 - 16), [("bar", BLUE, "diperiksa"), ("bar", RED, "kurang isi")], 11)
+        lx = c.legend((x0 + 16, y1 - 16), [("bar", BLUE, "inspected"), ("bar", RED, "short")], 11)
         c.text((x1 - 16, y1 - 16), f"Uji vs ground truth: {sc['trays_correct']}/{sc['trays_judged']} tray benar · "
                f"{sc['readings_in_zone'] - sc['readings_wrong']}/{sc['readings_in_zone']} pembacaan",
                11, "regular", TEXT_3, anchor="rm")
@@ -322,7 +322,7 @@ class LineBoard:
 
 # ---------------------------------------------------------------- packing station
 class PackBoard:
-    TITLE = "Packing QC · stasiun robot"
+    TITLE = "Pack Count QC · robot packing station"
 
     def __init__(self, run, score, total_s):
         self.run, self.score, self.total = run, score, total_s
@@ -347,7 +347,7 @@ class PackBoard:
         c.rrect((fx0, fy0, fx1, fy1), 6, fill=alpha(AMBER, 0.25) if alert else None,
                 outline=AMBER + (255,) if alert else alpha(SLATE, 0.8), width=2)
         if alert:
-            chip(c, (fx1 + 6, fy0 - 4), "Stopper feeder kosong", AMBER, "warning", anchor="lb")
+            chip(c, (fx1 + 6, fy0 - 4), "Feeder stopper empty", AMBER, "warning", anchor="lb")
         else:
             c.pill((fx1 + 6, fy0 - 4), "Stopper feeder", 11, TEXT, alpha(BG, 0.7), "medium", pad=(7, 2), anchor="lb")
         for b in s["boxes"]:
@@ -356,7 +356,7 @@ class PackBoard:
             lx = max(8, bx[0])
             slots = self.cal.slots(bx)
             if b["state"] == "filling":
-                chip(c, (lx, bx[1] - 8), f"Kardus #{b['bid']} · {b['count']}/20 · mengisi", CYAN, "inventory_2")
+                chip(c, (lx, bx[1] - 8), f"Box #{b['bid']} · {b['count']}/20 · filling", CYAN, "inventory_2")
                 st = s["station"]
                 for k, (x, y) in enumerate(slots):
                     if k in b["filled"]:
@@ -369,22 +369,22 @@ class PackBoard:
             elif b["state"] == "done":
                 v = b["verdict"]
                 if v["ok"]:
-                    chip(c, (lx, bx[1] - 8), f"#{b['bid']} · 20/20 · lengkap", GREEN, "check_circle")
+                    chip(c, (lx, bx[1] - 8), f"#{b['bid']} · 20/20 · complete", GREEN, "check_circle")
                 else:
-                    chip(c, (lx, bx[1] - 8), f"#{b['bid']} · {v['count']}/20 · KURANG", RED,
+                    chip(c, (lx, bx[1] - 8), f"#{b['bid']} · {v['count']}/20 · SHORT", RED,
                          "production_quantity_limits")
                 pts = self.cal.slots(VL.anchored(bx, v["box"]))
                 for k in v["empty"]:
                     if 0 < pts[k][0] < VW:
                         self.cross(c, *pts[k])
             else:
-                c.pill((lx, bx[1] - 8), "Kardus berikut", 11, TEXT, alpha(BG, 0.7), "medium", pad=(7, 2), anchor="lb")
+                c.pill((lx, bx[1] - 8), "Next box", 11, TEXT, alpha(BG, 0.7), "medium", pad=(7, 2), anchor="lb")
         st = s["station"]
-        robot = "Robot: mengisi" if st and st["filling"] else "Robot: ganti kardus"
+        robot = "Robot: filling" if st and st["filling"] else "Robot: box change"
         right = [robot]
         if s["cycle_s"]:
-            right.append(f"Siklus {num(s['cycle_s'], 2)} s")
-        corner_chips(c, f"{A.CAM} · Stasiun packing robot", right)
+            right.append(f"Cycle {num(s['cycle_s'], 2)} s")
+        corner_chips(c, f"{A.CAM} · Robot packing station", right)
         return c.bgr()
 
     @staticmethod
@@ -407,26 +407,26 @@ class PackBoard:
         ui.dashed(img, np.array([[cb[0], tgt], [cb[2], tgt]]), SLATE, 1)
         series_chart(img, cb, [(self.series[:i + 1], BLUE, True)], self.n, 22)
         c = ui.Canvas(img)
-        c.topbar(self.TITLE, "Pabrik simulasi · lini packing", "Putar ulang", t, self.total,
-                 ["Data simulasi 3D", A.CAM])
+        c.topbar(self.TITLE, "Simulated plant · packing line", "Replay", t, self.total,
+                 ["3D simulation", A.CAM])
         st = s["station"]
         done = s["done"]
         short = [d for d in done if not d["ok"]]
         if st:
-            state = "sedang diisi" if st["filling"] else "selesai, ganti kardus"
-            c.kpi(KPI_BOXES[0], "inventory_2", "Kardus di stasiun", f"{st['count']}/20", f"Kardus #{st['bid']} · {state}",
+            state = "filling" if st["filling"] else "done, box change"
+            c.kpi(KPI_BOXES[0], "inventory_2", "Box at station", f"{st['count']}/20", f"Box #{st['bid']} · {state}",
                   BLUE)
         else:
-            c.kpi(KPI_BOXES[0], "inventory_2", "Kardus di stasiun", "–", "menunggu kardus", BLUE)
-        c.kpi(KPI_BOXES[1], "local_shipping", "Kardus selesai", str(len(done)),
-              f"{len(done) - len(short)} lengkap · {len(short)} kurang isi", GREEN)
+            c.kpi(KPI_BOXES[0], "inventory_2", "Box at station", "–", "waiting for a box", BLUE)
+        c.kpi(KPI_BOXES[1], "local_shipping", "Boxes done", str(len(done)),
+              f"{len(done) - len(short)} complete · {len(short)} short", GREEN)
         m = s["missed_total"]
-        c.kpi(KPI_BOXES[2], "report", "Pick kosong", str(m),
-              f"{s['feeder_gaps']}× celah suplai feeder terdeteksi" if s["feeder_gaps"] else "robot selalu membawa produk",
+        c.kpi(KPI_BOXES[2], "report", "Empty picks", str(m),
+              f"{s['feeder_gaps']}× feeder supply gap detected" if s["feeder_gaps"] else "robot always carried a product",
               AMBER, value_fill=AMBER if m else TEXT)
         cy = s["cycle_s"]
-        c.kpi(KPI_BOXES[3], "speed", "Laju robot", f"{num(60 / cy, 0)} pick/menit" if cy else "–",
-              f"waktu siklus {num(cy, 2)} s (median)" if cy else "butuh 2 pick untuk menghitung", CYAN)
+        c.kpi(KPI_BOXES[3], "speed", "Robot speed", f"{num(60 / cy, 0)} picks/min" if cy else "–",
+              f"cycle time {num(cy, 2)} s (median)" if cy else "needs 2 picks to measure", CYAN)
         self.mid(c, st)
         feed(c, self.run.events, t, self.thumbs)
         self.history(c, done, st, s["frame"])
@@ -436,17 +436,17 @@ class PackBoard:
 
     def mid(self, c, st):
         if not st:
-            c.card_title(MID, "Peta slot kardus", "grid_view")
+            c.card_title(MID, "Box slot map", "grid_view")
             return
         rest = VP.EXPECTED - st["count"] - len(st["missed"])
-        y = c.card_title(MID, f"Peta slot · Kardus #{st['bid']}", "grid_view",
-                         f"terisi {st['count']} · kosong {len(st['missed'])} · sisa {rest}")
+        y = c.card_title(MID, f"Slot map · Box #{st['bid']}", "grid_view",
+                         f"filled {st['count']} · empty {len(st['missed'])} · to go {rest}")
         x0, _, x1, y1 = MID
         cw, chh, gap = 92, 44, 7
         gw = 5 * cw + 4 * gap
         gx = x0 + (x1 - x0 - gw) // 2
         gy = y + 22
-        c.text((gx, y + 6), "Belakang", 11, "regular", TEXT_3, anchor="lm")
+        c.text((gx, y + 6), "Back", 11, "regular", TEXT_3, anchor="lm")
         for k in range(VP.EXPECTED):
             r, col = divmod(k, VP.COLS)
             cx, cy = gx + col * (cw + gap), gy + r * (chh + gap)
@@ -460,21 +460,21 @@ class PackBoard:
                 lab = (255, 255, 255)
             elif st["filling"] and k == st["next"]:
                 c.rrect((cx, cy, cx + cw, cy + chh), 8, fill=alpha(BLUE, 0.16), outline=BLUE + (255,), width=2)
-                c.text((cx + cw - 10, cy + chh / 2), "berikut", 10, "medium", TEXT_2, anchor="rm")
+                c.text((cx + cw - 10, cy + chh / 2), "next", 10, "medium", TEXT_2, anchor="rm")
                 lab = TEXT
             else:
                 c.rrect((cx, cy, cx + cw, cy + chh), 8, fill=SURFACE_2)
                 lab = TEXT_3
             c.text((cx + 10, cy + chh / 2), VP.slot_label(k), 12, "semibold", lab, anchor="lm")
         ly = gy + 4 * chh + 3 * gap + 14
-        c.text((gx, ly), "Depan (dekat kamera)", 11, "regular", TEXT_3, anchor="lm")
-        c.legend((x0 + 16, y1 - 18), [("bar", GREEN, "terisi"), ("bar", RED, "pick kosong"),
-                                     ("ring", BLUE, "slot berikut"), ("bar", SURFACE_2, "belum")], 11)
+        c.text((gx, ly), "Front (near camera)", 11, "regular", TEXT_3, anchor="lm")
+        c.legend((x0 + 16, y1 - 18), [("bar", GREEN, "filled"), ("bar", RED, "empty pick"),
+                                     ("ring", BLUE, "next slot"), ("bar", SURFACE_2, "to go")], 11)
 
     def history(self, c, done, st, frame):
-        y = c.card_title(BL, "Riwayat kardus", "list_alt", "per kardus yang keluar")
+        y = c.card_title(BL, "Box history", "list_alt", "per box released")
         x0, _, x1, y1 = BL
-        cols = [("Kardus", 16), ("Keluar", 96), ("Isi", 172), ("Status", 236), ("Slot kosong", 336), ("Tindakan", 452)]
+        cols = [("Box", 16), ("Released", 96), ("Count", 172), ("Status", 236), ("Empty slots", 336), ("Action", 452)]
         hy = y + 6
         for name, dx in cols:
             c.text((x0 + dx, hy), name, 11, "medium", TEXT_3, anchor="lm")
@@ -489,16 +489,16 @@ class PackBoard:
                    TEXT_2, anchor="lm", tnum=True)
             c.text((x0 + 172, ry), f"{d['count']}/20", 13, "semibold", TEXT, anchor="lm", tnum=True)
             if live:
-                c.pill((x0 + 236, ry), "diisi", 10, TEXT, alpha(CYAN, 0.25), "semibold", pad=(7, 2), anchor="lm")
+                c.pill((x0 + 236, ry), "filling", 10, TEXT, alpha(CYAN, 0.25), "semibold", pad=(7, 2), anchor="lm")
                 act = "–"
             elif d["ok"]:
-                c.pill((x0 + 236, ry), "lengkap", 10, (255, 255, 255), alpha(GREEN, 0.9), "semibold", pad=(7, 2),
+                c.pill((x0 + 236, ry), "complete", 10, (255, 255, 255), alpha(GREEN, 0.9), "semibold", pad=(7, 2),
                        anchor="lm")
-                act = "Tutup & kirim"
+                act = "Seal & ship"
             else:
-                c.pill((x0 + 236, ry), "kurang", 10, (255, 255, 255), alpha(RED, 0.9), "semibold", pad=(7, 2),
+                c.pill((x0 + 236, ry), "short", 10, (255, 255, 255), alpha(RED, 0.9), "semibold", pad=(7, 2),
                        anchor="lm")
-                act = f"Tahan, tambah {20 - d['count']} unit"
+                act = f"Hold, add {20 - d['count']} units"
             c.text((x0 + 336, ry), ", ".join(VP.slot_label(k) for k in d["empty"]) or "–", 12, "regular",
                    TEXT if d["empty"] else TEXT_3, anchor="lm")
             c.text((x0 + 452, ry), act, 12, "medium" if not live and not d["ok"] else "regular",
@@ -506,14 +506,14 @@ class PackBoard:
             ry += 34
 
     def chart_text(self, c, cb, st):
-        right = f"Kardus #{st['bid']}: {st['count']}/20" if st else ""
-        c.card_title(BR, "Isi kardus di stasiun", "monitoring", right)
+        right = f"Box #{st['bid']}: {st['count']}/20" if st else ""
+        c.card_title(BR, "Box count at station", "monitoring", right)
         chart_axes(c, cb, 22, [0, 10, 20], self.total)
         x0, _, x1, y1 = BR
-        c.legend((x0 + 16, y1 - 16), [("bar", BLUE, "isi kardus"), ("bar", SLATE, "standar 20")], 11)
+        c.legend((x0 + 16, y1 - 16), [("bar", BLUE, "box count"), ("bar", SLATE, "standard 20")], 11)
         sc = self.score
-        c.text((x1 - 16, y1 - 16), f"Uji vs ground truth: {sc['boxes_correct']}/{sc['boxes_judged']} kardus benar · "
-               f"pick kosong {sc['empty_picks_found']}/{sc['empty_picks_in_truth']} · jeda hitung {num(sc['count_lag_s'], 2)} s",
+        c.text((x1 - 16, y1 - 16), f"Test vs ground truth: {sc['boxes_correct']}/{sc['boxes_judged']} boxes correct · "
+               f"empty picks {sc['empty_picks_found']}/{sc['empty_picks_in_truth']} · count lag {num(sc['count_lag_s'], 2)} s",
                11, "regular", TEXT_3, anchor="rm")
 
 

@@ -29,7 +29,7 @@ BLUE, CYAN, GREEN, AMBER, RED = (59, 130, 246), (34, 211, 238), (34, 197, 94), (
 ORANGE, VIOLET, PINK, YELLOW, SLATE = (251, 146, 60), (167, 139, 250), (244, 114, 182), (250, 204, 21), (148, 163, 184)
 
 SEVERITY = {"high": RED, "medium": AMBER, "low": BLUE, "info": SLATE}
-SEVERITY_NAME = {"high": "Tinggi", "medium": "Sedang", "low": "Rendah", "info": "Info"}
+SEVERITY_NAME = {"high": "High", "medium": "Medium", "low": "Low", "info": "Info"}
 
 _WEIGHT = {"regular": "Inter-Regular.ttf", "medium": "Inter-Medium.ttf", "semibold": "Inter-SemiBold.ttf",
            "bold": "Inter-Bold.ttf"}
@@ -62,8 +62,8 @@ def icon_font(size: int):
 
 
 def num(x: float, digits: int = 1) -> str:
-    """A decimal the Indonesian way: 4,6 not 4.6."""
-    return f"{x:.{digits}f}".replace(".", ",")
+    """A decimal with a point: 4.6."""
+    return f"{x:.{digits}f}"
 
 
 def clock(t: float) -> str:
@@ -252,7 +252,7 @@ class Canvas:
             x = b[2] + 16
         return x
 
-    def timeline(self, box, t: float, total: float, events: list, title: str = "Lini masa kejadian") -> None:
+    def timeline(self, box, t: float, total: float, events: list, title: str = "Event timeline") -> None:
         """The window as a track: elapsed part, one mark per reported event, the playhead."""
         x0, y0, x1, y1 = box
         self.rrect(box, r=10, fill=SURFACE)

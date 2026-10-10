@@ -70,33 +70,33 @@ class FillBoard:
     def phase(self, i):
         f = i + 1
         if self.in_pos is None or f < self.in_pos:
-            return "botol masuk", SLATE
+            return "bottle in", SLATE
         if self.start is None or f < self.start:
-            return "siap isi", CYAN
-        return "mengisi", BLUE
+            return "ready", CYAN
+        return "filling", BLUE
 
     def make_events(self):
         ev = []
         f = self.in_pos
-        ev.append(B.Event(f, (f - 1) / self.fps, "info", "check_circle", "Botol masuk posisi",
-                          "4 botol di bawah nozzle · botol depan diukur", "in_position", focus=self.bottle_box(f - 1)))
+        ev.append(B.Event(f, (f - 1) / self.fps, "info", "check_circle", "Bottle in position",
+                          "4 bottles under the nozzles · front bottle measured", "in_position", focus=self.bottle_box(f - 1)))
         f = self.start
-        ev.append(B.Event(f, (f - 1) / self.fps, "low", "water_drop", "Pengisian dimulai · nozzle 1",
-                          f"{num((f - self.in_pos) / self.fps, 1)} s setelah botol di posisi", "flow_start",
+        ev.append(B.Event(f, (f - 1) / self.fps, "low", "water_drop", "Filling started · nozzle 1",
+                          f"{num((f - self.in_pos) / self.fps, 1)} s after the bottle was in position", "flow_start",
                           focus=self.bottle_box(f - 1)))
         half = next((r for r in self.rows if r["frac"] >= 0.5), None)
         if half:
             f = half["frame"]
             rate = self.avg_rate(f - 1)
-            ev.append(B.Event(f, (f - 1) / self.fps, "info", "timelapse", "Setengah target tercapai",
-                              f"{num((f - self.start) / self.fps, 1)} s sejak mulai · {num(rate * SKU_ML, 0)} mL/s",
+            ev.append(B.Event(f, (f - 1) / self.fps, "info", "timelapse", "Half of target reached",
+                              f"{num((f - self.start) / self.fps, 1)} s since start · {num(rate * SKU_ML, 0)} mL/s",
                               "half", focus=self.bottle_box(f - 1)))
         last = self.rows[-1]
         f = last["frame"]
         rate = self.avg_rate(f - 1)
         eta = (1 - last["frac"]) / rate
-        ev.append(B.Event(f, (f - 1) / self.fps, "info", "hourglass_bottom", "Rekaman berakhir, siklus belum selesai",
-                          f"{num(100 * last['frac'], 0)}% · target diperkirakan {num(eta, 1)} s lagi · belum diputuskan",
+        ev.append(B.Event(f, (f - 1) / self.fps, "info", "hourglass_bottom", "Clip ends before the cycle does",
+                          f"{num(100 * last['frac'], 0)}% · target expected in {num(eta, 1)} s · no verdict yet",
                           "clip_end", focus=self.bottle_box(f - 1)))
         return ev
 
@@ -126,13 +126,13 @@ class FillBoard:
         poly, oy = self.outline(i)
         ox = r["roi"][0] - ROI[0]
         if f >= (self.in_pos or 10 ** 9):
-            ui.dashed(img, np.vstack([poly, poly[:1]]), CYAN if phase == "siap isi" else BLUE, 1)
+            ui.dashed(img, np.vstack([poly, poly[:1]]), CYAN if phase == "ready" else BLUE, 1)
         c = ui.Canvas(img)
         if f >= (self.in_pos or 10 ** 9):
             ty = self.m["datum"]["thread_y"] + oy
             xl, xr = self.width_at(ty, oy)
             c.d.line(((xl + ox) * K, ty * K, (xr + ox) * K, ty * K), fill=GREEN + (255,), width=2)
-            B.chip(c, ((xr + ox) * K + 10, ty * K), "Target 100% · garis ulir", GREEN, "flag", anchor="lm")
+            B.chip(c, ((xr + ox) * K + 10, ty * K), "Target 100% · thread line", GREEN, "flag", anchor="lm")
             if r["surface_y"] is not None and r["frac"] > 0:
                 sy = r["surface_y"]
                 xl, xr = self.width_at(sy, oy)
@@ -143,9 +143,9 @@ class FillBoard:
             B.chip(c, (bx, (BOTTLE_OUTLINE[0][0] + oy - 120) * K), f"Nozzle 1 · {phase}", pcol,
                    "local_drink", anchor="lb")
         else:
-            c.pill((B.VW / 2, B.VH - 40), "Menunggu botol masuk posisi", 13, TEXT, alpha(ui.BG, 0.8), "semibold",
+            c.pill((B.VW / 2, B.VH - 40), "Waiting for a bottle in position", 13, TEXT, alpha(ui.BG, 0.8), "semibold",
                    icon="hourglass_top", pad=(10, 5), anchor="mm")
-        B.corner_chips(c, "CAM 01 · Mesin pengisi, nozzle 1", [f"Fase: {phase}", "Rekaman nyata"])
+        B.corner_chips(c, "CAM 01 · Filler, nozzle 1", [f"Phase: {phase}", "Real footage"])
         return c.bgr()
 
     # ---- the page ------------------------------------------------------------
@@ -163,8 +163,8 @@ class FillBoard:
         hb = (B.BR[0] + 52, B.BR[1] + 50, B.BR[0] + 330, B.BR[3] - 40)
         self.height_volume(img, hb, r)
         c = ui.Canvas(img)
-        c.topbar("Fill Inspection · isi botol", "Lini pengisian · rekaman Pexels", "Putar ulang", t, self.total,
-                 ["Rekaman nyata", "CAM 01"])
+        c.topbar("Fill Level Inspection · bottle", "Filling line · Pexels footage", "Replay", t, self.total,
+                 ["Real footage", "CAM 01"])
         self.kpis(c, i)
         self.curve_text(c, cb, i)
         B.feed(c, self.events, t, self.thumbs)
@@ -176,21 +176,21 @@ class FillBoard:
     def kpis(self, c, i):
         r = self.rows[i]
         started = self.start is not None and i + 1 >= self.start
-        c.kpi(B.KPI_BOXES[0], "local_drink", "Isi botol · nozzle 1", f"{num(100 * r['frac'], 0)}%",
-              f"≈ {num(r['frac'] * SKU_ML, 0)} mL dari target {num(SKU_ML, 0)} mL (SKU contoh)", BLUE)
+        c.kpi(B.KPI_BOXES[0], "local_drink", "Fill level · nozzle 1", f"{num(100 * r['frac'], 0)}%",
+              f"≈ {num(r['frac'] * SKU_ML, 0)} mL of {num(SKU_ML, 0)} mL target (example SKU)", BLUE)
         rate = self.avg_rate(i)
-        c.kpi(B.KPI_BOXES[1], "water_drop", "Laju alir", f"{num(rate * SKU_ML, 0)} mL/s" if rate else "–",
-              f"{num(100 * rate, 1)}% per detik, rata-rata sejak mulai" if rate else "menunggu produk mengalir", CYAN)
+        c.kpi(B.KPI_BOXES[1], "water_drop", "Flow rate", f"{num(rate * SKU_ML, 0)} mL/s" if rate else "–",
+              f"{num(100 * rate, 1)}% per second, average since start" if rate else "waiting for product to flow", CYAN)
         el = (i + 1 - self.start) / self.fps if started else None
-        c.kpi(B.KPI_BOXES[2], "timer", "Waktu isi", f"{num(el, 1)} s" if el is not None else "–",
-              f"mulai {ui.clock((self.start - 1) / self.fps)},{int(((self.start - 1) / self.fps % 1) * 10)}"
-              if started else "nozzle belum membuka", AMBER)
+        c.kpi(B.KPI_BOXES[2], "timer", "Fill time", f"{num(el, 1)} s" if el is not None else "–",
+              f"started {ui.clock((self.start - 1) / self.fps)}.{int(((self.start - 1) / self.fps % 1) * 10)}"
+              if started else "nozzle not open yet", AMBER)
         if rate:
             eta = (1 - r["frac"]) / rate
-            c.kpi(B.KPI_BOXES[3], "hourglass_bottom", "Perkiraan capai target", f"{num(eta, 1)} s lagi",
-                  "dari laju rata-rata sejak mulai", GREEN)
+            c.kpi(B.KPI_BOXES[3], "hourglass_bottom", "Time to target", f"{num(eta, 1)} s",
+                  "from the average flow rate since start", GREEN)
         else:
-            c.kpi(B.KPI_BOXES[3], "hourglass_bottom", "Perkiraan capai target", "–", "dihitung setelah produk mengalir",
+            c.kpi(B.KPI_BOXES[3], "hourglass_bottom", "Time to target", "–", "shown once product flows",
                   GREEN)
 
     def tx(self, cb, t):
@@ -223,10 +223,10 @@ class FillBoard:
 
     def curve_text(self, c, cb, i):
         r = self.rows[i]
-        c.card_title(B.MID, "Kurva pengisian · nozzle 1", "monitoring", f"sekarang {num(100 * r['frac'], 0)}%")
+        c.card_title(B.MID, "Fill curve · nozzle 1", "monitoring", f"now {num(100 * r['frac'], 0)}%")
         B.chart_axes(c, cb, 1.1, [0, 0.5, 1.0], self.x_max, xstep=2, fmt=lambda v: f"{int(v * 100)}%",
                      xfmt=lambda s: f"{int(s)} s")
-        c.text((cb[0] + 6, self.ty(cb, 1 + TOL) - 8), "target 100% · toleransi 98–102%", 10, "medium", TEXT_2,
+        c.text((cb[0] + 6, self.ty(cb, 1 + TOL) - 8), "target 100% · tolerance 98–102%", 10, "medium", TEXT_2,
                anchor="ls")
         rate = self.avg_rate(i)
         if rate:
@@ -236,18 +236,18 @@ class FillBoard:
                 c.dot((x, self.ty(cb, 1.0)), 4.5, BLUE)
             else:
                 x = cb[2]
-            c.text((x - 10, self.ty(cb, 1 + TOL) - 8), f"perkiraan {num(t_end, 1)} s", 10, "semibold", TEXT, anchor="rs")
+            c.text((x - 10, self.ty(cb, 1 + TOL) - 8), f"expected {num(t_end, 1)} s", 10, "semibold", TEXT, anchor="rs")
         x0, _, x1, y1 = B.MID
-        c.legend((x0 + 16, y1 - 18), [("bar", BLUE, "isi terukur"), ("ring", BLUE, "perkiraan"),
-                                     ("bar", alpha(GREEN, 0.5), "target ± toleransi")], 11)
+        c.legend((x0 + 16, y1 - 18), [("bar", BLUE, "measured fill"), ("ring", BLUE, "forecast"),
+                                     ("bar", alpha(GREEN, 0.5), "target ± tolerance")], 11)
 
     def rules(self, c, r):
-        y = c.card_title(B.BL, "Aturan lolos / reject", "rule", f"SKU contoh {num(SKU_ML, 0)} mL")
+        y = c.card_title(B.BL, "Pass / reject rule", "rule", f"example SKU {num(SKU_ML, 0)} mL")
         x0, _, x1, y1 = B.BL
-        rows = [("flag", GREEN, "Target", "100% isi sampai garis ulir"),
-                ("tune", CYAN, "Toleransi", "98–102% saat nozzle berhenti"),
-                ("trending_down", RED, "Di bawah 98%", "reject · kurang isi"),
-                ("water_drop", AMBER, "Di atas 102%", "lolos, dicatat sebagai produk terbuang")]
+        rows = [("flag", GREEN, "Target", "100% fill up to the thread line"),
+                ("tune", CYAN, "Tolerance", "98–102% when the nozzle stops"),
+                ("trending_down", RED, "Below 98%", "reject · underfill"),
+                ("water_drop", AMBER, "Above 102%", "pass, logged as giveaway")]
         ry = y + 10
         for icon, col, a, b in rows:
             c.icon(icon, (x0 + 26, ry), 16, col)
@@ -255,11 +255,11 @@ class FillBoard:
             c.text((x0 + 150, ry), b, 12, "regular", TEXT_2, anchor="lm")
             ry += 26
         c.d.line((x0 + 16, ry - 6, x1 - 16, ry - 6), fill=ui.BORDER, width=1)
-        c.text((x0 + 16, ry + 12), "Siklus ini", 12, "medium", TEXT_3, anchor="lm")
-        state = "mengisi" if r["frac"] > 0 else "menunggu"
+        c.text((x0 + 16, ry + 12), "This cycle", 12, "medium", TEXT_3, anchor="lm")
+        state = "filling" if r["frac"] > 0 else "waiting"
         c.pill((x0 + 110, ry + 12), f"{state} · {num(100 * r['frac'], 0)}%", 11, TEXT, alpha(BLUE, 0.25), "semibold",
                pad=(8, 2), anchor="lm")
-        c.text((x1 - 16, ry + 12), "keputusan saat nozzle berhenti", 11, "regular", TEXT_3, anchor="rm")
+        c.text((x1 - 16, ry + 12), "verdict when the nozzle stops", 11, "regular", TEXT_3, anchor="rm")
 
     def height_volume(self, img, hb, r):
         curve = self.m["datum"]["height_volume_curve"]
@@ -268,13 +268,13 @@ class FillBoard:
         cv2.polylines(img, [pts.astype(np.int32)], False, ui.bgr(AMBER), 2, cv2.LINE_AA)
 
     def height_text(self, c, hb, r):
-        c.card_title(B.BR, "Tinggi cairan bukan volume", "straighten", "dihitung dari bentuk botol")
+        c.card_title(B.BR, "Level height is not volume", "straighten", "from the bottle shape")
         for v in (0, 0.5, 1.0):
             y = hb[3] - (hb[3] - hb[1]) * v
             c.text((hb[0] - 8, y), f"{int(v * 100)}%", 10, "regular", TEXT_3, anchor="rm")
             x = hb[0] + (hb[2] - hb[0]) * v
             c.text((x, hb[3] + 12), f"{int(v * 100)}%", 10, "regular", TEXT_3, anchor="mm")
-        c.text(((hb[0] + hb[2]) / 2, hb[3] + 26), "tinggi", 10, "regular", TEXT_3, anchor="mm")
+        c.text(((hb[0] + hb[2]) / 2, hb[3] + 26), "height", 10, "regular", TEXT_3, anchor="mm")
         if r["frac"] > 0:
             x = hb[0] + (hb[2] - hb[0]) * r["height_frac"]
             y = hb[3] - (hb[3] - hb[1]) * r["frac"]
@@ -282,15 +282,15 @@ class FillBoard:
             c.d.ellipse((x - 5, y - 5, x + 5, y + 5), outline=ui.SURFACE + (255,), width=2)
         tx = hb[2] + 36
         x1 = B.BR[2]
-        c.text((tx, hb[1] + 6), f"Tinggi {num(100 * r['height_frac'], 0)}%  =  volume {num(100 * r['frac'], 0)}%",
+        c.text((tx, hb[1] + 6), f"Height {num(100 * r['height_frac'], 0)}%  =  volume {num(100 * r['frac'], 0)}%",
                15, "semibold", TEXT, anchor="lm")
-        lines = ["Botol menyempit di dasar dan bahu: naik",
-                 "tinggi yang sama tidak sama dengan isi.",
-                 "Kamera mengukur lebar botol per baris",
-                 "lalu menjumlahkan volumenya."]
+        lines = ["The bottle narrows at the base and the",
+                 "shoulder: equal height is not equal volume.",
+                 "The camera measures the bottle width row",
+                 "by row and adds up the volume."]
         for k, s in enumerate(lines):
             c.text((tx, hb[1] + 36 + k * 18), s, 12, "regular", TEXT_2, anchor="lm")
-        c.legend((tx, hb[3] + 12), [("bar", AMBER, "botol ini"), ("bar", SLATE, "jika lurus")], 11)
+        c.legend((tx, hb[3] + 12), [("bar", AMBER, "this bottle"), ("bar", SLATE, "if straight")], 11)
 
 
 def main():
