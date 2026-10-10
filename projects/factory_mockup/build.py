@@ -29,6 +29,7 @@ HERE = Path(__file__).resolve().parent
 P = HERE.parent
 sys.path.insert(0, str(HERE))
 
+import tv  # noqa: E402
 from look import (CSS, I, USED, avatar, bd, card, hbars, img, kpi, legend, lines, num, sev, spark,  # noqa: E402
                   status, tg, tile, up, vbars)
 
@@ -55,9 +56,9 @@ S = META["frames"]
 TOMATOES = json.loads((P / "11_tomato_ripeness/output/tomato_ripeness_summary.json").read_text())["tomatoes"]
 
 
-def im(kind: str, k: int = -1, cam: bool = True) -> str:
-    f = S[kind][k]
-    return f"../img/{kind}_{'cam' if cam else 'dash'}_{f}.jpg"
+def im(kind: str, k: int = -1) -> str:
+    """The PoC camera picture, AI overlay only (assets.py)."""
+    return f"../img/{kind}_cam_{S[kind][k]}.jpg"
 
 
 def history(rows: list[tuple]) -> str:
@@ -205,26 +206,6 @@ def grid(cols: str, items: list[str], gap: int = 18, style: str = "") -> str:
     return f'<div style="display:grid;grid-template-columns:{cols};gap:{gap}px;{style}">{"".join(items)}</div>'
 
 
-def annotated(product: str, src: str, title: str, sub: str, view: str, notes: list[tuple], foot: str) -> str:
-    """A frame of the product's TV dashboard video, numbered, with what each part is for."""
-    s = 1584 / 1920
-    icon, name, colour, _, _ = PRODUCTS[product]
-    marks = "".join(f'<span class="mk" style="left:{24 + x * s - 15:.0f}px;top:{96 + y * s - 15:.0f}px">{k}</span>'
-                    for k, (x, y, _, _) in enumerate(notes, 1))
-    items = "".join(f'<div style="display:flex;gap:12px"><span class="mk" style="position:static;flex:none">{k}</span><div>'
-                    f'<b style="font-size:15px;color:#e9eef4">{a}</b>'
-                    f'<div style="color:#9ba9b8;font-size:13px;margin-top:3px;line-height:1.45">{b}</div></div></div>'
-                    for k, (_, _, a, b) in enumerate(notes, 1))
-    css = (".mk{position:absolute;width:30px;height:30px;border-radius:50%;background:#3b82f6;color:#fff;font-weight:700;font-size:15px;"
-           "display:grid;place-items:center;box-shadow:0 0 0 3px #05080c,0 4px 12px rgba(0,0,0,.5);z-index:3}")
-    body = (f'<div style="position:absolute;left:24px;top:22px;right:24px;display:flex;align-items:center;gap:14px">'
-            f'<span class="bd" style="background:{colour}33;color:#e9eef4;height:26px">{I(icon, True)}{name.upper()} · DASHBOARD TV</span>'
-            f'<b style="font-size:22px;color:#e9eef4">{title}</b><span style="color:#9ba9b8;font-size:15px">{sub}</span>'
-            f'<span style="margin-left:auto;color:#9ba9b8;font-size:13px">{view}</span></div>'
-            f'<img src="{src}" style="position:absolute;left:24px;top:96px;width:1584px;height:891px;border-radius:10px;box-shadow:0 0 0 1px #232f3d">'
-            f'{marks}<div style="position:absolute;left:1640px;top:96px;width:256px;display:flex;flex-direction:column;gap:18px">{items}</div>'
-            f'<div style="position:absolute;left:24px;top:1003px;color:#9ba9b8;font-size:13px">{foot}</div>')
-    return doc(body + f'<div class="wm" style="color:#657485">{WM_POC}</div>', cls="dk", extra_css=css + "body{background:#05080c}")
 
 
 # ------------------------------------------------------------------ shared tables
@@ -415,30 +396,8 @@ def p03_grading_live() -> str:
     return app("grading", "live", body, user=("Andi Wijaya", "Line Supervisor", "amber"))
 
 
-def p04_tv_tomato() -> str:
-    return annotated("grading", im("tomato", 2, cam=False), "Tomat · kelas warna USDA", "4 line, satu count gate",
-                     "Tampilan 1 dari 2 · berganti tiap 30 detik", [
-                         (640, 112, "Kamera live dengan AI", "Setiap tomat diberi kotak sesuai warna kelas USDA; buah yang terhitung diberi label line dan kelasnya."),
-                         (40, 465, "Count gate", "Satu garis melintasi 4 line; tiap tomat dihitung sekali, line-nya terbaca saat melintas."),
-                         (1330, 90, "KPI lot", "Jumlah terhitung, porsi kelas utama, off-colour vs limit 10%, hijau vs limit 5%."),
-                         (1330, 290, "Grade Composition", "Enam kelas USDA dan cek label lot: release sebagai Red, sortir ulang, atau Mixed Color."),
-                         (1330, 620, "Event Log", "Setiap tomat off-colour lengkap dengan foto, line, dan nilai warnanya."),
-                         (40, 820, "Off-colour trend", "Porsi off-colour lot yang terus naik terhadap limit 10%."),
-                         (680, 820, "Colour spread", "Warna tiap tomat terhadap batas kelas USDA.")],
-                     "Frame dari video PoC (rekaman nyata Pexels, diputar ulang). Di produk: satu TV per line, data live dari edge box.")
 
 
-def p05_tv_lemon() -> str:
-    return annotated("grading", im("lemon", 2, cam=False), "Lemon · bagan warna OECD", "2 chain sortir",
-                     "Tampilan 2 dari 2 · berganti tiap 30 detik", [
-                         (640, 112, "Kamera live dengan AI", "Setiap lemon diberi kotak sesuai lot warnanya; buah yang terhitung diberi label line dan derajat warna."),
-                         (40, 465, "Count gate", "Satu garis melintasi kedua chain."),
-                         (1330, 90, "KPI standar", "Jumlah terhitung, sesuai standar warna (derajat 1–9), porsi lot utama, out of grade."),
-                         (1330, 290, "Komposisi bagan OECD", "Jumlah lemon per derajat warna 1–10 dengan warna bagan aslinya, dikelompokkan per 3 derajat."),
-                         (1330, 620, "Event Log", "Setiap lemon di luar lot utama, untuk di-pack terpisah; derajat 10 = reject."),
-                         (40, 820, "Colour lot trend", "Porsi tiap lot dalam 2 detik terakhir: perubahan buah yang masuk langsung terlihat."),
-                         (680, 820, "Degree spread", "Posisi tiap lemon di skala OECD 1–10.")],
-                     "Frame dari video PoC (rekaman nyata Pexels, distabilkan). Bagan warna OECD dari panduan market-entry lemon CBI.")
 
 
 def p06_grading_lot() -> str:
@@ -586,15 +545,6 @@ def p08_fill_overview() -> str:
     return app("fill", "overview", body)
 
 
-def p09_tv_fill() -> str:
-    return annotated("fill", im("fill", 2, cam=False), "Level isi · nozzle 1", "botol demi botol", "Line F1 · TV", [
-        (640, 112, "Kamera live dengan AI", "Outline botol, garis target di leher botol, dan level terukur dalam % dan mL."),
-        (1330, 90, "KPI pengisian", "Level isi, flow rate, waktu isi, dan sisa waktu ke target."),
-        (1330, 290, "Fill curve", "Level dari waktu ke waktu terhadap band target 98–102%."),
-        (1330, 620, "Event Log", "Botol masuk posisi, mulai mengalir, setengah target, keputusan."),
-        (40, 820, "Aturan pass / reject", "Di bawah 98% = reject (underfill); di atas 102% = pass, dicatat sebagai giveaway."),
-        (680, 820, "Tinggi bukan volume", "Volume dihitung dari bentuk botol, bukan dari tinggi cairan saja.")],
-                     "Frame dari video PoC (rekaman nyata Pexels). Klip berakhir di 67% target, jadi PoC ini menunjukkan pengukuran, belum keputusan pass/reject.")
 
 
 def p10_fill_spec() -> str:
@@ -681,26 +631,8 @@ def p11_pack_overview() -> str:
     return app("pack", "overview", body)
 
 
-def p12_tv_tray() -> str:
-    return annotated("pack", im("tray", 2, cam=False), "Tray kaleng · 10 per tray", "ujung line pengisian", "Line C1 · TV", [
-        (640, 112, "Kamera live dengan AI", "Setiap kaleng terdeteksi; slot kosong dilingkari merah dan tray ditandai SHORT."),
-        (1330, 90, "KPI line", "Tray diinspeksi, tray kurang isi, kaleng kurang, kecepatan line."),
-        (1330, 290, "Missing can positions", "Slot mana yang kosong dan apakah berulang: menunjuk ke satu lane filler."),
-        (1330, 620, "Event Log", "Setiap tray kurang isi lengkap dengan foto, untuk di-reject."),
-        (40, 820, "Last trays", "Jumlah isi dan pass / reject per tray."),
-        (680, 820, "Trays inspected, cumulative", "Tray diinspeksi vs tray kurang, plus hasil uji vs data kebenaran.")],
-                     "Frame dari video PoC (simulasi 3D dengan data kebenaran: 7/7 tray benar). Di produk: kamera di atas ujung line.")
 
 
-def p13_tv_packing() -> str:
-    return annotated("pack", im("packing", 1, cam=False), "Robot packing · 20 per kardus", "kardus diisi slot demi slot", "Station P1 · TV", [
-        (640, 112, "Kamera live dengan AI", "Setiap slot kardus dipantau saat robot mengisi; empty pick diberi tanda silang merah."),
-        (1330, 90, "KPI station", "Kardus di station, kardus selesai, empty pick, kecepatan robot."),
-        (1330, 290, "Slot map", "Terisi, empty pick, slot berikutnya, sisa slot."),
-        (1330, 620, "Event Log", "Feeder gap, empty pick, kardus kurang keluar: sebab dan akibat berurutan."),
-        (40, 820, "Box history", "Setiap kardus yang keluar: jumlah isi, slot kosong, dan tindakan (seal & kirim atau hold & tambah)."),
-        (680, 820, "Box count at station", "Jumlah isi dari waktu ke waktu terhadap standar 20.")],
-                     "Frame dari video PoC (simulasi 3D dengan data kebenaran: 3/3 kardus dan 2/2 empty pick terdeteksi).")
 
 
 def p14_pack_reject() -> str:
@@ -791,16 +723,6 @@ def p15_parcel_overview() -> str:
     return app("parcel", "overview", body)
 
 
-def p16_tv_parcel() -> str:
-    return annotated("parcel", im("parcel", 2, cam=False), "Paket di belt · ukuran & volume", "belt teleskopik di truk", "Belt OB1 · TV", [
-        (640, 112, "Kamera live dengan AI", "Setiap paket diberi kotak sesuai kelas ukurannya, lengkap dengan P × L × T dan volume."),
-        (60, 230, "Count line", "Setiap paket dihitung sekali saat melintas."),
-        (1330, 90, "KPI belt", "Paket terhitung, volume, laju per jam, manual check."),
-        (1330, 290, "Parcels measured", "Ukuran akhir setiap paket sebelum count line."),
-        (1330, 620, "Event Log", "Setiap paket; ukuran yang dekat batas kelas ditandai untuk manual check."),
-        (40, 820, "Size mix", "S / M / L menurut jumlah dan volume."),
-        (680, 820, "Volume handled", "Volume kumulatif dalam liter, plus uji terhadap hitungan manual.")],
-                     "Frame dari video PoC (rekaman nyata Pexels): 8 dari 8 paket terhitung; karton uji terbaca 340,5 mm vs 340 mm.")
 
 
 def p17_parcel_load() -> str:
@@ -1014,15 +936,16 @@ def p21_rollout() -> str:
                  "yang paling banyak menimbulkan reject, komplain, atau giveaway.", body)
 
 
+TV = dict(tv.PAGES)   # the TV dashboards: their own layout, with the PoC camera picture in it (tv.py)
 PAGE_FUNCS = [
     ("00_product_map", p00_product_map), ("01_roles_access", p01_roles),
     ("02_grading_overview", p02_grading_overview), ("03_grading_live_view", p03_grading_live),
-    ("04_grading_tv_tomato", p04_tv_tomato), ("05_grading_tv_lemon", p05_tv_lemon),
+    ("04_grading_tv_tomato", TV["04_grading_tv_tomato"]), ("05_grading_tv_lemon", TV["05_grading_tv_lemon"]),
     ("06_grading_lot_report", p06_grading_lot), ("07_grading_standards", p07_grading_standards),
-    ("08_fill_overview", p08_fill_overview), ("09_fill_tv", p09_tv_fill), ("10_fill_spec", p10_fill_spec),
-    ("11_pack_overview", p11_pack_overview), ("12_pack_tv_trays", p12_tv_tray), ("13_pack_tv_packing", p13_tv_packing),
-    ("14_pack_reject_detail", p14_pack_reject),
-    ("15_parcel_overview", p15_parcel_overview), ("16_parcel_tv", p16_tv_parcel), ("17_parcel_load_billing", p17_parcel_load),
+    ("08_fill_overview", p08_fill_overview), ("09_fill_tv", TV["09_fill_tv"]), ("10_fill_spec", p10_fill_spec),
+    ("11_pack_overview", p11_pack_overview), ("12_pack_tv_trays", TV["12_pack_tv_trays"]),
+    ("13_pack_tv_packing", TV["13_pack_tv_packing"]), ("14_pack_reject_detail", p14_pack_reject),
+    ("15_parcel_overview", p15_parcel_overview), ("16_parcel_tv", TV["16_parcel_tv"]), ("17_parcel_load_billing", p17_parcel_load),
     ("18_alerts_integrations", p18_alerts), ("19_lines_cameras", p19_cameras), ("20_plants", p20_multi_plant),
     ("21_plans_rollout", p21_rollout),
 ]

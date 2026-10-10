@@ -3,18 +3,21 @@
   "tomato": [
    40,
    80,
-   125
+   125,
+   133
   ],
   "lemon": [
    60,
    150,
    200,
-   240
+   240,
+   245
   ],
   "fill": [
    120,
    180,
-   230
+   230,
+   232
   ],
   "tray": [
    95,
@@ -29,45 +32,112 @@
   "parcel": [
    165,
    300,
-   505
+   505,
+   511
   ]
  },
  "tomato_off": [
   {
    "img": "snap_tomato_1.jpg",
    "line": 2,
+   "frame": 58,
    "hue": 64.1,
-   "frame": 58
+   "usda_class": "Light Red"
   },
   {
    "img": "snap_tomato_2.jpg",
    "line": 3,
+   "frame": 62,
    "hue": 63.4,
-   "frame": 62
+   "usda_class": "Light Red"
   },
   {
    "img": "snap_tomato_3.jpg",
    "line": 1,
+   "frame": 69,
    "hue": 62.5,
-   "frame": 69
+   "usda_class": "Light Red"
   },
   {
    "img": "snap_tomato_4.jpg",
    "line": 2,
+   "frame": 100,
    "hue": 70.3,
-   "frame": 100
+   "usda_class": "Light Red"
   },
   {
    "img": "snap_tomato_5.jpg",
    "line": 2,
+   "frame": 110,
    "hue": 66.3,
-   "frame": 110
+   "usda_class": "Light Red"
   },
   {
    "img": "snap_tomato_6.jpg",
    "line": 2,
+   "frame": 121,
    "hue": 62.9,
-   "frame": 121
+   "usda_class": "Light Red"
   }
+ ],
+ "lemon_off": [
+  {
+   "img": "snap_lemon_0.jpg",
+   "line": 2,
+   "frame": 217,
+   "hue": 94.5,
+   "degree": 3,
+   "lot": "Colour lot 1–3"
+  },
+  {
+   "img": "snap_lemon_1.jpg",
+   "line": 1,
+   "frame": 219,
+   "hue": 81.9,
+   "degree": 1,
+   "lot": "Colour lot 1–3"
+  },
+  {
+   "img": "snap_lemon_2.jpg",
+   "line": 2,
+   "frame": 219,
+   "hue": 95.8,
+   "degree": 3,
+   "lot": "Colour lot 1–3"
+  },
+  {
+   "img": "snap_lemon_3.jpg",
+   "line": 2,
+   "frame": 229,
+   "hue": 109.1,
+   "degree": 7,
+   "lot": "Colour lot 7–9"
+  },
+  {
+   "img": "snap_lemon_4.jpg",
+   "line": 1,
+   "frame": 238,
+   "hue": 94.9,
+   "degree": 3,
+   "lot": "Colour lot 1–3"
+  },
+  {
+   "img": "snap_lemon_5.jpg",
+   "line": 2,
+   "frame": 244,
+   "hue": 97.7,
+   "degree": 3,
+   "lot": "Colour lot 1–3"
+  }
+ ],
+ "parcels": [
+  "snap_parcel_18.jpg",
+  "snap_parcel_15.jpg",
+  "snap_parcel_20.jpg",
+  "snap_parcel_1.jpg",
+  "snap_parcel_23.jpg",
+  "snap_parcel_4.jpg",
+  "snap_parcel_24.jpg",
+  "snap_parcel_28.jpg"
  ]
 }

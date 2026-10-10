@@ -194,8 +194,9 @@ class TomatoBoard:
                 c.pill((self.gate_x[k] * K, gy + 8), f"LINE {k} · {n_line[k - 1]}", 11, (20, 24, 30),
                        alpha(TEXT, 0.92), "bold", pad=(6, 2), anchor="mt", tnum=True)
         B.corner_chips(c, "CAM 01 · Tomato packing line, 4 lines", [f"Counted: {sum(n_line)}", "Real footage"])
-        c.rrect((8, B.VH - 38, 700, B.VH - 8), 8, fill=alpha(BG, 0.75))
-        c.legend((18, B.VH - 23), [("bar", u[2], u[0]) for u in USDA] + [("dot", TEXT, "✓ counted")], 12)
+        if not B.CLEAN:
+            c.rrect((8, B.VH - 38, 700, B.VH - 8), 8, fill=alpha(BG, 0.75))
+            c.legend((18, B.VH - 23), [("bar", u[2], u[0]) for u in USDA] + [("dot", TEXT, "✓ counted")], 12)
         return c.bgr()
 
     # ---- the page ------------------------------------------------------------
@@ -323,10 +324,18 @@ class TomatoBoard:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--still", type=int, nargs="*")
+    ap.add_argument("--cam", type=int, nargs="*", help="only the camera picture of these frames, clean (for the mockups)")
     a = ap.parse_args()
     tr = json.loads((OUT / "tracks.json").read_text())
     frames, fps = B.read_video(VIDEO)
     tb = TomatoBoard(tr, len(frames))
+    if a.cam:
+        B.CLEAN = True
+        (OUT / "cam").mkdir(exist_ok=True)
+        for fr in a.cam:
+            B.cv2.imwrite(str(OUT / "cam" / f"cam_{fr:04d}.jpg"), tb.overlay(frames[fr - 1], fr - 1),
+                          [B.cv2.IMWRITE_JPEG_QUALITY, 97])
+        return
     n, off, green = tb.lot(tb.counted)
     cnt = [sum(1 for _, t, _ in tb.counted if tb.cls(t) == k) for k in range(len(USDA))]
     summary = {"seconds": round(len(frames) / fps, 2), "counted": n, "per_minute": round(n / (len(frames) / fps) * 60),

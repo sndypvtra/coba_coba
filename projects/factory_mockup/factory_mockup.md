@@ -9,8 +9,13 @@ Warehouse tidak dibahas di sini karena slide-nya sudah jadi.
 - Bahasa di layar: **bahasa Indonesia, dengan istilah teknis Inggris yang umum dipakai di pabrik**
   (line, reject, lot, SKU, QC, dashboard, alert, giveaway, dan lain-lain; daftarnya ada di bagian 6).
 - Format angka Indonesia: 41.860 buah, 0,4%, 340,5 mm.
-- Halaman Dashboard TV (04, 05, 09, 12, 13, 16) berisi frame asli dari video demo PoC. Label di
-  dalam frame itu berbahasa Inggris, seperti di videonya; penjelasan bernomor di sampingnya berbahasa Indonesia.
+- **Template sama dengan mockup warehouse:** setiap halaman adalah layar web app / Dashboard TV milik
+  produk itu sendiri, dengan analytics-nya sendiri (KPI, grafik, Event Log, lini masa) dalam bahasa
+  Indonesia. Dari PoC hanya diambil **gambar kamera dengan overlay AI** (kotak, label, count gate) yang
+  ditempel ke dalam layar, plus angka hasil ukurnya. Tampilan dashboard video PoC tidak dipakai lagi,
+  jadi tidak ada "dashboard di dalam dashboard".
+- Label kecil yang tergambar di dalam gambar kamera (mis. "Line 2 · Light Red ✓", "Count gate",
+  "SHORT") adalah overlay AI dari PoC dan tetap seperti di videonya.
 - Setiap gambar mencantumkan "Mockup konsep · angka ilustrasi" di pojok kanan bawah. Hanya angka
   bertanda **PoC** dan gambar kamera yang merupakan hasil uji sungguhan.
 - Tidak ada angka rupiah di gambar mana pun.
@@ -49,17 +54,17 @@ salah satu pertanyaan berikut:
 | F2 | Role & hak akses | `01_roles_access.png` | 5 role; QC Manager memegang standar, line yang menjalankan |
 | F3 | Produce Grading · Ringkasan | `02_grading_overview.png` | komposisi grade per line, off-colour per jam, lot di-hold |
 | F4 | Produce Grading · Live View | `03_grading_live_view.png` | AI di kamera, lot berjalan, foto buah off-colour, tombol Hold / Sortir ulang |
-| F5 | Produce Grading · Dashboard TV | `04_grading_tv_tomato.png` (+ `05_grading_tv_lemon.png` kecil) | layar TV di line, dari video PoC |
+| F5 | Produce Grading · Dashboard TV | `04_grading_tv_tomato.png` (+ `05_grading_tv_lemon.png` kecil) | layar TV di line: kamera + KPI lot, Grade Composition, Event Log |
 | F6 | Produce Grading · Laporan lot | `06_grading_lot_report.png` | cek lot USDA, foto bukti, riwayat lot, ekspor sertifikat lot |
 | F7 | Produce Grading · Standar grade | `07_grading_standards.png` | kelas USDA, bagan OECD, limit lot, uji di rekaman |
 | F8 | Fill Level · Ringkasan | `08_fill_overview.png` | rata-rata isi per nozzle vs toleransi, reject underfill, giveaway |
-| F9 | Fill Level · Dashboard TV | `09_fill_tv.png` | level isi tiap frame, fill curve, tinggi ≠ volume |
+| F9 | Fill Level · Dashboard TV | `09_fill_tv.png` | kamera + level isi, fill curve, aturan pass/reject, tinggi ≠ volume |
 | F10 | Fill Level · Aturan isi | `10_fill_spec.png` | target & toleransi per SKU, sinyal reject ke PLC, giveaway per minggu |
 | F11 | Pack Count QC · Ringkasan | `11_pack_overview.png` | short pack per jam, slot yang sering kosong, reject terbaru |
-| F12 | Pack Count QC · Dashboard TV | `12_pack_tv_trays.png` (+ `13_pack_tv_packing.png` kecil) | hitung kaleng per tray dan isi kardus per slot |
+| F12 | Pack Count QC · Dashboard TV | `12_pack_tv_trays.png` (+ `13_pack_tv_packing.png` kecil) | kamera + slot kosong, tray terakhir, peta slot kardus, root cause |
 | F13 | Pack Count QC · Detail reject | `14_pack_reject_detail.png` | peta slot, bukti, timeline, root cause, corrective action |
 | F14 | Parcel Dimensioning · Ringkasan | `15_parcel_overview.png` | P × L × T dan volume per paket, komposisi ukuran, volume per jam |
-| F15 | Parcel Dimensioning · Dashboard TV | `16_parcel_tv.png` | ukuran 3D dari 1 kamera, count line, manual check |
+| F15 | Parcel Dimensioning · Dashboard TV | `16_parcel_tv.png` | kamera + tabel paket terukur, komposisi ukuran, volume kumulatif |
 | F16 | Parcel Dimensioning · Muat & tagihan | `17_parcel_load_billing.png` | isi truk dari volume terukur, berat volumetrik vs aktual |
 | F17 | Alert & Integrasi | `18_alerts_integrations.png` | aturan alert, eskalasi, WhatsApp berfoto, PLC/MES/ERP/WMS |
 | F18 | Line & Kamera | `19_lines_cameras.png` | cek kamera sebelum dipakai, edge AI box, uptime |
@@ -101,7 +106,7 @@ GAYA VISUAL
 - Judul setiap slide berupa kalimat kesimpulan dari sudut pandang pembeli.
 - Slide tur produk: screenshot adalah bintangnya. Screenshot utama mengisi minimal 60% lebar slide, utuh dalam bingkai browser (sudut membulat, bayangan halus), jangan dipotong. Teks pendamping di kolom samping (maksimal 35% lebar). Selang-seling posisi screenshot kiri dan kanan.
 - Pada screenshot web app, pasang 3 penanda bernomor (lingkaran biru kecil) di bagian layar yang dijelaskan, sesuai petunjuk letak dalam kurung di setiap poin.
-- Screenshot Dashboard TV (F5, F9, F12, F15) sudah punya penanda bernomor dan penjelasan sendiri: tampilkan selebar mungkin, tanpa penanda tambahan.
+- Screenshot Dashboard TV (F5, F9, F12, F15) berlatar gelap: tampilkan dalam bingkai layar TV (bezel tipis, sudut membulat), selebar mungkin; pasang penanda bernomor seperti slide lain.
 - Jika ada screenshot kedua, tampilkan lebih kecil (±30% lebar), bertumpuk di pojok screenshot utama dengan bayangan.
 - Kolom teks tiap slide tur: label kecil "NAMA PRODUK · n/…" (atau "PLATFORM" untuk F2 dan F17–F19), judul, 3 poin bernomor, satu baris tebal "Manfaat untuk bisnis", dan baris kecil "Dipakai oleh".
 - Catatan kaki kecil di slide yang memuat gambar kamera:
@@ -148,8 +153,10 @@ Manfaat untuk bisnis: sortir ulang dilakukan saat buah masih di line, bukan di g
 Dipakai oleh: Line Supervisor.
 
 F5. PRODUCE GRADING · 3/4 · Dashboard TV: "Layar di line menunjukkan mutu lot saat itu juga" (04_grading_tv_tomato.png utama, 05_grading_tv_lemon.png kecil)
-- Frame dari video PoC (rekaman Pexels): tomat di 4 line dengan kelas warna USDA, dan lemon di 2 chain dengan bagan warna OECD derajat 1–10. TV berganti tampilan otomatis.
-- Poin: (1) setiap buah dihitung sekali di count gate, dengan line dan kelasnya; (2) KPI lot dan komposisi grade langsung memberi status label lot; (3) Event Log berfoto untuk setiap buah di luar kelas utama.
+1) Kamera live dengan AI: setiap tomat diberi kotak sesuai kelas warna USDA dan dihitung sekali di count gate, per line (gambar kamera kiri atas).
+2) KPI lot dan Grade Composition: 41 tomat, 83% Red, off-colour 17% di atas limit 10% → label Mixed Color atau sortir ulang 7 buah (kartu kanan atas dan tengah).
+3) Event Log berfoto, grafik per line, off-colour lot yang terus naik, dan lini masa (kanan bawah dan baris bawah).
+Screenshot kecil: tampilan lemon dengan bagan warna OECD derajat 1–10, berganti otomatis di TV yang sama.
 Manfaat untuk bisnis: operator tidak perlu menebak; satu layar memberi tahu kapan harus sortir ulang.
 Dipakai oleh: operator line, Line Supervisor.
 
@@ -177,8 +184,9 @@ Manfaat untuk bisnis: aman dari komplain isi kurang, dan giveaway per nozzle ter
 Dipakai oleh: QC Manager, Production Manager.
 
 F9. FILL LEVEL · 2/3 · Dashboard TV: "Level isi diukur setiap frame, selama botol diisi" (09_fill_tv.png)
-- Frame dari video PoC (rekaman Pexels): level isi, flow rate, sisa waktu ke target, dan fill curve per nozzle.
-- Poin: (1) garis target di leher botol dan level saat ini; (2) "tinggi bukan volume": bentuk botol diukur sehingga tinggi 74% = volume 67%; (3) aturan pass/reject per SKU tampil di layar.
+1) Kamera live dengan AI: garis target di leher botol dan level isi saat ini dalam % dan mL (gambar kamera kiri atas).
+2) KPI dan fill curve: level isi, flow rate, waktu isi, sisa waktu ke target (kanan atas).
+3) Aturan pass/reject per SKU dan "tinggi bukan volume": bentuk botol diukur sehingga tinggi 74% = volume 67% (baris bawah).
 - Catatan jujur di slide: klip PoC berakhir di 67% saat botol masih diisi, jadi belum ada keputusan pass/reject; angka mL memakai contoh SKU 500 mL.
 Manfaat untuk bisnis: keputusan isi berdasarkan volume, bukan perkiraan dari tinggi cairan.
 Dipakai oleh: operator filler, QC.
@@ -200,8 +208,10 @@ Manfaat untuk bisnis: komplain "isi kurang" dari pelanggan dicegah, dan penyebab
 Dipakai oleh: QC Manager, Line Supervisor.
 
 F12. PACK COUNT QC · 2/3 · Dashboard TV: "Setiap tray dihitung, setiap slot kosong ditandai" (12_pack_tv_trays.png utama, 13_pack_tv_packing.png kecil)
-- Frame dari video PoC (simulasi 3D dengan data kebenaran): tray 10 kaleng di ujung line, dan robot packing station 20 item per kardus.
-- Poin: (1) slot kosong dilingkari merah dan tray ditandai SHORT; (2) posisi slot yang kosong dan pola berulangnya; (3) di packing station, empty pick robot dan feeder gap tercatat sebagai penyebab.
+1) Kamera live dengan AI: slot kosong dilingkari merah dan tray ditandai SHORT (gambar kamera kiri atas).
+2) Posisi kaleng yang kosong dan apakah berulang, menunjuk ke lane filler (kanan tengah).
+3) Tray terakhir dengan pass/reject, tray diinspeksi kumulatif, dan Event Log berfoto (baris bawah dan kanan bawah).
+Screenshot kecil: robot packing station dengan peta slot kardus, riwayat kardus, dan root cause feeder gap → empty pick → kardus kurang isi.
 Manfaat untuk bisnis: bukan hanya "kurang", tetapi juga "kurang di slot mana dan kenapa".
 Dipakai oleh: operator line, Line Supervisor.
 
@@ -222,8 +232,9 @@ Manfaat untuk bisnis: data ukuran setiap paket tanpa menambah orang atau memperl
 Dipakai oleh: Warehouse/Logistics Manager.
 
 F15. PARCEL DIMENSIONING · 2/3 · Dashboard TV: "Satu kamera mengukur P × L × T paket di belt" (16_parcel_tv.png)
-- Frame dari video PoC (rekaman Pexels): setiap paket diukur saat lewat, dihitung di count line, dan masuk tabel.
-- Poin: (1) kotak 3D dan ukuran per paket; (2) paket yang ukurannya dekat batas kelas masuk manual check, tidak ditebak; (3) volume kumulatif dan laju per jam.
+1) Kamera live dengan AI: setiap paket diberi kotak sesuai kelas ukuran dan dihitung di count line (gambar kamera kiri atas).
+2) Tabel paket terukur: P × L × T, volume, berat volumetrik, kelas; paket dekat batas kelas masuk manual check (kanan tengah).
+3) Komposisi ukuran S/M/L dan volume kumulatif, dengan uji vs hitungan manual (baris bawah).
 Manfaat untuk bisnis: ukuran yang konsisten dan bisa dicek ulang dari fotonya.
 Dipakai oleh: operator belt, supervisor logistik.
 
@@ -331,7 +342,8 @@ diterjemahkan, karena itu nama resmi.
 
 ## 8. Sumber gambar
 
-- `pages/*.png` dibuat oleh `build.py` (HTML → PNG 3840 × 2160). Gambar kamera dan angka bertanda PoC
-  diambil dari video PoC oleh `assets.py`. Nama pabrik, nama orang, angka harian, dan tren adalah ilustrasi.
+- `pages/*.png` dibuat oleh `build.py` dan `tv.py` (HTML → PNG 3840 × 2160). Gambar kamera (hanya overlay AI,
+  tanpa tampilan dashboard PoC) diekspor dari tiap proyek PoC dengan opsi `--cam`, lalu dikumpulkan oleh
+  `assets.py`. Nama pabrik, nama orang, angka harian, dan tren adalah ilustrasi.
 - Video: Pexels 8675103 (tomat), Pexels 32953325 (lemon), Pexels 8720278 (botol), Pexels 5370836 (paket),
   semuanya berlisensi Pexels; Pack Count QC dari simulasi 3D buatan tim (Blender).

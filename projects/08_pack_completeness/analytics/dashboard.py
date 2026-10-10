@@ -76,7 +76,12 @@ def chip(c, xy, label, colour, icon=None, anchor="lb", size=12):
                   pad=(7, 3), anchor=anchor, tnum=True)
 
 
+CLEAN = False   # True when only the camera picture is wanted (--cam): no corner chips, no legend strip
+
+
 def corner_chips(c, left, right):
+    if CLEAN:
+        return
     c.pill((10, 10), left, 12, TEXT, alpha(BG, 0.78), "semibold", dot=BLUE, pad=(9, 4))
     x = VW - 10
     for label in right:
@@ -541,8 +546,17 @@ def main():
     ap.add_argument("case", choices=["line", "pack"])
     ap.add_argument("--still", type=int, nargs="*", help="only write these frames as JPEG")
     ap.add_argument("--src", type=Path, help="another copy of the clip (e.g. a partial render)")
+    ap.add_argument("--cam", type=int, nargs="*", help="only the camera picture of these frames, clean (for the mockups)")
     a = ap.parse_args()
     frames, fps, run, score, board, name = (run_line if a.case == "line" else run_pack)(a.src)
+    if a.cam:
+        global CLEAN
+        CLEAN = True
+        (OUT / "cam").mkdir(parents=True, exist_ok=True)
+        for fr in a.cam:
+            cv2.imwrite(str(OUT / "cam" / f"{name}_cam_{fr:04d}.jpg"), board.overlay(frames[fr - 1], run.snaps[fr - 1]),
+                        [cv2.IMWRITE_JPEG_QUALITY, 97])
+        return
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / f"{name}_score.json").write_text(json.dumps(score, indent=1))
     (OUT / f"{name}_events.json").write_text(json.dumps(

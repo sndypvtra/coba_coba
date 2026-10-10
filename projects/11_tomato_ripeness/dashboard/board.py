@@ -77,7 +77,12 @@ def chip(c, xy, label, colour, icon=None, anchor="lb", size=12):
                   pad=(7, 3), anchor=anchor, tnum=True)
 
 
+CLEAN = False   # True when only the camera picture is wanted (--cam): no corner chips, no legend strip
+
+
 def corner_chips(c, left, right):
+    if CLEAN:
+        return
     c.pill((10, 10), left, 12, TEXT, alpha(BG, 0.78), "semibold", dot=BLUE, pad=(9, 4))
     x = VW - 10
     for label in right:

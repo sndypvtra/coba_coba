@@ -12,7 +12,9 @@ slides of the two decks join up. The deck prompt is in **`factory_mockup.md`**.
 | Parcel Dimensioning | `03_parcel_dimensioning` | 15–17 |
 | Shared platform: product map, roles, alerts, cameras, plants, plans | – | 00–01, 18–21 |
 
-Camera pictures, dashboard frames, snapshots and every figure marked **PoC** come from the PoC videos.
+Like the warehouse mockup, every page is the product's own screen with its own analytics (`build.py`, TV
+dashboards in `tv.py`). From the PoC it takes only the camera picture with the AI overlay drawn on it, exported
+clean by each dashboard script with `--cam` (see `assets.py`), the snapshots, and every figure marked **PoC**.
 Screen text is Indonesian with the common English terms of the plant floor (line, reject, lot, SKU, QC).
 Plant names, people, daily totals and trends are illustrative, and every page says so in its corner.
 No page shows a price.

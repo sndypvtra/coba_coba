@@ -121,8 +121,9 @@ class ParcelBoard:
                        pad=(6, 2), anchor="lb")
         n = sum(1 for fr in self.counted.values() if fr <= f)
         B.corner_chips(c, "CAM 01 · Unloading belt", [f"Counted: {n}", "Real footage"])
-        c.pill((B.VW - 10, B.VH - 12), "Stack at the back not counted · not on the belt", 11, TEXT,
-               alpha(BG, 0.75), "medium", icon="visibility_off", pad=(8, 3), anchor="rb")
+        if not B.CLEAN:
+            c.pill((B.VW - 10, B.VH - 12), "Stack at the back not counted · not on the belt", 11, TEXT,
+                   alpha(BG, 0.75), "medium", icon="visibility_off", pad=(8, 3), anchor="rb")
         return c.bgr()
 
     # ---- the page ------------------------------------------------------------
@@ -237,10 +238,18 @@ class ParcelBoard:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--still", type=int, nargs="*")
+    ap.add_argument("--cam", type=int, nargs="*", help="only the camera picture of these frames, clean (for the mockups)")
     a = ap.parse_args()
     rec = json.loads((OUT / "record.json").read_text())
     frames, fps = B.read_video(VIDEO)
     pb = ParcelBoard(rec, len(frames))
+    if a.cam:
+        B.CLEAN = True
+        (OUT / "cam").mkdir(exist_ok=True)
+        for fr in a.cam:
+            B.cv2.imwrite(str(OUT / "cam" / f"cam_{fr:04d}.jpg"), pb.overlay(frames[fr - 1], fr - 1),
+                          [B.cv2.IMWRITE_JPEG_QUALITY, 97])
+        return
     cs = pb.counted_sizes(len(frames))
     summary = {"counted": len(pb.order), "slit_scan_truth": SLIT_SCAN_TRUTH,
                "volume_counted_l": round(sum(s["volume_l"] for _, s in cs if s), 1),

@@ -296,10 +296,18 @@ class FillBoard:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--still", type=int, nargs="*")
+    ap.add_argument("--cam", type=int, nargs="*", help="only the camera picture of these frames, clean (for the mockups)")
     a = ap.parse_args()
     m = measure(VIDEO)
     frames, fps = B.read_video(VIDEO)
     fb = FillBoard(m, len(frames))
+    if a.cam:
+        B.CLEAN = True
+        (OUT / "cam").mkdir(exist_ok=True)
+        for fr in a.cam:
+            B.cv2.imwrite(str(OUT / "cam" / f"cam_{fr:04d}.jpg"), fb.overlay(frames[fr - 1], fr - 1),
+                          [B.cv2.IMWRITE_JPEG_QUALITY, 97])
+        return
     OUT.mkdir(exist_ok=True)
     summary = {"sku_ml_example": SKU_ML, "tolerance": TOL, "frames": len(frames), "fps": fps,
                "bottle_in_position_s": round((m["in_position"] - 1) / fps, 2),

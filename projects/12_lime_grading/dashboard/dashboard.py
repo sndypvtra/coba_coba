@@ -193,10 +193,11 @@ class LemonBoard:
         c.pill((B.VW - 16, gy + 10), f"LINE 2 · {n_line[1]}", 12, (20, 24, 30), alpha(TEXT, 0.92), "bold",
                pad=(7, 3), anchor="rt", tnum=True)
         B.corner_chips(c, "CAM 01 · Lemon sorting chains, 2 lines", [f"Counted: {sum(n_line)}", "Real footage"])
-        c.rrect((8, B.VH - 38, 640, B.VH - 8), 8, fill=alpha(BG, 0.75))
-        c.legend((18, B.VH - 23), [("bar", LOTS[0][3], "colour 1–3"), ("bar", LOTS[1][3], "colour 4–6"),
-                                   ("bar", LOTS[2][3], "colour 7–9"), ("bar", LOTS[3][3], "10 · out of grade"),
-                                   ("dot", TEXT, "✓ counted")], 12)
+        if not B.CLEAN:
+            c.rrect((8, B.VH - 38, 640, B.VH - 8), 8, fill=alpha(BG, 0.75))
+            c.legend((18, B.VH - 23), [("bar", LOTS[0][3], "colour 1–3"), ("bar", LOTS[1][3], "colour 4–6"),
+                                       ("bar", LOTS[2][3], "colour 7–9"), ("bar", LOTS[3][3], "10 · out of grade"),
+                                       ("dot", TEXT, "✓ counted")], 12)
         return c.bgr()
 
     # ---- the page ------------------------------------------------------------
@@ -320,10 +321,18 @@ class LemonBoard:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--still", type=int, nargs="*")
+    ap.add_argument("--cam", type=int, nargs="*", help="only the camera picture of these frames, clean (for the mockups)")
     a = ap.parse_args()
     tr = json.loads((OUT / "tracks.json").read_text())
     frames, fps = B.read_video(VIDEO)
     lb = LemonBoard(tr, len(frames))
+    if a.cam:
+        B.CLEAN = True
+        (OUT / "cam").mkdir(exist_ok=True)
+        for fr in a.cam:
+            B.cv2.imwrite(str(OUT / "cam" / f"cam_{fr:04d}.jpg"), lb.overlay(frames[fr - 1], fr - 1),
+                          [B.cv2.IMWRITE_JPEG_QUALITY, 97])
+        return
     n = len(lb.counted)
     deg = [sum(1 for _, t, _ in lb.counted if lb.degree(t) == d) for d in range(1, 11)]
     summary = {"seconds": round(len(frames) / fps, 2), "counted": n, "per_minute": round(n / (len(frames) / fps) * 60),
