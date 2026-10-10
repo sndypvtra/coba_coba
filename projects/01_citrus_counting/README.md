@@ -80,6 +80,39 @@ Downloaded on first run: `yoloe-11l-seg.pt` (detector) and `yolo11n-cls.pt`
 
 </details>
 
+## Dashboard: how evenly the fruit arrives
+
+`dashboard/` turns the count into a flow monitor (Factory Vision, 1920 × 1080):
+**`output/citrus_flow.mp4`**, with the figures in `output/citrus_flow_summary.json`.
+
+```bash
+python dashboard/tracks.py        # once: the unchanged engine, recorded per frame (~8-25 min on CPU)
+python dashboard/dashboard.py     # the video
+```
+
+`tracks.py` runs what `main.py` runs and records it per frame. On this run the
+engine fired **6** crossings, one of them a second crossing by the same orange
+(#5) jittering on the line; the dashboard counts each identity once, which gives
+**5**, the hand count.
+
+| On screen | Value on this clip |
+|---|---|
+| Oranges counted | 5 |
+| Line rate | about 1,900 an hour, extrapolated from 9.5 s and labelled as such |
+| Oranges in view | 7.3 on average: how full the belt is |
+| Gap between oranges at the line | 1.9, 1.8, 0.1 and 3.7 s |
+| Feed gap warning | raised at 7.4 s, when no orange had crossed for 3 s |
+
+What the manager reads from it: the fruit does not arrive evenly. Two oranges
+crossed 0.1 s apart and then nothing came for 3.7 s, so the sizer runs half
+empty part of the time and crowded the rest. The fix is upstream, in how the
+fruit is fed onto the rollers.
+
+Per-lane figures were tried and left out. With this camera's perspective and the
+short paths the oranges take through the frame, fruit from different channels
+extends to the same point on the counting line, so a lane count would have been
+wrong.
+
 ## How it works
 
 1. **Prompt.** `["orange", "round orange fruit"]` is encoded by MobileCLIP into

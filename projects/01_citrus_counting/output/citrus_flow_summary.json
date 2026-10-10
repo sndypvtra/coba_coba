@@ -1,0 +1,56 @@
+{
+ "counted": 5,
+ "engine_crossings": 6,
+ "repeat_crossings_dropped": 1,
+ "crossing_times_s": [
+  0.63,
+  2.57,
+  4.37,
+  4.43,
+  8.13
+ ],
+ "gaps_s": [
+  1.93,
+  1.8,
+  0.07,
+  3.7
+ ],
+ "mean_in_view": 7.34,
+ "events": [
+  {
+   "t": 0.03,
+   "title": "Kamera aktif",
+   "detail": "rekaman dimulai dari layar gelap"
+  },
+  {
+   "t": 0.63,
+   "title": "Jeruk #4 terhitung",
+   "detail": "00:00"
+  },
+  {
+   "t": 2.57,
+   "title": "Jeruk #5 terhitung",
+   "detail": "00:02"
+  },
+  {
+   "t": 4.37,
+   "title": "Jeruk #15 terhitung",
+   "detail": "00:04"
+  },
+  {
+   "t": 4.43,
+   "title": "Jeruk #6 terhitung",
+   "detail": "00:04"
+  },
+  {
+   "t": 7.43,
+   "title": "Celah pasokan buah",
+   "detail": "tidak ada jeruk lewat garis 3 s · cek pemasukan / singulator"
+  },
+  {
+   "t": 8.13,
+   "title": "Jeruk #8 terhitung",
+   "detail": "00:08"
+  }
+ ]
+}
