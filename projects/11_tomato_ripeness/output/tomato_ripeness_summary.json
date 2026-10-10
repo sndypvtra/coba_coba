@@ -1,0 +1,326 @@
+{
+ "seconds": 4.44,
+ "counted": 41,
+ "per_minute": 554,
+ "not_tomato_tracks": 6,
+ "duplicate_counts_dropped": 2,
+ "gate_y": 600,
+ "per_line": [
+  8,
+  9,
+  13,
+  11
+ ],
+ "ripeness": [
+  {
+   "name": "Matang",
+   "hue_below": 42.5,
+   "destination": "pasar lokal",
+   "count": 0,
+   "share": 0.0
+  },
+  {
+   "name": "Setengah matang",
+   "hue_below": 62.0,
+   "destination": "distributor / supermarket",
+   "count": 35,
+   "share": 0.854
+  },
+  {
+   "name": "Mentah",
+   "hue_below": 999.0,
+   "destination": "ruang pemeraman",
+   "count": 6,
+   "share": 0.146
+  }
+ ],
+ "tomatoes": [
+  {
+   "tid": 2,
+   "line": 1,
+   "frame": 6,
+   "hue": 53.7,
+   "ripeness": "Setengah matang"
+  },
+  {
+   "tid": 15,
+   "line": 2,
+   "frame": 13,
+   "hue": 52.8,
+   "ripeness": "Setengah matang"
+  },
+  {
+   "tid": 17,
+   "line": 3,
+   "frame": 13,
+   "hue": 51.9,
+   "ripeness": "Setengah matang"
+  },
+  {
+   "tid": 21,
+   "line": 4,
+   "frame": 13,
+   "hue": 42.6,
+   "ripeness": "Setengah matang"
+  },
+  {
+   "tid": 35,
+   "line": 4,
+   "frame": 20,
+   "hue": 56.0,
+   "ripeness": "Setengah matang"
+  },
+  {
+   "tid": 6,
+   "line": 1,
+   "frame": 27,
+   "hue": 43.3,
+   "ripeness": "Setengah matang"
+  },
+  {
+   "tid": 38,
+   "line": 4,
+   "frame": 29,
+   "hue": 42.6,
+   "ripeness": "Setengah matang"
+  },
+  {
+   "tid": 3,
+   "line": 2,
+   "frame": 32,
+   "hue": 52.2,
+   "ripeness": "Setengah matang"
+  },
+  {
+   "tid": 7,
+   "line": 3,
+   "frame": 33,
+   "hue": 57.7,
+   "ripeness": "Setengah matang"
+  },
+  {
+   "tid": 10,
+   "line": 1,
+   "frame": 36,
+   "hue": 53.7,
+   "ripeness": "Setengah matang"
+  },
+  {
+   "tid": 14,
+   "line": 2,
+   "frame": 41,
+   "hue": 50.5,
+   "ripeness": "Setengah matang"
+  },
+  {
+   "tid": 31,
+   "line": 3,
+   "frame": 44,
+   "hue": 50.0,
+   "ripeness": "Setengah matang"
+  },
+  {
+   "tid": 4,
+   "line": 1,
+   "frame": 48,
+   "hue": 43.2,
+   "ripeness": "Setengah matang"
+  },
+  {
+   "tid": 50,
+   "line": 4,
+   "frame": 51,
+   "hue": 48.7,
+   "ripeness": "Setengah matang"
+  },
+  {
+   "tid": 36,
+   "line": 3,
+   "frame": 53,
+   "hue": 55.9,
+   "ripeness": "Setengah matang"
+  },
+  {
+   "tid": 40,
+   "line": 3,
+   "frame": 55,
+   "hue": 66.4,
+   "ripeness": "Mentah"
+  },
+  {
+   "tid": 1,
+   "line": 2,
+   "frame": 58,
+   "hue": 71.1,
+   "ripeness": "Mentah"
+  },
+  {
+   "tid": 55,
+   "line": 4,
+   "frame": 60,
+   "hue": 50.9,
+   "ripeness": "Setengah matang"
+  },
+  {
+   "tid": 43,
+   "line": 3,
+   "frame": 62,
+   "hue": 62.7,
+   "ripeness": "Mentah"
+  },
+  {
+   "tid": 32,
+   "line": 2,
+   "frame": 68,
+   "hue": 56.7,
+   "ripeness": "Setengah matang"
+  },
+  {
+   "tid": 34,
+   "line": 1,
+   "frame": 69,
+   "hue": 60.3,
+   "ripeness": "Setengah matang"
+  },
+  {
+   "tid": 47,
+   "line": 3,
+   "frame": 71,
+   "hue": 50.4,
+   "ripeness": "Setengah matang"
+  },
+  {
+   "tid": 37,
+   "line": 2,
+   "frame": 76,
+   "hue": 50.5,
+   "ripeness": "Setengah matang"
+  },
+  {
+   "tid": 54,
+   "line": 3,
+   "frame": 82,
+   "hue": 49.2,
+   "ripeness": "Setengah matang"
+  },
+  {
+   "tid": 42,
+   "line": 1,
+   "frame": 83,
+   "hue": 52.2,
+   "ripeness": "Setengah matang"
+  },
+  {
+   "tid": 60,
+   "line": 3,
+   "frame": 88,
+   "hue": 59.5,
+   "ripeness": "Setengah matang"
+  },
+  {
+   "tid": 74,
+   "line": 4,
+   "frame": 90,
+   "hue": 55.7,
+   "ripeness": "Setengah matang"
+  },
+  {
+   "tid": 51,
+   "line": 1,
+   "frame": 93,
+   "hue": 56.3,
+   "ripeness": "Setengah matang"
+  },
+  {
+   "tid": 78,
+   "line": 4,
+   "frame": 99,
+   "hue": 52.9,
+   "ripeness": "Setengah matang"
+  },
+  {
+   "tid": 44,
+   "line": 2,
+   "frame": 100,
+   "hue": 69.4,
+   "ripeness": "Mentah"
+  },
+  {
+   "tid": 66,
+   "line": 3,
+   "frame": 104,
+   "hue": 54.6,
+   "ripeness": "Setengah matang"
+  },
+  {
+   "tid": 57,
+   "line": 1,
+   "frame": 108,
+   "hue": 56.6,
+   "ripeness": "Setengah matang"
+  },
+  {
+   "tid": 83,
+   "line": 4,
+   "frame": 108,
+   "hue": 46.7,
+   "ripeness": "Setengah matang"
+  },
+  {
+   "tid": 61,
+   "line": 2,
+   "frame": 110,
+   "hue": 66.4,
+   "ripeness": "Mentah"
+  },
+  {
+   "tid": 73,
+   "line": 3,
+   "frame": 114,
+   "hue": 46.7,
+   "ripeness": "Setengah matang"
+  },
+  {
+   "tid": 88,
+   "line": 4,
+   "frame": 114,
+   "hue": 51.3,
+   "ripeness": "Setengah matang"
+  },
+  {
+   "tid": 93,
+   "line": 4,
+   "frame": 119,
+   "hue": 49.3,
+   "ripeness": "Setengah matang"
+  },
+  {
+   "tid": 96,
+   "line": 3,
+   "frame": 120,
+   "hue": 49.0,
+   "ripeness": "Setengah matang"
+  },
+  {
+   "tid": 63,
+   "line": 2,
+   "frame": 121,
+   "hue": 62.9,
+   "ripeness": "Mentah"
+  },
+  {
+   "tid": 80,
+   "line": 3,
+   "frame": 128,
+   "hue": 47.9,
+   "ripeness": "Setengah matang"
+  },
+  {
+   "tid": 104,
+   "line": 4,
+   "frame": 129,
+   "hue": 50.2,
+   "ripeness": "Setengah matang"
+  }
+ ]
+}

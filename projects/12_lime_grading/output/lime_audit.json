@@ -1,0 +1,397 @@
+{
+ "caption": "Cek buta oleh mata: 15 dari 23 sama · menguning 7/7 cocok",
+ "method": "limes picked at random per grade, two crops each at their sharpest frames with the counted box drawn, shuffled and lettered (output/lime_audit_blind.jpg), graded by eye before the letters were matched; the bounds were set before and not changed",
+ "check": {
+  "same": 15,
+  "of": 23,
+  "two_grades_apart": 0,
+  "grade_c_agreement": "7 of 7",
+  "note": "every miss is grade A against grade B, deep green against light green, in both directions",
+  "rows": [
+   {
+    "letter": "A",
+    "tid": 131,
+    "line": 1,
+    "hue": 81.9,
+    "system": "C",
+    "eye": "C"
+   },
+   {
+    "letter": "B",
+    "tid": 124,
+    "line": 1,
+    "hue": 88.5,
+    "system": "C",
+    "eye": "C"
+   },
+   {
+    "letter": "C",
+    "tid": 134,
+    "line": 2,
+    "hue": 82.6,
+    "system": "C",
+    "eye": "C"
+   },
+   {
+    "letter": "D",
+    "tid": 57,
+    "line": 1,
+    "hue": 95.9,
+    "system": "C",
+    "eye": "C"
+   },
+   {
+    "letter": "E",
+    "tid": 99,
+    "line": 2,
+    "hue": 108.1,
+    "system": "A",
+    "eye": "B"
+   },
+   {
+    "letter": "F",
+    "tid": 42,
+    "line": 1,
+    "hue": 88.1,
+    "system": "C",
+    "eye": "C"
+   },
+   {
+    "letter": "G",
+    "tid": 41,
+    "line": 2,
+    "hue": 109.2,
+    "system": "A",
+    "eye": "A"
+   },
+   {
+    "letter": "H",
+    "tid": 80,
+    "line": 1,
+    "hue": 102.8,
+    "system": "B",
+    "eye": "B"
+   },
+   {
+    "letter": "I",
+    "tid": 103,
+    "line": 2,
+    "hue": 101.5,
+    "system": "B",
+    "eye": "A"
+   },
+   {
+    "letter": "J",
+    "tid": 106,
+    "line": 2,
+    "hue": 100.8,
+    "system": "B",
+    "eye": "B"
+   },
+   {
+    "letter": "K",
+    "tid": 61,
+    "line": 1,
+    "hue": 106.7,
+    "system": "A",
+    "eye": "B"
+   },
+   {
+    "letter": "L",
+    "tid": 47,
+    "line": 2,
+    "hue": 79.2,
+    "system": "C",
+    "eye": "C"
+   },
+   {
+    "letter": "M",
+    "tid": 65,
+    "line": 1,
+    "hue": 106.6,
+    "system": "A",
+    "eye": "B"
+   },
+   {
+    "letter": "N",
+    "tid": 112,
+    "line": 2,
+    "hue": 106.6,
+    "system": "A",
+    "eye": "B"
+   },
+   {
+    "letter": "O",
+    "tid": 54,
+    "line": 1,
+    "hue": 105.1,
+    "system": "B",
+    "eye": "A"
+   },
+   {
+    "letter": "P",
+    "tid": 44,
+    "line": 1,
+    "hue": 106.0,
+    "system": "A",
+    "eye": "B"
+   },
+   {
+    "letter": "Q",
+    "tid": 136,
+    "line": 2,
+    "hue": 104.8,
+    "system": "B",
+    "eye": "A"
+   },
+   {
+    "letter": "R",
+    "tid": 107,
+    "line": 1,
+    "hue": 101.3,
+    "system": "B",
+    "eye": "B"
+   },
+   {
+    "letter": "S",
+    "tid": 6,
+    "line": 1,
+    "hue": 97.2,
+    "system": "B",
+    "eye": "B"
+   },
+   {
+    "letter": "T",
+    "tid": 98,
+    "line": 1,
+    "hue": 83.8,
+    "system": "C",
+    "eye": "C"
+   },
+   {
+    "letter": "U",
+    "tid": 62,
+    "line": 2,
+    "hue": 100.3,
+    "system": "B",
+    "eye": "B"
+   },
+   {
+    "letter": "V",
+    "tid": 58,
+    "line": 2,
+    "hue": 107.6,
+    "system": "A",
+    "eye": "A"
+   },
+   {
+    "letter": "W",
+    "tid": 140,
+    "line": 2,
+    "hue": 107.8,
+    "system": "A",
+    "eye": "A"
+   }
+  ]
+ },
+ "first_check": {
+  "same": 13,
+  "of": 24,
+  "two_grades_apart": 0,
+  "note": "crops without the box drawn: in a row of touching limes it was not clear which one was meant; repeated on fresh limes with the box drawn",
+  "rows": [
+   {
+    "letter": "A",
+    "tid": 143,
+    "line": 1,
+    "hue": 108.1,
+    "system": "A",
+    "eye": "A"
+   },
+   {
+    "letter": "B",
+    "tid": 2,
+    "line": 2,
+    "hue": 106.6,
+    "system": "A",
+    "eye": "B"
+   },
+   {
+    "letter": "C",
+    "tid": 25,
+    "line": 2,
+    "hue": 103.5,
+    "system": "B",
+    "eye": "B"
+   },
+   {
+    "letter": "D",
+    "tid": 76,
+    "line": 2,
+    "hue": 99.8,
+    "system": "B",
+    "eye": "C"
+   },
+   {
+    "letter": "E",
+    "tid": 19,
+    "line": 2,
+    "hue": 104.7,
+    "system": "B",
+    "eye": "B"
+   },
+   {
+    "letter": "F",
+    "tid": 101,
+    "line": 1,
+    "hue": 99.6,
+    "system": "B",
+    "eye": "B"
+   },
+   {
+    "letter": "G",
+    "tid": 84,
+    "line": 2,
+    "hue": 100.1,
+    "system": "B",
+    "eye": "B"
+   },
+   {
+    "letter": "H",
+    "tid": 77,
+    "line": 2,
+    "hue": 94.8,
+    "system": "C",
+    "eye": "C"
+   },
+   {
+    "letter": "I",
+    "tid": 16,
+    "line": 1,
+    "hue": 101.7,
+    "system": "B",
+    "eye": "B"
+   },
+   {
+    "letter": "J",
+    "tid": 20,
+    "line": 1,
+    "hue": 96.1,
+    "system": "C",
+    "eye": "B"
+   },
+   {
+    "letter": "K",
+    "tid": 60,
+    "line": 2,
+    "hue": 106.9,
+    "system": "A",
+    "eye": "B"
+   },
+   {
+    "letter": "L",
+    "tid": 7,
+    "line": 2,
+    "hue": 110.3,
+    "system": "A",
+    "eye": "B"
+   },
+   {
+    "letter": "M",
+    "tid": 100,
+    "line": 2,
+    "hue": 106.1,
+    "system": "A",
+    "eye": "B"
+   },
+   {
+    "letter": "N",
+    "tid": 67,
+    "line": 2,
+    "hue": 104.0,
+    "system": "B",
+    "eye": "B"
+   },
+   {
+    "letter": "O",
+    "tid": 88,
+    "line": 2,
+    "hue": 110.1,
+    "system": "A",
+    "eye": "A"
+   },
+   {
+    "letter": "P",
+    "tid": 130,
+    "line": 2,
+    "hue": 94.5,
+    "system": "C",
+    "eye": "B"
+   },
+   {
+    "letter": "Q",
+    "tid": 137,
+    "line": 2,
+    "hue": 95.8,
+    "system": "C",
+    "eye": "B"
+   },
+   {
+    "letter": "R",
+    "tid": 43,
+    "line": 1,
+    "hue": 98.7,
+    "system": "B",
+    "eye": "C"
+   },
+   {
+    "letter": "S",
+    "tid": 139,
+    "line": 1,
+    "hue": 94.9,
+    "system": "C",
+    "eye": "C"
+   },
+   {
+    "letter": "T",
+    "tid": 46,
+    "line": 2,
+    "hue": 112.3,
+    "system": "A",
+    "eye": "A"
+   },
+   {
+    "letter": "U",
+    "tid": 45,
+    "line": 2,
+    "hue": 96.1,
+    "system": "C",
+    "eye": "B"
+   },
+   {
+    "letter": "V",
+    "tid": 14,
+    "line": 2,
+    "hue": 95.5,
+    "system": "C",
+    "eye": "B"
+   },
+   {
+    "letter": "W",
+    "tid": 118,
+    "line": 2,
+    "hue": 94.2,
+    "system": "C",
+    "eye": "C"
+   },
+   {
+    "letter": "X",
+    "tid": 138,
+    "line": 2,
+    "hue": 109.1,
+    "system": "A",
+    "eye": "A"
+   }
+  ]
+ }
+}

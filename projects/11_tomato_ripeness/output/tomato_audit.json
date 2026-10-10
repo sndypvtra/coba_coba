@@ -1,0 +1,296 @@
+{
+ "caption": "Cek buta oleh mata: 34 dari 41 sama, sisanya selisih 1 kelas",
+ "method": "every counted tomato, two crops each at its sharpest frames, shuffled and coded (output/tomato_audit_blind.jpg), graded by eye before the codes were matched; the class bounds were set before and not changed after",
+ "same": 34,
+ "of": 41,
+ "two_classes_apart": 0,
+ "rows": [
+  {
+   "code": "A1",
+   "tid": 42,
+   "hue": 52.2,
+   "system": "Setengah matang",
+   "eye": "Setengah matang"
+  },
+  {
+   "code": "A2",
+   "tid": 54,
+   "hue": 49.2,
+   "system": "Setengah matang",
+   "eye": "Setengah matang"
+  },
+  {
+   "code": "A3",
+   "tid": 35,
+   "hue": 56.0,
+   "system": "Setengah matang",
+   "eye": "Setengah matang"
+  },
+  {
+   "code": "A4",
+   "tid": 34,
+   "hue": 60.3,
+   "system": "Setengah matang",
+   "eye": "Mentah"
+  },
+  {
+   "code": "A5",
+   "tid": 88,
+   "hue": 51.3,
+   "system": "Setengah matang",
+   "eye": "Setengah matang"
+  },
+  {
+   "code": "A6",
+   "tid": 47,
+   "hue": 50.4,
+   "system": "Setengah matang",
+   "eye": "Setengah matang"
+  },
+  {
+   "code": "A7",
+   "tid": 32,
+   "hue": 56.7,
+   "system": "Setengah matang",
+   "eye": "Mentah"
+  },
+  {
+   "code": "B1",
+   "tid": 66,
+   "hue": 54.6,
+   "system": "Setengah matang",
+   "eye": "Setengah matang"
+  },
+  {
+   "code": "B2",
+   "tid": 63,
+   "hue": 62.9,
+   "system": "Mentah",
+   "eye": "Mentah"
+  },
+  {
+   "code": "B3",
+   "tid": 83,
+   "hue": 46.7,
+   "system": "Setengah matang",
+   "eye": "Setengah matang"
+  },
+  {
+   "code": "B4",
+   "tid": 10,
+   "hue": 53.7,
+   "system": "Setengah matang",
+   "eye": "Setengah matang"
+  },
+  {
+   "code": "B5",
+   "tid": 17,
+   "hue": 51.9,
+   "system": "Setengah matang",
+   "eye": "Setengah matang"
+  },
+  {
+   "code": "B6",
+   "tid": 93,
+   "hue": 49.3,
+   "system": "Setengah matang",
+   "eye": "Setengah matang"
+  },
+  {
+   "code": "B7",
+   "tid": 36,
+   "hue": 55.9,
+   "system": "Setengah matang",
+   "eye": "Setengah matang"
+  },
+  {
+   "code": "C1",
+   "tid": 104,
+   "hue": 50.2,
+   "system": "Setengah matang",
+   "eye": "Setengah matang"
+  },
+  {
+   "code": "C2",
+   "tid": 60,
+   "hue": 59.5,
+   "system": "Setengah matang",
+   "eye": "Mentah"
+  },
+  {
+   "code": "C3",
+   "tid": 74,
+   "hue": 55.7,
+   "system": "Setengah matang",
+   "eye": "Setengah matang"
+  },
+  {
+   "code": "C4",
+   "tid": 6,
+   "hue": 43.3,
+   "system": "Setengah matang",
+   "eye": "Setengah matang"
+  },
+  {
+   "code": "C5",
+   "tid": 7,
+   "hue": 57.7,
+   "system": "Setengah matang",
+   "eye": "Setengah matang"
+  },
+  {
+   "code": "C6",
+   "tid": 50,
+   "hue": 48.7,
+   "system": "Setengah matang",
+   "eye": "Setengah matang"
+  },
+  {
+   "code": "C7",
+   "tid": 38,
+   "hue": 42.6,
+   "system": "Setengah matang",
+   "eye": "Setengah matang"
+  },
+  {
+   "code": "D1",
+   "tid": 2,
+   "hue": 53.7,
+   "system": "Setengah matang",
+   "eye": "Setengah matang"
+  },
+  {
+   "code": "D2",
+   "tid": 78,
+   "hue": 52.9,
+   "system": "Setengah matang",
+   "eye": "Setengah matang"
+  },
+  {
+   "code": "D3",
+   "tid": 43,
+   "hue": 62.7,
+   "system": "Mentah",
+   "eye": "Mentah"
+  },
+  {
+   "code": "D4",
+   "tid": 96,
+   "hue": 49.0,
+   "system": "Setengah matang",
+   "eye": "Setengah matang"
+  },
+  {
+   "code": "D5",
+   "tid": 55,
+   "hue": 50.9,
+   "system": "Setengah matang",
+   "eye": "Setengah matang"
+  },
+  {
+   "code": "D6",
+   "tid": 4,
+   "hue": 43.2,
+   "system": "Setengah matang",
+   "eye": "Matang"
+  },
+  {
+   "code": "D7",
+   "tid": 57,
+   "hue": 56.6,
+   "system": "Setengah matang",
+   "eye": "Mentah"
+  },
+  {
+   "code": "E1",
+   "tid": 51,
+   "hue": 56.3,
+   "system": "Setengah matang",
+   "eye": "Mentah"
+  },
+  {
+   "code": "E2",
+   "tid": 73,
+   "hue": 46.7,
+   "system": "Setengah matang",
+   "eye": "Setengah matang"
+  },
+  {
+   "code": "E3",
+   "tid": 31,
+   "hue": 50.0,
+   "system": "Setengah matang",
+   "eye": "Setengah matang"
+  },
+  {
+   "code": "E4",
+   "tid": 3,
+   "hue": 52.2,
+   "system": "Setengah matang",
+   "eye": "Setengah matang"
+  },
+  {
+   "code": "E5",
+   "tid": 14,
+   "hue": 50.5,
+   "system": "Setengah matang",
+   "eye": "Setengah matang"
+  },
+  {
+   "code": "E6",
+   "tid": 21,
+   "hue": 42.6,
+   "system": "Setengah matang",
+   "eye": "Matang"
+  },
+  {
+   "code": "E7",
+   "tid": 40,
+   "hue": 66.4,
+   "system": "Mentah",
+   "eye": "Mentah"
+  },
+  {
+   "code": "F1",
+   "tid": 44,
+   "hue": 69.4,
+   "system": "Mentah",
+   "eye": "Mentah"
+  },
+  {
+   "code": "F2",
+   "tid": 15,
+   "hue": 52.8,
+   "system": "Setengah matang",
+   "eye": "Setengah matang"
+  },
+  {
+   "code": "F3",
+   "tid": 61,
+   "hue": 66.4,
+   "system": "Mentah",
+   "eye": "Mentah"
+  },
+  {
+   "code": "F4",
+   "tid": 37,
+   "hue": 50.5,
+   "system": "Setengah matang",
+   "eye": "Setengah matang"
+  },
+  {
+   "code": "F5",
+   "tid": 1,
+   "hue": 71.1,
+   "system": "Mentah",
+   "eye": "Mentah"
+  },
+  {
+   "code": "F6",
+   "tid": 80,
+   "hue": 47.9,
+   "system": "Setengah matang",
+   "eye": "Setengah matang"
+  }
+ ]
+}

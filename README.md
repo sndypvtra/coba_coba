@@ -19,7 +19,7 @@
 
 ## What this is
 
-Ten projects on fixed-camera footage, each in its own folder under
+Twelve projects on fixed-camera footage, each in its own folder under
 [`projects/`](projects), each run with `python main.py`. Every figure below was
 measured by running the code in this repository, not estimated.
 
@@ -35,6 +35,8 @@ measured by running the code in this repository, not estimated.
 | **8** | [Pack completeness, synthetic line](projects/08_pack_completeness) | Rendered clips for completeness checks: a line of 10-can trays (some with 9) and a packing station where a robot fills boxes of 20 (one leaves with 18) | 15 s + 34 s clips · QC dashboards counting from the pixels · 7/7 trays and 3/3 boxes judged right |
 | **9** | [Lemon grading, washer](projects/09_lemon_grading) | Outline every lemon, follow it, grade its colour A / B / C | **70** read · 39 % green, 39 % green-yellow, 23 % yellow · 21/24 blind-checked |
 | **10** | [Peach grading, six-line sizer](projects/10_peach_sizer) | Outline every peach, name its line, grade its red colour A / B / C | **204** counted across 6 lines · 87 % A, 12 % B, 1 % C · 19/24 blind-checked |
+| **11** | [Tomato ripeness per line](projects/11_tomato_ripeness) | Detect, follow and count tomatoes on four lines; ripeness class and shipping plan per line (boxes only) | **41** counted · 85 % half-ripe, 15 % unripe · 34/41 blind-checked |
+| **12** | [Lime grading, two chains](projects/12_lime_grading) | Detect, follow and count limes on two chains; grade A / B / C by colour, quality trend (boxes only) | **87** counted · 21 % A, 62 % B, 17 % C · 15/23 blind-checked, yellowing 7/7 |
 
 Each project's own README carries its method, its measured figures and what
 breaks it, and is written to stand on its own if the folder is lifted into a
@@ -460,6 +462,8 @@ projects/
   08_pack_completeness/     Blender-rendered can-tray line and packing station (boxes of 20), with per-frame truth
   09_lemon_grading/         lemon colour grading at a washer: FastSAM, tracking, CIELAB hue
   10_peach_sizer/           peach red-colour grade on a six-line sizer: FastSAM, tracking, red share
+  11_tomato_ripeness/       tomato ripeness per line: YOLOE boxes, TrackTrack, count gate, CIELAB hue
+  12_lime_grading/          lime grade A/B/C on two chains: YOLOE boxes, TrackTrack, count gate, CIELAB hue
 
     every project has these
       main.py               the entry point, and only the sequence of steps
