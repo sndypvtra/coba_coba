@@ -239,9 +239,9 @@ class Canvas:
         self.d.rectangle((0, 0, W, TOP), fill=SURFACE)
         self.d.line((0, TOP - 1, W, TOP - 1), fill=BORDER)
         self.rrect((M, 12, M + 32, 44), r=8, fill=BLUE)
-        self.icon("precision_manufacturing", (M + 16, 28), 22, (255, 255, 255))
+        self.icon("warehouse", (M + 16, 28), 22, (255, 255, 255))
         x = M + 44
-        b = self.text((x, 28), "Factory Vision", 17, "semibold", TEXT, anchor="lm")
+        b = self.text((x, 28), "Warehouse Live Ops", 17, "semibold", TEXT, anchor="lm")
         x = b[2] + 14
         for part, fill, weight in ((site, TEXT_2, "medium"), (view, TEXT, "semibold")):
             self.text((x, 28), "/", 16, "regular", TEXT_3, anchor="lm")

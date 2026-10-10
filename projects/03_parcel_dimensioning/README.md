@@ -155,6 +155,33 @@ fetched — see above.
 
 </details>
 
+## Dashboard: what dispatch bills and loads by
+
+`dashboard/` lays the same measurement out as a Factory Vision dashboard,
+1920 × 1080: **`output/parcel_dimensioning.mp4`**, with every counted parcel in
+`output/parcel_dimensioning_summary.json`.
+
+```bash
+python dashboard/record.py        # the project's own run, recorded per frame (first run ~2.5 h, later ~20 min)
+python dashboard/dashboard.py     # the video
+```
+
+`record.py` changes nothing in the count or the measurement: it wraps four
+places in the shared pipeline so their results are also written down per frame.
+Its run reproduces this README's figures (8 counted, the same sizes to the
+millimetre but one, 1,087 L in all) and the original `summary.json` is kept.
+
+| On screen | From |
+|---|---|
+| Each parcel's L × W × H, volume and size class as it travels, "measuring..." until frozen | the measurement above |
+| Parcels counted, volume handled (m³ and L), rate per hour and m³ per hour | the 8 crossings and their frozen sizes |
+| Size mix S / M / L with volume per class | the 300 mm and 600 mm class bounds |
+| "Needs a manual check" | parcels whose class is `?`, close to a bound, so they should not be charged by class automatically |
+| Count against the hand count, and the second test carton | 8 = 8; 340.5 mm against a true 340 mm |
+
+Of the 8 counted parcels: 1 small, 5 medium, 2 large, 381 L in all; one (#20,
+the small one) sits close to a class bound and is flagged for a manual check.
+
 ## How it works
 
 Six models are in play, and each one has a module that owns it.

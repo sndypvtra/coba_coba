@@ -121,7 +121,7 @@ class ParcelBoard:
                        pad=(6, 2), anchor="lb")
         n = sum(1 for fr in self.counted.values() if fr <= f)
         B.corner_chips(c, "CAM 01 · Ban bongkar paket", [f"Terhitung: {n}", "Rekaman nyata"])
-        c.pill((B.VW - 10, B.VH - 12), "Tumpukan diam di belakang diabaikan · di luar koridor kedalaman", 11, TEXT,
+        c.pill((B.VW - 10, B.VH - 12), "Tumpukan di belakang tidak dihitung · bukan di atas ban", 11, TEXT,
                alpha(BG, 0.75), "medium", icon="visibility_off", pad=(8, 3), anchor="rb")
         return c.bgr()
 
@@ -160,8 +160,8 @@ class ParcelBoard:
         step = 100 if vmax <= 600 else 200
         B.chart_axes(c, cb, vmax, list(range(0, int(vmax) + 1, step)), self.total, fmt=lambda v: f"{v} L")
         x0, _, x1, y1 = B.BR
-        c.text((x1 - 16, y1 - 16), f"Hitungan {len(self.order)} = slit-scan {SLIT_SCAN_TRUTH} · kalibrasi: karton uji "
-               "terbaca 340,5 mm vs 340 mm", 11, "regular", TEXT_3, anchor="rm")
+        c.text((x1 - 16, y1 - 16), f"Hitungan {len(self.order)} = hitungan manual {SLIT_SCAN_TRUTH} · karton uji "
+               "terbaca 340,5 mm, aslinya 340 mm", 11, "regular", TEXT_3, anchor="rm")
         c.timeline(B.TL, t, self.total, self.events)
         return c.bgr()
 
@@ -180,11 +180,11 @@ class ParcelBoard:
               CYAN)
         unsure = sum(1 for _, s in cs if s and s["mark"] == "?")
         c.kpi(B.KPI_BOXES[3], "straighten", "Perlu cek manual", str(unsure),
-              "kelas ukuran dekat batas, jangan ditagih otomatis" if unsure else "semua kelas pasti", AMBER,
+              "ukuran dekat batas kelas" if unsure else "semua kelas pasti", AMBER,
               value_fill=AMBER if unsure else TEXT)
 
     def table(self, c, f):
-        y = c.card_title(B.MID, "Paket terukur", "straighten", "ukuran dikunci sebelum garis")
+        y = c.card_title(B.MID, "Paket terukur", "straighten", "ukuran final sebelum garis hitung")
         x0, _, x1, y1 = B.MID
         cols = [("Paket", 16), ("P × L × T", 92), ("Volume", 270), ("Kelas", 350), ("Status", 440)]
         for name, dx in cols:
@@ -211,8 +211,7 @@ class ParcelBoard:
             else:
                 c.pill((x0 + 440, ry), "di ban", 10, TEXT, alpha(CYAN, 0.25), "semibold", pad=(7, 2), anchor="lm")
             ry += 34
-        c.text((x0 + 16, y1 - 18), "* tutup karton tak terlihat penuh, ukuran dari koreksi terkalibrasi (±10%) · "
-               "? dekat batas kelas", 10, "regular", TEXT_3, anchor="lm")
+        c.text((x0 + 16, y1 - 18), "* ukuran ±10% (bagian atas karton kurang terlihat) · ? dekat batas kelas", 10, "regular", TEXT_3, anchor="lm")
 
     def mix(self, c, cs):
         y = c.card_title(B.BL, "Campuran ukuran", "category", "batas 30 cm dan 60 cm, sisi terpanjang")

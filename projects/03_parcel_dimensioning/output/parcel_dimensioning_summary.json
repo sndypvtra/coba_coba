@@ -1,0 +1,153 @@
+{
+ "counted": 8,
+ "slit_scan_truth": 8,
+ "volume_counted_l": 381.4,
+ "parcels": [
+  {
+   "tid": 18,
+   "frame": 62,
+   "l_mm": 444,
+   "w_mm": 427,
+   "h_mm": 138,
+   "volume_l": 26.2,
+   "cls": "M",
+   "mark": "",
+   "distance_m": 2.27,
+   "locked": true
+  },
+  {
+   "tid": 15,
+   "frame": 132,
+   "l_mm": 462,
+   "w_mm": 362,
+   "h_mm": 159,
+   "volume_l": 26.6,
+   "cls": "M",
+   "mark": "*",
+   "distance_m": 2.22,
+   "locked": true
+  },
+  {
+   "tid": 20,
+   "frame": 161,
+   "l_mm": 282,
+   "w_mm": 234,
+   "h_mm": 102,
+   "volume_l": 6.7,
+   "cls": "S",
+   "mark": "?",
+   "distance_m": 2.37,
+   "locked": true
+  },
+  {
+   "tid": 1,
+   "frame": 195,
+   "l_mm": 689,
+   "w_mm": 465,
+   "h_mm": 366,
+   "volume_l": 117.4,
+   "cls": "L",
+   "mark": "*",
+   "distance_m": 1.99,
+   "locked": true
+  },
+  {
+   "tid": 23,
+   "frame": 261,
+   "l_mm": 391,
+   "w_mm": 338,
+   "h_mm": 108,
+   "volume_l": 14.3,
+   "cls": "M",
+   "mark": "*",
+   "distance_m": 2.11,
+   "locked": true
+  },
+  {
+   "tid": 4,
+   "frame": 311,
+   "l_mm": 383,
+   "w_mm": 352,
+   "h_mm": 140,
+   "volume_l": 18.8,
+   "cls": "M",
+   "mark": "*",
+   "distance_m": 2.15,
+   "locked": true
+  },
+  {
+   "tid": 24,
+   "frame": 421,
+   "l_mm": 376,
+   "w_mm": 313,
+   "h_mm": 268,
+   "volume_l": 31.6,
+   "cls": "M",
+   "mark": "*",
+   "distance_m": 2.1,
+   "locked": true
+  },
+  {
+   "tid": 28,
+   "frame": 459,
+   "l_mm": 754,
+   "w_mm": 543,
+   "h_mm": 341,
+   "volume_l": 139.8,
+   "cls": "L",
+   "mark": "*",
+   "distance_m": 1.9,
+   "locked": true
+  }
+ ],
+ "events": [
+  {
+   "t": 2.04,
+   "severity": "info",
+   "title": "Paket #18 · sedang (M)",
+   "detail": "44×43×14 cm · 26 L"
+  },
+  {
+   "t": 4.37,
+   "severity": "info",
+   "title": "Paket #15 · sedang (M)",
+   "detail": "46×36×16 cm · 27 L"
+  },
+  {
+   "t": 5.34,
+   "severity": "medium",
+   "title": "Paket #20 · cek ukuran manual",
+   "detail": "28×23×10 cm · 7 L · kelas S? dekat batas"
+  },
+  {
+   "t": 6.47,
+   "severity": "info",
+   "title": "Paket #1 · besar (L)",
+   "detail": "69×46×37 cm · 117 L"
+  },
+  {
+   "t": 8.68,
+   "severity": "info",
+   "title": "Paket #23 · sedang (M)",
+   "detail": "39×34×11 cm · 14 L"
+  },
+  {
+   "t": 10.34,
+   "severity": "info",
+   "title": "Paket #4 · sedang (M)",
+   "detail": "38×35×14 cm · 19 L"
+  },
+  {
+   "t": 14.01,
+   "severity": "info",
+   "title": "Paket #24 · sedang (M)",
+   "detail": "38×31×27 cm · 32 L"
+  },
+  {
+   "t": 15.28,
+   "severity": "info",
+   "title": "Paket #28 · besar (L)",
+   "detail": "75×54×34 cm · 140 L"
+  }
+ ]
+}
