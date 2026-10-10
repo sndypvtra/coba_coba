@@ -11,316 +11,345 @@
   13,
   11
  ],
- "ripeness": [
+ "usda_classes": [
   {
-   "name": "Matang",
-   "hue_below": 62.5,
-   "looks": "merah sampai oranye-merah",
+   "name": "Red",
+   "mean_hue_reference": 59.3,
    "count": 34,
    "share": 0.829
   },
   {
-   "name": "Setengah matang",
-   "hue_below": 73.0,
-   "looks": "oranye pucat, ada bagian kuning",
+   "name": "Light Red",
+   "mean_hue_reference": 64.9,
    "count": 7,
    "share": 0.171
   },
   {
-   "name": "Mentah",
-   "hue_below": 999.0,
-   "looks": "kuning sampai hijau",
+   "name": "Pink",
+   "mean_hue_reference": 78.1,
+   "count": 0,
+   "share": 0.0
+  },
+  {
+   "name": "Turning",
+   "mean_hue_reference": 93.2,
+   "count": 0,
+   "share": 0.0
+  },
+  {
+   "name": "Breakers",
+   "mean_hue_reference": 109.1,
+   "count": 0,
+   "share": 0.0
+  },
+  {
+   "name": "Green",
+   "mean_hue_reference": 113.3,
    "count": 0,
    "share": 0.0
   }
  ],
+ "class_bounds_deg": [
+  62.1,
+  71.5,
+  85.65,
+  101.15,
+  111.2
+ ],
+ "lot": {
+  "main_class": "Red",
+  "off_colour": 7,
+  "off_colour_share": 0.171,
+  "green": 0,
+  "label": "Mixed Color"
+ },
  "tomatoes": [
   {
    "tid": 2,
    "line": 1,
    "frame": 6,
    "hue": 53.6,
-   "ripeness": "Matang"
+   "usda_class": "Red"
   },
   {
    "tid": 15,
    "line": 2,
    "frame": 13,
    "hue": 52.1,
-   "ripeness": "Matang"
+   "usda_class": "Red"
   },
   {
    "tid": 17,
    "line": 3,
    "frame": 13,
    "hue": 53.4,
-   "ripeness": "Matang"
+   "usda_class": "Red"
   },
   {
    "tid": 21,
    "line": 4,
    "frame": 13,
    "hue": 43.6,
-   "ripeness": "Matang"
+   "usda_class": "Red"
   },
   {
    "tid": 35,
    "line": 4,
    "frame": 20,
    "hue": 55.9,
-   "ripeness": "Matang"
+   "usda_class": "Red"
   },
   {
    "tid": 6,
    "line": 1,
    "frame": 27,
    "hue": 43.3,
-   "ripeness": "Matang"
+   "usda_class": "Red"
   },
   {
    "tid": 38,
    "line": 4,
    "frame": 29,
    "hue": 43.6,
-   "ripeness": "Matang"
+   "usda_class": "Red"
   },
   {
    "tid": 3,
    "line": 2,
    "frame": 32,
    "hue": 52.4,
-   "ripeness": "Matang"
+   "usda_class": "Red"
   },
   {
    "tid": 7,
    "line": 3,
    "frame": 33,
    "hue": 58.7,
-   "ripeness": "Matang"
+   "usda_class": "Red"
   },
   {
    "tid": 10,
    "line": 1,
    "frame": 36,
    "hue": 53.8,
-   "ripeness": "Matang"
+   "usda_class": "Red"
   },
   {
    "tid": 14,
    "line": 2,
    "frame": 41,
    "hue": 52.9,
-   "ripeness": "Matang"
+   "usda_class": "Red"
   },
   {
    "tid": 31,
    "line": 3,
    "frame": 44,
    "hue": 51.0,
-   "ripeness": "Matang"
+   "usda_class": "Red"
   },
   {
    "tid": 4,
    "line": 1,
    "frame": 48,
    "hue": 43.3,
-   "ripeness": "Matang"
+   "usda_class": "Red"
   },
   {
    "tid": 50,
    "line": 4,
    "frame": 51,
    "hue": 50.5,
-   "ripeness": "Matang"
+   "usda_class": "Red"
   },
   {
    "tid": 36,
    "line": 3,
    "frame": 53,
    "hue": 58.7,
-   "ripeness": "Matang"
+   "usda_class": "Red"
   },
   {
    "tid": 40,
    "line": 3,
    "frame": 55,
    "hue": 64.2,
-   "ripeness": "Setengah matang"
+   "usda_class": "Light Red"
   },
   {
    "tid": 1,
    "line": 2,
    "frame": 58,
    "hue": 64.1,
-   "ripeness": "Setengah matang"
+   "usda_class": "Light Red"
   },
   {
    "tid": 55,
    "line": 4,
    "frame": 60,
    "hue": 51.7,
-   "ripeness": "Matang"
+   "usda_class": "Red"
   },
   {
    "tid": 43,
    "line": 3,
    "frame": 62,
    "hue": 63.4,
-   "ripeness": "Setengah matang"
+   "usda_class": "Light Red"
   },
   {
    "tid": 32,
    "line": 2,
    "frame": 68,
    "hue": 57.0,
-   "ripeness": "Matang"
+   "usda_class": "Red"
   },
   {
    "tid": 34,
    "line": 1,
    "frame": 69,
    "hue": 62.5,
-   "ripeness": "Setengah matang"
+   "usda_class": "Light Red"
   },
   {
    "tid": 47,
    "line": 3,
    "frame": 71,
    "hue": 51.5,
-   "ripeness": "Matang"
+   "usda_class": "Red"
   },
   {
    "tid": 37,
    "line": 2,
    "frame": 76,
    "hue": 51.5,
-   "ripeness": "Matang"
+   "usda_class": "Red"
   },
   {
    "tid": 54,
    "line": 3,
    "frame": 82,
    "hue": 49.6,
-   "ripeness": "Matang"
+   "usda_class": "Red"
   },
   {
    "tid": 42,
    "line": 1,
    "frame": 83,
    "hue": 53.4,
-   "ripeness": "Matang"
+   "usda_class": "Red"
   },
   {
    "tid": 60,
    "line": 3,
    "frame": 88,
    "hue": 60.2,
-   "ripeness": "Matang"
+   "usda_class": "Red"
   },
   {
    "tid": 74,
    "line": 4,
    "frame": 90,
    "hue": 55.4,
-   "ripeness": "Matang"
+   "usda_class": "Red"
   },
   {
    "tid": 51,
    "line": 1,
    "frame": 93,
    "hue": 57.0,
-   "ripeness": "Matang"
+   "usda_class": "Red"
   },
   {
    "tid": 78,
    "line": 4,
    "frame": 99,
    "hue": 52.7,
-   "ripeness": "Matang"
+   "usda_class": "Red"
   },
   {
    "tid": 44,
    "line": 2,
    "frame": 100,
    "hue": 70.3,
-   "ripeness": "Setengah matang"
+   "usda_class": "Light Red"
   },
   {
    "tid": 66,
    "line": 3,
    "frame": 104,
    "hue": 55.9,
-   "ripeness": "Matang"
+   "usda_class": "Red"
   },
   {
    "tid": 57,
    "line": 1,
    "frame": 108,
    "hue": 57.4,
-   "ripeness": "Matang"
+   "usda_class": "Red"
   },
   {
    "tid": 83,
    "line": 4,
    "frame": 108,
    "hue": 49.8,
-   "ripeness": "Matang"
+   "usda_class": "Red"
   },
   {
    "tid": 61,
    "line": 2,
    "frame": 110,
    "hue": 66.3,
-   "ripeness": "Setengah matang"
+   "usda_class": "Light Red"
   },
   {
    "tid": 73,
    "line": 3,
    "frame": 114,
    "hue": 46.5,
-   "ripeness": "Matang"
+   "usda_class": "Red"
   },
   {
    "tid": 88,
    "line": 4,
    "frame": 114,
    "hue": 54.1,
-   "ripeness": "Matang"
+   "usda_class": "Red"
   },
   {
    "tid": 93,
    "line": 4,
    "frame": 119,
    "hue": 48.6,
-   "ripeness": "Matang"
+   "usda_class": "Red"
   },
   {
    "tid": 96,
    "line": 3,
    "frame": 120,
    "hue": 50.6,
-   "ripeness": "Matang"
+   "usda_class": "Red"
   },
   {
    "tid": 63,
    "line": 2,
    "frame": 121,
    "hue": 62.9,
-   "ripeness": "Setengah matang"
+   "usda_class": "Light Red"
   },
   {
    "tid": 80,
    "line": 3,
    "frame": 128,
    "hue": 48.8,
-   "ripeness": "Matang"
+   "usda_class": "Red"
   },
   {
    "tid": 104,
    "line": 4,
    "frame": 129,
    "hue": 50.9,
-   "ripeness": "Matang"
+   "usda_class": "Red"
   }
  ]
 }
