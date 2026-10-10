@@ -8,10 +8,10 @@
 Four lines carry tomatoes away from the camera. A tomato is counted once, when
 its box centre crosses the count gate, a horizontal line across all four lines
 at GATE_Y; the line it is on is where it crosses. Its ripeness is the colour of
-its skin as a CIELAB hue angle, read inside its box on the frames where it is
-sharpest, and sorted into three classes by where it should go next: ripe fruit
-to the local market, half-ripe to distributors, unripe to the ripening room.
-Every unripe tomato goes in the event log with a snapshot at the gate. The class
+its skin as a CIELAB hue angle, read on skin pixels inside its box on the frames
+where it is sharpest, and sorted into three classes: ripe (red to orange-red),
+half-ripe (pale orange with yellow) and unripe (yellow to green). Every tomato
+not yet ripe goes in the event log with a snapshot at the gate. The class
 bounds are in RIPENESS; how well they agree with grading by eye is in
 output/tomato_audit.json.
 """
@@ -38,18 +38,18 @@ GATE_Y = 600                          # count gate (source px): horizontal, acro
 LINE_BOUNDS = [700, 1200, 1700]       # x on the gate between lines 1|2|3|4, from where tracks cross it
 N_LINES = 4
 MIN_AGE = 3                           # frames a track must be held before it can be counted
-MIN_CHROMA = 25                       # a tomato is coloured; the belt, gloves and steel are not (tomatoes >= 37, rest <= 15)
+MIN_CHROMA = 20                       # a tomato is coloured; the belt, gloves and steel are not (tomatoes >= 25, rest <= 16)
 DRAW_Y = 330                          # boxes are drawn below the crossbar; beyond it the fruit is too small to read
 CHIP_FRAMES = 20                      # a counted tomato keeps its label this long after the gate
 DUP_FRAMES, DUP_PX = 4, 60            # two counts on one line this close are one tomato whose identity broke
 
-# Ripeness by hue angle (degrees): red ripe fruit sits lowest. The bounds were set
-# on another clip of the same packhouse and series (Pexels 8675102), same light,
-# and are used here unchanged. (name, upper hue bound, colour, destination, days to sale)
+# Ripeness by the hue angle of the skin (degrees): red ripe fruit sits lowest. The
+# bounds were chosen on half of the tomatoes graded by eye and checked on the other
+# half (output/tomato_audit.json). (name, upper hue bound, colour, what it looks like)
 RIPENESS = [
-    ("Matang", 42.5, RED, "pasar lokal", "kirim hari ini · 1–2 hari"),
-    ("Setengah matang", 62.0, AMBER, "distributor / supermarket", "perjalanan 3–5 hari"),
-    ("Mentah", 999.0, GREEN, "ruang pemeraman", "7+ hari · atau ekspor jarak jauh"),
+    ("Matang", 62.5, RED, "merah sampai oranye-merah"),
+    ("Setengah matang", 73.0, AMBER, "oranye pucat, ada bagian kuning"),
+    ("Mentah", 999.0, GREEN, "kuning sampai hijau"),
 ]
 
 
@@ -73,20 +73,24 @@ class TomatoBoard:
                 chroma.setdefault(o["tid"], []).append(o["chroma"])
                 b = o["box"]
                 self.paths.setdefault(o["tid"], []).append((fr["frame"], (b[0] + b[2]) / 2, (b[1] + b[3]) / 2))
-                reads.setdefault(o["tid"], []).append((o["sharp"], o["hue"]))
+                if o["hue"] is not None:
+                    reads.setdefault(o["tid"], []).append((o["sharp"], o["hue"]))
         # each tomato's hue: the median over the half of its frames where it is sharpest
         self.hue = {}
         for t, rs in reads.items():
             rs.sort(reverse=True)
             self.hue[t] = float(np.median([h for _, h in rs[:max(3, len(rs) // 2)]]))
+        for t in self.paths:
+            self.hue.setdefault(t, 40.0)
         self.grey = {t for t, v in chroma.items() if np.median(v) < MIN_CHROMA}
         self.count()
         self.thumbs = {}
-        # the event log: every unripe tomato, the one the line has to act on, with a snapshot at the gate
-        self.events = [B.Event(f, (f - 1) / self.fps, "medium", "eco", f"Tomat mentah · Line {ln}",
-                               f"hue {num(self.hue[t], 0)}° · arahkan ke ruang pemeraman", "unripe",
+        # the event log: every tomato not yet ripe, with a snapshot at the gate
+        self.events = [B.Event(f, (f - 1) / self.fps, "medium" if self.cls(t) == 2 else "low",
+                               "eco" if self.cls(t) == 2 else "schedule", f"{RIPENESS[self.cls(t)][0]} · Line {ln}",
+                               f"hue {num(self.hue[t], 1)}° · {RIPENESS[self.cls(t)][3]}", "not_ripe",
                                focus=self.box_at(t, f))
-                       for f, t, ln in self.counted if self.cls(t) == 2]
+                       for f, t, ln in self.counted if self.cls(t) > 0]
 
     def box_at(self, t, f):
         """The tomato's box (picture coordinates) in the frame nearest to f where it was seen."""
@@ -159,7 +163,7 @@ class TomatoBoard:
             t = o["tid"]
             if not 0 <= f - self.count_f.get(t, 10 ** 6) <= CHIP_FRAMES or (o["box"][1] + o["box"][3]) / 2 < DRAW_Y:
                 continue
-            name, _, col, _, _ = RIPENESS[self.cls(t)]
+            name, _, col, _ = RIPENESS[self.cls(t)]
             x0, y0 = o["box"][0] * K, o["box"][1] * K
             B.chip(c, (max(6, x0), y0 - 4), f"Line {self.line[t]} · {name} ✓", col, None, anchor="lb", size=11)
         for k in range(1, N_LINES + 1):
@@ -187,11 +191,11 @@ class TomatoBoard:
         c.topbar("Kematangan · tomat per line", "Lini packing tomat · rekaman Pexels", "Putar ulang", t, self.total,
                  ["Rekaman nyata", "CAM 01"])
         self.kpis(c, done, t)
-        self.dispatch(c, done)
+        self.mix(c, done)
         B.feed(c, self.events, t, self.thumbs, title="Event Log", unit="events", empty="No events yet")
         self.history(c, done)
         self.hue_strip(c, done)
-        c.timeline(B.TL, t, self.total, self.events, title="Tomat mentah dialihkan")
+        c.timeline(B.TL, t, self.total, self.events, title="Tomat belum matang")
         return c.bgr()
 
     def kpis(self, c, done, t):
@@ -201,17 +205,16 @@ class TomatoBoard:
               f"4 line · ≈ {num(rate, 0)}/menit, perkiraan dari {num(t, 1)} s" if rate else "4 line · gerbang hitung",
               RED)
         cnt = [sum(1 for _, x, _ in done if self.cls(x) == k) for k in range(3)]
-        c.kpi(B.KPI_BOXES[1], "local_shipping", "Matang · kirim hari ini", f"{num(100 * cnt[0] / n, 0)}%" if n else "–",
-              f"{cnt[0]} tomat · pasar lokal" if n else "menunggu tomat pertama", RED)
+        c.kpi(B.KPI_BOXES[1], "check_circle", "Matang", f"{num(100 * cnt[0] / n, 0)}%" if n else "–",
+              f"{cnt[0]} dari {n} tomat · merah sampai oranye-merah" if n else "menunggu tomat pertama", RED)
         c.kpi(B.KPI_BOXES[2], "schedule", "Setengah matang", f"{num(100 * cnt[1] / n, 0)}%" if n else "–",
-              f"{cnt[1]} tomat · distributor, 3–5 hari" if n else "menunggu tomat pertama", AMBER)
-        c.kpi(B.KPI_BOXES[3], "eco", "Mentah · ke pemeraman", str(cnt[2]),
-              f"{num(100 * cnt[2] / n, 0)}% · pisahkan dari lini kirim" if cnt[2] else "belum ada tomat mentah", GREEN,
+              f"{cnt[1]} tomat · oranye pucat" if n else "menunggu tomat pertama", AMBER)
+        c.kpi(B.KPI_BOXES[3], "eco", "Mentah", str(cnt[2]),
+              f"{num(100 * cnt[2] / n, 0)}% · kuning sampai hijau" if cnt[2] else "belum ada tomat mentah", GREEN,
               value_fill=GREEN if cnt[2] else TEXT)
 
-    def dispatch(self, c, done):
-        """Where today's fruit goes: one row per ripeness class with its destination and time to sale."""
-        y = c.card_title(B.MID, "Rencana kirim per kematangan", "local_shipping", f"{len(done)} tomat")
+    def mix(self, c, done):
+        y = c.card_title(B.MID, "Komposisi Grade", "category", f"{len(done)} tomat")
         x0, _, x1, y1 = B.MID
         counts = [sum(1 for _, t, _ in done if self.cls(t) == k) for k in range(3)]
         n = max(1, len(done))
@@ -225,13 +228,18 @@ class TomatoBoard:
         if not done:
             c.rrect((bx0, by, bx1, by + 18), 4, fill=SURFACE_2)
         ry = by + 52
-        for k, (name, _, col, dest, days) in enumerate(RIPENESS):
+        lo = 0.0
+        for k, (name, ub, col, looks) in enumerate(RIPENESS):
             c.dot((x0 + 24, ry), 6, col)
-            c.text((x0 + 38, ry), f"{name} → {dest}", 14, "semibold", TEXT, anchor="lm")
-            c.text((x0 + 38, ry + 22), days, 12, "regular", TEXT_2, anchor="lm")
+            c.text((x0 + 38, ry), name, 14, "semibold", TEXT, anchor="lm")
+            rng = f"hue < {num(ub, 1).replace(',0', '')}°" if k == 0 else (
+                f"hue ≥ {num(lo, 1).replace(',0', '')}°" if ub > 360 else
+                f"hue {num(lo, 1).replace(',0', '')}–{num(ub, 1).replace(',0', '')}°")
+            c.text((x0 + 38, ry + 22), f"{looks} · {rng}", 12, "regular", TEXT_2, anchor="lm")
             c.text((x1 - 16, ry), f"{counts[k]}", 20, "bold", TEXT, anchor="rm", tnum=True)
             c.text((x1 - 60, ry), f"{num(100 * counts[k] / n, 0)}%" if done else "–", 13, "medium", TEXT_2,
                    anchor="rm", tnum=True)
+            lo = ub
             ry += 64
         c.text((x0 + 16, y1 - 18), "Kelas dari sudut hue warna kulit (CIELAB), dibaca di dalam kotak deteksi", 11,
                "regular", TEXT_3, anchor="lm")
@@ -242,7 +250,7 @@ class TomatoBoard:
         tw, gap = 78, 9
         x = x0 + 16
         for _, t, ln in list(reversed(done))[:7]:
-            name, _, col, _, _ = RIPENESS[self.cls(t)]
+            name, _, col, _ = RIPENESS[self.cls(t)]
             c.rrect((x, y + 2, x + tw, y1 - 14), 8, fill=SURFACE_2)
             c.rrect((x, y + 2, x + tw, y + 6), 2, fill=col)
             c.text((x + tw / 2, y + 24), f"Line {ln}", 12, "semibold", TEXT, anchor="mm")
@@ -264,7 +272,7 @@ class TomatoBoard:
         def X(h):
             return sx0 + (sx1 - sx0) * (min(max(h, lo), hi) - lo) / (hi - lo)
         prev = lo
-        for name, ub, col, _, _ in RIPENESS:
+        for name, ub, col, _ in RIPENESS:
             ub_ = min(ub, hi)
             c.rrect((X(prev), sy - 26, X(ub_), sy + 26), 6, fill=alpha(col, 0.12))
             c.text(((X(prev) + X(ub_)) / 2, sy - 40), name, 12, "semibold", TEXT_2, anchor="mm")
@@ -298,7 +306,7 @@ def main():
                "not_tomato_tracks": len(tb.grey),
                "duplicate_counts_dropped": tb.dropped, "gate_y": GATE_Y,
                "per_line": [sum(1 for _, _, ln in tb.counted if ln == k) for k in range(1, N_LINES + 1)],
-               "ripeness": [{"name": r[0], "hue_below": r[1], "destination": r[3], "count": cnt[k],
+               "ripeness": [{"name": r[0], "hue_below": r[1], "looks": r[3], "count": cnt[k],
                              "share": round(cnt[k] / max(n, 1), 3)} for k, r in enumerate(RIPENESS)],
                "tomatoes": [{"tid": t, "line": ln, "frame": f, "hue": round(tb.hue[t], 1),
                              "ripeness": RIPENESS[tb.cls(t)][0]} for f, t, ln in tb.counted]}

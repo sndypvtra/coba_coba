@@ -4,10 +4,10 @@
 
 Detection only: YOLOE, prompted with words, gives a box and a score per fruit;
 no mask is used anywhere. TrackTrack keeps one identity per tomato from frame to
-frame. The colour is read inside an ellipse at the centre of the box (half its
-width and height), which stays on the fruit and off the belt and the
-neighbours; in CIELAB, as the hue angle h = atan2(b*, a*) of the median a* and
-b*, with highlights and deep shadow left out. Red fruit sits lowest, orange
+frame. The colour is read inside an ellipse at the centre of the box (80 % of its
+width and height), on skin pixels only: saturated, and neither highlight nor
+deep shadow, so the cream belt and the steel showing inside the box are left
+out. It is the median per-pixel hue angle h = atan2(b*, a*) in CIELAB. Red fruit sits lowest, orange
 higher, yellow and green higher still.
 """
 from __future__ import annotations
@@ -32,7 +32,8 @@ CONF = 0.06                            # zero-shot scores run low; the tracker's
 IMGSZ = 1280
 MIN_AREA, MAX_AREA = 0.0008, 0.06      # box area as a share of the frame: drops specks and boxes over several fruit
 TRACKER = {"track_high_thresh": 0.12, "track_low_thresh": 0.03, "new_track_thresh": 0.15, "min_track_len": 2}
-ELLIPSE = 0.25                         # semi-axes of the colour ellipse, as a share of the box width and height
+ELLIPSE = 0.40                         # semi-axes of the colour ellipse, as a share of the box width and height
+MIN_SKIN_CHROMA = 20                   # a skin pixel is saturated; belt, steel and glare are not
 
 
 def tracker_cfg():
@@ -46,7 +47,11 @@ def tracker_cfg():
 
 
 def colour(lab, gray, box):
-    """Hue angle, chroma and lightness inside the centre ellipse of the box, and how sharp the box is."""
+    """Hue angle, chroma and lightness of the skin inside the centre ellipse of the box, and how sharp the box is.
+
+    Only skin pixels are read: saturated (chroma above MIN_SKIN_CHROMA) and neither highlight nor deep shadow.
+    The pale belt and the steel between the fruit are grey or cream, and would pull the reading towards yellow.
+    """
     x0, y0, x1, y1 = (int(round(v)) for v in box)
     h, w = lab.shape[:2]
     x0, y0, x1, y1 = max(0, x0), max(0, y0), min(w, x1), min(h, y1)
@@ -58,13 +63,15 @@ def colour(lab, gray, box):
     px = lab[y0:y1, x0:x1][m > 0].astype(np.float32)
     L = px[:, 0] * 100 / 255
     a, b = px[:, 1] - 128, px[:, 2] - 128
-    keep = (L > 15) & (L < 92)
-    if keep.sum() > 20:
-        L, a, b = L[keep], a[keep], b[keep]
-    ma, mb = float(np.median(a)), float(np.median(b))
+    chroma = np.hypot(a, b)
+    skin = (L > 20) & (L < 92) & (chroma > MIN_SKIN_CHROMA)
     sharp = float(cv2.Laplacian(gray[y0:y1, x0:x1], cv2.CV_32F).var())
-    return {"hue": round(float(np.degrees(np.arctan2(mb, ma))), 1), "chroma": round(float(np.hypot(ma, mb)), 1),
-            "light": round(float(np.median(L)), 1), "sharp": round(sharp, 1)}
+    if skin.sum() < 30:
+        return {"hue": None, "chroma": round(float(np.median(chroma)), 1), "light": round(float(np.median(L)), 1),
+                "sharp": round(sharp, 1)}
+    return {"hue": round(float(np.median(np.degrees(np.arctan2(b[skin], a[skin])))), 1),
+            "chroma": round(float(np.median(chroma)), 1), "light": round(float(np.median(L[skin])), 1),
+            "sharp": round(sharp, 1)}
 
 
 def main():

@@ -3,9 +3,9 @@
 Tomatoes run on four lines away from a camera at the head of a packing line.
 Each tomato is found as a box, followed from frame to frame, counted once at a
 horizontal gate across all four lines, and given a ripeness class from the
-colour inside its box. The class says where it goes: ripe fruit to the local
-market today, half-ripe to distributors for a 3–5 day trip, unripe to the
-ripening room. Detection, tracking and counting only: no segmentation anywhere.
+colour of the skin inside its box: ripe (red to orange-red), half-ripe (pale
+orange with yellow) or unripe (yellow to green). Detection, tracking and
+counting only: no segmentation anywhere.
 The output is a Factory Vision dashboard, 1920 × 1080:
 **`output/tomato_ripeness.mp4`**.
 
@@ -15,32 +15,31 @@ The output is a Factory Vision dashboard, 1920 × 1080:
 |---|---|
 | Tomatoes counted | **41** in 4.4 s at one gate across four lines |
 | Per line | line 1: 8 · line 2: 9 · line 3: 13 · line 4: 11 |
-| Matang (ripe, hue < 42.5°) | 0 · local market, ship today |
-| Setengah matang (half-ripe, 42.5–62°) | 35 (85 %) · distributor / supermarket, 3–5 days |
-| Mentah (unripe, ≥ 62°) | 6 (15 %) · ripening room, each one marked on the timeline |
+| Matang (ripe, skin hue < 62.5°) | 34 (83 %) · red to orange-red |
+| Setengah matang (half-ripe, 62.5–73°) | 7 (17 %) · pale orange with yellow, each one in the event log |
+| Mentah (unripe, ≥ 73°) | 0 · yellow to green |
 | Line rate | ≈ 550 a minute, extrapolated from 4.4 s of footage |
-| Class against a blind check by eye | **34 of 41** the same; the 7 others one class apart |
+| Class against a blind check by eye | **38 of 39** the same on the test half; the one miss is one class apart |
 
 The rate is the 4.4 s clip scaled to a minute. It describes this clip, not a
-shift. The fruit in this clip is pale orange, so no tomato reaches the ripe
-class. The two the eye called ripe sit at 42.6° and 43.2°, right on the bound.
+shift.
 
 ## The dashboard
 
 - **On the picture.** Every tomato has a box in its class colour. Once a tomato
   is counted, its box fills and a label shows its line and class, e.g.
-  "Line 3 · Setengah matang ✓", for 0.7 s. No track numbers are shown. The
+  "Line 3 · Matang ✓", for 0.7 s. No track numbers are shown. The
   count gate runs across all four lines, and each line's name and running
   count sit on the gate.
-- **KPIs.** Tomatoes counted and the rate, share ripe (ship today), share
-  half-ripe, and the number of unripe tomatoes to the ripening room.
-- **Shipping plan by ripeness.** One row per class with its destination and
-  time to sale.
-- **Event Log.** Every unripe tomato as it passes the gate, newest first, with a
-  snapshot, its line, its hue and where it must go.
+- **KPIs.** Tomatoes counted and the rate, share ripe, share half-ripe, and the
+  number of unripe tomatoes.
+- **Komposisi Grade.** One row per class with what it looks like and its hue
+  range.
+- **Event Log.** Every tomato not yet ripe as it passes the gate, newest first,
+  with a snapshot, its line and its hue.
 - **Last tomatoes counted.** Line, hue and class of each.
 - **Colour spread** of the counted tomatoes against the class bounds.
-- **Timeline** of the unripe tomatoes.
+- **Timeline** of the tomatoes not yet ripe.
 
 ## The clip
 
@@ -79,35 +78,40 @@ run `detect.py` from `weights/` or link the file there.
    picture. A tomato counts once, when its box centre crosses the gate, and its
    line is where it crosses. Two counts on one line within 4 frames and 60 px
    are one tomato whose identity broke (2 dropped).
-4. **Read the colour.** Inside an ellipse at the centre of the box, half its
-   width and height, which keeps the reading on the fruit and off the belt and
-   the neighbours. The pixels are put in CIELAB, highlights and deep shadow are
-   left out, and the hue angle h = atan2(b\*, a\*) is taken from the median a\*
-   and b\*. A tomato's hue is the median over the half of its frames where its
-   box is sharpest.
-5. **Not a tomato.** A track whose colour is grey (median chroma below 25) is
-   steel, belt or a glove, and is not counted or drawn (6 such tracks). Counted
-   tomatoes have chroma of 37 and more; those tracks have 15 or less.
-6. **Classify.** The bounds (42.5° and 62°) were set on another clip from the
-   same packhouse and series (Pexels 8675102), same lamps, and are used here
-   unchanged.
+4. **Read the colour.** Inside an ellipse at the centre of the box, 80 % of its
+   width and height, in CIELAB, on skin pixels only: saturated (chroma above
+   20), and neither highlight nor deep shadow. The cream belt and the steel that
+   show inside a box are grey or pale, so they are left out. The reading is the
+   median per-pixel hue angle h = atan2(b\*, a\*). A tomato's hue is the median
+   over the half of its frames where its box is sharpest.
+5. **Not a tomato.** A track whose colour is grey (median chroma below 20) is
+   steel, belt or a glove, and is not counted or drawn (5 such tracks). Tomato
+   tracks have chroma of 25 and more; those tracks have 16 or less.
+6. **Classify.** Ripe below 62.5°, half-ripe from 62.5° to 73°, unripe from 73°.
+   The bounds come from a blind check (below).
 
 ## How far to trust the class
 
-Every counted tomato was cut out at its two sharpest frames, the crops were
-shuffled and coded (`output/tomato_audit_blind.jpg`), and each was classed by
-eye before the codes were matched (`output/tomato_audit.json`). The bounds were
-not changed afterwards.
+Every tomato that appears on screen (78) was cut out at its two sharpest frames
+with its box drawn. The crops were shuffled and coded
+(`output/tomato_audit_blind.jpg`), and each was classed by eye before any reading
+was matched: ripe is red to orange-red, half-ripe is pale orange with yellow,
+unripe is yellow to green. The bounds were chosen on half of the tomatoes (dev)
+and checked on the other half (test); every row is in `output/tomato_audit.json`.
 
-- **34 of 41 agree.** All 6 tomatoes the system called unripe the eye called
-  unripe too.
-- Of the 7 that disagree, 5 are pale tomatoes the eye called unripe and the
-  system half-ripe (hue 56–60°). The other 2 are the redder pair at 42.6° and
-  43.2° that the eye called ripe.
-- None is two classes apart.
+- **Test half: 38 of 39 agree.** The one miss is a yellow-green tomato read as
+  half-ripe (64°), one class apart. Dev half: 38 of 39.
+- **A model instead of the colour reading was tried.** CLIP (ViT-B/32), asked
+  "ripe red", "half-ripe orange and yellow" or "unripe green" tomato for each
+  crop, agreed on 29 of the 39 test tomatoes, so the colour reading is kept.
+- **An earlier version read every tomato too pale.** It took the colour of the
+  whole centre of the box, belt and steel included, and used bounds from another
+  clip (42.5° and 62°), so orange-red tomatoes came out half-ripe or unripe.
 
-Colour depends on the light. Another hall, other lamps or a camera with its own
-white balance needs the bounds checked again against a few classed tomatoes.
+The eye check is one person's grading of crops blurred by motion; it is the
+reference used here, not a lab measurement. Colour depends on the light: another
+hall, other lamps or a camera with its own white balance needs the bounds
+checked again against a few classed tomatoes.
 
 ## What this does not do
 
@@ -115,8 +119,7 @@ white balance needs the bounds checked again against a few classed tomatoes.
 - **It does not size the fruit.** There is nothing of known size in view.
 - **The count covers the part of the lines in view.** The narrow channel on the
   far left carried no tomatoes in this clip.
-- **The class-to-destination mapping is one example.** It is one line in
-  `RIPENESS`.
+- **The class bounds are for this light.** They are one line in `RIPENESS`.
 
 ## Files
 
