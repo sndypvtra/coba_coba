@@ -33,9 +33,11 @@ K = 1280 / 1920
 MIN_AGE = 3
 
 # Ripeness by hue angle (degrees): ripe red fruit sits lowest. The class decides
-# where the fruit goes next, which is what the line is sorting for.
+# where the fruit goes next, which is what the line is sorting for. The ripe /
+# half-ripe boundary was 47 deg before a blind check by eye (13 of 16 agreed);
+# 42.5 deg is where that sample splits (see output/tomato_audit.json).
 GRADES = [  # (name, upper hue bound, colour, destination)
-    ("Matang", 47.0, RED, "pasar lokal · kirim hari ini"),
+    ("Matang", 42.5, RED, "pasar lokal · kirim hari ini"),
     ("Setengah matang", 62.0, AMBER, "distributor · perjalanan jauh"),
     ("Mentah", 999.0, GREEN, "ruang pemeraman"),
 ]
@@ -123,17 +125,21 @@ class TomatoBoard:
                icon="filter_center_focus", pad=(7, 2), anchor="mb")
         c.pill((12, self.roi_y + 8), "Lajur depan di luar fokus · tidak dihitung", 11, TEXT, alpha(BG, 0.75), "medium",
                icon="visibility", pad=(8, 3), anchor="la")
-        for o in fr["objects"]:
+        # the less ripe on top: a green tomato is the one the line has to act on
+        for o in sorted(fr["objects"], key=lambda o: self.cls(o["tid"])):
             if o["age"] < MIN_AGE:
                 continue
             k = self.cls(o["tid"])
             name, _, col, _ = GRADES[k]
             x0, y0 = o["box"][0] * K, o["box"][1] * K
             done = o["tid"] in self.counted and self.counted[o["tid"]] <= f
-            label = f"#{o['tid']} · {name}" + (" ✓" if done else "")
-            B.chip(c, (max(6, x0), y0 - 4), label, col, None, anchor="lb", size=11)
+            if done:                        # graded boxes say it in colour; the counted ones also in words
+                B.chip(c, (max(6, x0), y0 - 4), f"#{o['tid']} · {name} ✓", col, None, anchor="lb", size=11)
         n = sum(1 for t, fr_ in self.counted.items() if fr_ <= f)
         B.corner_chips(c, "CAM 01 · Lini sortir tomat", [f"Terhitung: {n}", "Rekaman nyata"])
+        c.rrect((8, B.VH - 38, 470, B.VH - 8), 8, fill=alpha(BG, 0.75))
+        c.legend((18, B.VH - 23), [("bar", GRADES[0][2], "matang"), ("bar", GRADES[1][2], "setengah matang"),
+                                   ("bar", GRADES[2][2], "mentah"), ("dot", TEXT, "✓ terhitung")], 12)
         return c.bgr()
 
     # ---- the page ------------------------------------------------------------
@@ -236,7 +242,7 @@ class TomatoBoard:
             prev = ub_
         for ub in (GRADES[0][1], GRADES[1][1]):
             c.d.line((X(ub), sy - 30, X(ub), sy + 30), fill=alpha(TEXT_3, 0.9), width=1)
-            c.text((X(ub), sy + 42), f"{num(ub, 0)}°", 10, "regular", TEXT_3, anchor="mm")
+            c.text((X(ub), sy + 42), f"{num(ub, 1).replace(',0', '')}°", 10, "regular", TEXT_3, anchor="mm")
         rng = np.random.default_rng(3)
         for tid in done:
             col = GRADES[self.cls(tid)][2]
@@ -249,8 +255,8 @@ class TomatoBoard:
         audit = OUT / "tomato_audit.json"
         if audit.exists():
             a = json.loads(audit.read_text())
-            c.text((x1 - 16, y1 - 16), f"Uji buta vs penilaian mata: {a['agree']}/{a['n']} kelas sama", 11, "regular",
-                   TEXT_3, anchor="rm")
+            c.text((x1 - 16, y1 - 16), f"Uji buta vs mata: {a['agree_preset']}/{a['n']} sebelum kalibrasi · "
+                   f"{a['agree']}/{a['n']} sesudah (sampel sama)", 11, "regular", TEXT_3, anchor="rm")
 
 
 def main():

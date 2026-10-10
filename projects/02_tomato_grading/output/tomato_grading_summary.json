@@ -1,0 +1,120 @@
+{
+ "counted": 16,
+ "frames": 212,
+ "fps": 29.97002997002997,
+ "grades": [
+  {
+   "name": "Matang",
+   "hue_below": 42.5,
+   "destination": "pasar lokal · kirim hari ini"
+  },
+  {
+   "name": "Setengah matang",
+   "hue_below": 62.0,
+   "destination": "distributor · perjalanan jauh"
+  },
+  {
+   "name": "Mentah",
+   "hue_below": 999.0,
+   "destination": "ruang pemeraman"
+  }
+ ],
+ "tomatoes": [
+  {
+   "tid": 1,
+   "frame": 41,
+   "hue": 43.7,
+   "grade": "Setengah matang"
+  },
+  {
+   "tid": 17,
+   "frame": 47,
+   "hue": 33.3,
+   "grade": "Matang"
+  },
+  {
+   "tid": 18,
+   "frame": 56,
+   "hue": 40.2,
+   "grade": "Matang"
+  },
+  {
+   "tid": 15,
+   "frame": 62,
+   "hue": 47.9,
+   "grade": "Setengah matang"
+  },
+  {
+   "tid": 3,
+   "frame": 65,
+   "hue": 34.5,
+   "grade": "Matang"
+  },
+  {
+   "tid": 21,
+   "frame": 65,
+   "hue": 39.2,
+   "grade": "Matang"
+  },
+  {
+   "tid": 16,
+   "frame": 69,
+   "hue": 38.4,
+   "grade": "Matang"
+  },
+  {
+   "tid": 5,
+   "frame": 80,
+   "hue": 46.6,
+   "grade": "Setengah matang"
+  },
+  {
+   "tid": 23,
+   "frame": 97,
+   "hue": 41.3,
+   "grade": "Matang"
+  },
+  {
+   "tid": 26,
+   "frame": 112,
+   "hue": 38.2,
+   "grade": "Matang"
+  },
+  {
+   "tid": 24,
+   "frame": 132,
+   "hue": 36.5,
+   "grade": "Matang"
+  },
+  {
+   "tid": 31,
+   "frame": 149,
+   "hue": 45.0,
+   "grade": "Setengah matang"
+  },
+  {
+   "tid": 37,
+   "frame": 157,
+   "hue": 64.5,
+   "grade": "Mentah"
+  },
+  {
+   "tid": 28,
+   "frame": 170,
+   "hue": 37.9,
+   "grade": "Matang"
+  },
+  {
+   "tid": 56,
+   "frame": 203,
+   "hue": 39.8,
+   "grade": "Matang"
+  },
+  {
+   "tid": 48,
+   "frame": 205,
+   "hue": 32.9,
+   "grade": "Matang"
+  }
+ ]
+}

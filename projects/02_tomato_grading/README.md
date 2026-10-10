@@ -94,6 +94,40 @@ Downloaded on first run: `yoloe-11l-seg.pt` (detector) and `yolo11n-cls.pt`
 A track must survive 3 frames before it may count — the cheapest guard against a
 one-frame false positive incrementing a production figure.
 
+## Dashboard: ripeness grading, not only a count
+
+`dashboard/` turns the same count into a grading dashboard (Factory Vision,
+1920 × 1080): **`output/tomato_grading.mp4`**, with the per-tomato grades in
+`output/tomato_grading_summary.json`.
+
+```bash
+python dashboard/tracks.py        # once: the unchanged engine, recorded per frame (~6-12 min on CPU)
+python dashboard/dashboard.py     # the video
+```
+
+`tracks.py` runs exactly what `main.py` runs (same prompt, floor, ROI, tracker
+and counting line) and also reads each tomato's colour inside its mask, in
+CIELAB, as a hue angle: red fruit sits low, orange higher, green-yellow higher
+still. The run counts **16**, the same as the baseline.
+
+| Class | Hue angle | Where it goes |
+|---|---|---|
+| Matang (ripe) | below 42.5° | local market, ship today |
+| Setengah matang (half-ripe) | 42.5–62° | distributor, long haul |
+| Mentah (green) | 62° and above | ripening room |
+
+On this clip: 11 ripe, 4 half-ripe, 1 green, with the green one raised as an
+event so it can be pulled before the shipping line.
+
+**How far to trust the grade.** Each counted tomato was cropped at its sharpest
+frame, shuffled and lettered (`output/tomato_audit_blind.jpg`) and graded by eye
+before the letters were matched to tracks (`output/tomato_audit.json`). With the
+boundary set beforehand at 47°, **13 of 16** agreed; the three misses were
+half-ripe fruit called ripe. 42.5° is where that same sample splits, so the
+16 of 16 it gives is in-sample and needs a fresh sample to confirm. Both figures
+are printed on the dashboard. Colour also depends on the light: a new hall or new
+lamps means a new check.
+
 ## Why this project exists next to the citrus line
 
 To make the zero-shot claim checkable rather than asserted. Same weights, same
@@ -157,8 +191,9 @@ per-clip contract in one dataclass.
   in the in-focus lanes, as the panel states on the frame.
 - **Throughput is extrapolated.** 8,421 /h comes from 16 crossings in 6.8
   seconds, and the frame says so.
-- **It does not grade.** Nothing here measures size, colour or defects; the name
-  is the scene, not the capability.
+- **`main.py` does not grade; the dashboard grades colour only.** Ripeness by
+  hue angle is in `dashboard/` (above). Size and defects (cracks, bruises,
+  rot) are not measured anywhere in this project.
 - **The calibration is per-installation.** The prompt transfers; the line, the
   travel vector, the ROI and the box-area limit are properties of this camera.
 

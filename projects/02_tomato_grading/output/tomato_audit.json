@@ -1,0 +1,91 @@
+{
+ "method": "each counted tomato cropped at its sharpest frame, shuffled and lettered (tomato_audit_blind.jpg), graded by eye before the letters were matched to tracks",
+ "n": 16,
+ "preset_threshold_deg": 47.0,
+ "agree_preset": 13,
+ "threshold_deg": 42.5,
+ "agree": 16,
+ "note": "42.5 deg is the midpoint between the highest hue graded ripe (41.3) and the lowest graded half-ripe (43.7) in this same sample, so 16/16 is in-sample; a fresh sample is needed to confirm it",
+ "grades": [
+  {
+   "letter": "A",
+   "tid": 5,
+   "eye": "Setengah matang"
+  },
+  {
+   "letter": "B",
+   "tid": 15,
+   "eye": "Setengah matang"
+  },
+  {
+   "letter": "C",
+   "tid": 16,
+   "eye": "Matang"
+  },
+  {
+   "letter": "D",
+   "tid": 37,
+   "eye": "Mentah"
+  },
+  {
+   "letter": "E",
+   "tid": 24,
+   "eye": "Matang"
+  },
+  {
+   "letter": "F",
+   "tid": 3,
+   "eye": "Matang"
+  },
+  {
+   "letter": "G",
+   "tid": 18,
+   "eye": "Matang"
+  },
+  {
+   "letter": "H",
+   "tid": 23,
+   "eye": "Matang"
+  },
+  {
+   "letter": "I",
+   "tid": 1,
+   "eye": "Setengah matang"
+  },
+  {
+   "letter": "J",
+   "tid": 56,
+   "eye": "Matang"
+  },
+  {
+   "letter": "K",
+   "tid": 26,
+   "eye": "Matang"
+  },
+  {
+   "letter": "L",
+   "tid": 48,
+   "eye": "Matang"
+  },
+  {
+   "letter": "M",
+   "tid": 31,
+   "eye": "Setengah matang"
+  },
+  {
+   "letter": "N",
+   "tid": 17,
+   "eye": "Matang"
+  },
+  {
+   "letter": "O",
+   "tid": 28,
+   "eye": "Matang"
+  },
+  {
+   "letter": "P",
+   "tid": 21,
+   "eye": "Matang"
+  }
+ ]
+}
