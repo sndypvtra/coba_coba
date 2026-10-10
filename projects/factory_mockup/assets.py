@@ -51,8 +51,8 @@ def main():
     OUT.mkdir(exist_ok=True)
     for k, (path, fs) in CLIPS.items():
         for f, im in frames(path, fs).items():
-            cv2.imwrite(str(OUT / f"{k}_dash_{f}.jpg"), im, [cv2.IMWRITE_JPEG_QUALITY, 90])
-            cv2.imwrite(str(OUT / f"{k}_cam_{f}.jpg"), im[VY:VY + VH, VX:VX + VW], [cv2.IMWRITE_JPEG_QUALITY, 90])
+            cv2.imwrite(str(OUT / f"{k}_dash_{f}.jpg"), im, [cv2.IMWRITE_JPEG_QUALITY, 97])
+            cv2.imwrite(str(OUT / f"{k}_cam_{f}.jpg"), im[VY:VY + VH, VX:VX + VW], [cv2.IMWRITE_JPEG_QUALITY, 97])
 
     # the off-colour (Light Red) tomatoes of the tomato lot, cut from the camera at the frame each was counted
     s = json.loads((P / "11_tomato_ripeness/output/tomato_ripeness_summary.json").read_text())
@@ -69,19 +69,18 @@ def main():
         side = int(max(x1 - x0, y1 - y0) * 1.5)
         c = crop(pics[t["frame"] - 1], (x0 + x1) / 2, (y0 + y1) / 2, side, side)
         name = f"snap_tomato_{n}.jpg"
-        cv2.imwrite(str(OUT / name), cv2.resize(c, (240, 240)), [cv2.IMWRITE_JPEG_QUALITY, 90])
+        cv2.imwrite(str(OUT / name), cv2.resize(c, (480, 480), interpolation=cv2.INTER_CUBIC), [cv2.IMWRITE_JPEG_QUALITY, 95])
         snaps.append({"img": name, "line": t["line"], "hue": t["hue"], "frame": t["frame"]})
 
     # the short tray and the short box, from the dashboard's own camera picture at the moment they were judged
     tray = frames(CLIPS["tray"][0], [89, 222, 413])
     for f, im in tray.items():
         cam = im[VY:VY + VH, VX:VX + VW]
-        cv2.imwrite(str(OUT / f"snap_tray_{f}.jpg"), cv2.resize(crop(cam, 640, 360, 900, 506), (640, 360)),
-                    [cv2.IMWRITE_JPEG_QUALITY, 90])
+        cv2.imwrite(str(OUT / f"snap_tray_{f}.jpg"), crop(cam, 640, 360, 900, 506), [cv2.IMWRITE_JPEG_QUALITY, 95])
     box = frames(CLIPS["packing"][0], [284, 412, 461])
     for f, im in box.items():
         cam = im[VY:VY + VH, VX:VX + VW]
-        cv2.imwrite(str(OUT / f"snap_box_{f}.jpg"), cv2.resize(cam, (640, 360)), [cv2.IMWRITE_JPEG_QUALITY, 90])
+        cv2.imwrite(str(OUT / f"snap_box_{f}.jpg"), cam, [cv2.IMWRITE_JPEG_QUALITY, 95])
     (OUT / "meta.json").write_text(json.dumps({"frames": {k: v[1] for k, v in CLIPS.items()}, "tomato_off": snaps}, indent=1))
     print(len(list(OUT.glob("*.jpg"))), "pictures ->", OUT)
 

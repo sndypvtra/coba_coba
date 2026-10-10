@@ -248,8 +248,8 @@ def I(name: str, fill: bool = False, size: int | None = None, color: str | None 
 
 
 def num(v: float, dec: int = 0) -> str:
-    """Figures with a thousands comma and a decimal point: 1,284 and 0.19."""
-    return f"{v:,.{dec}f}"
+    """Indonesian figures, a thousands dot and a decimal comma: 1.284 and 0,19."""
+    return f"{v:,.{dec}f}".replace(",", "\x00").replace(".", ",").replace("\x00", ".")
 
 
 AV_COLOURS = ["#2563eb", "#0e7490", "#7c3aed", "#be185d", "#c2410c", "#15803d", "#475569", "#a16207"]
@@ -261,8 +261,8 @@ def avatar(name: str, size: int = 32) -> str:
     return f'<span class="av" style="width:{size}px;height:{size}px;background:{col};font-size:{size * 0.38:.0f}px">{ini}</span>'
 
 
-SEV = {"high": ("red", "High", "error"), "medium": ("amber", "Medium", "warning"),
-       "low": ("blue", "Low", "info"), "info": ("slate", "Info", "info")}
+SEV = {"high": ("red", "Tinggi", "error"), "medium": ("amber", "Sedang", "warning"),
+       "low": ("blue", "Rendah", "info"), "info": ("slate", "Info", "info")}
 
 
 def sev(s: str) -> str:
@@ -274,10 +274,11 @@ def bd(text: str, tone: str = "slate", icon: str | None = None) -> str:
     return f'<span class="bd {tone}">{I(icon, True) if icon else ""}{text}</span>'
 
 
-STATUS = {"New": "#2563eb", "In progress": "#d97706", "Closed": "#079455", "False alarm": "#94a3b8",
-          "Online": "#079455", "Offline": "#dc2626", "Updating": "#2563eb", "Active": "#079455",
-          "Released": "#079455", "On hold": "#d97706", "Re-sort": "#dc2626", "Mixed Color": "#7c3aed", "Running": "#079455",
-          "Check": "#d97706", "Draft": "#94a3b8", "Pass": "#079455", "Reject": "#dc2626", "Rework": "#d97706"}
+STATUS = {"Baru": "#2563eb", "Diproses": "#d97706", "Selesai": "#079455", "Alarm palsu": "#94a3b8",
+          "Online": "#079455", "Offline": "#dc2626", "Update": "#2563eb", "Aktif": "#079455",
+          "Release": "#079455", "Hold": "#d97706", "Sortir ulang": "#dc2626", "Mixed Color": "#7c3aed", "Berjalan": "#079455",
+          "Cek": "#d97706", "Draft": "#94a3b8", "Pass": "#079455", "Reject": "#dc2626", "Rework": "#d97706",
+          "Tersedia": "#94a3b8", "Jeda": "#94a3b8"}
 
 
 def status(text: str, colour: str | None = None) -> str:
