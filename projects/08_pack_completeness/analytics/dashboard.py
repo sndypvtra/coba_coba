@@ -140,7 +140,7 @@ def encode(frames_iter, path, fps):
 
 # ---------------------------------------------------------------- can line
 class LineBoard:
-    TITLE = "Inspeksi tray kaleng"
+    TITLE = "Packing QC · tray kaleng"
 
     def __init__(self, run, score, total_s):
         self.run, self.score, self.total = run, score, total_s
@@ -322,7 +322,7 @@ class LineBoard:
 
 # ---------------------------------------------------------------- packing station
 class PackBoard:
-    TITLE = "Stasiun packing robot"
+    TITLE = "Packing QC · stasiun robot"
 
     def __init__(self, run, score, total_s):
         self.run, self.score, self.total = run, score, total_s

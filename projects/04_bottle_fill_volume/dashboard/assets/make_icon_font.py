@@ -24,6 +24,7 @@ square_foot aspect_ratio open_in_full view_in_ar hourglass_bottom play_circle st
 straighten height width_normal fullscreen info lightbulb tune science thermostat palette colorize
 inventory local_mall forklift pallet ruler deployed_code_alert package_2 shopping_cart add_shopping_cart
 looks_one looks_two looks_3 counter_2 counter_3 equalizer timer_off speed restart_alt
+access_time access_time_filled accessibility_new arrow_downward arrow_upward badge block bolt cancel check_circle check_circle_filled check_circle_outline circle construction device_reset directions_walk distance do_disturb do_not_disturb_alt do_not_step engineering error error_circle_rounded error_outline fmd_good forklift front_hand gpp_bad gpp_good group groups health_and_safety highlight_off history hourglass_bottom info location_on location_pin login logout map monitoring motion_sensor_active my_location new_releases not_interested notifications notifications_none pallet people people_alt people_outline perm_identity person person_alert person_filled person_outline place play_arrow remove_red_eye report report_gmailerrorred report_problem restore road robot_2 room route schedule sensors shield smart_toy social_distance speed swap_horiz timer trending_down trending_up trolley verified verified_user videocam videocam_off visibility visibility_off warehouse warning warning_amber watch_later
 """.split()
 f = TTFont('full.ttf')  # the full variable font, see the docstring
 cmap = f.getBestCmap(); rev = {}

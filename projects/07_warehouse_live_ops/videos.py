@@ -227,7 +227,7 @@ def video_live_ops(ctx: dict, out_path) -> None:
                    ("bar", ui.ORANGE, "Forklift"), ("bar", ui.YELLOW, "Pallet truck"),
                    ("bar", ui.alpha(ui.AMBER, 0.5), "Jalur forklift"),
                    ("icon:warning", ui.RED, "Titik nyaris tertabrak")], 11)
-        cv.topbar("Ikhtisar lantai", "Gudang simulasi A", "Putar ulang", fr.t, TOTAL_S,
+        cv.topbar("Warehouse Ops · ikhtisar lantai", "Gudang simulasi A", "Putar ulang", fr.t, TOTAL_S,
                   ["Data simulasi NVIDIA", f"{len(ctx['used'])} kamera aktif"])
         cv.timeline(timeline_box, fr.t, TOTAL_S, evs)
         out.write(cv.bgr())
@@ -358,7 +358,7 @@ def video_one_camera(ctx: dict, out_path) -> None:
         if accuracy:
             cv.text((tb[0] + 16, tb[3] - 18), accuracy, 11, "regular", ui.TEXT_3, anchor="lm")
         cv.legend((tb[2] - 16 - 300, tb[3] - 18), [("bar", ui.CYAN, "orang terhitung di gambar")], 11)
-        cv.topbar(ops.camera_name(scene, cid), "Gudang simulasi A", "Putar ulang", fr.t, TOTAL_S,
+        cv.topbar(f"Warehouse Ops · {ops.camera_name(scene, cid)}", "Gudang simulasi A", "Putar ulang", fr.t, TOTAL_S,
                   ["Data simulasi NVIDIA", ops.cam_label(cid)])
         cv.timeline(timeline_box, fr.t, TOTAL_S, evs)
         out.write(cv.bgr())
@@ -532,7 +532,7 @@ def video_real(ctx: dict, out_path) -> None:
         cv.text((col[2], y + 78), cv.fit(accuracy or "", 12, "regular", system_box[2] - col[2] - 16), 12, "regular",
                 ui.TEXT_3, anchor="lm")
         _feed(cv, feed_box, evs, snaps, fr.t, row_h=78)
-        cv.topbar("3 kamera terverifikasi", "Gudang nyata", "Putar ulang", fr.t, TOTAL_S,
+        cv.topbar("Warehouse Ops · 3 kamera terverifikasi", "Gudang nyata", "Putar ulang", fr.t, TOTAL_S,
                   ["Data nyata NVIDIA", "tanpa denah lantai"])
         cv.timeline(timeline_box, fr.t, TOTAL_S, evs)
         out.write(cv.bgr())
