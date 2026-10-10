@@ -1,50 +1,75 @@
-# Lime Grading — detect, follow, count and grade on two chains
+# Lemon Colour Grading on the OECD Chart — detect, follow, count, grade
 
-Limes ride two singulator chains away from the camera. Each lime is found as a
-box, followed from frame to frame, counted once at a horizontal gate across both
-chains, and given a grade from the colour inside its box. The grade says where
-it goes: Grade A, deep green, to export and supermarkets; Grade B, light green,
-to the local market; Grade C, yellowing, off the line to processing (juice,
-concentrate). Detection, tracking and counting only: no segmentation anywhere.
-The output is a Factory Vision dashboard, 1920 × 1080:
+Lemons ride two singulator chains away from the camera. Each lemon is found as
+a box, followed from frame to frame, counted once at a horizontal gate across
+both chains, and given a colour degree on the external colour chart of the OECD
+standard for citrus fruit. Detection, tracking and counting only: no
+segmentation anywhere. The output is a Factory Vision dashboard, 1920 × 1080:
 **`output/lime_grading.mp4`**.
+
+The Pexels clip is titled "lime sorting", but the fruit is pointed at both ends
+and runs from green to yellow like the lemons on the chart, so it is graded on
+the lemon chart. The folder keeps its first name.
+
+## The standard
+
+The chart is Figure 2, "Lemon grading according to external colour", in the
+[CBI market-entry guide for lemons](https://www.cbi.eu/market-information/fresh-fruit-vegetables/lemons/market-entry),
+which takes it from OECD, *Citrus Fruits*, International Standards for Fruit
+and Vegetables (OECD Publishing, Paris, 2010).
+
+- **Ten colour degrees**, from 1 (fully yellow) to 10 (dark green).
+- **Degrees 1 to 9 are allowed** in Extra Class, Class I and Class II.
+  **Degree 10 is out of grade.**
+- **Uniformity:** only 3 adjacent colour degrees are allowed within the same
+  consignment.
+
+So colour does not separate Extra, Class I and Class II; defects and shape
+decide that, and this system does not judge them. Colour decides two things: a
+lemon at degree 10 is rejected, and the line must pack the fruit in lots of 3
+adjacent degrees. The dashboard uses three such lots, 1–3 (yellow), 4–6
+(yellow-green) and 7–9 (green), plus out of grade.
 
 ## Result
 
 | | |
 |---|---|
-| Limes counted | **87** in 8.2 s at one gate across both chains |
+| Lemons counted | **87** in 8.2 s at one gate across both chains |
 | Per line | line 1 (left chain): 35 · line 2 (right chain): 52 |
-| Grade A · deep green (hue ≥ 106°) | 18 (21 %) · export / supermarket |
-| Grade B · light green (97–106°) | 54 (62 %) · local market |
-| Grade C · yellowing (below 97°) | 15 (17 %) · processing, each one marked on the timeline |
+| Colour degrees | 1: 6 · 2: 1 · 3: 14 · 4: 21 · 5: 23 · 6: 16 · 7: 6 · 8–10: 0 |
+| Within the standard (degrees 1–9) | 87 (100 %) · no lemon at degree 10 |
+| Main lot, degrees 4–6 | 60 (69 %) |
+| Lot 1–3 / lot 7–9 | 21 (24 %) / 6 (7 %) · packed apart, each one in the event log |
 | Line rate | ≈ 640 a minute, extrapolated from 8.2 s of footage |
-| Grade against a blind check by eye | **15 of 23** the same; **yellowing 7 of 7**; every miss is A against B |
+| Degree against matching to the chart by eye | **18 of 24 within 1 degree**, 11 exact; same lot **17 of 24** |
 
 The rate is the 8.2 s clip scaled to a minute. It describes this clip, not a
 shift.
 
 ## The dashboard
 
-- **On the picture.** Every lime has a box in its grade colour. Once a lime is
-  counted, its box fills and a label shows its line and grade, e.g.
-  "Line 2 · Grade A ✓". No track numbers are shown. The count gate runs across
+- **On the picture.** Every lemon has a box in its lot colour. Once a lemon is
+  counted, its box fills and a label shows its line and degree, e.g.
+  "Line 2 · Warna 5 ✓". No track numbers are shown. The count gate runs across
   both chains, and each line's running count sits at the gate.
-- **KPIs.** Limes counted and the rate, Grade A share, Grade B share, and the
-  number of yellowing limes diverted to processing.
-- **Grade mix and destination.**
-- **Event Log.** Every yellowing lime as it passes the gate, newest first, with
-  a snapshot, its line and its hue, to divert to processing.
-- **Quality trend.** The share of Grade A and Grade C among the limes counted
-  in the last 2 s, so a change in the incoming fruit is seen as it happens.
-- **Colour spread** of the counted limes against the grade bounds.
-- **Timeline** of the yellowing limes diverted.
+- **KPIs.** Lemons counted and the rate, the share within the colour standard
+  (degrees 1–9), the share in the main lot, and the number out of grade.
+- **Komposisi Grade · OECD colour chart.** How many lemons at each of the ten
+  degrees, each bar in the chart's own colour. The limit before degree 10 is
+  marked, and the lots are shown underneath.
+- **Event Log.** Every lemon outside the main lot as it passes the gate, with a
+  snapshot, its line, its degree and the lot it goes to. A lemon at degree 10
+  would show here as a rejection.
+- **Lot trend.** The share of each lot among the lemons counted in the last 2 s,
+  so a change in the incoming fruit is seen as it happens.
+- **Degree spread** of the counted lemons on the chart scale.
+- **Timeline** of the lemons outside the main lot.
 
 ## The clip
 
 [Pexels 32953325](https://www.pexels.com/video/lime-sorting-on-conveyor-belt-in-factory-32953325/),
-"Lime sorting on conveyor belt in factory", filmed on a phone held by hand
-(portrait, 1080 × 1920, 60 fps). `prepare.py` makes it usable:
+filmed on a phone held by hand (portrait, 1080 × 1920, 60 fps). `prepare.py`
+makes it usable:
 
 1. ffmpeg vidstab with a 3 s smoothing window and an automatic zoom takes out
    the shake of the hand and leaves no black edge. Tripod mode, which pins every
@@ -62,7 +87,7 @@ sideways drift does not change what is counted.
 ```bash
 pip install ultralytics opencv-python pillow imageio-ffmpeg numpy pyyaml lap
 python prepare.py                    # the clip, into input/
-python dashboard/detect.py           # detect, follow and read every lime (~11 min on 4 cores)
+python dashboard/detect.py           # detect, follow and read every lemon (~11 min on 4 cores)
 python dashboard/dashboard.py        # the video
 ```
 
@@ -74,55 +99,59 @@ run `detect.py` from `weights/` or link the file there.
 ## How it works
 
 1. **Detect.** YOLOE, an open-vocabulary detector, is given the words "lime"
-   and "lemon" and returns a box and a score per fruit; the second word lifts
-   the yellowing limes that "lime" alone scores low. Only boxes are used. The
-   checkpoint also has a mask head, but its masks are never read.
-2. **Follow.** TrackTrack keeps one identity per lime, with its gates lowered
+   and "lemon" and returns a box and a score per fruit; the two words together
+   find both the green and the yellow fruit. Only boxes are used. The checkpoint
+   also has a mask head, but its masks are never read.
+2. **Follow.** TrackTrack keeps one identity per lemon, with its gates lowered
    for zero-shot scores and a small re-identification network for appearance.
    A track is held for 3 frames before it can count.
 3. **Count.** The gate is a horizontal line at y = 600 px across both chains. A
-   lime counts once, when its box centre crosses it, and its line is the side
+   lemon counts once, when its box centre crosses it, and its line is the side
    of the picture it crosses on.
-   - The limes touch each other on the chain. At about 32 px a frame and about
+   - The lemons touch each other on the chain. At about 32 px a frame and about
      105 px tall, one passes the gate every 3.3 frames, and the measured gaps
      between counts cluster at 2–4 frames. Only two counts on one line under
-     1.5 frames apart would be one lime counted twice, and there were none.
+     1.5 frames apart would be one lemon counted twice, and there were none.
    - The same tracks crossing lines 100 px above and below the gate give 93 and
      87, against 87 at the gate.
 4. **Read the colour.** Inside an ellipse at the centre of the box, half its
    width and height, in CIELAB, with highlights and deep shadow left out. The
-   hue angle h = atan2(b\*, a\*) is taken from the median a\* and b\*. A lime's
+   hue angle h = atan2(b\*, a\*) is taken from the median a\* and b\*. A lemon's
    hue is the median over the half of its frames where its box is sharpest.
-5. **Grade.** The bounds (106° and 97°) were set on another clip from the same
-   packhouse and series (Pexels 32953304), same lamps, and are used here
-   unchanged.
+5. **Put it on the chart.** The ten lemons of the chart, read the same way,
+   have hue angles of 86, 94, 100, 99, 103, 107, 113, 112, 116 and 124° for
+   degrees 1 to 10. A straight line through them,
+   hue = 85.29 + 3.63 × degree, turns a lemon's hue into its nearest degree.
+   Degrees 3 and 4, and 7 and 8, differ on the chart mostly in lightness, not
+   in hue; the line spreads them evenly.
 
-## How far to trust the grade
+## How far to trust the degree
 
-Limes were picked at random per grade, cut out at their two sharpest frames
-with the counted box drawn, shuffled and lettered
-(`output/lime_audit_blind.jpg`), and graded by eye before the letters were
-matched (`output/lime_audit.json`). The bounds were not changed afterwards.
+24 lemons were picked at random across the degrees and cut out at their two
+sharpest frames, with the counted box drawn. The crops were shuffled and
+lettered under a copy of the chart (`output/lime_audit_blind.jpg`). Each was
+matched to a chart degree by eye before the letters were matched
+(`output/lime_audit.json`).
 
-- **15 of 23 agree, and none is two grades apart.**
-- **Yellowing agrees 7 of 7, both ways.** Every lime the eye called yellowing
-  the system graded C, and the system called nothing else C. This is the call
-  that decides what leaves the packing line.
-- **All 8 misses are deep green against light green** (Grade A against B), in
-  both directions, at hues of 101–108°. Where light green ends and deep green
-  begins is the least sure call, for the eye as much as for the system.
-- **A first check scored 13 of 24.** Its crops had no box drawn. In a row of
-  touching limes it was not clear which one was meant, so it was repeated on
-  fresh limes with the box drawn. Both are in the audit file.
+- **Within 1 degree: 18 of 24. Exact: 11 of 24.** On average the system reads
+  0.1 degree lower than the eye, so there is no lean either way.
+- **Same lot: 17 of 24.** The misses are lemons near the edge of a lot (degree
+  3 against 4, 6 against 7) and a few read 2 degrees apart.
+- **The chart is a studio photograph and the video a packhouse camera.** The
+  scale is fitted to the chart, not to this hall's lamps, so a degree here is
+  an estimate to about ±1. Before a lot rule is enforced on a real line, the
+  scale should be set against a few lemons graded on the chart under that
+  line's light.
 
-Colour depends on the light. Another hall, other lamps or a camera with its own
-white balance needs the bounds checked again against a few graded limes.
+An earlier version graded these fruits A/B/C by fixed hue bounds (deep green,
+light green, yellowing). It was replaced by the chart, because the chart is the
+standard buyers use; that earlier check is kept in the audit file.
 
 ## What this does not do
 
-- **It does not find defects** such as scars, oil spots or rot; colour only.
+- **It does not decide Extra, Class I or Class II.** Those classes depend on
+  defects, shape and skin blemishes as well, which this system does not see.
 - **It does not size the fruit.** There is nothing of known size in view.
-- **The grade-to-destination mapping is one example.** It is one line in `GRADES`.
 
 ## Files
 
@@ -131,11 +160,11 @@ white balance needs the bounds checked again against a few graded limes.
 | `prepare.py` | download, stabilise and cut the inspection clip |
 | `dashboard/detect.py` | YOLOE boxes, TrackTrack, colour per box → `output/tracks.json` |
 | `dashboard/tracktrack.yaml` | the tracker's settings |
-| `dashboard/dashboard.py` | the gate, lines, grades, trend, event log and the dashboard video |
+| `dashboard/dashboard.py` | the gate, lines, OECD degrees and lots, trend, event log and the dashboard video |
 | `dashboard/ui.py`, `dashboard/board.py` | the dashboard's look and layout (Inter, Material Symbols in `dashboard/assets/fonts`) |
 
 ## Credits
 
-Footage: Pexels 32953325 (Pexels licence). Detection: YOLOE; tracking:
-TrackTrack, both via Ultralytics. Type: Inter (SIL OFL 1.1). Icons: Material
-Symbols (Apache 2.0).
+Footage: Pexels 32953325 (Pexels licence). Colour chart: OECD, *Citrus Fruits*
+(2010), via CBI. Detection: YOLOE; tracking: TrackTrack, both via Ultralytics.
+Type: Inter (SIL OFL 1.1). Icons: Material Symbols (Apache 2.0).

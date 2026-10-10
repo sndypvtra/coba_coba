@@ -36,7 +36,7 @@ measured by running the code in this repository, not estimated.
 | **9** | [Lemon grading, washer](projects/09_lemon_grading) | Outline every lemon, follow it, grade its colour A / B / C | **70** read · 39 % green, 39 % green-yellow, 23 % yellow · 21/24 blind-checked |
 | **10** | [Peach grading, six-line sizer](projects/10_peach_sizer) | Outline every peach, name its line, grade its red colour A / B / C | **204** counted across 6 lines · 87 % A, 12 % B, 1 % C · 19/24 blind-checked |
 | **11** | [Tomato ripeness per line](projects/11_tomato_ripeness) | Detect, follow and count tomatoes on four lines; ripeness class, grade mix, event log of fruit not yet ripe (boxes only) | **41** counted · 83 % ripe, 17 % half-ripe · 38/39 blind-checked |
-| **12** | [Lime grading, two chains](projects/12_lime_grading) | Detect, follow and count limes on two chains; grade A / B / C by colour, quality trend, event log of yellowing fruit (boxes only) | **87** counted · 21 % A, 62 % B, 17 % C · 15/23 blind-checked, yellowing 7/7 |
+| **12** | [Lemon colour grading, two chains](projects/12_lime_grading) | Detect, follow and count lemons on two chains; colour degree on the OECD chart, colour lots of 3 degrees, event log (boxes only) | **87** counted · all within the standard (1–9), 69 % in lot 4–6 · 18/24 within 1 degree |
 
 Each project's own README carries its method, its measured figures and what
 breaks it, and is written to stand on its own if the folder is lifted into a
@@ -463,7 +463,7 @@ projects/
   09_lemon_grading/         lemon colour grading at a washer: FastSAM, tracking, CIELAB hue
   10_peach_sizer/           peach red-colour grade on a six-line sizer: FastSAM, tracking, red share
   11_tomato_ripeness/       tomato ripeness per line: YOLOE boxes, TrackTrack, count gate, CIELAB hue
-  12_lime_grading/          lime grade A/B/C on two chains: YOLOE boxes, TrackTrack, count gate, CIELAB hue
+  12_lime_grading/          lemon colour degree on the OECD chart, two chains: YOLOE boxes, TrackTrack, count gate
 
     every project has these
       main.py               the entry point, and only the sequence of steps
