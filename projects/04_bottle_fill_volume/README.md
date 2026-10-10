@@ -129,6 +129,34 @@ against the neck, which stays sharp and never fills.
 `--detect` overlays the live detector so you can watch it run and judge that call
 yourself. That is why it exists and why it is not the default.
 
+## Dashboard: the fill as the line reads it
+
+`dashboard/` draws the same measurement as a Factory Vision dashboard,
+1920 × 1080: **`output/fill_inspection.mp4`**, with the numbers in
+`output/fill_inspection_summary.json`.
+
+```bash
+python dashboard/dashboard.py              # the video
+python dashboard/dashboard.py --still 232  # one frame as JPEG
+```
+
+| On screen | Where it comes from |
+|---|---|
+| Fill %, against a target of 100 % at the thread line | measured, as above |
+| Millilitres | that fraction × an **example** SKU of 500 mL, labelled as an example; no camera sees a bottle's size |
+| Flow rate, time filling, time to target | the measured fill over time, averaged since product started to flow |
+| Bottle in position (4.3 s), flow starts (5.6 s) | the neck template locking on; the fill passing 0.5 % |
+| Fill curve with the 98–102 % band and the projection | measured curve, then the average rate extended to 100 % |
+| Height vs volume | the bore profile: 74 % of the height is 67 % of the volume in this bottle |
+| Pass / reject rule | under 98 % when the nozzle stops is a reject, over 102 % is product given away |
+
+**No verdict is given, on purpose.** The clip ends while the bottle is still
+filling (67 % and rising about 18 % a second), so the dashboard says so, shows
+when the target should be reached (about 11.1 s into the clip), and leaves the
+pass / reject call to the moment the nozzle stops, which this footage does not
+contain. The earlier panel printed "66.7 % of capacity" against an assumed
+1,500 mL bottle, which a buyer reads as an underfill.
+
 ## What is measured and what is typed in
 
 | Reported | Status |
