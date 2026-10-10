@@ -1,359 +1,763 @@
 {
- "caption": "Cek buta oleh mata: 18 dari 24 sama, sisanya selisih 1 kelas",
- "method": "24 graded peaches, three crops each (start, middle and end of the grading zone), shuffled and lettered (output/peach_audit_blind.jpg), graded by eye against the same bounds before the letters were matched",
- "check": {
-  "red_hue_deg": 36,
-  "sample": "fresh: none of the first check's peaches; 10 Extra, 10 Class I, 4 Class II as graded by the system, shuffled",
-  "same": 18,
+ "caption": "Cek buta oleh mata: 19 dari 24 sama, sisanya selisih 1 grade",
+ "method": "24 graded peaches, three crops each from the frames the system read, shuffled and lettered (output/peach_audit_blind.jpg), graded by eye against the same bounds before the letters were matched. Every check used peaches not seen in an earlier one.",
+ "final_check": {
+  "setup": "red pixel hue < 38 deg, median of all reads while the peach is on its line, oversize segments not read",
+  "sample": "11 grade B and 13 grade A as the system graded them (no grade C left that an earlier check had not used), shuffled",
+  "same": 19,
   "of": 24,
-  "two_classes_apart": 0,
+  "system_stricter": 3,
+  "system_softer": 2,
+  "two_grades_apart": 0,
   "rows": [
    {
     "letter": "A",
-    "tid": 122,
-    "red_share": 0.881,
-    "system": "Kelas I",
-    "eye": "Extra"
+    "tid": 217,
+    "line": 3,
+    "red_share": 1.0,
+    "system": "A",
+    "eye": "A"
    },
    {
     "letter": "B",
-    "tid": 162,
-    "red_share": 0.982,
-    "system": "Extra",
-    "eye": "Extra"
+    "tid": 173,
+    "line": 1,
+    "red_share": 0.84,
+    "system": "B",
+    "eye": "B"
    },
    {
     "letter": "C",
-    "tid": 301,
-    "red_share": 1.0,
-    "system": "Extra",
-    "eye": "Extra"
+    "tid": 367,
+    "line": 1,
+    "red_share": 0.977,
+    "system": "A",
+    "eye": "A"
    },
    {
     "letter": "D",
-    "tid": 69,
-    "red_share": 0.963,
-    "system": "Extra",
-    "eye": "Extra"
+    "tid": 333,
+    "line": 2,
+    "red_share": 0.79,
+    "system": "B",
+    "eye": "B"
    },
    {
     "letter": "E",
-    "tid": 404,
-    "red_share": 0.998,
-    "system": "Extra",
-    "eye": "Extra"
+    "tid": 53,
+    "line": 2,
+    "red_share": 1.0,
+    "system": "A",
+    "eye": "A"
    },
    {
     "letter": "F",
-    "tid": 758,
-    "red_share": 0.696,
-    "system": "Kelas I",
-    "eye": "Kelas I"
+    "tid": 632,
+    "line": 3,
+    "red_share": 1.0,
+    "system": "A",
+    "eye": "A"
    },
    {
     "letter": "G",
-    "tid": 593,
-    "red_share": 0.989,
-    "system": "Extra",
-    "eye": "Extra"
+    "tid": 509,
+    "line": 3,
+    "red_share": 1.0,
+    "system": "A",
+    "eye": "A"
    },
    {
     "letter": "H",
-    "tid": 545,
-    "red_share": 1.0,
-    "system": "Extra",
-    "eye": "Extra"
+    "tid": 281,
+    "line": 1,
+    "red_share": 0.952,
+    "system": "A",
+    "eye": "B"
    },
    {
     "letter": "I",
-    "tid": 52,
-    "red_share": 0.512,
-    "system": "Kelas II",
-    "eye": "Kelas II"
+    "tid": 140,
+    "line": 5,
+    "red_share": 0.915,
+    "system": "A",
+    "eye": "B"
    },
    {
     "letter": "J",
-    "tid": 532,
-    "red_share": 1.0,
-    "system": "Extra",
-    "eye": "Extra"
+    "tid": 664,
+    "line": 3,
+    "red_share": 0.982,
+    "system": "A",
+    "eye": "A"
    },
    {
     "letter": "K",
-    "tid": 107,
-    "red_share": 0.979,
-    "system": "Extra",
-    "eye": "Extra"
+    "tid": 46,
+    "line": 4,
+    "red_share": 1.0,
+    "system": "A",
+    "eye": "A"
    },
    {
     "letter": "L",
-    "tid": 338,
-    "red_share": 1.0,
-    "system": "Extra",
-    "eye": "Extra"
+    "tid": 137,
+    "line": 2,
+    "red_share": 0.894,
+    "system": "B",
+    "eye": "A"
    },
    {
     "letter": "M",
-    "tid": 427,
-    "red_share": 0.751,
-    "system": "Kelas I",
-    "eye": "Kelas I"
+    "tid": 501,
+    "line": 4,
+    "red_share": 0.986,
+    "system": "A",
+    "eye": "A"
    },
    {
     "letter": "N",
-    "tid": 650,
-    "red_share": 0.773,
-    "system": "Kelas I",
-    "eye": "Kelas I"
+    "tid": 619,
+    "line": 3,
+    "red_share": 0.81,
+    "system": "B",
+    "eye": "B"
    },
    {
     "letter": "O",
-    "tid": 196,
-    "red_share": 0.874,
-    "system": "Kelas I",
-    "eye": "Kelas I"
+    "tid": 125,
+    "line": 3,
+    "red_share": 0.881,
+    "system": "B",
+    "eye": "B"
    },
    {
     "letter": "P",
-    "tid": 3,
-    "red_share": 0.752,
-    "system": "Kelas I",
-    "eye": "Kelas I"
+    "tid": 254,
+    "line": 4,
+    "red_share": 0.838,
+    "system": "B",
+    "eye": "A"
    },
    {
     "letter": "Q",
-    "tid": 484,
-    "red_share": 0.712,
-    "system": "Kelas I",
-    "eye": "Kelas I"
+    "tid": 237,
+    "line": 1,
+    "red_share": 0.882,
+    "system": "B",
+    "eye": "B"
    },
    {
     "letter": "R",
-    "tid": 116,
-    "red_share": 0.558,
-    "system": "Kelas II",
-    "eye": "Kelas I"
+    "tid": 64,
+    "line": 1,
+    "red_share": 0.988,
+    "system": "A",
+    "eye": "A"
    },
    {
     "letter": "S",
-    "tid": 185,
-    "red_share": 0.653,
-    "system": "Kelas I",
-    "eye": "Kelas I"
+    "tid": 221,
+    "line": 1,
+    "red_share": 0.734,
+    "system": "B",
+    "eye": "B"
    },
    {
     "letter": "T",
-    "tid": 195,
-    "red_share": 0.75,
-    "system": "Kelas I",
-    "eye": "Kelas I"
+    "tid": 126,
+    "line": 2,
+    "red_share": 0.877,
+    "system": "B",
+    "eye": "A"
    },
    {
     "letter": "U",
-    "tid": 272,
-    "red_share": 0.517,
-    "system": "Kelas II",
-    "eye": "Kelas I"
+    "tid": 129,
+    "line": 1,
+    "red_share": 0.882,
+    "system": "B",
+    "eye": "B"
    },
    {
     "letter": "V",
-    "tid": 580,
-    "red_share": 0.688,
-    "system": "Kelas I",
-    "eye": "Extra"
+    "tid": 520,
+    "line": 2,
+    "red_share": 1.0,
+    "system": "A",
+    "eye": "A"
    },
    {
     "letter": "W",
-    "tid": 224,
-    "red_share": 0.956,
-    "system": "Extra",
-    "eye": "Kelas I"
+    "tid": 441,
+    "line": 1,
+    "red_share": 0.884,
+    "system": "B",
+    "eye": "B"
    },
    {
     "letter": "X",
-    "tid": 163,
-    "red_share": 0.501,
-    "system": "Kelas II",
-    "eye": "Kelas I"
+    "tid": 624,
+    "line": 4,
+    "red_share": 0.975,
+    "system": "A",
+    "eye": "A"
    }
   ]
  },
- "first_check": {
-  "red_hue_deg": 30,
-  "sample": "random 24",
-  "same": 14,
-  "of": 24,
-  "two_classes_apart": 0,
-  "finding": "9 of the 10 disagreements had the system one class lower than the eye; the pixel images showed lit red skin at hue 30-37 deg counted as not red, while yellow ground colour sits at 44-60 deg, so the red pixel bound moved from 30 to 36 deg. Grade bounds (90 %, 60 %) unchanged. This check's peaches were then excluded from the next.",
-  "rows": [
-   {
-    "letter": "A",
-    "tid": 264,
-    "red_share": 0.698,
-    "system": "Kelas I",
-    "eye": "Extra"
-   },
-   {
-    "letter": "B",
-    "tid": 256,
-    "red_share": 0.988,
-    "system": "Extra",
-    "eye": "Extra"
-   },
-   {
-    "letter": "C",
-    "tid": 66,
-    "red_share": 1.0,
-    "system": "Extra",
-    "eye": "Extra"
-   },
-   {
-    "letter": "D",
-    "tid": 457,
-    "red_share": 0.999,
-    "system": "Extra",
-    "eye": "Extra"
-   },
-   {
-    "letter": "E",
-    "tid": 420,
-    "red_share": 0.732,
-    "system": "Kelas I",
-    "eye": "Extra"
-   },
-   {
-    "letter": "F",
-    "tid": 108,
-    "red_share": 0.781,
-    "system": "Kelas I",
-    "eye": "Kelas I"
-   },
-   {
-    "letter": "G",
-    "tid": 50,
-    "red_share": 0.999,
-    "system": "Extra",
-    "eye": "Extra"
-   },
-   {
-    "letter": "H",
-    "tid": 277,
-    "red_share": 0.63,
-    "system": "Kelas I",
-    "eye": "Extra"
-   },
-   {
-    "letter": "I",
-    "tid": 629,
-    "red_share": 1.0,
-    "system": "Extra",
-    "eye": "Extra"
-   },
-   {
-    "letter": "J",
-    "tid": 149,
-    "red_share": 0.865,
-    "system": "Kelas I",
-    "eye": "Kelas I"
-   },
-   {
-    "letter": "K",
-    "tid": 16,
-    "red_share": 0.956,
-    "system": "Extra",
-    "eye": "Extra"
-   },
-   {
-    "letter": "L",
-    "tid": 359,
-    "red_share": 0.661,
-    "system": "Kelas I",
-    "eye": "Kelas I"
-   },
-   {
-    "letter": "M",
-    "tid": 495,
-    "red_share": 0.882,
-    "system": "Kelas I",
-    "eye": "Extra"
-   },
-   {
-    "letter": "N",
-    "tid": 699,
-    "red_share": 0.303,
-    "system": "Kelas II",
-    "eye": "Kelas II"
-   },
-   {
-    "letter": "O",
-    "tid": 549,
-    "red_share": 0.673,
-    "system": "Kelas I",
-    "eye": "Extra"
-   },
-   {
-    "letter": "P",
-    "tid": 138,
-    "red_share": 0.481,
-    "system": "Kelas II",
-    "eye": "Kelas I"
-   },
-   {
-    "letter": "Q",
-    "tid": 651,
-    "red_share": 0.994,
-    "system": "Extra",
-    "eye": "Extra"
-   },
-   {
-    "letter": "R",
-    "tid": 753,
-    "red_share": 0.829,
-    "system": "Kelas I",
-    "eye": "Extra"
-   },
-   {
-    "letter": "S",
-    "tid": 598,
-    "red_share": 0.601,
-    "system": "Kelas I",
-    "eye": "Extra"
-   },
-   {
-    "letter": "T",
-    "tid": 41,
-    "red_share": 0.81,
-    "system": "Kelas I",
-    "eye": "Extra"
-   },
-   {
-    "letter": "U",
-    "tid": 350,
-    "red_share": 1.0,
-    "system": "Extra",
-    "eye": "Extra"
-   },
-   {
-    "letter": "V",
-    "tid": 481,
-    "red_share": 0.658,
-    "system": "Kelas I",
-    "eye": "Extra"
-   },
-   {
-    "letter": "W",
-    "tid": 344,
-    "red_share": 0.972,
-    "system": "Extra",
-    "eye": "Extra"
-   },
-   {
-    "letter": "X",
-    "tid": 300,
-    "red_share": 0.3,
-    "system": "Kelas II",
-    "eye": "Kelas II"
-   }
-  ]
- }
+ "earlier_checks": [
+  {
+   "setup": "right-hand lanes only, hue < 30 deg",
+   "same": 14,
+   "of": 24,
+   "system_stricter": 10,
+   "finding": "lit red skin (30-37 deg) counted as not red; pixel bound moved to 36 deg",
+   "rows": [
+    {
+     "letter": "A",
+     "tid": 264,
+     "red_share": 0.698,
+     "system": "B",
+     "eye": "A"
+    },
+    {
+     "letter": "B",
+     "tid": 256,
+     "red_share": 0.988,
+     "system": "A",
+     "eye": "A"
+    },
+    {
+     "letter": "C",
+     "tid": 66,
+     "red_share": 1.0,
+     "system": "A",
+     "eye": "A"
+    },
+    {
+     "letter": "D",
+     "tid": 457,
+     "red_share": 0.999,
+     "system": "A",
+     "eye": "A"
+    },
+    {
+     "letter": "E",
+     "tid": 420,
+     "red_share": 0.732,
+     "system": "B",
+     "eye": "A"
+    },
+    {
+     "letter": "F",
+     "tid": 108,
+     "red_share": 0.781,
+     "system": "B",
+     "eye": "B"
+    },
+    {
+     "letter": "G",
+     "tid": 50,
+     "red_share": 0.999,
+     "system": "A",
+     "eye": "A"
+    },
+    {
+     "letter": "H",
+     "tid": 277,
+     "red_share": 0.63,
+     "system": "B",
+     "eye": "A"
+    },
+    {
+     "letter": "I",
+     "tid": 629,
+     "red_share": 1.0,
+     "system": "A",
+     "eye": "A"
+    },
+    {
+     "letter": "J",
+     "tid": 149,
+     "red_share": 0.865,
+     "system": "B",
+     "eye": "B"
+    },
+    {
+     "letter": "K",
+     "tid": 16,
+     "red_share": 0.956,
+     "system": "A",
+     "eye": "A"
+    },
+    {
+     "letter": "L",
+     "tid": 359,
+     "red_share": 0.661,
+     "system": "B",
+     "eye": "B"
+    },
+    {
+     "letter": "M",
+     "tid": 495,
+     "red_share": 0.882,
+     "system": "B",
+     "eye": "A"
+    },
+    {
+     "letter": "N",
+     "tid": 699,
+     "red_share": 0.303,
+     "system": "C",
+     "eye": "C"
+    },
+    {
+     "letter": "O",
+     "tid": 549,
+     "red_share": 0.673,
+     "system": "B",
+     "eye": "A"
+    },
+    {
+     "letter": "P",
+     "tid": 138,
+     "red_share": 0.481,
+     "system": "C",
+     "eye": "B"
+    },
+    {
+     "letter": "Q",
+     "tid": 651,
+     "red_share": 0.994,
+     "system": "A",
+     "eye": "A"
+    },
+    {
+     "letter": "R",
+     "tid": 753,
+     "red_share": 0.829,
+     "system": "B",
+     "eye": "A"
+    },
+    {
+     "letter": "S",
+     "tid": 598,
+     "red_share": 0.601,
+     "system": "B",
+     "eye": "A"
+    },
+    {
+     "letter": "T",
+     "tid": 41,
+     "red_share": 0.81,
+     "system": "B",
+     "eye": "A"
+    },
+    {
+     "letter": "U",
+     "tid": 350,
+     "red_share": 1.0,
+     "system": "A",
+     "eye": "A"
+    },
+    {
+     "letter": "V",
+     "tid": 481,
+     "red_share": 0.658,
+     "system": "B",
+     "eye": "A"
+    },
+    {
+     "letter": "W",
+     "tid": 344,
+     "red_share": 0.972,
+     "system": "A",
+     "eye": "A"
+    },
+    {
+     "letter": "X",
+     "tid": 300,
+     "red_share": 0.3,
+     "system": "C",
+     "eye": "C"
+    }
+   ]
+  },
+  {
+   "setup": "right-hand lanes only, hue < 36 deg",
+   "same": 18,
+   "of": 24,
+   "system_stricter": 5,
+   "rows": [
+    {
+     "letter": "A",
+     "tid": 122,
+     "red_share": 0.881,
+     "system": "B",
+     "eye": "A"
+    },
+    {
+     "letter": "B",
+     "tid": 162,
+     "red_share": 0.982,
+     "system": "A",
+     "eye": "A"
+    },
+    {
+     "letter": "C",
+     "tid": 301,
+     "red_share": 1.0,
+     "system": "A",
+     "eye": "A"
+    },
+    {
+     "letter": "D",
+     "tid": 69,
+     "red_share": 0.963,
+     "system": "A",
+     "eye": "A"
+    },
+    {
+     "letter": "E",
+     "tid": 404,
+     "red_share": 0.998,
+     "system": "A",
+     "eye": "A"
+    },
+    {
+     "letter": "F",
+     "tid": 758,
+     "red_share": 0.696,
+     "system": "B",
+     "eye": "B"
+    },
+    {
+     "letter": "G",
+     "tid": 593,
+     "red_share": 0.989,
+     "system": "A",
+     "eye": "A"
+    },
+    {
+     "letter": "H",
+     "tid": 545,
+     "red_share": 1.0,
+     "system": "A",
+     "eye": "A"
+    },
+    {
+     "letter": "I",
+     "tid": 52,
+     "red_share": 0.512,
+     "system": "C",
+     "eye": "C"
+    },
+    {
+     "letter": "J",
+     "tid": 532,
+     "red_share": 1.0,
+     "system": "A",
+     "eye": "A"
+    },
+    {
+     "letter": "K",
+     "tid": 107,
+     "red_share": 0.979,
+     "system": "A",
+     "eye": "A"
+    },
+    {
+     "letter": "L",
+     "tid": 338,
+     "red_share": 1.0,
+     "system": "A",
+     "eye": "A"
+    },
+    {
+     "letter": "M",
+     "tid": 427,
+     "red_share": 0.751,
+     "system": "B",
+     "eye": "B"
+    },
+    {
+     "letter": "N",
+     "tid": 650,
+     "red_share": 0.773,
+     "system": "B",
+     "eye": "B"
+    },
+    {
+     "letter": "O",
+     "tid": 196,
+     "red_share": 0.874,
+     "system": "B",
+     "eye": "B"
+    },
+    {
+     "letter": "P",
+     "tid": 3,
+     "red_share": 0.752,
+     "system": "B",
+     "eye": "B"
+    },
+    {
+     "letter": "Q",
+     "tid": 484,
+     "red_share": 0.712,
+     "system": "B",
+     "eye": "B"
+    },
+    {
+     "letter": "R",
+     "tid": 116,
+     "red_share": 0.558,
+     "system": "C",
+     "eye": "B"
+    },
+    {
+     "letter": "S",
+     "tid": 185,
+     "red_share": 0.653,
+     "system": "B",
+     "eye": "B"
+    },
+    {
+     "letter": "T",
+     "tid": 195,
+     "red_share": 0.75,
+     "system": "B",
+     "eye": "B"
+    },
+    {
+     "letter": "U",
+     "tid": 272,
+     "red_share": 0.517,
+     "system": "C",
+     "eye": "B"
+    },
+    {
+     "letter": "V",
+     "tid": 580,
+     "red_share": 0.688,
+     "system": "B",
+     "eye": "A"
+    },
+    {
+     "letter": "W",
+     "tid": 224,
+     "red_share": 0.956,
+     "system": "A",
+     "eye": "B"
+    },
+    {
+     "letter": "X",
+     "tid": 163,
+     "red_share": 0.501,
+     "system": "C",
+     "eye": "B"
+    }
+   ]
+  },
+  {
+   "setup": "all six lines, hue < 36 deg, grade on the first 12 reads (mostly at the crowded line entry)",
+   "same": 13,
+   "of": 24,
+   "system_stricter": 9,
+   "finding": "used as the development set: grading on all reads and a 38 deg bound brought it to 17 of 24 with the errors no longer one-sided; the final check above then used fresh peaches",
+   "rows": [
+    {
+     "letter": "A",
+     "tid": 373,
+     "line": 4,
+     "red_share": 0.762,
+     "system": "B",
+     "eye": "B"
+    },
+    {
+     "letter": "B",
+     "tid": 265,
+     "line": 3,
+     "red_share": 0.501,
+     "system": "C",
+     "eye": "B"
+    },
+    {
+     "letter": "C",
+     "tid": 483,
+     "line": 4,
+     "red_share": 0.941,
+     "system": "A",
+     "eye": "A"
+    },
+    {
+     "letter": "D",
+     "tid": 223,
+     "line": 3,
+     "red_share": 0.419,
+     "system": "C",
+     "eye": "B"
+    },
+    {
+     "letter": "E",
+     "tid": 659,
+     "line": 2,
+     "red_share": 0.707,
+     "system": "B",
+     "eye": "C"
+    },
+    {
+     "letter": "F",
+     "tid": 204,
+     "line": 3,
+     "red_share": 0.991,
+     "system": "A",
+     "eye": "A"
+    },
+    {
+     "letter": "G",
+     "tid": 413,
+     "line": 4,
+     "red_share": 0.996,
+     "system": "A",
+     "eye": "A"
+    },
+    {
+     "letter": "H",
+     "tid": 755,
+     "line": 1,
+     "red_share": 0.97,
+     "system": "A",
+     "eye": "A"
+    },
+    {
+     "letter": "I",
+     "tid": 343,
+     "line": 1,
+     "red_share": 0.688,
+     "system": "B",
+     "eye": "B"
+    },
+    {
+     "letter": "J",
+     "tid": 601,
+     "line": 2,
+     "red_share": 0.885,
+     "system": "B",
+     "eye": "A"
+    },
+    {
+     "letter": "K",
+     "tid": 552,
+     "line": 4,
+     "red_share": 0.899,
+     "system": "B",
+     "eye": "A"
+    },
+    {
+     "letter": "L",
+     "tid": 742,
+     "line": 2,
+     "red_share": 0.968,
+     "system": "A",
+     "eye": "A"
+    },
+    {
+     "letter": "M",
+     "tid": 259,
+     "line": 1,
+     "red_share": 0.804,
+     "system": "B",
+     "eye": "B"
+    },
+    {
+     "letter": "N",
+     "tid": 412,
+     "line": 3,
+     "red_share": 0.766,
+     "system": "B",
+     "eye": "A"
+    },
+    {
+     "letter": "O",
+     "tid": 147,
+     "line": 4,
+     "red_share": 0.692,
+     "system": "B",
+     "eye": "B"
+    },
+    {
+     "letter": "P",
+     "tid": 229,
+     "line": 5,
+     "red_share": 0.948,
+     "system": "A",
+     "eye": "B"
+    },
+    {
+     "letter": "Q",
+     "tid": 669,
+     "line": 2,
+     "red_share": 1.0,
+     "system": "A",
+     "eye": "A"
+    },
+    {
+     "letter": "R",
+     "tid": 646,
+     "line": 4,
+     "red_share": 0.403,
+     "system": "C",
+     "eye": "B"
+    },
+    {
+     "letter": "S",
+     "tid": 334,
+     "line": 3,
+     "red_share": 0.995,
+     "system": "A",
+     "eye": "A"
+    },
+    {
+     "letter": "T",
+     "tid": 644,
+     "line": 5,
+     "red_share": 0.995,
+     "system": "A",
+     "eye": "A"
+    },
+    {
+     "letter": "U",
+     "tid": 708,
+     "line": 3,
+     "red_share": 0.996,
+     "system": "A",
+     "eye": "A"
+    },
+    {
+     "letter": "V",
+     "tid": 436,
+     "line": 4,
+     "red_share": 0.591,
+     "system": "C",
+     "eye": "B"
+    },
+    {
+     "letter": "W",
+     "tid": 575,
+     "line": 5,
+     "red_share": 0.695,
+     "system": "B",
+     "eye": "A"
+    },
+    {
+     "letter": "X",
+     "tid": 306,
+     "line": 4,
+     "red_share": 0.743,
+     "system": "B",
+     "eye": "A"
+    }
+   ]
+  }
+ ]
 }

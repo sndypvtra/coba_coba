@@ -34,7 +34,7 @@ measured by running the code in this repository, not estimated.
 | **7** | [Warehouse live ops, fifteen cameras](projects/07_warehouse_live_ops) | One live floor plan, 20 operations analytics, each checked against ground truth; helmet and vest per person | position error **0.19 m**; line counts and walking share match the truth; helmet right on **24 of 26** blind-checked crops |
 | **8** | [Pack completeness, synthetic line](projects/08_pack_completeness) | Rendered clips for completeness checks: a line of 10-can trays (some with 9) and a packing station where a robot fills boxes of 20 (one leaves with 18) | 15 s + 34 s clips · QC dashboards counting from the pixels · 7/7 trays and 3/3 boxes judged right |
 | **9** | [Lemon grading, washer](projects/09_lemon_grading) | Outline every lemon, follow it, grade its colour A / B / C | **70** read · 39 % green, 39 % green-yellow, 23 % yellow · 21/24 blind-checked |
-| **10** | [Peach grading, roller sizer](projects/10_peach_sizer) | Outline every peach, follow it as it turns, grade its red colour Extra / I / II | **172** graded · 83 % Extra, 14 % Class I, 3 % Class II · 18/24 blind-checked |
+| **10** | [Peach grading, six-line sizer](projects/10_peach_sizer) | Outline every peach, name its line, grade its red colour A / B / C | **204** counted across 6 lines · 87 % A, 12 % B, 1 % C · 19/24 blind-checked |
 
 Each project's own README carries its method, its measured figures and what
 breaks it, and is written to stand on its own if the folder is lifted into a
@@ -459,7 +459,7 @@ projects/
   07_warehouse_live_ops/    fifteen cameras -> one live plan, 20 analytics vs truth, helmet/vest
   08_pack_completeness/     Blender-rendered can-tray line and packing station (boxes of 20), with per-frame truth
   09_lemon_grading/         lemon colour grading at a washer: FastSAM, tracking, CIELAB hue
-  10_peach_sizer/           peach red-colour class on a roller sizer: FastSAM, tracking, red share
+  10_peach_sizer/           peach red-colour grade on a six-line sizer: FastSAM, tracking, red share
 
     every project has these
       main.py               the entry point, and only the sequence of steps

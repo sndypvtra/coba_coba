@@ -1,1235 +1,1878 @@
 {
  "seconds": 8.14,
- "graded": 172,
- "per_minute": 1268,
- "duplicate_crossings_dropped": 3,
+ "counted": 204,
+ "graded": 204,
+ "per_minute": 1503,
+ "duplicate_counts_dropped": 77,
+ "track_pieces_stitched": 80,
+ "gate_y": 375,
+ "per_line": [
+  36,
+  41,
+  41,
+  50,
+  26,
+  10
+ ],
  "grades": [
   {
-   "name": "Extra · merah ≥ 90%",
+   "name": "Grade A · merah ≥ 90%",
    "red_share_from": 0.9,
    "destination": "kemasan premium / ekspor",
-   "count": 142,
-   "share": 0.826
+   "count": 177,
+   "share": 0.868
   },
   {
-   "name": "Kelas I · merah 60–90%",
+   "name": "Grade B · merah 60–90%",
    "red_share_from": 0.6,
    "destination": "kemasan reguler",
    "count": 24,
-   "share": 0.14
+   "share": 0.118
   },
   {
-   "name": "Kelas II · merah < 60%",
+   "name": "Grade C · merah < 60%",
    "red_share_from": 0.0,
-   "destination": "pasar lokal / olahan",
-   "count": 6,
-   "share": 0.035
+   "destination": "dialihkan ke olahan",
+   "count": 3,
+   "share": 0.015
   }
  ],
  "peaches": [
   {
-   "tid": 36,
-   "lane": 2,
-   "frame": 4,
-   "red_share": 0.949,
-   "grade": "Extra"
-  },
-  {
-   "tid": 3,
-   "lane": 4,
-   "frame": 5,
-   "red_share": 0.752,
-   "grade": "Kelas I"
-  },
-  {
-   "tid": 21,
-   "lane": 1,
-   "frame": 5,
-   "red_share": 1.0,
-   "grade": "Extra"
-  },
-  {
-   "tid": 41,
-   "lane": 1,
-   "frame": 9,
-   "red_share": 0.998,
-   "grade": "Extra"
-  },
-  {
    "tid": 11,
-   "lane": 3,
-   "frame": 10,
+   "line": 4,
+   "counted_frame": 1,
+   "graded_frame": 12,
+   "reads": 12,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
    "tid": 6,
-   "lane": 2,
-   "frame": 11,
-   "red_share": 0.998,
-   "grade": "Extra"
-  },
-  {
-   "tid": 7,
-   "lane": 4,
-   "frame": 12,
+   "line": 5,
+   "counted_frame": 1,
+   "graded_frame": 14,
+   "reads": 18,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
    "tid": 46,
-   "lane": 3,
-   "frame": 13,
+   "line": 4,
+   "counted_frame": 8,
+   "graded_frame": 15,
+   "reads": 8,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
-   "tid": 50,
-   "lane": 1,
-   "frame": 14,
-   "red_share": 1.0,
-   "grade": "Extra"
-  },
-  {
-   "tid": 48,
-   "lane": 4,
-   "frame": 15,
-   "red_share": 1.0,
-   "grade": "Extra"
+   "tid": 30,
+   "line": 4,
+   "counted_frame": 8,
+   "graded_frame": 17,
+   "reads": 8,
+   "red_share": 0.999,
+   "grade": "A"
   },
   {
    "tid": 12,
-   "lane": 3,
-   "frame": 16,
-   "red_share": 0.994,
-   "grade": "Extra"
+   "line": 4,
+   "counted_frame": 1,
+   "graded_frame": 19,
+   "reads": 17,
+   "red_share": 0.997,
+   "grade": "A"
   },
   {
-   "tid": 16,
-   "lane": 3,
-   "frame": 19,
+   "tid": 41,
+   "line": 6,
+   "counted_frame": 15,
+   "graded_frame": 20,
+   "reads": 22,
+   "red_share": 1.0,
+   "grade": "A"
+  },
+  {
+   "tid": 14,
+   "line": 4,
+   "counted_frame": 1,
+   "graded_frame": 22,
+   "reads": 28,
    "red_share": 0.998,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
-   "tid": 61,
-   "lane": 1,
-   "frame": 19,
-   "red_share": 0.923,
-   "grade": "Extra"
-  },
-  {
-   "tid": 63,
-   "lane": 3,
-   "frame": 23,
+   "tid": 42,
+   "line": 2,
+   "counted_frame": 6,
+   "graded_frame": 24,
+   "reads": 16,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
-   "tid": 58,
-   "lane": 2,
-   "frame": 24,
+   "tid": 54,
+   "line": 3,
+   "counted_frame": 18,
+   "graded_frame": 24,
+   "reads": 12,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
    "tid": 9,
-   "lane": 4,
-   "frame": 25,
+   "line": 3,
+   "counted_frame": 1,
+   "graded_frame": 26,
+   "reads": 24,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
-   "tid": 57,
-   "lane": 1,
-   "frame": 28,
-   "red_share": 0.985,
-   "grade": "Extra"
-  },
-  {
-   "tid": 70,
-   "lane": 3,
-   "frame": 30,
-   "red_share": 0.884,
-   "grade": "Kelas I"
-  },
-  {
-   "tid": 88,
-   "lane": 2,
-   "frame": 31,
+   "tid": 63,
+   "line": 4,
+   "counted_frame": 15,
+   "graded_frame": 26,
+   "reads": 12,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
+  },
+  {
+   "tid": 31,
+   "line": 5,
+   "counted_frame": 16,
+   "graded_frame": 27,
+   "reads": 28,
+   "red_share": 1.0,
+   "grade": "A"
+  },
+  {
+   "tid": 61,
+   "line": 6,
+   "counted_frame": 25,
+   "graded_frame": 28,
+   "reads": 15,
+   "red_share": 0.998,
+   "grade": "A"
+  },
+  {
+   "tid": 18,
+   "line": 1,
+   "counted_frame": 5,
+   "graded_frame": 32,
+   "reads": 46,
+   "red_share": 0.972,
+   "grade": "A"
+  },
+  {
+   "tid": 23,
+   "line": 4,
+   "counted_frame": 18,
+   "graded_frame": 32,
+   "reads": 23,
+   "red_share": 0.998,
+   "grade": "A"
   },
   {
    "tid": 66,
-   "lane": 4,
-   "frame": 32,
+   "line": 3,
+   "counted_frame": 17,
+   "graded_frame": 34,
+   "reads": 15,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
-   "tid": 45,
-   "lane": 3,
-   "frame": 33,
-   "red_share": 0.996,
-   "grade": "Extra"
+   "tid": 73,
+   "line": 1,
+   "counted_frame": 23,
+   "graded_frame": 34,
+   "reads": 9,
+   "red_share": 0.988,
+   "grade": "A"
   },
   {
-   "tid": 85,
-   "lane": 1,
-   "frame": 33,
+   "tid": 88,
+   "line": 5,
+   "counted_frame": 29,
+   "graded_frame": 34,
+   "reads": 6,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
-   "tid": 81,
-   "lane": 4,
-   "frame": 36,
+   "tid": 38,
+   "line": 4,
+   "counted_frame": 16,
+   "graded_frame": 36,
+   "reads": 29,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
    "tid": 75,
-   "lane": 2,
-   "frame": 38,
-   "red_share": 0.991,
-   "grade": "Extra"
+   "line": 5,
+   "counted_frame": 31,
+   "graded_frame": 39,
+   "reads": 15,
+   "red_share": 0.993,
+   "grade": "A"
   },
   {
-   "tid": 97,
-   "lane": 1,
-   "frame": 38,
-   "red_share": 1.0,
-   "grade": "Extra"
+   "tid": 57,
+   "line": 6,
+   "counted_frame": 32,
+   "graded_frame": 40,
+   "reads": 26,
+   "red_share": 0.984,
+   "grade": "A"
   },
   {
-   "tid": 87,
-   "lane": 5,
-   "frame": 39,
-   "red_share": 0.953,
-   "grade": "Extra"
+   "tid": 64,
+   "line": 1,
+   "counted_frame": 16,
+   "graded_frame": 42,
+   "reads": 21,
+   "red_share": 0.988,
+   "grade": "A"
   },
   {
    "tid": 83,
-   "lane": 3,
-   "frame": 40,
-   "red_share": 0.999,
-   "grade": "Extra"
+   "line": 4,
+   "counted_frame": 27,
+   "graded_frame": 42,
+   "reads": 16,
+   "red_share": 1.0,
+   "grade": "A"
   },
   {
    "tid": 52,
-   "lane": 4,
-   "frame": 42,
-   "red_share": 0.512,
-   "grade": "Kelas II"
-  },
-  {
-   "tid": 107,
-   "lane": 1,
-   "frame": 43,
-   "red_share": 0.979,
-   "grade": "Extra"
-  },
-  {
-   "tid": 34,
-   "lane": 2,
-   "frame": 44,
-   "red_share": 0.998,
-   "grade": "Extra"
+   "line": 3,
+   "counted_frame": 11,
+   "graded_frame": 44,
+   "reads": 28,
+   "red_share": 0.693,
+   "grade": "B"
   },
   {
    "tid": 44,
-   "lane": 3,
-   "frame": 44,
-   "red_share": 0.992,
-   "grade": "Extra"
+   "line": 4,
+   "counted_frame": 25,
+   "graded_frame": 46,
+   "reads": 21,
+   "red_share": 0.999,
+   "grade": "A"
   },
   {
-   "tid": 106,
-   "lane": 1,
-   "frame": 48,
-   "red_share": 0.712,
-   "grade": "Kelas I"
+   "tid": 24,
+   "line": 1,
+   "counted_frame": 1,
+   "graded_frame": 47,
+   "reads": 61,
+   "red_share": 0.998,
+   "grade": "A"
+  },
+  {
+   "tid": 34,
+   "line": 5,
+   "counted_frame": 25,
+   "graded_frame": 47,
+   "reads": 30,
+   "red_share": 0.995,
+   "grade": "A"
+  },
+  {
+   "tid": 10,
+   "line": 1,
+   "counted_frame": 1,
+   "graded_frame": 49,
+   "reads": 43,
+   "red_share": 0.998,
+   "grade": "A"
+  },
+  {
+   "tid": 97,
+   "line": 6,
+   "counted_frame": 40,
+   "graded_frame": 50,
+   "reads": 25,
+   "red_share": 1.0,
+   "grade": "A"
   },
   {
    "tid": 104,
-   "lane": 3,
-   "frame": 50,
-   "red_share": 0.982,
-   "grade": "Extra"
+   "line": 4,
+   "counted_frame": 35,
+   "graded_frame": 52,
+   "reads": 17,
+   "red_share": 0.99,
+   "grade": "A"
   },
   {
    "tid": 53,
-   "lane": 5,
-   "frame": 52,
+   "line": 2,
+   "counted_frame": 22,
+   "graded_frame": 54,
+   "reads": 35,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
    "tid": 153,
-   "lane": 2,
-   "frame": 53,
-   "red_share": 0.892,
-   "grade": "Kelas I"
-  },
-  {
-   "tid": 138,
-   "lane": 5,
-   "frame": 56,
-   "red_share": 0.799,
-   "grade": "Kelas I"
-  },
-  {
-   "tid": 148,
-   "lane": 1,
-   "frame": 56,
-   "red_share": 0.998,
-   "grade": "Extra"
+   "line": 5,
+   "counted_frame": 51,
+   "graded_frame": 57,
+   "reads": 7,
+   "red_share": 0.999,
+   "grade": "A"
   },
   {
    "tid": 69,
-   "lane": 2,
-   "frame": 57,
-   "red_share": 0.963,
-   "grade": "Extra"
+   "line": 5,
+   "counted_frame": 38,
+   "graded_frame": 60,
+   "reads": 38,
+   "red_share": 0.984,
+   "grade": "A"
+  },
+  {
+   "tid": 106,
+   "line": 6,
+   "counted_frame": 49,
+   "graded_frame": 61,
+   "reads": 26,
+   "red_share": 0.998,
+   "grade": "A"
+  },
+  {
+   "tid": 72,
+   "line": 2,
+   "counted_frame": 30,
+   "graded_frame": 64,
+   "reads": 62,
+   "red_share": 0.999,
+   "grade": "A"
+  },
+  {
+   "tid": 140,
+   "line": 5,
+   "counted_frame": 47,
+   "graded_frame": 64,
+   "reads": 24,
+   "red_share": 0.915,
+   "grade": "A"
   },
   {
    "tid": 155,
-   "lane": 1,
-   "frame": 60,
-   "red_share": 0.956,
-   "grade": "Extra"
+   "line": 6,
+   "counted_frame": 59,
+   "graded_frame": 64,
+   "reads": 11,
+   "red_share": 0.995,
+   "grade": "A"
   },
   {
-   "tid": 110,
-   "lane": 5,
-   "frame": 62,
-   "red_share": 1.0,
-   "grade": "Extra"
-  },
-  {
-   "tid": 160,
-   "lane": 4,
-   "frame": 63,
-   "red_share": 1.0,
-   "grade": "Extra"
+   "tid": 159,
+   "line": 1,
+   "counted_frame": 56,
+   "graded_frame": 65,
+   "reads": 7,
+   "red_share": 0.991,
+   "grade": "A"
   },
   {
    "tid": 108,
-   "lane": 3,
-   "frame": 64,
-   "red_share": 0.95,
-   "grade": "Extra"
-  },
-  {
-   "tid": 178,
-   "lane": 2,
-   "frame": 64,
-   "red_share": 1.0,
-   "grade": "Extra"
+   "line": 5,
+   "counted_frame": 55,
+   "graded_frame": 67,
+   "reads": 31,
+   "red_share": 0.982,
+   "grade": "A"
   },
   {
    "tid": 126,
-   "lane": 5,
-   "frame": 66,
-   "red_share": 0.775,
-   "grade": "Kelas I"
+   "line": 2,
+   "counted_frame": 46,
+   "graded_frame": 68,
+   "reads": 21,
+   "red_share": 0.877,
+   "grade": "B"
   },
   {
-   "tid": 139,
-   "lane": 5,
-   "frame": 69,
-   "red_share": 0.962,
-   "grade": "Extra"
+   "tid": 147,
+   "line": 4,
+   "counted_frame": 64,
+   "graded_frame": 72,
+   "reads": 25,
+   "red_share": 0.8,
+   "grade": "B"
   },
   {
-   "tid": 170,
-   "lane": 2,
-   "frame": 69,
-   "red_share": 0.998,
-   "grade": "Extra"
+   "tid": 76,
+   "line": 4,
+   "counted_frame": 41,
+   "graded_frame": 73,
+   "reads": 56,
+   "red_share": 0.988,
+   "grade": "A"
   },
   {
-   "tid": 116,
-   "lane": 4,
-   "frame": 70,
-   "red_share": 0.558,
-   "grade": "Kelas II"
+   "tid": 90,
+   "line": 2,
+   "counted_frame": 65,
+   "graded_frame": 73,
+   "reads": 26,
+   "red_share": 1.0,
+   "grade": "A"
   },
   {
-   "tid": 163,
-   "lane": 5,
-   "frame": 71,
-   "red_share": 0.501,
-   "grade": "Kelas II"
+   "tid": 187,
+   "line": 4,
+   "counted_frame": 64,
+   "graded_frame": 74,
+   "reads": 11,
+   "red_share": 1.0,
+   "grade": "A"
   },
   {
-   "tid": 111,
-   "lane": 5,
-   "frame": 76,
-   "red_share": 0.995,
-   "grade": "Extra"
+   "tid": 94,
+   "line": 2,
+   "counted_frame": 43,
+   "graded_frame": 75,
+   "reads": 56,
+   "red_share": 0.982,
+   "grade": "A"
   },
   {
-   "tid": 196,
-   "lane": 3,
-   "frame": 77,
-   "red_share": 0.874,
-   "grade": "Kelas I"
+   "tid": 178,
+   "line": 5,
+   "counted_frame": 61,
+   "graded_frame": 75,
+   "reads": 24,
+   "red_share": 1.0,
+   "grade": "A"
+  },
+  {
+   "tid": 141,
+   "line": 3,
+   "counted_frame": 51,
+   "graded_frame": 76,
+   "reads": 26,
+   "red_share": 1.0,
+   "grade": "A"
+  },
+  {
+   "tid": 102,
+   "line": 2,
+   "counted_frame": 36,
+   "graded_frame": 77,
+   "reads": 34,
+   "red_share": 1.0,
+   "grade": "A"
+  },
+  {
+   "tid": 129,
+   "line": 1,
+   "counted_frame": 46,
+   "graded_frame": 77,
+   "reads": 22,
+   "red_share": 0.882,
+   "grade": "B"
+  },
+  {
+   "tid": 135,
+   "line": 3,
+   "counted_frame": 70,
+   "graded_frame": 77,
+   "reads": 28,
+   "red_share": 0.996,
+   "grade": "A"
   },
   {
    "tid": 175,
-   "lane": 5,
-   "frame": 79,
+   "line": 2,
+   "counted_frame": 61,
+   "graded_frame": 81,
+   "reads": 21,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
-   "tid": 162,
-   "lane": 4,
-   "frame": 80,
-   "red_share": 0.982,
-   "grade": "Extra"
+   "tid": 137,
+   "line": 2,
+   "counted_frame": 72,
+   "graded_frame": 83,
+   "reads": 21,
+   "red_share": 0.894,
+   "grade": "B"
   },
   {
-   "tid": 149,
-   "lane": 3,
-   "frame": 82,
-   "red_share": 0.975,
-   "grade": "Extra"
-  },
-  {
-   "tid": 216,
-   "lane": 5,
-   "frame": 82,
+   "tid": 142,
+   "line": 2,
+   "counted_frame": 51,
+   "graded_frame": 84,
+   "reads": 53,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
+  },
+  {
+   "tid": 172,
+   "line": 1,
+   "counted_frame": 60,
+   "graded_frame": 84,
+   "reads": 30,
+   "red_share": 0.99,
+   "grade": "A"
   },
   {
    "tid": 217,
-   "lane": 4,
-   "frame": 83,
+   "line": 3,
+   "counted_frame": 74,
+   "graded_frame": 85,
+   "reads": 12,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
-   "tid": 179,
-   "lane": 3,
-   "frame": 85,
-   "red_share": 1.0,
-   "grade": "Extra"
+   "tid": 226,
+   "line": 1,
+   "counted_frame": 79,
+   "graded_frame": 88,
+   "reads": 8,
+   "red_share": 0.996,
+   "grade": "A"
   },
   {
-   "tid": 195,
-   "lane": 5,
-   "frame": 85,
-   "red_share": 0.75,
-   "grade": "Kelas I"
+   "tid": 149,
+   "line": 4,
+   "counted_frame": 61,
+   "graded_frame": 90,
+   "reads": 64,
+   "red_share": 0.998,
+   "grade": "A"
   },
   {
-   "tid": 225,
-   "lane": 5,
-   "frame": 89,
-   "red_share": 1.0,
-   "grade": "Extra"
+   "tid": 125,
+   "line": 3,
+   "counted_frame": 85,
+   "graded_frame": 91,
+   "reads": 21,
+   "red_share": 0.881,
+   "grade": "B"
   },
   {
-   "tid": 229,
-   "lane": 2,
-   "frame": 89,
-   "red_share": 0.964,
-   "grade": "Extra"
+   "tid": 162,
+   "line": 3,
+   "counted_frame": 57,
+   "graded_frame": 93,
+   "reads": 53,
+   "red_share": 0.853,
+   "grade": "B"
   },
   {
-   "tid": 185,
-   "lane": 4,
-   "frame": 90,
-   "red_share": 0.653,
-   "grade": "Kelas I"
-  },
-  {
-   "tid": 218,
-   "lane": 3,
-   "frame": 90,
-   "red_share": 0.655,
-   "grade": "Kelas I"
+   "tid": 196,
+   "line": 4,
+   "counted_frame": 69,
+   "graded_frame": 93,
+   "reads": 31,
+   "red_share": 0.838,
+   "grade": "B"
   },
   {
    "tid": 122,
-   "lane": 5,
-   "frame": 92,
-   "red_share": 0.881,
-   "grade": "Kelas I"
-  },
-  {
-   "tid": 240,
-   "lane": 4,
-   "frame": 93,
+   "line": 2,
+   "counted_frame": 70,
+   "graded_frame": 94,
+   "reads": 35,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
-   "tid": 256,
-   "lane": 2,
-   "frame": 94,
+   "tid": 223,
+   "line": 3,
+   "counted_frame": 77,
+   "graded_frame": 95,
+   "reads": 18,
+   "red_share": 0.616,
+   "grade": "B"
+  },
+  {
+   "tid": 229,
+   "line": 5,
+   "counted_frame": 83,
+   "graded_frame": 95,
+   "reads": 14,
+   "red_share": 0.986,
+   "grade": "A"
+  },
+  {
+   "tid": 176,
+   "line": 2,
+   "counted_frame": 61,
+   "graded_frame": 101,
+   "reads": 20,
    "red_share": 0.998,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
-   "tid": 252,
-   "lane": 5,
-   "frame": 95,
-   "red_share": 0.913,
-   "grade": "Extra"
+   "tid": 265,
+   "line": 3,
+   "counted_frame": 91,
+   "graded_frame": 102,
+   "reads": 11,
+   "red_share": 0.555,
+   "grade": "C"
   },
   {
-   "tid": 197,
-   "lane": 3,
-   "frame": 97,
-   "red_share": 0.996,
-   "grade": "Extra"
+   "tid": 221,
+   "line": 1,
+   "counted_frame": 75,
+   "graded_frame": 108,
+   "reads": 25,
+   "red_share": 0.734,
+   "grade": "B"
   },
   {
-   "tid": 271,
-   "lane": 5,
-   "frame": 98,
-   "red_share": 0.973,
-   "grade": "Extra"
-  },
-  {
-   "tid": 258,
-   "lane": 4,
-   "frame": 100,
-   "red_share": 1.0,
-   "grade": "Extra"
-  },
-  {
-   "tid": 154,
-   "lane": 3,
-   "frame": 104,
-   "red_share": 0.997,
-   "grade": "Extra"
-  },
-  {
-   "tid": 243,
-   "lane": 5,
-   "frame": 104,
+   "tid": 198,
+   "line": 2,
+   "counted_frame": 82,
+   "graded_frame": 108,
+   "reads": 25,
    "red_share": 0.999,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
-   "tid": 275,
-   "lane": 2,
-   "frame": 104,
-   "red_share": 0.992,
-   "grade": "Extra"
-  },
-  {
-   "tid": 300,
-   "lane": 4,
-   "frame": 106,
-   "red_share": 0.591,
-   "grade": "Kelas II"
-  },
-  {
-   "tid": 290,
-   "lane": 5,
-   "frame": 109,
-   "red_share": 0.909,
-   "grade": "Extra"
+   "tid": 263,
+   "line": 4,
+   "counted_frame": 90,
+   "graded_frame": 111,
+   "reads": 14,
+   "red_share": 0.958,
+   "grade": "A"
   },
   {
    "tid": 204,
-   "lane": 4,
-   "frame": 110,
-   "red_share": 0.97,
-   "grade": "Extra"
+   "line": 3,
+   "counted_frame": 71,
+   "graded_frame": 112,
+   "reads": 36,
+   "red_share": 0.994,
+   "grade": "A"
   },
   {
-   "tid": 297,
-   "lane": 2,
-   "frame": 110,
-   "red_share": 0.992,
-   "grade": "Extra"
+   "tid": 289,
+   "line": 5,
+   "counted_frame": 99,
+   "graded_frame": 112,
+   "reads": 14,
+   "red_share": 0.988,
+   "grade": "A"
   },
   {
-   "tid": 224,
-   "lane": 3,
-   "frame": 112,
-   "red_share": 0.956,
-   "grade": "Extra"
+   "tid": 100,
+   "line": 1,
+   "counted_frame": 34,
+   "graded_frame": 113,
+   "reads": 62,
+   "red_share": 0.963,
+   "grade": "A"
   },
   {
-   "tid": 293,
-   "lane": 5,
-   "frame": 112,
+   "tid": 256,
+   "line": 5,
+   "counted_frame": 89,
+   "graded_frame": 113,
+   "reads": 32,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
-   "tid": 267,
-   "lane": 4,
-   "frame": 113,
-   "red_share": 0.731,
-   "grade": "Kelas I"
+   "tid": 197,
+   "line": 4,
+   "counted_frame": 77,
+   "graded_frame": 117,
+   "reads": 67,
+   "red_share": 0.997,
+   "grade": "A"
   },
   {
-   "tid": 248,
-   "lane": 5,
-   "frame": 115,
-   "red_share": 1.0,
-   "grade": "Extra"
+   "tid": 246,
+   "line": 2,
+   "counted_frame": 85,
+   "graded_frame": 117,
+   "reads": 36,
+   "red_share": 0.988,
+   "grade": "A"
+  },
+  {
+   "tid": 237,
+   "line": 1,
+   "counted_frame": 83,
+   "graded_frame": 119,
+   "reads": 21,
+   "red_share": 0.882,
+   "grade": "B"
+  },
+  {
+   "tid": 242,
+   "line": 1,
+   "counted_frame": 100,
+   "graded_frame": 119,
+   "reads": 26,
+   "red_share": 0.984,
+   "grade": "A"
   },
   {
    "tid": 307,
-   "lane": 2,
-   "frame": 116,
-   "red_share": 0.957,
-   "grade": "Extra"
-  },
-  {
-   "tid": 310,
-   "lane": 5,
-   "frame": 118,
-   "red_share": 0.933,
-   "grade": "Extra"
+   "line": 5,
+   "counted_frame": 108,
+   "graded_frame": 120,
+   "reads": 13,
+   "red_share": 0.989,
+   "grade": "A"
   },
   {
    "tid": 342,
-   "lane": 3,
-   "frame": 118,
+   "line": 4,
+   "counted_frame": 115,
+   "graded_frame": 120,
+   "reads": 6,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
-   "tid": 324,
-   "lane": 4,
-   "frame": 119,
+   "tid": 333,
+   "line": 2,
+   "counted_frame": 113,
+   "graded_frame": 121,
+   "reads": 6,
+   "red_share": 0.79,
+   "grade": "B"
+  },
+  {
+   "tid": 294,
+   "line": 2,
+   "counted_frame": 101,
+   "graded_frame": 127,
+   "reads": 37,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
-   "tid": 350,
-   "lane": 5,
-   "frame": 122,
-   "red_share": 1.0,
-   "grade": "Extra"
+   "tid": 334,
+   "line": 3,
+   "counted_frame": 113,
+   "graded_frame": 127,
+   "reads": 4,
+   "red_share": 0.998,
+   "grade": "A"
   },
   {
-   "tid": 291,
-   "lane": 3,
-   "frame": 124,
-   "red_share": 0.829,
-   "grade": "Kelas I"
+   "tid": 173,
+   "line": 1,
+   "counted_frame": 69,
+   "graded_frame": 129,
+   "reads": 41,
+   "red_share": 0.84,
+   "grade": "B"
   },
   {
-   "tid": 301,
-   "lane": 5,
-   "frame": 125,
-   "red_share": 1.0,
-   "grade": "Extra"
-  },
-  {
-   "tid": 272,
-   "lane": 4,
-   "frame": 126,
-   "red_share": 0.517,
-   "grade": "Kelas II"
+   "tid": 267,
+   "line": 3,
+   "counted_frame": 92,
+   "graded_frame": 129,
+   "reads": 55,
+   "red_share": 0.823,
+   "grade": "B"
   },
   {
    "tid": 338,
-   "lane": 3,
-   "frame": 127,
+   "line": 4,
+   "counted_frame": 114,
+   "graded_frame": 130,
+   "reads": 15,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
-   "tid": 329,
-   "lane": 5,
-   "frame": 128,
+   "tid": 291,
+   "line": 4,
+   "counted_frame": 108,
+   "graded_frame": 132,
+   "reads": 42,
+   "red_share": 0.997,
+   "grade": "A"
+  },
+  {
+   "tid": 375,
+   "line": 2,
+   "counted_frame": 127,
+   "graded_frame": 132,
+   "reads": 6,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
+  },
+  {
+   "tid": 259,
+   "line": 1,
+   "counted_frame": 90,
+   "graded_frame": 133,
+   "reads": 31,
+   "red_share": 0.875,
+   "grade": "B"
+  },
+  {
+   "tid": 254,
+   "line": 4,
+   "counted_frame": 118,
+   "graded_frame": 133,
+   "reads": 47,
+   "red_share": 0.838,
+   "grade": "B"
   },
   {
    "tid": 373,
-   "lane": 3,
-   "frame": 131,
-   "red_share": 0.741,
-   "grade": "Kelas I"
-  },
-  {
-   "tid": 344,
-   "lane": 2,
-   "frame": 132,
-   "red_share": 0.981,
-   "grade": "Extra"
-  },
-  {
-   "tid": 362,
-   "lane": 5,
-   "frame": 132,
-   "red_share": 0.712,
-   "grade": "Kelas I"
+   "line": 4,
+   "counted_frame": 125,
+   "graded_frame": 133,
+   "reads": 8,
+   "red_share": 0.911,
+   "grade": "A"
   },
   {
    "tid": 264,
-   "lane": 4,
-   "frame": 133,
-   "red_share": 0.974,
-   "grade": "Extra"
+   "line": 3,
+   "counted_frame": 101,
+   "graded_frame": 135,
+   "reads": 45,
+   "red_share": 0.989,
+   "grade": "A"
   },
   {
-   "tid": 378,
-   "lane": 5,
-   "frame": 135,
+   "tid": 358,
+   "line": 2,
+   "counted_frame": 120,
+   "graded_frame": 139,
+   "reads": 19,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
-   "tid": 368,
-   "lane": 5,
-   "frame": 138,
-   "red_share": 0.998,
-   "grade": "Extra"
+   "tid": 344,
+   "line": 5,
+   "counted_frame": 125,
+   "graded_frame": 139,
+   "reads": 24,
+   "red_share": 0.982,
+   "grade": "A"
   },
   {
-   "tid": 371,
-   "lane": 5,
-   "frame": 141,
-   "red_share": 0.918,
-   "grade": "Extra"
+   "tid": 231,
+   "line": 2,
+   "counted_frame": 83,
+   "graded_frame": 140,
+   "reads": 34,
+   "red_share": 1.0,
+   "grade": "A"
+  },
+  {
+   "tid": 401,
+   "line": 6,
+   "counted_frame": 138,
+   "graded_frame": 141,
+   "reads": 8,
+   "red_share": 1.0,
+   "grade": "A"
   },
   {
    "tid": 308,
-   "lane": 4,
-   "frame": 143,
-   "red_share": 0.957,
-   "grade": "Extra"
+   "line": 3,
+   "counted_frame": 119,
+   "graded_frame": 145,
+   "reads": 27,
+   "red_share": 0.989,
+   "grade": "A"
   },
   {
-   "tid": 277,
-   "lane": 3,
-   "frame": 144,
-   "red_share": 0.874,
-   "grade": "Kelas I"
+   "tid": 154,
+   "line": 4,
+   "counted_frame": 90,
+   "graded_frame": 146,
+   "reads": 91,
+   "red_share": 0.961,
+   "grade": "A"
   },
   {
-   "tid": 403,
-   "lane": 5,
-   "frame": 145,
-   "red_share": 0.991,
-   "grade": "Extra"
+   "tid": 407,
+   "line": 4,
+   "counted_frame": 137,
+   "graded_frame": 146,
+   "reads": 9,
+   "red_share": 0.964,
+   "grade": "A"
   },
   {
-   "tid": 408,
-   "lane": 2,
-   "frame": 145,
-   "red_share": 0.994,
-   "grade": "Extra"
+   "tid": 410,
+   "line": 4,
+   "counted_frame": 138,
+   "graded_frame": 146,
+   "reads": 6,
+   "red_share": 1.0,
+   "grade": "A"
+  },
+  {
+   "tid": 260,
+   "line": 1,
+   "counted_frame": 90,
+   "graded_frame": 147,
+   "reads": 115,
+   "red_share": 0.999,
+   "grade": "A"
   },
   {
    "tid": 296,
-   "lane": 4,
-   "frame": 146,
-   "red_share": 1.0,
-   "grade": "Extra"
+   "line": 3,
+   "counted_frame": 108,
+   "graded_frame": 148,
+   "reads": 79,
+   "red_share": 0.974,
+   "grade": "A"
+  },
+  {
+   "tid": 306,
+   "line": 4,
+   "counted_frame": 138,
+   "graded_frame": 148,
+   "reads": 38,
+   "red_share": 0.865,
+   "grade": "B"
+  },
+  {
+   "tid": 316,
+   "line": 1,
+   "counted_frame": 110,
+   "graded_frame": 149,
+   "reads": 69,
+   "red_share": 0.985,
+   "grade": "A"
+  },
+  {
+   "tid": 343,
+   "line": 1,
+   "counted_frame": 142,
+   "graded_frame": 149,
+   "reads": 27,
+   "red_share": 0.806,
+   "grade": "B"
   },
   {
    "tid": 379,
-   "lane": 5,
-   "frame": 148,
-   "red_share": 0.888,
-   "grade": "Kelas I"
+   "line": 2,
+   "counted_frame": 128,
+   "graded_frame": 150,
+   "reads": 23,
+   "red_share": 0.976,
+   "grade": "A"
   },
   {
-   "tid": 449,
-   "lane": 4,
-   "frame": 152,
+   "tid": 408,
+   "line": 5,
+   "counted_frame": 137,
+   "graded_frame": 150,
+   "reads": 14,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
-   "tid": 413,
-   "lane": 3,
-   "frame": 154,
+   "tid": 450,
+   "line": 6,
+   "counted_frame": 151,
+   "graded_frame": 151,
+   "reads": 1,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
    "tid": 405,
-   "lane": 5,
-   "frame": 155,
+   "line": 2,
+   "counted_frame": 135,
+   "graded_frame": 156,
+   "reads": 31,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
-   "tid": 433,
-   "lane": 2,
-   "frame": 155,
+   "tid": 436,
+   "line": 4,
+   "counted_frame": 148,
+   "graded_frame": 156,
+   "reads": 8,
+   "red_share": 0.692,
+   "grade": "B"
+  },
+  {
+   "tid": 413,
+   "line": 4,
+   "counted_frame": 138,
+   "graded_frame": 157,
+   "reads": 18,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
    "tid": 372,
-   "lane": 4,
-   "frame": 156,
-   "red_share": 0.989,
-   "grade": "Extra"
+   "line": 3,
+   "counted_frame": 125,
+   "graded_frame": 158,
+   "reads": 40,
+   "red_share": 0.992,
+   "grade": "A"
+  },
+  {
+   "tid": 412,
+   "line": 3,
+   "counted_frame": 138,
+   "graded_frame": 162,
+   "reads": 16,
+   "red_share": 1.0,
+   "grade": "A"
   },
   {
    "tid": 420,
-   "lane": 5,
-   "frame": 158,
-   "red_share": 0.992,
-   "grade": "Extra"
+   "line": 2,
+   "counted_frame": 140,
+   "graded_frame": 163,
+   "reads": 37,
+   "red_share": 0.937,
+   "grade": "A"
   },
   {
-   "tid": 454,
-   "lane": 4,
-   "frame": 159,
+   "tid": 468,
+   "line": 3,
+   "counted_frame": 156,
+   "graded_frame": 164,
+   "reads": 9,
    "red_share": 1.0,
-   "grade": "Extra"
-  },
-  {
-   "tid": 457,
-   "lane": 2,
-   "frame": 160,
-   "red_share": 1.0,
-   "grade": "Extra"
-  },
-  {
-   "tid": 482,
-   "lane": 3,
-   "frame": 160,
-   "red_share": 1.0,
-   "grade": "Extra"
-  },
-  {
-   "tid": 427,
-   "lane": 5,
-   "frame": 161,
-   "red_share": 0.751,
-   "grade": "Kelas I"
-  },
-  {
-   "tid": 484,
-   "lane": 3,
-   "frame": 163,
-   "red_share": 0.712,
-   "grade": "Kelas I"
+   "grade": "A"
   },
   {
    "tid": 415,
-   "lane": 5,
-   "frame": 165,
+   "line": 2,
+   "counted_frame": 139,
+   "graded_frame": 166,
+   "reads": 26,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
-   "tid": 480,
-   "lane": 2,
-   "frame": 166,
-   "red_share": 0.998,
-   "grade": "Extra"
+   "tid": 433,
+   "line": 5,
+   "counted_frame": 147,
+   "graded_frame": 167,
+   "reads": 31,
+   "red_share": 1.0,
+   "grade": "A"
+  },
+  {
+   "tid": 384,
+   "line": 4,
+   "counted_frame": 162,
+   "graded_frame": 167,
+   "reads": 24,
+   "red_share": 0.994,
+   "grade": "A"
   },
   {
    "tid": 446,
-   "lane": 3,
-   "frame": 167,
-   "red_share": 0.976,
-   "grade": "Extra"
+   "line": 4,
+   "counted_frame": 150,
+   "graded_frame": 170,
+   "reads": 18,
+   "red_share": 0.99,
+   "grade": "A"
   },
   {
-   "tid": 440,
-   "lane": 5,
-   "frame": 168,
+   "tid": 453,
+   "line": 2,
+   "counted_frame": 152,
+   "graded_frame": 170,
+   "reads": 5,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
+  },
+  {
+   "tid": 483,
+   "line": 4,
+   "counted_frame": 163,
+   "graded_frame": 171,
+   "reads": 11,
+   "red_share": 0.948,
+   "grade": "A"
+  },
+  {
+   "tid": 281,
+   "line": 1,
+   "counted_frame": 119,
+   "graded_frame": 172,
+   "reads": 119,
+   "red_share": 0.952,
+   "grade": "A"
   },
   {
    "tid": 404,
-   "lane": 4,
-   "frame": 169,
-   "red_share": 0.998,
-   "grade": "Extra"
+   "line": 3,
+   "counted_frame": 140,
+   "graded_frame": 172,
+   "reads": 39,
+   "red_share": 1.0,
+   "grade": "A"
   },
   {
-   "tid": 359,
-   "lane": 4,
-   "frame": 172,
-   "red_share": 0.933,
-   "grade": "Extra"
+   "tid": 480,
+   "line": 5,
+   "counted_frame": 158,
+   "graded_frame": 172,
+   "reads": 15,
+   "red_share": 1.0,
+   "grade": "A"
+  },
+  {
+   "tid": 380,
+   "line": 3,
+   "counted_frame": 128,
+   "graded_frame": 175,
+   "reads": 61,
+   "red_share": 0.99,
+   "grade": "A"
+  },
+  {
+   "tid": 522,
+   "line": 2,
+   "counted_frame": 172,
+   "graded_frame": 176,
+   "reads": 7,
+   "red_share": 1.0,
+   "grade": "A"
   },
   {
    "tid": 499,
-   "lane": 2,
-   "frame": 172,
+   "line": 5,
+   "counted_frame": 166,
+   "graded_frame": 177,
+   "reads": 12,
    "red_share": 1.0,
-   "grade": "Extra"
-  },
-  {
-   "tid": 478,
-   "lane": 3,
-   "frame": 173,
-   "red_share": 1.0,
-   "grade": "Extra"
-  },
-  {
-   "tid": 470,
-   "lane": 5,
-   "frame": 174,
-   "red_share": 0.998,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
    "tid": 386,
-   "lane": 3,
-   "frame": 177,
+   "line": 4,
+   "counted_frame": 151,
+   "graded_frame": 178,
+   "reads": 55,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
+  },
+  {
+   "tid": 441,
+   "line": 1,
+   "counted_frame": 149,
+   "graded_frame": 180,
+   "reads": 30,
+   "red_share": 0.884,
+   "grade": "B"
+  },
+  {
+   "tid": 501,
+   "line": 4,
+   "counted_frame": 169,
+   "graded_frame": 180,
+   "reads": 15,
+   "red_share": 0.986,
+   "grade": "A"
   },
   {
    "tid": 495,
-   "lane": 2,
-   "frame": 177,
-   "red_share": 0.991,
-   "grade": "Extra"
-  },
-  {
-   "tid": 490,
-   "lane": 5,
-   "frame": 178,
-   "red_share": 1.0,
-   "grade": "Extra"
-  },
-  {
-   "tid": 481,
-   "lane": 3,
-   "frame": 179,
-   "red_share": 0.989,
-   "grade": "Extra"
-  },
-  {
-   "tid": 486,
-   "lane": 4,
-   "frame": 180,
+   "line": 5,
+   "counted_frame": 165,
+   "graded_frame": 182,
+   "reads": 15,
    "red_share": 0.998,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
-   "tid": 554,
-   "lane": 3,
-   "frame": 184,
-   "red_share": 0.88,
-   "grade": "Kelas I"
-  },
-  {
-   "tid": 532,
-   "lane": 5,
-   "frame": 185,
+   "tid": 516,
+   "line": 2,
+   "counted_frame": 173,
+   "graded_frame": 182,
+   "reads": 11,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
+  },
+  {
+   "tid": 466,
+   "line": 4,
+   "counted_frame": 155,
+   "graded_frame": 183,
+   "reads": 47,
+   "red_share": 1.0,
+   "grade": "A"
+  },
+  {
+   "tid": 437,
+   "line": 1,
+   "counted_frame": 158,
+   "graded_frame": 183,
+   "reads": 59,
+   "red_share": 1.0,
+   "grade": "A"
+  },
+  {
+   "tid": 474,
+   "line": 3,
+   "counted_frame": 157,
+   "graded_frame": 185,
+   "reads": 24,
+   "red_share": 0.999,
+   "grade": "A"
+  },
+  {
+   "tid": 510,
+   "line": 3,
+   "counted_frame": 179,
+   "graded_frame": 187,
+   "reads": 16,
+   "red_share": 1.0,
+   "grade": "A"
   },
   {
    "tid": 497,
-   "lane": 5,
-   "frame": 188,
-   "red_share": 0.993,
-   "grade": "Extra"
+   "line": 3,
+   "counted_frame": 166,
+   "graded_frame": 190,
+   "reads": 40,
+   "red_share": 1.0,
+   "grade": "A"
   },
   {
-   "tid": 557,
-   "lane": 4,
-   "frame": 189,
-   "red_share": 0.982,
-   "grade": "Extra"
+   "tid": 575,
+   "line": 5,
+   "counted_frame": 187,
+   "graded_frame": 190,
+   "reads": 4,
+   "red_share": 0.772,
+   "grade": "B"
   },
   {
-   "tid": 519,
-   "lane": 3,
-   "frame": 190,
-   "red_share": 0.957,
-   "grade": "Extra"
+   "tid": 520,
+   "line": 2,
+   "counted_frame": 169,
+   "graded_frame": 192,
+   "reads": 15,
+   "red_share": 1.0,
+   "grade": "A"
   },
   {
    "tid": 518,
-   "lane": 5,
-   "frame": 191,
+   "line": 2,
+   "counted_frame": 169,
+   "graded_frame": 193,
+   "reads": 20,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
-   "tid": 549,
-   "lane": 2,
-   "frame": 191,
-   "red_share": 0.859,
-   "grade": "Kelas I"
+   "tid": 519,
+   "line": 4,
+   "counted_frame": 169,
+   "graded_frame": 193,
+   "reads": 23,
+   "red_share": 0.982,
+   "grade": "A"
   },
   {
    "tid": 509,
-   "lane": 4,
-   "frame": 193,
+   "line": 3,
+   "counted_frame": 175,
+   "graded_frame": 195,
+   "reads": 22,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
-   "tid": 595,
-   "lane": 3,
-   "frame": 193,
+   "tid": 537,
+   "line": 4,
+   "counted_frame": 171,
+   "graded_frame": 196,
+   "reads": 36,
+   "red_share": 0.996,
+   "grade": "A"
+  },
+  {
+   "tid": 587,
+   "line": 3,
+   "counted_frame": 189,
+   "graded_frame": 196,
+   "reads": 6,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
+  },
+  {
+   "tid": 588,
+   "line": 2,
+   "counted_frame": 193,
+   "graded_frame": 196,
+   "reads": 5,
+   "red_share": 0.957,
+   "grade": "A"
+  },
+  {
+   "tid": 601,
+   "line": 2,
+   "counted_frame": 193,
+   "graded_frame": 196,
+   "reads": 8,
+   "red_share": 0.904,
+   "grade": "A"
+  },
+  {
+   "tid": 508,
+   "line": 3,
+   "counted_frame": 168,
+   "graded_frame": 197,
+   "reads": 23,
+   "red_share": 1.0,
+   "grade": "A"
+  },
+  {
+   "tid": 549,
+   "line": 5,
+   "counted_frame": 179,
+   "graded_frame": 197,
+   "reads": 19,
+   "red_share": 0.878,
+   "grade": "B"
+  },
+  {
+   "tid": 367,
+   "line": 1,
+   "counted_frame": 130,
+   "graded_frame": 198,
+   "reads": 153,
+   "red_share": 0.977,
+   "grade": "A"
   },
   {
    "tid": 552,
-   "lane": 3,
-   "frame": 197,
-   "red_share": 0.961,
-   "grade": "Extra"
+   "line": 4,
+   "counted_frame": 181,
+   "graded_frame": 199,
+   "reads": 18,
+   "red_share": 0.988,
+   "grade": "A"
   },
   {
-   "tid": 543,
-   "lane": 5,
-   "frame": 198,
+   "tid": 606,
+   "line": 3,
+   "counted_frame": 195,
+   "graded_frame": 199,
+   "reads": 6,
    "red_share": 1.0,
-   "grade": "Extra"
-  },
-  {
-   "tid": 585,
-   "lane": 2,
-   "frame": 198,
-   "red_share": 0.998,
-   "grade": "Extra"
-  },
-  {
-   "tid": 571,
-   "lane": 4,
-   "frame": 199,
-   "red_share": 1.0,
-   "grade": "Extra"
-  },
-  {
-   "tid": 597,
-   "lane": 5,
-   "frame": 201,
-   "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
    "tid": 581,
-   "lane": 3,
-   "frame": 203,
-   "red_share": 0.999,
-   "grade": "Extra"
+   "line": 4,
+   "counted_frame": 188,
+   "graded_frame": 203,
+   "reads": 15,
+   "red_share": 1.0,
+   "grade": "A"
+  },
+  {
+   "tid": 585,
+   "line": 5,
+   "counted_frame": 189,
+   "graded_frame": 204,
+   "reads": 16,
+   "red_share": 1.0,
+   "grade": "A"
   },
   {
    "tid": 545,
-   "lane": 5,
-   "frame": 204,
+   "line": 2,
+   "counted_frame": 176,
+   "graded_frame": 206,
+   "reads": 28,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
-   "tid": 558,
-   "lane": 4,
-   "frame": 205,
-   "red_share": 0.984,
-   "grade": "Extra"
-  },
-  {
-   "tid": 580,
-   "lane": 3,
-   "frame": 206,
-   "red_share": 0.688,
-   "grade": "Kelas I"
-  },
-  {
-   "tid": 627,
-   "lane": 2,
-   "frame": 208,
+   "tid": 568,
+   "line": 2,
+   "counted_frame": 192,
+   "graded_frame": 206,
+   "reads": 6,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
-   "tid": 629,
-   "lane": 4,
-   "frame": 209,
-   "red_share": 1.0,
-   "grade": "Extra"
+   "tid": 624,
+   "line": 4,
+   "counted_frame": 199,
+   "graded_frame": 206,
+   "reads": 5,
+   "red_share": 0.975,
+   "grade": "A"
   },
   {
-   "tid": 651,
-   "lane": 3,
-   "frame": 210,
+   "tid": 166,
+   "line": 1,
+   "counted_frame": 59,
+   "graded_frame": 207,
+   "reads": 123,
+   "red_share": 0.974,
+   "grade": "A"
+  },
+  {
+   "tid": 512,
+   "line": 6,
+   "counted_frame": 167,
+   "graded_frame": 210,
+   "reads": 43,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
+  },
+  {
+   "tid": 643,
+   "line": 2,
+   "counted_frame": 206,
+   "graded_frame": 210,
+   "reads": 2,
+   "red_share": 0.982,
+   "grade": "A"
+  },
+  {
+   "tid": 460,
+   "line": 1,
+   "counted_frame": 179,
+   "graded_frame": 211,
+   "reads": 54,
+   "red_share": 1.0,
+   "grade": "A"
+  },
+  {
+   "tid": 506,
+   "line": 4,
+   "counted_frame": 167,
+   "graded_frame": 213,
+   "reads": 37,
+   "red_share": 0.985,
+   "grade": "A"
   },
   {
    "tid": 566,
-   "lane": 5,
-   "frame": 211,
+   "line": 2,
+   "counted_frame": 184,
+   "graded_frame": 213,
+   "reads": 28,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
-   "tid": 609,
-   "lane": 3,
-   "frame": 214,
+   "tid": 580,
+   "line": 4,
+   "counted_frame": 188,
+   "graded_frame": 216,
+   "reads": 40,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
-   "tid": 647,
-   "lane": 2,
-   "frame": 214,
-   "red_share": 0.994,
-   "grade": "Extra"
+   "tid": 664,
+   "line": 3,
+   "counted_frame": 210,
+   "graded_frame": 217,
+   "reads": 4,
+   "red_share": 0.982,
+   "grade": "A"
   },
   {
    "tid": 593,
-   "lane": 4,
-   "frame": 215,
-   "red_share": 0.989,
-   "grade": "Extra"
+   "line": 3,
+   "counted_frame": 192,
+   "graded_frame": 218,
+   "reads": 25,
+   "red_share": 1.0,
+   "grade": "A"
   },
   {
    "tid": 598,
-   "lane": 5,
-   "frame": 217,
-   "red_share": 0.991,
-   "grade": "Extra"
+   "line": 2,
+   "counted_frame": 193,
+   "graded_frame": 220,
+   "reads": 28,
+   "red_share": 0.998,
+   "grade": "A"
   },
   {
    "tid": 589,
-   "lane": 4,
-   "frame": 219,
-   "red_share": 0.926,
-   "grade": "Extra"
+   "line": 3,
+   "counted_frame": 198,
+   "graded_frame": 221,
+   "reads": 27,
+   "red_share": 0.999,
+   "grade": "A"
+  },
+  {
+   "tid": 627,
+   "line": 5,
+   "counted_frame": 200,
+   "graded_frame": 222,
+   "reads": 32,
+   "red_share": 1.0,
+   "grade": "A"
+  },
+  {
+   "tid": 547,
+   "line": 1,
+   "counted_frame": 191,
+   "graded_frame": 223,
+   "reads": 33,
+   "red_share": 1.0,
+   "grade": "A"
+  },
+  {
+   "tid": 523,
+   "line": 2,
+   "counted_frame": 179,
+   "graded_frame": 227,
+   "reads": 33,
+   "red_share": 0.998,
+   "grade": "A"
+  },
+  {
+   "tid": 673,
+   "line": 3,
+   "counted_frame": 216,
+   "graded_frame": 228,
+   "reads": 12,
+   "red_share": 1.0,
+   "grade": "A"
+  },
+  {
+   "tid": 447,
+   "line": 1,
+   "counted_frame": 151,
+   "graded_frame": 229,
+   "reads": 77,
+   "red_share": 0.959,
+   "grade": "A"
   },
   {
    "tid": 650,
-   "lane": 3,
-   "frame": 219,
-   "red_share": 0.773,
-   "grade": "Kelas I"
+   "line": 4,
+   "counted_frame": 207,
+   "graded_frame": 229,
+   "reads": 34,
+   "red_share": 0.998,
+   "grade": "A"
   },
   {
-   "tid": 657,
-   "lane": 4,
-   "frame": 225,
-   "red_share": 1.0,
-   "grade": "Extra"
+   "tid": 659,
+   "line": 2,
+   "counted_frame": 211,
+   "graded_frame": 229,
+   "reads": 24,
+   "red_share": 0.792,
+   "grade": "B"
   },
   {
-   "tid": 660,
-   "lane": 3,
-   "frame": 226,
-   "red_share": 1.0,
-   "grade": "Extra"
-  },
-  {
-   "tid": 706,
-   "lane": 5,
-   "frame": 227,
-   "red_share": 0.941,
-   "grade": "Extra"
-  },
-  {
-   "tid": 644,
-   "lane": 2,
-   "frame": 228,
-   "red_share": 0.994,
-   "grade": "Extra"
-  },
-  {
-   "tid": 721,
-   "lane": 4,
-   "frame": 228,
-   "red_share": 1.0,
-   "grade": "Extra"
+   "tid": 708,
+   "line": 3,
+   "counted_frame": 222,
+   "graded_frame": 229,
+   "reads": 8,
+   "red_share": 0.998,
+   "grade": "A"
   },
   {
    "tid": 620,
-   "lane": 3,
-   "frame": 230,
+   "line": 4,
+   "counted_frame": 207,
+   "graded_frame": 232,
+   "reads": 34,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
-   "tid": 695,
-   "lane": 4,
-   "frame": 232,
+   "tid": 719,
+   "line": 3,
+   "counted_frame": 225,
+   "graded_frame": 232,
+   "reads": 3,
+   "red_share": 0.996,
+   "grade": "A"
+  },
+  {
+   "tid": 558,
+   "line": 3,
+   "counted_frame": 183,
+   "graded_frame": 234,
+   "reads": 45,
+   "red_share": 0.964,
+   "grade": "A"
+  },
+  {
+   "tid": 590,
+   "line": 1,
+   "counted_frame": 191,
+   "graded_frame": 234,
+   "reads": 38,
+   "red_share": 0.996,
+   "grade": "A"
+  },
+  {
+   "tid": 644,
+   "line": 5,
+   "counted_frame": 220,
+   "graded_frame": 234,
+   "reads": 30,
+   "red_share": 0.998,
+   "grade": "A"
+  },
+  {
+   "tid": 680,
+   "line": 6,
+   "counted_frame": 215,
+   "graded_frame": 235,
+   "reads": 20,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
    "tid": 669,
-   "lane": 5,
-   "frame": 234,
+   "line": 2,
+   "counted_frame": 212,
+   "graded_frame": 236,
+   "reads": 27,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
-   "tid": 699,
-   "lane": 4,
-   "frame": 235,
-   "red_share": 0.411,
-   "grade": "Kelas II"
+   "tid": 681,
+   "line": 3,
+   "counted_frame": 216,
+   "graded_frame": 238,
+   "reads": 22,
+   "red_share": 0.481,
+   "grade": "C"
   },
   {
-   "tid": 734,
-   "lane": 2,
-   "frame": 235,
-   "red_share": 0.978,
-   "grade": "Extra"
+   "tid": 551,
+   "line": 1,
+   "counted_frame": 181,
+   "graded_frame": 239,
+   "reads": 84,
+   "red_share": 0.995,
+   "grade": "A"
   },
   {
    "tid": 654,
-   "lane": 3,
-   "frame": 236,
+   "line": 4,
+   "counted_frame": 207,
+   "graded_frame": 239,
+   "reads": 41,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
-   "tid": 720,
-   "lane": 5,
-   "frame": 237,
+   "tid": 679,
+   "line": 4,
+   "counted_frame": 215,
+   "graded_frame": 239,
+   "reads": 37,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
-   "tid": 758,
-   "lane": 5,
-   "frame": 241,
-   "red_share": 0.696,
-   "grade": "Kelas I"
-  },
-  {
-   "tid": 743,
-   "lane": 4,
-   "frame": 242,
+   "tid": 683,
+   "line": 2,
+   "counted_frame": 216,
+   "graded_frame": 239,
+   "reads": 31,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
   },
   {
-   "tid": 748,
-   "lane": 2,
-   "frame": 242,
-   "red_share": 0.977,
-   "grade": "Extra"
+   "tid": 701,
+   "line": 3,
+   "counted_frame": 223,
+   "graded_frame": 239,
+   "reads": 19,
+   "red_share": 1.0,
+   "grade": "A"
+  },
+  {
+   "tid": 653,
+   "line": 4,
+   "counted_frame": 218,
+   "graded_frame": 240,
+   "reads": 33,
+   "red_share": 1.0,
+   "grade": "A"
+  },
+  {
+   "tid": 572,
+   "line": 1,
+   "counted_frame": 205,
+   "graded_frame": 242,
+   "reads": 73,
+   "red_share": 0.976,
+   "grade": "A"
+  },
+  {
+   "tid": 723,
+   "line": 1,
+   "counted_frame": 229,
+   "graded_frame": 242,
+   "reads": 12,
+   "red_share": 0.975,
+   "grade": "A"
+  },
+  {
+   "tid": 515,
+   "line": 1,
+   "counted_frame": 169,
+   "graded_frame": 243,
+   "reads": 66,
+   "red_share": 0.999,
+   "grade": "A"
+  },
+  {
+   "tid": 710,
+   "line": 1,
+   "counted_frame": 222,
+   "graded_frame": 243,
+   "reads": 15,
+   "red_share": 0.952,
+   "grade": "A"
+  },
+  {
+   "tid": 755,
+   "line": 1,
+   "counted_frame": 238,
+   "graded_frame": 243,
+   "reads": 6,
+   "red_share": 0.996,
+   "grade": "A"
+  },
+  {
+   "tid": 491,
+   "line": 1,
+   "counted_frame": 185,
+   "graded_frame": 244,
+   "reads": 67,
+   "red_share": 0.999,
+   "grade": "A"
+  },
+  {
+   "tid": 619,
+   "line": 3,
+   "counted_frame": 208,
+   "graded_frame": 244,
+   "reads": 41,
+   "red_share": 0.81,
+   "grade": "B"
+  },
+  {
+   "tid": 657,
+   "line": 3,
+   "counted_frame": 208,
+   "graded_frame": 244,
+   "reads": 47,
+   "red_share": 0.999,
+   "grade": "A"
+  },
+  {
+   "tid": 655,
+   "line": 1,
+   "counted_frame": 213,
+   "graded_frame": 244,
+   "reads": 44,
+   "red_share": 0.976,
+   "grade": "A"
+  },
+  {
+   "tid": 727,
+   "line": 1,
+   "counted_frame": 229,
+   "graded_frame": 244,
+   "reads": 11,
+   "red_share": 0.984,
+   "grade": "A"
+  },
+  {
+   "tid": 734,
+   "line": 5,
+   "counted_frame": 231,
+   "graded_frame": 244,
+   "reads": 19,
+   "red_share": 0.985,
+   "grade": "A"
+  },
+  {
+   "tid": 686,
+   "line": 2,
+   "counted_frame": 232,
+   "graded_frame": 244,
+   "reads": 3,
+   "red_share": 1.0,
+   "grade": "A"
+  },
+  {
+   "tid": 632,
+   "line": 3,
+   "counted_frame": 234,
+   "graded_frame": 244,
+   "reads": 39,
+   "red_share": 1.0,
+   "grade": "A"
+  },
+  {
+   "tid": 742,
+   "line": 2,
+   "counted_frame": 234,
+   "graded_frame": 244,
+   "reads": 14,
+   "red_share": 0.974,
+   "grade": "A"
+  },
+  {
+   "tid": 646,
+   "line": 4,
+   "counted_frame": 237,
+   "graded_frame": 244,
+   "reads": 38,
+   "red_share": 0.558,
+   "grade": "C"
   },
   {
    "tid": 753,
-   "lane": 3,
-   "frame": 242,
-   "red_share": 0.997,
-   "grade": "Extra"
+   "line": 4,
+   "counted_frame": 238,
+   "graded_frame": 244,
+   "reads": 12,
+   "red_share": 1.0,
+   "grade": "A"
   },
   {
-   "tid": 765,
-   "lane": 5,
-   "frame": 244,
+   "tid": 759,
+   "line": 4,
+   "counted_frame": 240,
+   "graded_frame": 244,
+   "reads": 5,
    "red_share": 1.0,
-   "grade": "Extra"
+   "grade": "A"
   }
  ]
 }
