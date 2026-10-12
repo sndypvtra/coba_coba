@@ -26,15 +26,15 @@ standarnya siapa dan siapa yang mengatur; apa buktinya; apakah cocok dengan kame
 
 | # | Slide | Gambar (folder `pages/`) | Yang ditonjolkan |
 |---|---|---|---|
-| 1 | Sampul | `03_dashboard_tv_tray.png` | Pack Count QC · Jumlah isi setiap tray dan kardus sebelum disegel, lengkap dengan slot yang kosong dan penyebabnya. |
+| 1 | Sampul | `PC_03_dashboard_tv_tray.png` | Pack Count QC · Jumlah isi setiap tray dan kardus sebelum disegel, lengkap dengan slot yang kosong dan penyebabnya. |
 | 2 | Masalah | – | 4 masalah di line hari ini |
 | 3 | Solusi & cara kerja | – | alur kamera → edge AI box → web app → tindakan di line |
-| 4 | Fitur 1/6 · Ringkasan | `01_ringkasan.png` | Tray dan kardus kurang isi ditahan sebelum disegel |
-| 5 | Fitur 2/6 · Live Monitoring | `02_live_monitoring.png` | Setiap tray dan kardus terlihat dihitung, langsung di layar |
-| 6 | Fitur 3/6 · Dashboard TV | `03_dashboard_tv_tray.png` + `04_dashboard_tv_packing.png` kecil | Setiap tray dihitung, setiap slot kosong ditandai |
-| 7 | Fitur 4/6 · Detail Reject | `05_detail_reject.png` | Setiap reject punya bukti, penyebab, dan tindakan perbaikan |
-| 8 | Fitur 5/6 · Spesifikasi Kemasan | `06_spesifikasi_kemasan.png` | Layout slot dan aturan isi diatur per SKU |
-| 9 | Fitur 6/6 · Kamera, Alert & Integrasi | `07_kamera_alert_integrasi.png` | Kemasan kurang isi dialihkan otomatis, orang yang tepat langsung tahu |
+| 4 | Fitur 1/6 · Ringkasan | `PC_01_ringkasan.png` | Tray dan kardus kurang isi ditahan sebelum disegel |
+| 5 | Fitur 2/6 · Live Monitoring | `PC_02_live_monitoring.png` | Setiap tray dan kardus terlihat dihitung, langsung di layar |
+| 6 | Fitur 3/6 · Dashboard TV | `PC_03_dashboard_tv_tray.png` + `PC_04_dashboard_tv_packing.png` kecil | Setiap tray dihitung, setiap slot kosong ditandai |
+| 7 | Fitur 4/6 · Detail Reject | `PC_05_detail_reject.png` | Setiap reject punya bukti, penyebab, dan tindakan perbaikan |
+| 8 | Fitur 5/6 · Spesifikasi Kemasan | `PC_06_spesifikasi_kemasan.png` | Layout slot dan aturan isi diatur per SKU |
+| 9 | Fitur 6/6 · Kamera, Alert & Integrasi | `PC_07_kamera_alert_integrasi.png` | Kemasan kurang isi dialihkan otomatis, orang yang tepat langsung tahu |
 | 10 | Ringkasan manfaat | – | 4 manfaat bisnis dan fitur yang mewujudkannya |
 | 11 | Bukti PoC | – | hasil terukur dan batasannya |
 | 12 | Pilot & langkah berikutnya | – | pilot 30 hari, yang disiapkan, keputusan |
@@ -42,7 +42,7 @@ standarnya siapa dan siapa yang mengatur; apa buktinya; apakah cocok dengan kame
 ## 4. Cara pakai
 
 1. Buka Claude Design dan mulai proyek presentasi baru (atau buka deck yang akan digabung).
-2. Lampirkan 7 gambar dari folder `pages/`: `01_ringkasan.png`, `02_live_monitoring.png`, `03_dashboard_tv_tray.png`, `04_dashboard_tv_packing.png`, `05_detail_reject.png`, `06_spesifikasi_kemasan.png`, `07_kamera_alert_integrasi.png`.
+2. Lampirkan 7 gambar dari folder `pages/`: `PC_01_ringkasan.png`, `PC_02_live_monitoring.png`, `PC_03_dashboard_tv_tray.png`, `PC_04_dashboard_tv_packing.png`, `PC_05_detail_reject.png`, `PC_06_spesifikasi_kemasan.png`, `PC_07_kamera_alert_integrasi.png`.
 3. Tempel prompt di bagian 5. Isi dulu `[Nama tim]` dan `[Tanggal]`.
 4. Setelah semua slide jadi, minta ekspor ke PPTX.
 
@@ -66,7 +66,7 @@ GAYA VISUAL
 - Ikon garis sederhana. Jangan memakai logo perusahaan nyata.
 
 GAMBAR TERLAMPIR
-01_ringkasan.png · 02_live_monitoring.png · 03_dashboard_tv_tray.png · 04_dashboard_tv_packing.png · 05_detail_reject.png · 06_spesifikasi_kemasan.png · 07_kamera_alert_integrasi.png
+PC_01_ringkasan.png · PC_02_live_monitoring.png · PC_03_dashboard_tv_tray.png · PC_04_dashboard_tv_packing.png · PC_05_detail_reject.png · PC_06_spesifikasi_kemasan.png · PC_07_kamera_alert_integrasi.png
 Jika ada yang tidak terlampir, pakai bingkai placeholder berlabel nama filenya.
 
 PEMBUKA
@@ -75,7 +75,7 @@ PEMBUKA
 - Judul: Pack Count QC
 - Subjudul: Jumlah isi setiap tray dan kardus sebelum disegel, lengkap dengan slot yang kosong dan penyebabnya.
 - Teks kecil: Konsep produk · [Nama tim] · [Tanggal]
-- Visual: 03_dashboard_tv_tray.png besar dalam bingkai layar TV, sedikit terpotong di sisi kanan.
+- Visual: PC_03_dashboard_tv_tray.png besar dalam bingkai layar TV, sedikit terpotong di sisi kanan.
 
 2. Masalah: "Masalah yang terjadi di line setiap hari"
 Empat kartu dengan ikon:
@@ -91,42 +91,42 @@ Empat kartu dengan ikon:
 
 TUR PRODUK (satu layar per slide)
 
-4. FITUR 1/6 · RINGKASAN: "Tray dan kardus kurang isi ditahan sebelum disegel" (01_ringkasan.png)
+4. FITUR 1/6 · RINGKASAN: "Tray dan kardus kurang isi ditahan sebelum disegel" (PC_01_ringkasan.png)
 1) Pack diinspeksi, short pack tertangkap, item kurang, dan feeder gap sebagai penyebab (baris kartu atas).
 2) Short pack per jam dan slot yang paling sering kosong minggu ini (grafik kiri dan heatmap kanan).
 3) Reject & kejadian terbaru berfoto dan dua kamera live (baris bawah).
 Manfaat untuk bisnis: komplain "isi kurang" dicegah, dan penyebabnya ketahuan.
 Dipakai oleh: QC Manager, Line Supervisor.
 
-5. FITUR 2/6 · LIVE MONITORING: "Setiap tray dan kardus terlihat dihitung, langsung di layar" (02_live_monitoring.png)
+5. FITUR 2/6 · LIVE MONITORING: "Setiap tray dan kardus terlihat dihitung, langsung di layar" (PC_02_live_monitoring.png)
 1) Kamera dengan overlay AI: jumlah isi, slot kosong dilingkari merah, tray ditandai SHORT (kamera besar kiri).
 2) Tray terakhir dan alert terbaru dengan tombol Konfirmasi & reject atau Alarm palsu (kolom kanan).
 3) Kardus di packing station, kecepatan robot, dan status feeder (kanan bawah).
 Manfaat untuk bisnis: supervisor bertindak sebelum kemasan disegel, bukan setelah komplain.
 Dipakai oleh: Line Supervisor.
 
-6. FITUR 3/6 · DASHBOARD TV: "Setiap tray dihitung, setiap slot kosong ditandai" (03_dashboard_tv_tray.png utama, 04_dashboard_tv_packing.png kecil)
+6. FITUR 3/6 · DASHBOARD TV: "Setiap tray dihitung, setiap slot kosong ditandai" (PC_03_dashboard_tv_tray.png utama, PC_04_dashboard_tv_packing.png kecil)
 1) Kamera live dengan AI: slot kosong dilingkari merah dan tray ditandai SHORT (gambar kamera kiri atas).
 2) Posisi kaleng yang kosong dan apakah berulang, menunjuk ke lane filler (kanan tengah).
 3) Tray terakhir dengan pass/reject, tray diinspeksi kumulatif, dan Event Log berfoto (baris bawah). Screenshot kecil: robot packing station dengan peta slot kardus dan root cause feeder gap → empty pick → kardus kurang isi.
 Manfaat untuk bisnis: bukan hanya "kurang", tetapi juga "kurang di slot mana dan kenapa".
 Dipakai oleh: operator line, Line Supervisor.
 
-7. FITUR 4/6 · DETAIL REJECT: "Setiap reject punya bukti, penyebab, dan tindakan perbaikan" (05_detail_reject.png)
+7. FITUR 4/6 · DETAIL REJECT: "Setiap reject punya bukti, penyebab, dan tindakan perbaikan" (PC_05_detail_reject.png)
 1) Peta slot kardus: B2 dan C5 kosong, 18/20, dengan root cause feeder gap (kiri atas).
 2) Foto bukti dan klip 10 detik sebelum–sesudah, bisa diekspor ke PDF (tengah).
 3) Timeline dari feeder gap → empty pick → kardus di-hold → WhatsApp → rework 20/20, plus corrective action (kanan dan kiri bawah).
 Manfaat untuk bisnis: investigasi selesai dalam hitungan menit; bukti siap untuk pelanggan atau audit.
 Dipakai oleh: Line Supervisor, QC Manager, Maintenance.
 
-8. FITUR 5/6 · SPESIFIKASI KEMASAN: "Layout slot dan aturan isi diatur per SKU" (06_spesifikasi_kemasan.png)
+8. FITUR 5/6 · SPESIFIKASI KEMASAN: "Layout slot dan aturan isi diatur per SKU" (PC_06_spesifikasi_kemasan.png)
 1) Daftar kemasan dengan layout slot (tray 10, kardus 20, dan lain-lain) (tabel kiri).
 2) Layout slot dan tindakan jika isi kurang, feeder gap, atau empty pick (panel kanan).
 3) Uji di rekaman sebelum go-live (PoC: 3/3 kardus, 7/7 tray, 2/2 empty pick) dan hasil per kemasan minggu ini (baris bawah).
 Manfaat untuk bisnis: ganti SKU atau kemasan cukup ganti layout, bukan ganti sistem.
 Dipakai oleh: QC Manager.
 
-9. FITUR 6/6 · KAMERA, ALERT & INTEGRASI: "Kemasan kurang isi dialihkan otomatis, orang yang tepat langsung tahu" (07_kamera_alert_integrasi.png)
+9. FITUR 6/6 · KAMERA, ALERT & INTEGRASI: "Kemasan kurang isi dialihkan otomatis, orang yang tepat langsung tahu" (PC_07_kamera_alert_integrasi.png)
 1) Kamera per line dan station dengan status dan hasil cek gambar (tabel kiri atas).
 2) Aturan alert khusus kemasan (kurang isi, feeder gap berulang, slot yang sama kosong, empty pick) dan eskalasi (kiri tengah dan bawah).
 3) Integrasi PLC/diverter, MES, robot controller, WhatsApp, plus contoh pesan WhatsApp berfoto (kolom kanan).

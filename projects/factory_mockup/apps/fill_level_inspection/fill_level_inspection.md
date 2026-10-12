@@ -26,15 +26,15 @@ standarnya siapa dan siapa yang mengatur; apa buktinya; apakah cocok dengan kame
 
 | # | Slide | Gambar (folder `pages/`) | Yang ditonjolkan |
 |---|---|---|---|
-| 1 | Sampul | `03_dashboard_tv.png` | Fill Level Inspection · Level isi setiap botol terhadap target dan toleransi; underfill di-reject, overfill dihitung sebagai giveaway. |
+| 1 | Sampul | `FL_03_dashboard_tv.png` | Fill Level Inspection · Level isi setiap botol terhadap target dan toleransi; underfill di-reject, overfill dihitung sebagai giveaway. |
 | 2 | Masalah | – | 4 masalah di line hari ini |
 | 3 | Solusi & cara kerja | – | alur kamera → edge AI box → web app → tindakan di line |
-| 4 | Fitur 1/6 · Ringkasan | `01_ringkasan.png` | Setiap botol dicek; underfill di-reject, overfill dihitung sebagai produk terbuang |
-| 5 | Fitur 2/6 · Live Monitoring | `02_live_monitoring.png` | Level isi terlihat langsung di layar, nozzle demi nozzle |
-| 6 | Fitur 3/6 · Dashboard TV | `03_dashboard_tv.png` | Level isi diukur setiap frame, selama botol diisi |
-| 7 | Fitur 4/6 · Reject & Giveaway | `04_reject_giveaway.png` | Setiap reject punya bukti; setiap mL lebih dihitung |
-| 8 | Fitur 5/6 · Spesifikasi SKU | `05_spesifikasi_sku.png` | Target, toleransi, dan tindakan diatur per SKU |
-| 9 | Fitur 6/6 · Kamera, Alert & Integrasi | `06_kamera_alert_integrasi.png` | Reject langsung ke PLC, alert langsung ke orang yang tepat |
+| 4 | Fitur 1/6 · Ringkasan | `FL_01_ringkasan.png` | Setiap botol dicek; underfill di-reject, overfill dihitung sebagai produk terbuang |
+| 5 | Fitur 2/6 · Live Monitoring | `FL_02_live_monitoring.png` | Level isi terlihat langsung di layar, nozzle demi nozzle |
+| 6 | Fitur 3/6 · Dashboard TV | `FL_03_dashboard_tv.png` | Level isi diukur setiap frame, selama botol diisi |
+| 7 | Fitur 4/6 · Reject & Giveaway | `FL_04_reject_giveaway.png` | Setiap reject punya bukti; setiap mL lebih dihitung |
+| 8 | Fitur 5/6 · Spesifikasi SKU | `FL_05_spesifikasi_sku.png` | Target, toleransi, dan tindakan diatur per SKU |
+| 9 | Fitur 6/6 · Kamera, Alert & Integrasi | `FL_06_kamera_alert_integrasi.png` | Reject langsung ke PLC, alert langsung ke orang yang tepat |
 | 10 | Ringkasan manfaat | – | 4 manfaat bisnis dan fitur yang mewujudkannya |
 | 11 | Bukti PoC | – | hasil terukur dan batasannya |
 | 12 | Pilot & langkah berikutnya | – | pilot 30 hari, yang disiapkan, keputusan |
@@ -42,7 +42,7 @@ standarnya siapa dan siapa yang mengatur; apa buktinya; apakah cocok dengan kame
 ## 4. Cara pakai
 
 1. Buka Claude Design dan mulai proyek presentasi baru (atau buka deck yang akan digabung).
-2. Lampirkan 6 gambar dari folder `pages/`: `01_ringkasan.png`, `02_live_monitoring.png`, `03_dashboard_tv.png`, `04_reject_giveaway.png`, `05_spesifikasi_sku.png`, `06_kamera_alert_integrasi.png`.
+2. Lampirkan 6 gambar dari folder `pages/`: `FL_01_ringkasan.png`, `FL_02_live_monitoring.png`, `FL_03_dashboard_tv.png`, `FL_04_reject_giveaway.png`, `FL_05_spesifikasi_sku.png`, `FL_06_kamera_alert_integrasi.png`.
 3. Tempel prompt di bagian 5. Isi dulu `[Nama tim]` dan `[Tanggal]`.
 4. Setelah semua slide jadi, minta ekspor ke PPTX.
 
@@ -66,7 +66,7 @@ GAYA VISUAL
 - Ikon garis sederhana. Jangan memakai logo perusahaan nyata.
 
 GAMBAR TERLAMPIR
-01_ringkasan.png · 02_live_monitoring.png · 03_dashboard_tv.png · 04_reject_giveaway.png · 05_spesifikasi_sku.png · 06_kamera_alert_integrasi.png
+FL_01_ringkasan.png · FL_02_live_monitoring.png · FL_03_dashboard_tv.png · FL_04_reject_giveaway.png · FL_05_spesifikasi_sku.png · FL_06_kamera_alert_integrasi.png
 Jika ada yang tidak terlampir, pakai bingkai placeholder berlabel nama filenya.
 
 PEMBUKA
@@ -75,7 +75,7 @@ PEMBUKA
 - Judul: Fill Level Inspection
 - Subjudul: Level isi setiap botol terhadap target dan toleransi; underfill di-reject, overfill dihitung sebagai giveaway.
 - Teks kecil: Konsep produk · [Nama tim] · [Tanggal]
-- Visual: 03_dashboard_tv.png besar dalam bingkai layar TV, sedikit terpotong di sisi kanan.
+- Visual: FL_03_dashboard_tv.png besar dalam bingkai layar TV, sedikit terpotong di sisi kanan.
 
 2. Masalah: "Masalah yang terjadi di line setiap hari"
 Empat kartu dengan ikon:
@@ -91,42 +91,42 @@ Empat kartu dengan ikon:
 
 TUR PRODUK (satu layar per slide)
 
-4. FITUR 1/6 · RINGKASAN: "Setiap botol dicek; underfill di-reject, overfill dihitung sebagai produk terbuang" (01_ringkasan.png)
+4. FITUR 1/6 · RINGKASAN: "Setiap botol dicek; underfill di-reject, overfill dihitung sebagai produk terbuang" (FL_01_ringkasan.png)
 1) Botol diinspeksi, reject underfill, rata-rata overfill dalam mL, dan persentase dalam toleransi (baris kartu atas).
 2) Rata-rata isi per nozzle terhadap target dan batas toleransi: nozzle 3 selalu kelebihan isi (grafik kiri).
 3) Reject per jam dengan penyebabnya, reject terbaru, dan kamera live (kanan dan baris bawah).
 Manfaat untuk bisnis: aman dari komplain isi kurang, dan giveaway per nozzle terukur sehingga bisa dikurangi.
 Dipakai oleh: QC Manager, Production Manager.
 
-5. FITUR 2/6 · LIVE MONITORING: "Level isi terlihat langsung di layar, nozzle demi nozzle" (02_live_monitoring.png)
+5. FITUR 2/6 · LIVE MONITORING: "Level isi terlihat langsung di layar, nozzle demi nozzle" (FL_02_live_monitoring.png)
 1) Kamera dengan overlay AI: outline botol, garis target di leher botol, level isi dalam % dan mL (kamera besar kiri).
 2) Siklus berjalan dan hasil terakhir per nozzle 1–8, dengan nozzle yang bermasalah ditandai (kolom kanan).
 3) Tombol hentikan nozzle untuk dicek atau tandai reject manual (kanan bawah).
 Manfaat untuk bisnis: supervisor tahu nozzle mana yang bermasalah tanpa menunggu sampel per jam.
 Dipakai oleh: Line Supervisor.
 
-6. FITUR 3/6 · DASHBOARD TV: "Level isi diukur setiap frame, selama botol diisi" (03_dashboard_tv.png)
+6. FITUR 3/6 · DASHBOARD TV: "Level isi diukur setiap frame, selama botol diisi" (FL_03_dashboard_tv.png)
 1) Kamera live dengan AI: garis target dan level isi saat ini dalam % dan mL (gambar kamera kiri atas).
 2) KPI dan fill curve: level isi, flow rate, waktu isi, sisa waktu ke target (kanan atas).
 3) Aturan pass/reject per SKU dan "tinggi bukan volume": tinggi 74% = volume 67% (baris bawah). Catatan jujur: klip PoC berakhir di 67%, jadi belum ada keputusan pass/reject; angka mL memakai contoh SKU 500 mL.
 Manfaat untuk bisnis: keputusan isi berdasarkan volume, bukan perkiraan dari tinggi cairan.
 Dipakai oleh: operator filler, QC.
 
-7. FITUR 4/6 · REJECT & GIVEAWAY: "Setiap reject punya bukti; setiap mL lebih dihitung" (04_reject_giveaway.png)
+7. FITUR 4/6 · REJECT & GIVEAWAY: "Setiap reject punya bukti; setiap mL lebih dihitung" (FL_04_reject_giveaway.png)
 1) Reject underfill terbaru per nozzle, dengan status dikonfirmasi QC atau alarm palsu (tabel kiri atas).
 2) Giveaway per nozzle terhadap target dan batas toleransi, dengan saran tindakan (grafik kanan atas).
 3) Bukti reject (gambar kamera, level saat nozzle berhenti, sinyal ke PLC) dan reject per jam (baris bawah).
 Manfaat untuk bisnis: tim teknik tahu nozzle mana yang perlu disetel, berdasarkan data, bukan perasaan.
 Dipakai oleh: QC Manager, Maintenance.
 
-8. FITUR 5/6 · SPESIFIKASI SKU: "Target, toleransi, dan tindakan diatur per SKU" (05_spesifikasi_sku.png)
+8. FITUR 5/6 · SPESIFIKASI SKU: "Target, toleransi, dan tindakan diatur per SKU" (FL_05_spesifikasi_sku.png)
 1) Daftar SKU dan aturan isi: target, toleransi 98–102%, reject di bawah 490 mL lewat sinyal PLC dalam 0,5 detik (kiri dan tengah atas).
 2) Profil botol dari 3 botol kosong agar tinggi cairan bisa diubah jadi volume; toleransi disesuaikan dengan BDKT dan spec pelanggan (kanan atas).
 3) Giveaway per minggu turun setelah garis target dipindah, checklist sebelum go-live, dan riwayat perubahan (baris bawah).
 Manfaat untuk bisnis: aturan mutu dan bukti perubahannya tersimpan rapi, siap untuk audit.
 Dipakai oleh: QC Manager.
 
-9. FITUR 6/6 · KAMERA, ALERT & INTEGRASI: "Reject langsung ke PLC, alert langsung ke orang yang tepat" (06_kamera_alert_integrasi.png)
+9. FITUR 6/6 · KAMERA, ALERT & INTEGRASI: "Reject langsung ke PLC, alert langsung ke orang yang tepat" (FL_06_kamera_alert_integrasi.png)
 1) Kamera per mesin pengisi dengan status dan hasil cek gambar, termasuk kamera yang perlu dicek (tabel kiri atas).
 2) Aturan alert khusus pengisian (underfill, reject berulang di satu nozzle, overfill beruntun, kamera silau) dan eskalasi (kiri tengah dan bawah).
 3) Integrasi PLC/rejector, check weigher, MES, WhatsApp, plus contoh pesan WhatsApp berfoto (kolom kanan).

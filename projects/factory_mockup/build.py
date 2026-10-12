@@ -685,6 +685,8 @@ def p17_parcel_load() -> str:
 
 
 APP_DIR = HERE / "apps"
+# file names carry the product, so all apps' pictures can sit in one Claude Design project without clashing
+PREFIX = {"produce_grading": "PG", "fill_level_inspection": "FL", "pack_count_qc": "PC", "parcel_dimensioning": "PD"}
 
 
 def apps() -> dict:
@@ -766,7 +768,7 @@ def main(argv: list[str]) -> int:
         for name, fn in pages:
             path = HTML / f"{slug}__{name}.html"
             path.write_text(fn())
-            built.append((slug, name, path, out / f"{name}.png"))
+            built.append((slug, name, path, out / f"{PREFIX[slug]}_{name}.png"))
     if "--icons" in argv:
         fetch_icons()
     if "--no-shot" not in argv:

@@ -10,6 +10,9 @@ warehouse mockup (`07_warehouse_live_ops/mockup`), so the decks can be shown alo
 | `pack_count_qc` · can trays and robot packing station | `08_pack_completeness` | 7 | `pack_count_qc.md` |
 | `parcel_dimensioning` | `03_parcel_dimensioning` | 6 | `parcel_dimensioning.md` |
 
+For one deck with all four products, use **`factory_vision_deck.md`** (34 slides, pictures attached in four rounds).
+Picture names start with the product (PG, FL, PC, PD), so all of them fit in one Claude Design project.
+
 Every app tells the same story: Ringkasan → Live Monitoring → Dashboard TV → report or reject detail →
 the product's own specification page → Kamera, Alert & Integrasi.
 
@@ -24,7 +27,7 @@ python factory_mockup/assets.py           # camera pictures and snapshots -> img
 python factory_mockup/build.py            # every app -> apps/<app>/pages/*.png (3840 x 2160; --1x for 1920 x 1080)
 python factory_mockup/build.py fill pack  # some apps
 python factory_mockup/build.py --icons    # refetch the icon subset after using a new icon (network)
-python factory_mockup/gen_md.py           # apps/<app>/<app>.md, the Claude Design prompt per app
+python factory_mockup/gen_md.py           # apps/<app>/<app>.md per app, and factory_vision_deck.md (one deck, all four)
 ```
 
 Code: `build.py` (shell, per-app menus, web-app pages, the list of apps), `tv.py` (Dashboard TV pages),

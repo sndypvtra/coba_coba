@@ -26,15 +26,15 @@ standarnya siapa dan siapa yang mengatur; apa buktinya; apakah cocok dengan kame
 
 | # | Slide | Gambar (folder `pages/`) | Yang ditonjolkan |
 |---|---|---|---|
-| 1 | Sampul | `03_dashboard_tv.png` | Parcel Dimensioning · Panjang × lebar × tinggi dan volume setiap paket di belt, untuk muat truk dan tagihan berat volumetrik. |
+| 1 | Sampul | `PD_03_dashboard_tv.png` | Parcel Dimensioning · Panjang × lebar × tinggi dan volume setiap paket di belt, untuk muat truk dan tagihan berat volumetrik. |
 | 2 | Masalah | – | 4 masalah di line hari ini |
 | 3 | Solusi & cara kerja | – | alur kamera → edge AI box → web app → tindakan di line |
-| 4 | Fitur 1/6 · Ringkasan | `01_ringkasan.png` | Ukuran dan volume setiap paket, tanpa meteran |
-| 5 | Fitur 2/6 · Live Monitoring | `02_live_monitoring.png` | Setiap paket terlihat diukur saat lewat |
-| 6 | Fitur 3/6 · Dashboard TV | `03_dashboard_tv.png` | Satu kamera mengukur P × L × T paket di belt |
-| 7 | Fitur 4/6 · Muat & Tagihan | `04_muat_tagihan.png` | Volume terukur dipakai untuk muat truk dan tagihan |
-| 8 | Fitur 5/6 · Kelas Ukuran & Tagihan | `05_kelas_ukuran.png` | Kelas ukuran, rumus tagihan, dan kalibrasi diatur sendiri |
-| 9 | Fitur 6/6 · Kamera, Alert & Integrasi | `06_kamera_alert_integrasi.png` | Data ukuran langsung masuk ke WMS, TMS, dan invoice |
+| 4 | Fitur 1/6 · Ringkasan | `PD_01_ringkasan.png` | Ukuran dan volume setiap paket, tanpa meteran |
+| 5 | Fitur 2/6 · Live Monitoring | `PD_02_live_monitoring.png` | Setiap paket terlihat diukur saat lewat |
+| 6 | Fitur 3/6 · Dashboard TV | `PD_03_dashboard_tv.png` | Satu kamera mengukur P × L × T paket di belt |
+| 7 | Fitur 4/6 · Muat & Tagihan | `PD_04_muat_tagihan.png` | Volume terukur dipakai untuk muat truk dan tagihan |
+| 8 | Fitur 5/6 · Kelas Ukuran & Tagihan | `PD_05_kelas_ukuran.png` | Kelas ukuran, rumus tagihan, dan kalibrasi diatur sendiri |
+| 9 | Fitur 6/6 · Kamera, Alert & Integrasi | `PD_06_kamera_alert_integrasi.png` | Data ukuran langsung masuk ke WMS, TMS, dan invoice |
 | 10 | Ringkasan manfaat | – | 4 manfaat bisnis dan fitur yang mewujudkannya |
 | 11 | Bukti PoC | – | hasil terukur dan batasannya |
 | 12 | Pilot & langkah berikutnya | – | pilot 30 hari, yang disiapkan, keputusan |
@@ -42,7 +42,7 @@ standarnya siapa dan siapa yang mengatur; apa buktinya; apakah cocok dengan kame
 ## 4. Cara pakai
 
 1. Buka Claude Design dan mulai proyek presentasi baru (atau buka deck yang akan digabung).
-2. Lampirkan 6 gambar dari folder `pages/`: `01_ringkasan.png`, `02_live_monitoring.png`, `03_dashboard_tv.png`, `04_muat_tagihan.png`, `05_kelas_ukuran.png`, `06_kamera_alert_integrasi.png`.
+2. Lampirkan 6 gambar dari folder `pages/`: `PD_01_ringkasan.png`, `PD_02_live_monitoring.png`, `PD_03_dashboard_tv.png`, `PD_04_muat_tagihan.png`, `PD_05_kelas_ukuran.png`, `PD_06_kamera_alert_integrasi.png`.
 3. Tempel prompt di bagian 5. Isi dulu `[Nama tim]` dan `[Tanggal]`.
 4. Setelah semua slide jadi, minta ekspor ke PPTX.
 
@@ -66,7 +66,7 @@ GAYA VISUAL
 - Ikon garis sederhana. Jangan memakai logo perusahaan nyata.
 
 GAMBAR TERLAMPIR
-01_ringkasan.png · 02_live_monitoring.png · 03_dashboard_tv.png · 04_muat_tagihan.png · 05_kelas_ukuran.png · 06_kamera_alert_integrasi.png
+PD_01_ringkasan.png · PD_02_live_monitoring.png · PD_03_dashboard_tv.png · PD_04_muat_tagihan.png · PD_05_kelas_ukuran.png · PD_06_kamera_alert_integrasi.png
 Jika ada yang tidak terlampir, pakai bingkai placeholder berlabel nama filenya.
 
 PEMBUKA
@@ -75,7 +75,7 @@ PEMBUKA
 - Judul: Parcel Dimensioning
 - Subjudul: Panjang × lebar × tinggi dan volume setiap paket di belt, untuk muat truk dan tagihan berat volumetrik.
 - Teks kecil: Konsep produk · [Nama tim] · [Tanggal]
-- Visual: 03_dashboard_tv.png besar dalam bingkai layar TV, sedikit terpotong di sisi kanan.
+- Visual: PD_03_dashboard_tv.png besar dalam bingkai layar TV, sedikit terpotong di sisi kanan.
 
 2. Masalah: "Masalah yang terjadi di line setiap hari"
 Empat kartu dengan ikon:
@@ -91,42 +91,42 @@ Empat kartu dengan ikon:
 
 TUR PRODUK (satu layar per slide)
 
-4. FITUR 1/6 · RINGKASAN: "Ukuran dan volume setiap paket, tanpa meteran" (01_ringkasan.png)
+4. FITUR 1/6 · RINGKASAN: "Ukuran dan volume setiap paket, tanpa meteran" (PD_01_ringkasan.png)
 1) Paket terukur hari ini, volume, berat volumetrik, dan paket yang perlu manual check (baris kartu atas).
 2) Log paket: P × L × T, volume, berat volumetrik (P × L × T ÷ 6000), kelas S/M/L (tabel kiri).
 3) Komposisi ukuran, kamera live, dan volume per jam untuk merencanakan truk lebih awal (kanan dan baris bawah).
 Manfaat untuk bisnis: data ukuran setiap paket tanpa menambah orang atau memperlambat belt.
 Dipakai oleh: Warehouse/Logistics Manager.
 
-5. FITUR 2/6 · LIVE MONITORING: "Setiap paket terlihat diukur saat lewat" (02_live_monitoring.png)
+5. FITUR 2/6 · LIVE MONITORING: "Setiap paket terlihat diukur saat lewat" (PD_02_live_monitoring.png)
 1) Kamera dengan overlay AI: kotak paket, P × L × T, kelas ukuran, dan count line (kamera besar kiri).
 2) Paket terakhir dengan foto dan ukurannya (kanan atas).
 3) Paket yang dekat batas kelas masuk manual check, dengan tombol Konfirmasi atau Ubah kelas (kanan bawah).
 Manfaat untuk bisnis: ukuran yang meragukan tidak ditebak, tetapi dikonfirmasi orang.
 Dipakai oleh: supervisor dock, operator belt.
 
-6. FITUR 3/6 · DASHBOARD TV: "Satu kamera mengukur P × L × T paket di belt" (03_dashboard_tv.png)
+6. FITUR 3/6 · DASHBOARD TV: "Satu kamera mengukur P × L × T paket di belt" (PD_03_dashboard_tv.png)
 1) Kamera live dengan AI: setiap paket diberi kotak sesuai kelas ukuran dan dihitung di count line (gambar kamera kiri atas).
 2) Tabel paket terukur: P × L × T, volume, berat volumetrik, kelas; paket dekat batas kelas masuk manual check (kanan tengah).
 3) Komposisi ukuran S/M/L dan volume kumulatif, dengan uji vs hitungan manual (baris bawah).
 Manfaat untuk bisnis: ukuran yang konsisten, bisa dicek ulang dari fotonya.
 Dipakai oleh: operator belt, supervisor logistik.
 
-7. FITUR 4/6 · MUAT & TAGIHAN: "Volume terukur dipakai untuk muat truk dan tagihan" (04_muat_tagihan.png)
+7. FITUR 4/6 · MUAT & TAGIHAN: "Volume terukur dipakai untuk muat truk dan tagihan" (PD_04_muat_tagihan.png)
 1) Isi tiap truk dari volume terukur: selesai muat, sedang muat, terjadwal (kiri atas).
 2) Berat volumetrik vs berat aktual per pelanggan; pelanggan dengan paket ringan tapi besar ditagih berdasarkan volume (kanan atas).
 3) Antrean manual check, dasar tagihan per pelanggan, volume per tujuan, dan selisih berat 7 hari, siap dikirim ke TMS/WMS (baris tengah dan bawah).
 Manfaat untuk bisnis: truk terisi lebih penuh dan tagihan sesuai ruang yang benar-benar dipakai.
 Dipakai oleh: Logistics Manager, Finance.
 
-8. FITUR 5/6 · KELAS UKURAN & TAGIHAN: "Kelas ukuran, rumus tagihan, dan kalibrasi diatur sendiri" (05_kelas_ukuran.png)
+8. FITUR 5/6 · KELAS UKURAN & TAGIHAN: "Kelas ukuran, rumus tagihan, dan kalibrasi diatur sendiri" (PD_05_kelas_ukuran.png)
 1) Batas kelas S/M/L dan kapan paket masuk manual check (kiri atas).
 2) Rumus berat volumetrik (P × L × T ÷ 6000) yang bisa diubah per pelanggan, dan ke mana datanya dikirim (kanan atas).
 3) Kalibrasi kamera dengan karton referensi (PoC: 340,5 mm vs 340 mm) dan uji di rekaman sebelum go-live (baris bawah).
 Manfaat untuk bisnis: aturan tagihan transparan dan bisa ditunjukkan ke pelanggan.
 Dipakai oleh: Logistics Manager, Finance.
 
-9. FITUR 6/6 · KAMERA, ALERT & INTEGRASI: "Data ukuran langsung masuk ke WMS, TMS, dan invoice" (06_kamera_alert_integrasi.png)
+9. FITUR 6/6 · KAMERA, ALERT & INTEGRASI: "Data ukuran langsung masuk ke WMS, TMS, dan invoice" (PD_06_kamera_alert_integrasi.png)
 1) Kamera per belt dan dock dengan status dan hasil cek gambar (tabel kiri atas).
 2) Aturan alert khusus paket (ukuran dekat batas kelas, paket tidak terukur, truk hampir penuh, belt berhenti) dan eskalasi (kiri tengah dan bawah).
 3) Integrasi WMS, TMS, sistem invoice, API, plus contoh pesan WhatsApp berfoto (kolom kanan).

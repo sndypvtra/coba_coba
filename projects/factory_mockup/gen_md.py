@@ -234,6 +234,11 @@ APPS = {
 }
 
 
+PREFIX = {"produce_grading": "PG", "fill_level_inspection": "FL", "pack_count_qc": "PC", "parcel_dimensioning": "PD"}
+for _slug, _a in APPS.items():   # picture names carry the product (build.py writes them so)
+    _a["pages"] = [(f"{PREFIX[_slug]}_{p[0]}", f"{PREFIX[_slug]}_{p[1]}" if p[1] else None) + tuple(p[2:]) for p in _a["pages"]]
+
+
 def md(slug: str, a: dict) -> str:
     n_tour = len(a["pages"])
     total = 3 + n_tour + 3
@@ -363,11 +368,183 @@ Catatan kaki: "Besaran manfaat dihitung bersama klien dari data pilot 30 hari."
 """
 
 
+SHORT = {"produce_grading": "lot campur warna terkirim ke pembeli; cek manual hanya sampel",
+         "fill_level_inspection": "botol kurang isi lolos ke pasar; botol lebih isi = produk terbuang (giveaway)",
+         "pack_count_qc": "tray dan kardus kurang isi baru ketahuan setelah komplain",
+         "parcel_dimensioning": "ukuran paket tidak diketahui; truk dan tagihan tidak optimal"}
+GAIN = {"produce_grading": "lot bermasalah ditahan sebelum dikirim, dengan bukti per lot untuk pembeli",
+        "fill_level_inspection": "setiap underfill di-reject otomatis; giveaway per nozzle terukur dan bisa dikurangi",
+        "pack_count_qc": "kemasan kurang isi ditahan sebelum disegel, lengkap dengan slot dan penyebabnya",
+        "parcel_dimensioning": "ukuran setiap paket tanpa meteran; truk lebih penuh dan tagihan sesuai volume"}
+LETTER = dict(zip(APPS, "ABCD"))
+
+
+def combined() -> str:
+    """One deck for all four products: one Claude Design project, pictures attached in four rounds."""
+    n = 3
+    plan, sections, rounds = [], [], []
+    for slug, a in APPS.items():
+        L, name, pages = LETTER[slug], a["name"], a["pages"]
+        first = n + 1
+        imgs = [x for p in pages for x in (p[0], p[1]) if x]
+        tv = pages[2][0]
+        plan.append(f"| {first} | Bagian {L} · {name} (pembuka) | `{tv}` kecil | untuk siapa, 3 masalah, alur kerja |")
+        body = [f"{first}. PEMBUKA BAGIAN {L} · {name.upper()}: \"{a['tagline']}\" ({tv} kecil, dalam bingkai layar TV, di sisi kanan)\n"
+                f"- Label kecil: \"PRODUK {'ABCD'.index(L) + 1}/4\". Latar warna aksen produk ({a['colour']}) dengan teks putih, atau latar terang dengan ikon warna aksen.\n"
+                f"- Untuk: {a['buyer']}.\n"
+                + "\n".join(f"- Masalah: {t}" for t in a["problem"][:3])
+                + f"\n- Alur kerja (diagram 4 langkah kecil): {a['flow']}."]
+        for k, p in enumerate(pages, 1):
+            n_slide = first + k
+            g = p[0] + (f" utama, {p[1]} kecil" if p[1] else "")
+            plan.append(f"| {n_slide} | {name} · {k}/{len(pages)} · {p[2]} | `{p[0]}`" + (f" + `{p[1]}` kecil" if p[1] else "") + f" | {p[3]} |")
+            pts = "\n".join(f"{i}) {t}" for i, t in enumerate(p[4], 1))
+            body.append(f"{n_slide}. {name.upper()} · FITUR {k}/{len(pages)} · {p[2].upper()}: \"{p[3]}\" ({g})\n{pts}\n"
+                        f"Manfaat untuk bisnis: {p[5]}\nDipakai oleh: {p[6]}.")
+        last = first + len(pages)
+        sections.append((L, name, first, last, "\n\n".join(body), a["footnote"], imgs))
+        n = last
+    close = n + 1
+    plan += [f"| {close} | Ringkasan: empat produk, satu cara kerja | – | masalah → hasil per produk |",
+             f"| {close + 1} | Bukti PoC | – | hasil terukur per produk dan batasannya |",
+             f"| {close + 2} | Pilot & langkah berikutnya | – | mulai dari satu produk di satu line |"]
+    total = close + 2
+    all_imgs = [x for s_ in sections for x in s_[6]]
+    proof = "\n".join(f"- {APPS[s]['name']}: " + " ".join(APPS[s]["proof"][:-1]) for s in APPS)
+    proof_next = "\n".join(f"- {APPS[s]['name']}: {APPS[s]['pilot']}." for s in APPS)
+    foot = "\n".join(f"  {name}: \"{f}\"" for L, name, a_, b_, c_, f, i_ in sections)
+    for k, (L, name, first, last, body, f, imgs) in enumerate(sections):
+        extra = ""
+        if k == 0:
+            extra = f" Di sampul (slide 1), isi dulu bingkai Produce Grading dengan {imgs[2]}; tiga bingkai lain diisi nanti."
+        if k == len(sections) - 1:
+            extra = (f" Lalu kerjakan slide penutup {close}–{total}, dan perbarui sampul (slide 1): isi keempat bingkai dengan "
+                     f"{sections[0][6][2]}, {sections[1][6][2]}, {sections[2][6][2]}, {sections[3][6][2]}.")
+        rounds.append((L, name, first, last, imgs, extra))
+    style = COMMON_STYLE.format(colour="sesuai produk (lihat di bawah)", n_tour="6", footnote="(lihat daftar per produk di bawah)")
+    style = style.replace('label kecil "FITUR n/6 · NAMA LAYAR"', 'label kecil "NAMA PRODUK · FITUR n/6 · NAMA LAYAR"')
+    style = style.replace("Warna aksen produk ini: sesuai produk (lihat di bawah)",
+                          "Setiap produk punya warna aksen sendiri: Produce Grading hijau #16A34A, Fill Level Inspection biru #2563EB, "
+                          "Pack Count QC oranye #D97706, Parcel Dimensioning ungu #7C3AED. Slide pembuka dan penutup memakai aksen biru #2563EB")
+    style = style.replace('- Catatan kaki kecil di slide yang memuat gambar kamera: "(lihat daftar per produk di bawah)"',
+                          "- Catatan kaki kecil di slide yang memuat gambar kamera, sesuai produknya:\n" + foot)
+    rows = "\n".join(plan)
+    stage = "\n\n".join(
+        f"**Tahap {k + 1} · Bagian {L} · {name}** — lampirkan {len(imgs)} gambar dari `apps/"
+        f"{list(APPS)[k]}/pages/`: " + ", ".join(f"`{x}`" for x in imgs) + "\n\n"
+        + ("Tempel **prompt utama** (bagian 5), lalu kirim." if k == 0 else "Ketik pesan ini, lalu kirim:\n\n")
+        + ("" if k == 0 else f"```text\nIni gambar untuk Bagian {L} · {name}. Kerjakan slide {first}–{last} sesuai prompt utama.{extra}\n```")
+        for k, (L, name, first, last, imgs, extra) in enumerate(rounds))
+    first_msg = rounds[0]
+    return f"""# Prompt Claude Design: Factory Vision, satu deck untuk empat produk pabrik
+
+Satu presentasi berisi keempat produk: **Produce Grading, Fill Level Inspection, Pack Count QC, dan
+Parcel Dimensioning**. Setiap produk tetap punya bagiannya sendiri dengan alur yang sama, jadi mudah dijelaskan
+satu per satu, lalu ditutup dengan bukti PoC dan langkah pilot untuk semuanya. Total **{total} slide**.
+
+## 1. Gambar yang dipakai
+
+- {len(all_imgs)} gambar PNG 3840 × 2160 dari empat folder `apps/<app>/pages/`. Nama file sudah diberi awalan produk
+  (**PG** Produce Grading, **FL** Fill Level, **PC** Pack Count QC, **PD** Parcel Dimensioning), jadi semuanya
+  aman diunggah ke **satu proyek** tanpa bentrok nama. Jangan ganti nama filenya.
+- Templatenya sama dengan mockup warehouse: setiap gambar adalah layar web app atau Dashboard TV produk itu sendiri.
+  Dari PoC hanya diambil gambar kamera dengan overlay AI, plus angka hasil ukurnya. Angka lain ilustrasi, dan setiap
+  gambar mencantumkannya di pojok kanan bawah. Tidak ada angka rupiah.
+
+## 2. Susunan deck ({total} slide)
+
+| # | Slide | Gambar | Yang ditonjolkan |
+|---|---|---|---|
+| 1 | Sampul | `{sections[0][6][2]}`, `{sections[1][6][2]}`, `{sections[2][6][2]}`, `{sections[3][6][2]}` | Factory Vision · empat produk |
+| 2 | Masalah di pabrik | – | satu masalah per produk |
+| 3 | Empat produk, satu cara kerja | – | kamera → edge AI box → web app & TV → tindakan di line |
+{rows}
+
+## 3. Cara mengerjakan di Claude Design (satu proyek, 4 tahap)
+
+Gambar diunggah bertahap per produk supaya tidak kena batas lampiran dan Claude Design tetap fokus.
+Kalau ternyata Claude Design bisa menerima {len(all_imgs)} gambar sekaligus, lampirkan semuanya di tahap 1,
+tempel prompt utama, lalu tulis "kerjakan semua slide 1–{total}".
+
+{stage}
+
+Setelah tahap 4 selesai, minta: "Periksa semua slide: judul di posisi yang sama, tidak ada teks terpotong, lalu ekspor ke PPTX."
+
+## 4. Kalau Claude Design berhenti di tengah
+
+Tulis: "Lanjutkan dari slide berikutnya sesuai prompt utama." Kalau slide terlalu padat: "Perbesar screenshot di slide
+X sampai 65% lebar slide dan persingkat poinnya jadi satu baris."
+
+## 5. Prompt utama (tempel di tahap 1)
+
+```text
+Buatkan presentasi 16:9 berbahasa Indonesia berjudul "Factory Vision" sebanyak {total} slide, siap diekspor ke PowerPoint. Isinya empat produk video analytics untuk pabrik, masing-masing di bagiannya sendiri. Gambar dilampirkan bertahap per produk: sekarang terlampir gambar Bagian A ({first_msg[1]}). Kerjakan sekarang slide 1–3 dan slide {first_msg[2]}–{first_msg[3]}; bagian lain menunggu gambarnya di pesan berikutnya. Untuk gambar yang belum terlampir, pakai bingkai placeholder berlabel nama filenya.{first_msg[5]}
+
+Tujuan utamanya: calon pembeli MELIHAT web app tiap produk bekerja, layar demi layar, dan memahami manfaat bisnis tiap layar. Jangan bahas detail teknis AI (model, algoritma, kode).
+
+KONTEKS
+Tim kami sudah membuat proof of concept (PoC) empat produk inspeksi berbasis kamera. Setiap produk dijual sendiri, per line, dengan web app, Dashboard TV, alert, dan integrasinya sendiri:
+""" + "\n".join(f"- {a['name']}: {a['tagline']} Untuk {a['buyer']}." for a in APPS.values()) + f"""
+Penontonnya pemilik dan direktur pabrik yang sedang memilih sistem video analytics. Mereka bertanya: "Masalah saya yang mana yang selesai, layar apa yang dipakai tim saya, apa yang terjadi di line saat ada masalah, dan apa buktinya?"
+
+{style}
+- Setiap bagian produk dibuka dengan slide pembuka bagian, lalu slide tur layar. Slide tur memakai warna aksen produk itu.
+
+GAMBAR (diunggah bertahap)
+{" · ".join(all_imgs)}
+
+PEMBUKA
+
+1. Sampul (latar navy)
+- Judul: Factory Vision
+- Subjudul: Video analytics untuk line produksi: grade buah, level isi botol, isi kemasan, dan ukuran paket, dari kamera di line.
+- Teks kecil: Konsep produk · [Nama tim] · [Tanggal]
+- Visual: empat bingkai layar TV kecil berjajar 2×2 di sisi kanan, satu per produk, masing-masing dengan nama produknya: {sections[0][6][2]} (Produce Grading), {sections[1][6][2]} (Fill Level Inspection), {sections[2][6][2]} (Pack Count QC), {sections[3][6][2]} (Parcel Dimensioning).
+
+2. Masalah: "Masalah mutu di line baru ketahuan setelah produk keluar pabrik"
+Empat kartu, satu per produk, dengan ikon dan warna aksen produknya:
+""" + "\n".join(f"- {APPS[s]['name']} · {SHORT[s]}" for s in APPS) + f"""
+
+3. Solusi: "Empat produk, satu cara kerja"
+- Diagram alur 4 langkah: kamera di line (CCTV yang ada atau kamera industri) → edge AI box di pabrik (deteksi, hitung, ukur) → web app dan Dashboard TV (standar, laporan, bukti) → tindakan di line (sinyal reject ke PLC, hold, WhatsApp).
+- Strip empat produk di bawahnya, masing-masing dengan warna aksen dan satu baris "untuk siapa".
+- Teks kecil: "Berikut tur layar setiap produk. Setiap produk bisa dibeli sendiri, per line."
+
+""" + "\n\n".join(f"BAGIAN {L} · {name.upper()} (slide {first}–{last})\n\n{body}" for L, name, first, last, body, f, i_ in sections) + f"""
+
+PENUTUP
+
+{close}. Ringkasan: "Empat produk, satu tujuan: masalah mutu ketahuan di line, bukan di tangan pelanggan" (latar terang)
+Tabel atau 4 kartu, satu per produk, kolom Masalah → Hasil:
+""" + "\n".join(f"- {APPS[s]['name']}: {SHORT[s]} → {GAIN[s]}." for s in APPS) + f"""
+Catatan kaki: "Besaran manfaat dihitung bersama klien dari data pilot 30 hari."
+
+{close + 1}. Bukti PoC: "Inti teknologi keempat produk sudah diuji"
+Tabel 4 baris (satu per produk) dengan kolom Yang diuji · Hasil:
+{proof}
+Kotak "Yang dibuktikan saat pilot":
+{proof_next}
+Catatan kaki: "Laju per menit/jam di video adalah perkiraan dari klip beberapa detik, bukan data satu shift."
+
+{total}. Langkah berikutnya: "Mulai dari satu produk di satu line" (latar navy)
+- Langkah: line survey 1 minggu → pilot 30 hari → go-live 2 minggu → line atau produk berikutnya.
+- Yang disiapkan pabrik: titik dudukan dan listrik di titik inspeksi, jaringan ke edge AI box, satu orang QC untuk cek blind, standar atau spec yang dipakai.
+- Yang kami siapkan: kamera, lampu, dan edge AI box terpasang dan tersetel; setting standar, limit, dan aturan alert; laporan akurasi di akhir pilot.
+- Kalimat penutup tebal: "Harga per line, dihitung setelah line survey."
+
+{COMMON_RULES}
+```
+"""
+
+
 def main():
     for slug, a in APPS.items():
         out = HERE / "apps" / slug / f"{slug}.md"
         out.write_text(md(slug, a))
         print(out)
+    out = HERE / "factory_vision_deck.md"
+    out.write_text(combined())
+    print(out)
 
 
 if __name__ == "__main__":

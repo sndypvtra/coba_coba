@@ -26,15 +26,15 @@ standarnya siapa dan siapa yang mengatur; apa buktinya; apakah cocok dengan kame
 
 | # | Slide | Gambar (folder `pages/`) | Yang ditonjolkan |
 |---|---|---|---|
-| 1 | Sampul | `03_dashboard_tv_tomat.png` | Produce Grading · Grade warna setiap buah di line, sesuai standar USDA dan OECD, lengkap dengan bukti per lot. |
+| 1 | Sampul | `PG_03_dashboard_tv_tomat.png` | Produce Grading · Grade warna setiap buah di line, sesuai standar USDA dan OECD, lengkap dengan bukti per lot. |
 | 2 | Masalah | – | 4 masalah di line hari ini |
 | 3 | Solusi & cara kerja | – | alur kamera → edge AI box → web app → tindakan di line |
-| 4 | Fitur 1/6 · Ringkasan | `01_ringkasan.png` | Setiap shift, mutu warna semua line terbaca di satu layar |
-| 5 | Fitur 2/6 · Live Monitoring | `02_live_monitoring.png` | Supervisor melihat setiap buah yang keluar dari kelasnya, dan langsung bertindak |
-| 6 | Fitur 3/6 · Dashboard TV | `03_dashboard_tv_tomat.png` + `04_dashboard_tv_lemon.png` kecil | Layar di line menunjukkan mutu lot saat itu juga |
-| 7 | Fitur 4/6 · Laporan Lot | `05_laporan_lot.png` | Setiap lot punya keputusan, bukti, dan riwayat yang bisa ditunjukkan ke pembeli |
-| 8 | Fitur 5/6 · Standar Grade | `06_standar_grade.png` | Standar resmi dan spec pembeli, diatur sendiri oleh QC |
-| 9 | Fitur 6/6 · Kamera, Alert & Integrasi | `07_kamera_alert_integrasi.png` | Orang yang tepat tahu dalam hitungan detik, line bertindak otomatis |
+| 4 | Fitur 1/6 · Ringkasan | `PG_01_ringkasan.png` | Setiap shift, mutu warna semua line terbaca di satu layar |
+| 5 | Fitur 2/6 · Live Monitoring | `PG_02_live_monitoring.png` | Supervisor melihat setiap buah yang keluar dari kelasnya, dan langsung bertindak |
+| 6 | Fitur 3/6 · Dashboard TV | `PG_03_dashboard_tv_tomat.png` + `PG_04_dashboard_tv_lemon.png` kecil | Layar di line menunjukkan mutu lot saat itu juga |
+| 7 | Fitur 4/6 · Laporan Lot | `PG_05_laporan_lot.png` | Setiap lot punya keputusan, bukti, dan riwayat yang bisa ditunjukkan ke pembeli |
+| 8 | Fitur 5/6 · Standar Grade | `PG_06_standar_grade.png` | Standar resmi dan spec pembeli, diatur sendiri oleh QC |
+| 9 | Fitur 6/6 · Kamera, Alert & Integrasi | `PG_07_kamera_alert_integrasi.png` | Orang yang tepat tahu dalam hitungan detik, line bertindak otomatis |
 | 10 | Ringkasan manfaat | – | 4 manfaat bisnis dan fitur yang mewujudkannya |
 | 11 | Bukti PoC | – | hasil terukur dan batasannya |
 | 12 | Pilot & langkah berikutnya | – | pilot 30 hari, yang disiapkan, keputusan |
@@ -42,7 +42,7 @@ standarnya siapa dan siapa yang mengatur; apa buktinya; apakah cocok dengan kame
 ## 4. Cara pakai
 
 1. Buka Claude Design dan mulai proyek presentasi baru (atau buka deck yang akan digabung).
-2. Lampirkan 7 gambar dari folder `pages/`: `01_ringkasan.png`, `02_live_monitoring.png`, `03_dashboard_tv_tomat.png`, `04_dashboard_tv_lemon.png`, `05_laporan_lot.png`, `06_standar_grade.png`, `07_kamera_alert_integrasi.png`.
+2. Lampirkan 7 gambar dari folder `pages/`: `PG_01_ringkasan.png`, `PG_02_live_monitoring.png`, `PG_03_dashboard_tv_tomat.png`, `PG_04_dashboard_tv_lemon.png`, `PG_05_laporan_lot.png`, `PG_06_standar_grade.png`, `PG_07_kamera_alert_integrasi.png`.
 3. Tempel prompt di bagian 5. Isi dulu `[Nama tim]` dan `[Tanggal]`.
 4. Setelah semua slide jadi, minta ekspor ke PPTX.
 
@@ -66,7 +66,7 @@ GAYA VISUAL
 - Ikon garis sederhana. Jangan memakai logo perusahaan nyata.
 
 GAMBAR TERLAMPIR
-01_ringkasan.png · 02_live_monitoring.png · 03_dashboard_tv_tomat.png · 04_dashboard_tv_lemon.png · 05_laporan_lot.png · 06_standar_grade.png · 07_kamera_alert_integrasi.png
+PG_01_ringkasan.png · PG_02_live_monitoring.png · PG_03_dashboard_tv_tomat.png · PG_04_dashboard_tv_lemon.png · PG_05_laporan_lot.png · PG_06_standar_grade.png · PG_07_kamera_alert_integrasi.png
 Jika ada yang tidak terlampir, pakai bingkai placeholder berlabel nama filenya.
 
 PEMBUKA
@@ -75,7 +75,7 @@ PEMBUKA
 - Judul: Produce Grading
 - Subjudul: Grade warna setiap buah di line, sesuai standar USDA dan OECD, lengkap dengan bukti per lot.
 - Teks kecil: Konsep produk · [Nama tim] · [Tanggal]
-- Visual: 03_dashboard_tv_tomat.png besar dalam bingkai layar TV, sedikit terpotong di sisi kanan.
+- Visual: PG_03_dashboard_tv_tomat.png besar dalam bingkai layar TV, sedikit terpotong di sisi kanan.
 
 2. Masalah: "Masalah yang terjadi di line setiap hari"
 Empat kartu dengan ikon:
@@ -91,42 +91,42 @@ Empat kartu dengan ikon:
 
 TUR PRODUK (satu layar per slide)
 
-4. FITUR 1/6 · RINGKASAN: "Setiap shift, mutu warna semua line terbaca di satu layar" (01_ringkasan.png)
+4. FITUR 1/6 · RINGKASAN: "Setiap shift, mutu warna semua line terbaca di satu layar" (PG_01_ringkasan.png)
 1) Buah di-grade hari ini, persentase di kelas warna utama, lot di-hold, dan out of grade (baris kartu atas).
 2) Komposisi grade per line untuk tomat (kelas USDA) dan lemon (lot warna OECD), plus off-colour per jam terhadap limit lot 10% (grafik tengah).
 3) Daftar lot shift ini dengan statusnya (Release, Hold, Mixed Color) dan cuplikan line yang sedang berjalan (baris bawah).
 Manfaat untuk bisnis: lot bermasalah ketahuan sebelum naik truk, bukan setelah ditolak pembeli.
 Dipakai oleh: QC Manager, Plant Manager.
 
-5. FITUR 2/6 · LIVE MONITORING: "Supervisor melihat setiap buah yang keluar dari kelasnya, dan langsung bertindak" (02_live_monitoring.png)
+5. FITUR 2/6 · LIVE MONITORING: "Supervisor melihat setiap buah yang keluar dari kelasnya, dan langsung bertindak" (PG_02_live_monitoring.png)
 1) Kamera dengan overlay AI: kelas warna per buah, nomor line, count gate (kamera besar kiri).
 2) Lot berjalan: jumlah per kelas USDA dan off-colour 17% di atas limit 10%, plus foto buah off-colour per line (kolom kanan).
 3) Tombol Hold lot, Sortir ulang di line T2, atau Release sebagai Mixed Color (kanan bawah).
 Manfaat untuk bisnis: sortir ulang dilakukan saat buah masih di line, bukan di gudang.
 Dipakai oleh: Line Supervisor.
 
-6. FITUR 3/6 · DASHBOARD TV: "Layar di line menunjukkan mutu lot saat itu juga" (03_dashboard_tv_tomat.png utama, 04_dashboard_tv_lemon.png kecil)
+6. FITUR 3/6 · DASHBOARD TV: "Layar di line menunjukkan mutu lot saat itu juga" (PG_03_dashboard_tv_tomat.png utama, PG_04_dashboard_tv_lemon.png kecil)
 1) Kamera live dengan AI: setiap tomat diberi kotak sesuai kelas warna USDA dan dihitung sekali di count gate (gambar kamera kiri atas).
 2) KPI lot dan Grade Composition: 41 tomat, 83% Red, off-colour 17% di atas limit 10% → label Mixed Color atau sortir ulang 7 buah (kanan atas dan tengah).
 3) Event Log berfoto, grafik per line, off-colour yang terus naik, dan lini masa (kanan bawah dan baris bawah). Screenshot kecil: tampilan lemon dengan bagan warna OECD derajat 1–10, berganti otomatis di TV yang sama.
 Manfaat untuk bisnis: operator tidak perlu menebak; satu layar memberi tahu kapan harus sortir ulang.
 Dipakai oleh: operator line, Line Supervisor.
 
-7. FITUR 4/6 · LAPORAN LOT: "Setiap lot punya keputusan, bukti, dan riwayat yang bisa ditunjukkan ke pembeli" (05_laporan_lot.png)
+7. FITUR 4/6 · LAPORAN LOT: "Setiap lot punya keputusan, bukti, dan riwayat yang bisa ditunjukkan ke pembeli" (PG_05_laporan_lot.png)
 1) Cek lot sesuai USDA 7 CFR 51.1861: off-colour 17% > limit 10% → Mixed Color, atau sortir ulang 7 buah agar bisa diberi label Red (kartu tengah atas).
 2) Foto bukti buah off-colour dan sebaran warna setiap buah terhadap batas kelas USDA (baris tengah dan kiri bawah).
 3) Riwayat lot (dibuka, alert, hold, sortir ulang, oleh siapa) dan ekspor sertifikat lot PDF untuk QA pembeli (kanan bawah dan tombol atas).
 Manfaat untuk bisnis: klaim pembeli bisa dijawab dengan data per lot, bukan perkiraan.
 Dipakai oleh: QC Manager, tim sales/ekspor.
 
-8. FITUR 5/6 · STANDAR GRADE: "Standar resmi dan spec pembeli, diatur sendiri oleh QC" (06_standar_grade.png)
+8. FITUR 5/6 · STANDAR GRADE: "Standar resmi dan spec pembeli, diatur sendiri oleh QC" (PG_06_standar_grade.png)
 1) Daftar standar: kelas warna tomat USDA, bagan warna lemon OECD, dan spec pembeli (tabel kiri atas).
 2) Batas tiap kelas, limit off-colour, tindakan otomatis jika limit terlewati, dan cek warna dengan kartu referensi tiap awal shift (panel kanan atas).
 3) Standar diuji dulu di rekaman sebelum go-live; di PoC 75 dari 78 tomat sama dengan cek mata (kartu tengah dan bagan OECD di bawah).
 Manfaat untuk bisnis: ganti pembeli atau pasar ekspor cukup ganti standar, bukan ganti sistem.
 Dipakai oleh: QC Manager.
 
-9. FITUR 6/6 · KAMERA, ALERT & INTEGRASI: "Orang yang tepat tahu dalam hitungan detik, line bertindak otomatis" (07_kamera_alert_integrasi.png)
+9. FITUR 6/6 · KAMERA, ALERT & INTEGRASI: "Orang yang tepat tahu dalam hitungan detik, line bertindak otomatis" (PG_07_kamera_alert_integrasi.png)
 1) Kamera per line dengan status dan hasil cek gambar (tabel kiri atas).
 2) Aturan alert khusus grading (off-colour lot, hijau di lot, lemon derajat 10, kartu warna gagal) dan eskalasi (kiri tengah dan bawah).
 3) Integrasi ke PLC sortir, ERP/sistem lot, WhatsApp, dan API, plus contoh pesan WhatsApp berfoto (kolom kanan).
