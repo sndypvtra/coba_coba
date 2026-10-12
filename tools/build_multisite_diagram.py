@@ -14,10 +14,17 @@ diagram opens with no network. Sources:
       brand marks belong to their owners)
   cam.png, switch.png, server.svg, laptop.svg   draw.io clip art (Apache-2.0)
   mediamtx.png                                  github.com/bluenviron/mediamtx
+  webapp_a.jpg, webapp_b.jpg   the Produce Grading Dashboard TV pages of
+      projects/factory_mockup (tomato for plant A, lemon for plant B), cut down to
+      one product per plant; re-shoot them with --shots
+
+    python tools/build_multisite_diagram.py           # write the .drawio
+    python tools/build_multisite_diagram.py --shots   # re-shoot the two web-app pictures first
 """
 
 import base64
 import html
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -55,7 +62,7 @@ def esc(v):
 
 def uri(name):
     p = ICONS / name
-    kind = "svg+xml" if p.suffix == ".svg" else "png"
+    kind = {".svg": "svg+xml", ".jpg": "jpeg"}.get(p.suffix, "png")
     # draw.io splits style on ';' so the data URI carries no ';base64'
     return f"data:image/{kind}," + base64.b64encode(p.read_bytes()).decode()
 
@@ -129,6 +136,43 @@ def free(x1, y1, x2, y2, color, width=2, dashed=False, dotted=False, arrow=True)
         f'<mxCell id="{nid("e")}" style="{st}" edge="1" parent="1">'
         f'<mxGeometry relative="1" as="geometry"><mxPoint x="{x1}" y="{y1}" as="sourcePoint"/>'
         f'<mxPoint x="{x2}" y="{y2}" as="targetPoint"/></mxGeometry></mxCell>')
+
+
+def shots():
+    """Shoot the plant A and plant B web-app pictures from the factory mockup pages.
+
+    Plant A runs tomato only and plant B lemon only, so each page loses the other
+    product's tab, and the lemon page is moved to Pabrik B.
+    """
+    import cv2
+    sys.path.insert(0, str(ROOT / "projects" / "factory_mockup"))
+    from build import shoot
+    pages = ROOT / "projects" / "factory_mockup" / "html"
+    tomato = ('<span class=""><span class="i">nutrition</span>Tomat · USDA</span>')
+    lemon_on = ('<span class=""><span class="i">nutrition</span>Lemon · OECD</span>')
+    for out, page, cuts in [
+            ("webapp_a.jpg", "produce_grading__03_dashboard_tv_tomat.html", [(lemon_on, "")]),
+            ("webapp_b.jpg", "produce_grading__04_dashboard_tv_lemon.html",
+             [(tomato, ""), ("Pabrik A · Cikarang", "Pabrik B · Karawang")])]:
+        src = (pages / page).read_text()
+        for old, new in cuts:
+            assert old in src, (page, old)
+            src = src.replace(old, new)
+        tmp = pages / f"_diagram_{out[:-4]}.html"
+        tmp.write_text(src)
+        png = tmp.with_suffix(".png")
+        try:
+            shoot(tmp, png, 1.0)
+            pic = cv2.resize(cv2.imread(str(png)), (1280, 720), interpolation=cv2.INTER_AREA)
+            cv2.imwrite(str(ICONS / out), pic, [cv2.IMWRITE_JPEG_QUALITY, 88])
+        finally:
+            tmp.unlink(missing_ok=True)
+            png.unlink(missing_ok=True)
+        print("shot", out)
+
+
+if "--shots" in sys.argv:
+    shots()
 
 
 def fy(y, top, h):
@@ -247,9 +291,10 @@ def plant(L, y0):
                    size=11.5, color=INK, align="center", valign="middle", pad=2)
 
     dec = step("DECODE", "NVDEC / FFmpeg", 615, y0 + 168, 125, True)
-    yolo = step("YOLO", "PPE &#183; person", 755, y0 + 168, 135, True)
+    yolo = step("YOLO", ("tomat" if L == "A" else "lemon") + " &#183; PPE/person", 755,
+                y0 + 168, 135, True)
     trk = step("ByteTrack", "track_id", 905, y0 + 168, 115, False)
-    evt = step("EVENT LOGIC", "zona &#183; aturan PPE &#183; durasi", 885, y0 + 244, 135, False)
+    evt = step("EVENT LOGIC", "grade &#183; lot &#183; aturan PPE", 885, y0 + 244, 135, False)
     meta = step("metadata JSON", "cam &#183; ts &#183; bbox &#183; track_id &#183; class "
                 "&#183; event", 615, y0 + 244, 255, False)
     for a, b, ex_, en_ in [(dec, yolo, (1, .5), (0, .5)), (yolo, trk, (1, .5), (0, .5)),
@@ -298,7 +343,7 @@ def plant(L, y0):
               stroke="#94A3B8", size=12)
     img("fastapi.svg", 1288, y0 + 398, 24, 24)
     web = box(1345, y0 + 390, 240, 110,
-              "<b>Nginx :443</b> + Webapp<br>dashboard pabrik " + L + "<br>"
+              "<b>Nginx :443</b> + Webapp<br>Produce Grading, " + ("tomat" if L == "A" else "lemon") + "<br>"
               "proxy /api &amp; /ws &#8594; FastAPI<br>TLS: <i>tailscale cert</i>",
               stroke="#94A3B8", size=12)
     img("react.svg", 1524, y0 + 398, 24, 24)
@@ -378,40 +423,30 @@ usr = box(2140, UY, 380, UH, stroke="#94A3B8", sw=1.5)
 
 def mock(y, L):
     l = L.lower()
-    box(2160, y, 340, 200, stroke="#CBD5E1", arc=6)
+    fruit = "tomat" if L == "A" else "lemon"
+    box(2160, y, 340, 240, stroke="#94A3B8", arc=6)
     box(2160, y, 340, 22, f"&#9679; &#9679; &#9679;&#160;&#160; https://server-pabrik-{l}"
-        ".&lt;tailnet&gt;.ts.net", stroke="#CBD5E1", fill="#E5E7EB", size=10, color=BODY,
+        ".&lt;tailnet&gt;.ts.net", stroke="#94A3B8", fill="#E5E7EB", size=10, color=BODY,
         valign="middle", pad=6, arc=6)
-    text(f"<b>Webapp Pabrik {L}</b>", 2170, y + 28, 200, 18, size=11, color=INK)
-    box(2170, y + 50, 200, 140, stroke="none", fill="#1F2937", arc=4)
-    chip(f"LIVE &#183; {l}_cam01", 2176, y + 56, 84, 16, fill=RED, color="#FFFFFF", size=8.5,
-         bold=True)
-    box(2205, y + 96, 44, 84, stroke="#22C55E", fill="none", sw=2, arc=2)
-    chip("id 17 &#183; helm &#10003;", 2192, y + 79, 72, 15, fill="#22C55E", color="#FFFFFF",
-         size=8)
-    box(2296, y + 104, 40, 76, stroke="#EF4444", fill="none", sw=2, arc=2)
-    chip("id 23 &#183; tanpa helm", 2276, y + 87, 88, 15, fill="#EF4444", color="#FFFFFF",
-         size=8)
-    for i, (k, v) in enumerate([("Event hari ini", "48"), ("Alert terbuka", "3"),
-                                ("Kamera online", "12/12")]):
-        box(2380, y + 50 + i * 48, 110, 42, f"<font style='font-size:9px' color='{MUTE}'>"
-            f"{k}</font><br><b>{v}</b>", stroke="#E5E7EB", size=13, color=INK, pad=5)
+    img(f"webapp_{l}.jpg", 2162, y + 23, 336, 189)
+    text(f"<b>Webapp Pabrik {L}</b> &#183; Produce Grading, {fruit}", 2170, y + 216, 324, 18,
+         size=11, color=INK)
 
 
-mock(UY + 20, "A")
-mock(UY + UH - 220, "B")
-img("laptop.svg", 2205, 832, 110, 70)
-img("smartphone.svg", 2340, 838, 56, 56)
-text("Laptop / HP user", 2140, 910, 380, 22, size=15, color=INK, align="center", bold=True)
+mock(UY + 12, "A")
+mock(UY + UH - 250, "B")
+img("laptop.svg", 2205, 818, 104, 66)
+img("smartphone.svg", 2340, 822, 54, 54)
+text("Laptop / HP user", 2140, 888, 380, 22, size=15, color=INK, align="center", bold=True)
 text("di jaringan mana pun (kantor, rumah, 4G)<br>Tailscale client &#183; login SSO &#183; "
-     "group:viewer", 2140, 934, 380, 36, size=11.5, color=MUTE, align="center")
+     "group:viewer", 2140, 910, 380, 36, size=11.5, color=MUTE, align="center")
 text("Buka 2 alamat (bookmark), satu per pabrik.<br>"
      f"<b><font color='{EVENT}'>Webapp, event, kotak &amp; label</font></b> &#8592; HTTPS + "
      "WSS dari server pabrik<br>"
      f"<b><font color='{VIDEO}'>Video live</font></b> &#8592; WebRTC/WHEP dari server pabrik "
-     "yang sama, hanya saat dibuka", 2156, 980, 350, 100, size=12)
-text("<i>Angka di layar contoh = ilustrasi.</i>", 2156, 1080, 350, 16, size=10,
-     color="#9CA3AF")
+     "yang sama, hanya saat dibuka", 2156, 952, 350, 84, size=12)
+text("<i>Gambar: mockup Produce Grading (Dashboard TV); angka di layar = ilustrasi.</i>",
+     2156, 1040, 350, 32, size=10, color="#9CA3AF")
 
 # ======================================================== WAN flows =========
 for ts, y0, L in [(TS_A, A0, "A"), (TS_B, B0, "B")]:
