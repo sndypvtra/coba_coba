@@ -93,8 +93,8 @@ Setelah tahap 4 selesai, minta: "Periksa semua slide: judul di posisi yang sama,
 Tulis: "Lanjutkan dari slide berikutnya sesuai prompt utama." Kalau slide terlalu padat: "Perbesar screenshot di slide
 X sampai 65% lebar slide dan persingkat poinnya jadi satu baris."
 
-Mau menambah **3 slide arsitektur** (server per pabrik + Tailscale)? Lihat bagian 6. Itu bisa dikerjakan setelah
-deck 34 slide jadi, atau sebelum ekspor.
+Mau menambah **1 slide arsitektur sistem**? Lihat bagian 6. Itu bisa dikerjakan setelah deck 34 slide jadi,
+atau sebelum ekspor.
 
 ## 5. Prompt utama (tempel di tahap 1)
 
@@ -396,48 +396,25 @@ ATURAN
 - Tambahkan catatan pembicara 2–3 kalimat untuk setiap slide; di slide tur, isinya cara mendemokan layar itu dalam satu menit.
 ```
 
-## 6. Tambahan: 3 slide arsitektur (slide 34–36, deck menjadi 37 slide)
+## 6. Tambahan: 1 slide arsitektur sistem (slide 34, deck menjadi 35 slide)
 
-Untuk deck yang sudah jadi di Claude Design, di proyek yang sama. Lampirkan 3 gambar dari folder `arsitektur/`:
-`ARC_01_arsitektur_2_pabrik.png`, `ARC_02_server_pabrik.png`, `ARC_03_akses_tailscale.png`. Gambarnya diambil dari diagram draw.io
-`architecture_multi_pabrik.drawio` (di root repo). Tempel prompt di bawah (juga ada di
+Untuk deck yang sudah jadi di Claude Design, di proyek yang sama. Lampirkan `arsitektur/ARC_arsitektur_sistem.png`.
+Gambarnya diambil dari diagram draw.io `architecture_multi_pabrik.drawio` (di root repo), tanpa baris judulnya,
+karena judul ditulis di slide. Tempel prompt di bawah (juga ada di
 `claude_design_prompts/tahap_6_tambah_arsitektur.txt`), lalu kirim.
 
 ```text
-Tambahkan 3 slide arsitektur ke deck Factory Vision yang sudah ada. Sisipkan setelah slide 33 (Bukti PoC) dan sebelum slide "Langkah berikutnya", jadi slide arsitektur bernomor 34–36 dan slide "Langkah berikutnya" pindah ke nomor 37. Total deck menjadi 37 slide. Jangan ubah isi slide lain.
+Tambahkan 1 slide arsitektur ke deck Factory Vision yang sudah ada. Sisipkan setelah slide 33 (Bukti PoC) dan sebelum slide "Langkah berikutnya", jadi slide arsitektur menjadi slide 34 dan slide "Langkah berikutnya" pindah ke nomor 35. Total deck menjadi 35 slide. Jangan ubah isi slide lain.
 
-Terlampir 3 gambar: ARC_01_arsitektur_2_pabrik.png, ARC_02_server_pabrik.png, ARC_03_akses_tailscale.png. Jangan crop atau ubah isi gambarnya. Gambar boleh diperkecil supaya muat. Beri bingkai tipis abu (#E2E8F0) dengan sudut membulat, sama seperti screenshot di slide lain.
+Terlampir 1 gambar: ARC_arsitektur_sistem.png. Gambar ini sudah berisi seluruh penjelasan, jadi slide ini hanya berisi judul dan gambar, tanpa poin atau kartu tambahan.
 
-GAYA
-- Sama dengan slide penutup: latar terang #F3F5F8, teks #0F172A dan #475569, huruf Inter, aksen biru #2563EB untuk label kecil, ikon, dan garis penanda.
-- Label kecil di atas judul: "ARSITEKTUR · n/3". Posisi judul sama dengan slide lain.
-- Penontonnya pemilik pabrik dan tim IT. Istilah teknis umum boleh dipakai (server, jaringan, VPN, port, SSO), tapi kalimatnya tetap singkat, satu baris per poin.
-- "Server pabrik" di slide ini sama dengan "edge AI box" di slide 3. Tulis "server pabrik (edge AI box)" saat pertama kali muncul.
+34. ARSITEKTUR: "Setiap pabrik mandiri, dipantau dari mana saja" (ARC_arsitektur_sistem.png)
+- Label kecil di atas judul: "ARSITEKTUR SISTEM", warna aksen biru #2563EB.
+- Judul: Setiap pabrik mandiri, dipantau dari mana saja
+- Subjudul satu baris di bawah judul: AI, rekaman, dan data diproses di server tiap pabrik. Dashboard bisa dibuka dari kantor, rumah, atau HP lewat jaringan privat yang aman.
+- Gambar sebesar mungkin di bawah subjudul, di tengah, memenuhi sisa tinggi slide. Jangan crop, jangan ubah isi gambar, dan jaga rasio aslinya. Beri bingkai tipis abu (#E2E8F0) dengan sudut membulat, sama seperti screenshot di slide lain.
+- Gaya sama dengan slide penutup: latar terang #F3F5F8, teks #0F172A dan #475569, huruf Inter. Posisi judul sama dengan slide lain.
+- Catatan kaki kecil: "Diagram lengkap (file draw.io) tersedia untuk tim IT."
 
-34. ARSITEKTUR 1/3: "Satu server di tiap pabrik, dibuka dari mana saja" (ARC_01_arsitektur_2_pabrik.png)
-- Gambar sebesar mungkin: tinggi penuh di bawah judul (sekitar 80% tinggi slide), rata kiri.
-- Kolom kanan yang sempit, 3 poin:
-  1) Kamera → server pabrik (edge AI box): AI, rekaman, database, dan web app → laptop atau HP lewat Tailscale.
-  2) Tidak ada server pusat. Data tiap pabrik tetap di pabriknya.
-  3) Contoh di gambar: Produce Grading di 2 pabrik (tomat di Pabrik A, lemon di Pabrik B). Produk lain dan pabrik berikutnya polanya sama.
-- Catatan kaki: "Diagram lengkap (file draw.io) tersedia untuk tim IT."
-
-35. ARSITEKTUR 2/3: "Semua proses terjadi di server pabrik" (ARC_02_server_pabrik.png)
-- Gambar selebar slide di bagian atas (sekitar 55% tinggi slide).
-- Di bawahnya 4 kartu kecil berjajar, masing-masing dengan ikon:
-  - Kamera: 1 koneksi per kamera, di jaringan lokal pabrik.
-  - AI: deteksi, tracking, dan aturan grade berjalan di GPU server pabrik.
-  - Data: event, rekaman video, dan laporan disimpan di server pabrik.
-  - Internet putus: line tetap diinspeksi dan dicatat, tim di pabrik tetap bisa membuka web app.
-
-36. ARSITEKTUR 3/3: "Akses aman tanpa membuka jaringan pabrik" (ARC_03_akses_tailscale.png)
-- Gambar di sisi kanan, tinggi penuh di bawah judul (gambarnya tegak).
-- Sisi kiri, 5 poin dengan ikon:
-  1) Tailscale: jaringan privat terenkripsi, login SSO + MFA, perangkat baru harus disetujui admin.
-  2) Tanpa port forwarding dan tanpa IP publik di pabrik.
-  3) Hak akses per pabrik: setiap user hanya melihat pabrik yang menjadi haknya.
-  4) Video live hanya mengalir saat ditonton. Tanpa penonton, trafik internet hampir nol.
-  5) Butuh laporan gabungan beberapa pabrik? Server pusat bisa ditambah nanti, tanpa mengubah server pabrik.
-
-Setelah itu ubah nomor slide "Langkah berikutnya" menjadi 37. Periksa judul, nomor slide, dan tidak ada teks terpotong, lalu ekspor ulang ke PPTX.
+Setelah itu ubah nomor slide "Langkah berikutnya" menjadi 35. Periksa judul, nomor slide, dan tidak ada teks terpotong, lalu ekspor ulang ke PPTX.
 ```

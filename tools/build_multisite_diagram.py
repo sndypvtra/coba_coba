@@ -181,11 +181,11 @@ def fy(y, top, h):
 
 
 # ================================================================ title =====
-text("Arsitektur Video Analytics 2 Pabrik &#8212; Server per Pabrik + Tailscale", 0, 16, W,
-     40, size=30, color=INK, align="center", bold=True)
-text("Tiap pabrik punya server sendiri: AI, rekaman, database dan webapp. <b>Tidak ada server "
-     "pusat:</b> laptop di jaringan mana pun membuka webapp tiap pabrik langsung lewat "
-     "Tailscale.", 0, 60, W, 22, size=14, color=MUTE, align="center")
+text("Arsitektur Sistem: Setiap Pabrik Mandiri, Dipantau dari Mana Saja", 0, 16, W, 40,
+     size=30, color=INK, align="center", bold=True)
+text("AI, rekaman, dan data diproses di server masing-masing pabrik. Tim membuka dashboard tiap "
+     "pabrik dari kantor, rumah, atau HP melalui jaringan privat yang aman, <b>tanpa server "
+     "pusat</b>.", 0, 60, W, 22, size=14, color=MUTE, align="center")
 
 # ================================================================ zones =====
 ZT, ZB = 110, 1460
