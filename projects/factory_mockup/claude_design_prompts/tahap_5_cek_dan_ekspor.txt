@@ -1,0 +1,1 @@
+Periksa semua slide: judul di posisi yang sama, tidak ada teks terpotong, gambar sesuai nama filenya, lalu ekspor ke PPTX.
