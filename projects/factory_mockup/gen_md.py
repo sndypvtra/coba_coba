@@ -379,6 +379,47 @@ GAIN = {"produce_grading": "lot bermasalah ditahan sebelum dikirim, dengan bukti
 LETTER = dict(zip(APPS, "ABCD"))
 
 
+ARCH_IMGS = ["ARC_01_arsitektur_2_pabrik.png", "ARC_02_server_pabrik.png", "ARC_03_akses_tailscale.png"]
+
+# Three architecture slides added to a finished deck: after "Bukti PoC", before the pilot slide.
+ARCH_PROMPT = """Tambahkan 3 slide arsitektur ke deck Factory Vision yang sudah ada. Sisipkan setelah slide 33 (Bukti PoC) dan sebelum slide "Langkah berikutnya", jadi slide arsitektur bernomor 34–36 dan slide "Langkah berikutnya" pindah ke nomor 37. Total deck menjadi 37 slide. Jangan ubah isi slide lain.
+
+Terlampir 3 gambar: ARC_01_arsitektur_2_pabrik.png, ARC_02_server_pabrik.png, ARC_03_akses_tailscale.png. Jangan crop atau ubah isi gambarnya. Gambar boleh diperkecil supaya muat. Beri bingkai tipis abu (#E2E8F0) dengan sudut membulat, sama seperti screenshot di slide lain.
+
+GAYA
+- Sama dengan slide penutup: latar terang #F3F5F8, teks #0F172A dan #475569, huruf Inter, aksen biru #2563EB untuk label kecil, ikon, dan garis penanda.
+- Label kecil di atas judul: "ARSITEKTUR · n/3". Posisi judul sama dengan slide lain.
+- Penontonnya pemilik pabrik dan tim IT. Istilah teknis umum boleh dipakai (server, jaringan, VPN, port, SSO), tapi kalimatnya tetap singkat, satu baris per poin.
+- "Server pabrik" di slide ini sama dengan "edge AI box" di slide 3. Tulis "server pabrik (edge AI box)" saat pertama kali muncul.
+
+34. ARSITEKTUR 1/3: "Satu server di tiap pabrik, dibuka dari mana saja" (ARC_01_arsitektur_2_pabrik.png)
+- Gambar sebesar mungkin: tinggi penuh di bawah judul (sekitar 80% tinggi slide), rata kiri.
+- Kolom kanan yang sempit, 3 poin:
+  1) Kamera → server pabrik (edge AI box): AI, rekaman, database, dan web app → laptop atau HP lewat Tailscale.
+  2) Tidak ada server pusat. Data tiap pabrik tetap di pabriknya.
+  3) Contoh di gambar: Produce Grading di 2 pabrik (tomat di Pabrik A, lemon di Pabrik B). Produk lain dan pabrik berikutnya polanya sama.
+- Catatan kaki: "Diagram lengkap (file draw.io) tersedia untuk tim IT."
+
+35. ARSITEKTUR 2/3: "Semua proses terjadi di server pabrik" (ARC_02_server_pabrik.png)
+- Gambar selebar slide di bagian atas (sekitar 55% tinggi slide).
+- Di bawahnya 4 kartu kecil berjajar, masing-masing dengan ikon:
+  - Kamera: 1 koneksi per kamera, di jaringan lokal pabrik.
+  - AI: deteksi, tracking, dan aturan grade berjalan di GPU server pabrik.
+  - Data: event, rekaman video, dan laporan disimpan di server pabrik.
+  - Internet putus: line tetap diinspeksi dan dicatat, tim di pabrik tetap bisa membuka web app.
+
+36. ARSITEKTUR 3/3: "Akses aman tanpa membuka jaringan pabrik" (ARC_03_akses_tailscale.png)
+- Gambar di sisi kanan, tinggi penuh di bawah judul (gambarnya tegak).
+- Sisi kiri, 5 poin dengan ikon:
+  1) Tailscale: jaringan privat terenkripsi, login SSO + MFA, perangkat baru harus disetujui admin.
+  2) Tanpa port forwarding dan tanpa IP publik di pabrik.
+  3) Hak akses per pabrik: setiap user hanya melihat pabrik yang menjadi haknya.
+  4) Video live hanya mengalir saat ditonton. Tanpa penonton, trafik internet hampir nol.
+  5) Butuh laporan gabungan beberapa pabrik? Server pusat bisa ditambah nanti, tanpa mengubah server pabrik.
+
+Setelah itu ubah nomor slide "Langkah berikutnya" menjadi 37. Periksa judul, nomor slide, dan tidak ada teks terpotong, lalu ekspor ulang ke PPTX."""
+
+
 def combined() -> str:
     """One deck for all four products: one Claude Design project, pictures attached in four rounds."""
     n = 3
@@ -475,6 +516,9 @@ Setelah tahap 4 selesai, minta: "Periksa semua slide: judul di posisi yang sama,
 Tulis: "Lanjutkan dari slide berikutnya sesuai prompt utama." Kalau slide terlalu padat: "Perbesar screenshot di slide
 X sampai 65% lebar slide dan persingkat poinnya jadi satu baris."
 
+Mau menambah **3 slide arsitektur** (server per pabrik + Tailscale)? Lihat bagian 6. Itu bisa dikerjakan setelah
+deck 34 slide jadi, atau sebelum ekspor.
+
 ## 5. Prompt utama (tempel di tahap 1)
 
 ```text
@@ -534,6 +578,17 @@ Catatan kaki: "Laju per menit/jam di video adalah perkiraan dari klip beberapa d
 
 {COMMON_RULES}
 ```
+
+## 6. Tambahan: 3 slide arsitektur (slide 34–36, deck menjadi 37 slide)
+
+Untuk deck yang sudah jadi di Claude Design, di proyek yang sama. Lampirkan 3 gambar dari folder `arsitektur/`:
+""" + ", ".join(f"`{x}`" for x in ARCH_IMGS) + """. Gambarnya diambil dari diagram draw.io
+`architecture_multi_pabrik.drawio` (di root repo). Tempel prompt di bawah (juga ada di
+`claude_design_prompts/tahap_6_tambah_arsitektur.txt`), lalu kirim.
+
+```text
+""" + ARCH_PROMPT + """
+```
 """
 
 
@@ -544,6 +599,9 @@ def main():
         print(out)
     out = HERE / "factory_vision_deck.md"
     out.write_text(combined())
+    print(out)
+    out = HERE / "claude_design_prompts" / "tahap_6_tambah_arsitektur.txt"
+    out.write_text(ARCH_PROMPT + "\n")
     print(out)
 
 

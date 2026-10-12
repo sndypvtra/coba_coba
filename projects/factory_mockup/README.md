@@ -12,6 +12,9 @@ warehouse mockup (`07_warehouse_live_ops/mockup`), so the decks can be shown alo
 
 For one deck with all four products, use **`factory_vision_deck.md`** (34 slides, pictures attached in four rounds).
 Picture names start with the product (PG, FL, PC, PD), so all of them fit in one Claude Design project.
+Three optional architecture slides (one server per plant, Tailscale) can be added to a finished deck. Their pictures
+are in `arsitektur/` (ARC_01–03, cut from `architecture_multi_pabrik.drawio` at the repo root), and the prompt is in
+section 6 of the deck file and in `claude_design_prompts/tahap_6_tambah_arsitektur.txt`.
 
 Every app tells the same story: Ringkasan → Live Monitoring → Dashboard TV → report or reject detail →
 the product's own specification page → Kamera, Alert & Integrasi.
