@@ -30,13 +30,15 @@ editable file, and `docs/architecture.png` is a flat render of it.
 ### Multi-plant version (Indonesian labels)
 
 `architecture_multi_pabrik.drawio` (flat render: `docs/architecture_multi_pabrik.png`)
-draws the same idea for several plants. Each plant runs its own edge node (MediaMTX,
-CV Worker with YOLO + ByteTrack, a local RabbitMQ buffer, Tailscale). Only events and
-metadata travel to the central server (RabbitMQ, FastAPI, PostgreSQL + TimescaleDB,
-the Nginx/React dashboard). Live video goes from the edge straight to the viewer over
-WebRTC/WHEP, and only while someone is watching. The diagram also shows the ports,
-the Tailscale ACL, the data tables, and what happens when the WAN drops. It is rebuilt
-with `python tools/build_multisite_diagram.py`, which reads its logos from
+draws two plants with no central server. Each plant has one server that holds the whole
+stack: MediaMTX, the CV Worker (YOLO + ByteTrack), a local RabbitMQ, FastAPI,
+PostgreSQL + TimescaleDB, the Nginx/React web app and Tailscale. A laptop on any network
+joins the tailnet and opens each plant's web app on its own address
+(`server-pabrik-a`, `server-pabrik-b`). Live video comes from the same server over
+WebRTC/WHEP, and only while someone is watching. The diagram also shows the ports, the
+Tailscale ACL, the data tables, what happens when a plant loses its internet, and what
+having no central server costs. It is rebuilt with
+`python tools/build_multisite_diagram.py`, which reads its logos from
 `tools/multisite_icons/` and needs no network. Like the script above, it overwrites
 its `.drawio`.
 

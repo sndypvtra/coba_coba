@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Build architecture_multi_pabrik.drawio: two plants, each with its own edge
-video analytics, one central server, and Tailscale between them.
+"""Build architecture_multi_pabrik.drawio: two plants, each with its own server
+(video analytics, recording, database and web app), no central server, and
+Tailscale so a laptop on any network can open each plant's web app.
 
 WARNING: this OVERWRITES ../architecture_multi_pabrik.drawio. Once the file is
 edited by hand in draw.io, change the layout there, not here.
@@ -23,15 +24,15 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "architecture_multi_pabrik.drawio"
 ICONS = Path(__file__).with_name("multisite_icons")
 
-W, H = 2520, 1660
+W, H = 2560, 1660
 FONT = "fontFamily=Helvetica;"
 
 INK = "#111827"
 BODY = "#374151"
 MUTE = "#6B7280"
 LINE = "#CBD5E1"
-EDGE_C = "#C2410C"     # edge node, the hero of each plant
-EVENT = "#1D4ED8"      # event / metadata flow
+EDGE_C = "#C2410C"     # plant server, the hero of each plant
+EVENT = "#1D4ED8"      # app data: events, web app, API
 VIDEO = "#7C3AED"      # live video, on demand
 RTSP = "#6B7280"
 CABLE = "#9CA3AF"
@@ -136,25 +137,26 @@ def fy(y, top, h):
 
 
 # ================================================================ title =====
-text("Arsitektur Video Analytics Multi-Pabrik", 0, 16, W, 40, size=30, color=INK,
-     align="center", bold=True)
-text("Edge AI di tiap pabrik &#183; server pusat untuk event semua pabrik &#183; "
-     "Tailscale sebagai jaringan privat. <b>Yang mengalir terus hanya event/metadata; "
-     "video live dibuka langsung dari edge saat ada yang menonton.</b>",
-     0, 60, W, 22, size=14, color=MUTE, align="center")
+text("Arsitektur Video Analytics 2 Pabrik &#8212; Server per Pabrik + Tailscale", 0, 16, W,
+     40, size=30, color=INK, align="center", bold=True)
+text("Tiap pabrik punya server sendiri: AI, rekaman, database dan webapp. <b>Tidak ada server "
+     "pusat:</b> laptop di jaringan mana pun membuka webapp tiap pabrik langsung lewat "
+     "Tailscale.", 0, 60, W, 22, size=14, color=MUTE, align="center")
 
 # ================================================================ zones =====
 ZT, ZB = 110, 1460
 ZONES = [
     (20, 270, "1. AKUISISI VIDEO", "#F3F4F6", "#4B5563"),
-    (305, 925, "2. EDGE NODE (PER PABRIK)", "#FDF3E7", EDGE_C),
-    (1245, 255, "3. JARINGAN &#183; TAILSCALE", "#EAF0FA", NET),
-    (1515, 640, "4. SERVER PUSAT / DC", "#E9EEF7", NET),
-    (2170, 330, "5. PENGGUNA", "#F3F4F6", "#4B5563"),
+    (305, 1485, "2. SERVER PABRIK (SEMUA DI LOKASI MASING-MASING)", "#FDF3E7", EDGE_C),
+    (1805, 300, "3. JARINGAN &#183; TAILSCALE", "#EAF0FA", NET),
+    (2120, 420, "4. PENGGUNA (BEDA JARINGAN)", "#F3F4F6", "#4B5563"),
 ]
 for x, w, title, fill, col in ZONES:
     box(x, ZT, w, ZB - ZT, stroke="none", fill=fill, arc=10)
     text(title, x, ZT + 12, w, 24, size=17, color=col, align="center", bold=True)
+
+TS_X, TS_W = 1610, 145      # Tailscale box on each server
+WEB_DY, VID_DY = 445, 510   # where the webapp and the video leave the server
 
 
 # ================================================================ plants ====
@@ -163,9 +165,9 @@ def plant(L, y0):
     l = L.lower()
 
     # site boundary
-    box(30, y0, 1192, 575, stroke=RED, fill="none", sw=2, dashed=True, arc=12)
-    chip(f"LOKASI PABRIK {L} &#183; site_id = {l}", 48, y0 - 11, 250, 22, fill="#FFFFFF",
-         color=RED, stroke=RED, size=11, bold=True)
+    box(30, y0, 1752, 575, stroke=RED, fill="none", sw=2, dashed=True, arc=12)
+    chip(f"LOKASI PABRIK {L} &#183; jaringan lokal pabrik {L}", 48, y0 - 11, 300, 22,
+         fill="#FFFFFF", color=RED, stroke=RED, size=11, bold=True)
 
     # 1. cameras, switch, UPS
     cam = box(42, y0 + 30, 226, 220)
@@ -184,25 +186,26 @@ def plant(L, y0):
     img("switch.png", 54, y0 + 290, 84, 45)
     text("<b>PoE Switch</b><br>VLAN kamera<br>LAN lokal", 146, y0 + 284, 118, 58,
          size=12, color=BODY)
-    text("uplink 1 GbE ke edge node<br>1 koneksi RTSP per kamera", 42, y0 + 348, 226, 34,
-         size=10, color=MUTE, align="center")
+    text("uplink 1 GbE ke server pabrik<br>1 koneksi RTSP per kamera", 42, y0 + 348, 226,
+         34, size=10, color=MUTE, align="center")
     edge(cam, sw, color=CABLE, exit_=(.5, 1), entry=(.5, 0), arrow=False)
 
     ups = box(42, y0 + 420, 226, 85, stroke=LINE, dashed=True)
     img("battery.svg", 54, y0 + 442, 40, 40)
     text("<b>UPS</b> <font color='#9CA3AF'>(opsional)</font><br>daya untuk switch<br>"
-         "+ edge node", 102, y0 + 434, 160, 58, size=12)
+         "+ server pabrik", 102, y0 + 434, 160, 58, size=12)
 
-    # 2. edge node
+    # 2. the plant server
     ey, eh = y0 + 30, 515
-    ec = box(320, ey, 895, eh, stroke=EDGE_C, sw=2, arc=8)
+    ec = box(320, ey, 1455, eh, stroke=EDGE_C, sw=2, arc=8)
     img("server.svg", 334, y0 + 42, 24, 48)
-    text(f"EDGE NODE PABRIK {L}", 368, y0 + 40, 600, 24, size=17, color=EDGE_C, bold=True)
-    text("GPU server on-prem &#183; Ubuntu LTS &#183; Docker Compose &#183; "
-         "NVIDIA GPU (CUDA / TensorRT)", 368, y0 + 66, 680, 18, size=11.5, color=MUTE)
-    img("ubuntu.svg", 1098, y0 + 46, 26, 26)
-    img("docker.svg", 1134, y0 + 46, 26, 26)
-    img("nvidia.svg", 1170, y0 + 46, 30, 30)
+    text(f"SERVER PABRIK {L}", 368, y0 + 40, 600, 24, size=17, color=EDGE_C, bold=True)
+    text("1 GPU server on-prem &#183; Ubuntu LTS &#183; Docker Compose &#183; NVIDIA GPU "
+         "(CUDA / TensorRT) &#183; AI, rekaman, database dan webapp di satu mesin",
+         368, y0 + 66, 1000, 18, size=11.5, color=MUTE)
+    img("ubuntu.svg", 1658, y0 + 46, 26, 26)
+    img("docker.svg", 1694, y0 + 46, 26, 26)
+    img("nvidia.svg", 1730, y0 + 46, 30, 30)
     edge(ups, ec, color=CABLE, exit_=(1, .5), entry=(0, fy(y0 + 462.5, ey, eh)),
          arrow=False, dotted=True)
 
@@ -247,8 +250,8 @@ def plant(L, y0):
     yolo = step("YOLO", "PPE &#183; person", 755, y0 + 168, 135, True)
     trk = step("ByteTrack", "track_id", 905, y0 + 168, 115, False)
     evt = step("EVENT LOGIC", "zona &#183; aturan PPE &#183; durasi", 885, y0 + 244, 135, False)
-    meta = step("metadata JSON", "site &#183; cam &#183; ts &#183; bbox &#183; track_id "
-                "&#183; class &#183; event", 615, y0 + 244, 255, False)
+    meta = step("metadata JSON", "cam &#183; ts &#183; bbox &#183; track_id &#183; class "
+                "&#183; event", 615, y0 + 244, 255, False)
     for a, b, ex_, en_ in [(dec, yolo, (1, .5), (0, .5)), (yolo, trk, (1, .5), (0, .5)),
                            (trk, evt, (.5, 1), (.5, 0)), (evt, meta, (0, .5), (1, .5))]:
         edge(a, b, color=RTSP, width=1.5, exit_=ex_, entry=en_)
@@ -264,180 +267,163 @@ def plant(L, y0):
     ry, rh = y0 + 390, 105
     rmq = box(600, ry, 300, rh, stroke="#94A3B8")
     img("rabbitmq.svg", 866, y0 + 398, 24, 24)
-    text("<b>RabbitMQ lokal</b><br><b>event</b>: queue durable, buffer saat WAN putus<br>"
-         "<b>track</b> (bbox live): TTL pendek<br>shovel &#8594; RabbitMQ pusat",
-         612, y0 + 398, 260, 90, size=12)
+    text("<b>RabbitMQ lokal</b><br>antrean CV Worker &#8594; FastAPI<br>"
+         "<b>event</b>: durable &#183; <b>track</b>: TTL pendek<br>"
+         "AI tetap jalan walau API restart", 612, y0 + 398, 260, 90, size=12)
     edge(meta, rmq, color=EVENT, exit_=(fy(745, 615, 255), 1), entry=(fy(745, 600, 300), 0),
          label="publish &#183; AMQP :5672")
 
-    # Tailscale on the edge node
+    # schema (top of the app column)
+    box(1060, y0 + 110, 525, 118, stroke="#94A3B8", fill="#F8FAFC")
+    text(f"<b>Skema data</b> &#183; database lokal pabrik {L}", 1072, y0 + 116, 400, 18,
+         size=12, color=INK)
+    for i, (name, cols) in enumerate([
+            ("camera", "id &#183; rtsp_path<br>zona &#183; status"),
+            ("event", "ts &#183; cam_id &#183; track_id<br>class &#183; bbox &#183; event_type"),
+            ("alert", "event_id &#183; status<br>user &#183; ack_at")]):
+        x = 1072 + i * 170
+        chip(f"<b>{name}</b>" + (" &#183; hypertable" if name == "event" else ""), x,
+             y0 + 140, 160, 20, fill="#DBE4F3", color=NET, size=10.5)
+        text(cols, x + 4, y0 + 166, 158, 40, size=10.5, extra="fontFamily=Courier New;")
+
+    # PostgreSQL, FastAPI, Nginx + webapp, notifications
+    pg = box(1060, y0 + 250, 260, 115,
+             "<b>PostgreSQL</b> + TimescaleDB<br>event pabrik ini saja<br>"
+             "retensi + compression<br>backup harian (NAS lokal)", stroke="#94A3B8", size=12)
+    img("timescale.svg", 1258, y0 + 260, 22, 22)
+    img("postgresql.svg", 1286, y0 + 258, 26, 26)
+    api = box(1060, y0 + 390, 260, 110,
+              "<b>FastAPI</b> (uvicorn)<br>event &#8594; PostgreSQL<br>"
+              "track &#8594; WebSocket (overlay live)<br>REST /api &#183; WS /ws &#183; JWT",
+              stroke="#94A3B8", size=12)
+    img("fastapi.svg", 1288, y0 + 398, 24, 24)
+    web = box(1345, y0 + 390, 240, 110,
+              "<b>Nginx :443</b> + Webapp<br>dashboard pabrik " + L + "<br>"
+              "proxy /api &amp; /ws &#8594; FastAPI<br>TLS: <i>tailscale cert</i>",
+              stroke="#94A3B8", size=12)
+    img("react.svg", 1524, y0 + 398, 24, 24)
+    img("nginx.svg", 1552, y0 + 398, 24, 24)
+    box(1345, y0 + 250, 240, 115, "<b>Notifikasi</b> <font color='#9CA3AF'>(opsional)</font>"
+        "<br>WhatsApp / email / webhook<br>dipicu event kritis", stroke="#9CA3AF",
+        dashed=True, size=12)
+    img("whatsapp.svg", 1552, y0 + 258, 24, 24)
+    edge(rmq, api, color=EVENT, exit_=(1, .5), entry=(0, fy(ry + rh / 2, y0 + 390, 110)),
+         label="consume")
+    edge(api, pg, color=EVENT, exit_=(.5, 0), entry=(.5, 1), start=True,
+         label="INSERT / SELECT")
+    edge(api, web, color=EVENT, exit_=(1, .5), entry=(0, .5))
+
+    # Tailscale on the server
     ty, th = y0 + 110, 415
-    ts = box(1060, ty, 140, th, stroke="#334155", fill="#F8FAFC", sw=1.5)
-    img("tailscale.svg", 1110, y0 + 122, 40, 40)
+    ts = box(TS_X, ty, TS_W, th, stroke="#334155", fill="#F8FAFC", sw=1.5)
+    img("tailscale.svg", TS_X + 52, y0 + 122, 40, 40)
     text(f"<b>Tailscale</b><br>tailscaled<br><br>MagicDNS<br>"
-         f"<b><font color='{INK}'>edge-pabrik-{l}</font></b><br><br>tag:edge<br><br>"
+         f"<b><font color='{INK}'>server-pabrik-{l}</font></b><br><br>tag:pabrik<br><br>"
          f"<font color='{MUTE}'>keluar ke internet:<br>UDP 41641 / TCP 443<br>"
-         "(outbound saja)</font><br><br>IP tailnet<br>100.x.y.z", 1064, y0 + 172, 132, 330, size=12, align="center")
-    edge(rmq, ts, color=EVENT, exit_=(1, .5), entry=(0, fy(ry + rh / 2, ty, th)),
-         label="shovel")
-    edge(whep, ts, color=VIDEO, exit_=(1, fy(y0 + 510, wy, wh)),
-         entry=(0, fy(y0 + 510, ty, th)), dashed=True)
+         "(outbound saja)</font><br><br>IP tailnet<br>100.x.y.z", TS_X + 4, y0 + 172,
+         TS_W - 8, 330, size=12, align="center")
+    edge(web, ts, color=EVENT, exit_=(1, fy(y0 + WEB_DY, y0 + 390, 110)),
+         entry=(0, fy(y0 + WEB_DY, ty, th)))
+    edge(whep, ts, color=VIDEO, exit_=(1, fy(y0 + VID_DY, wy, wh)),
+         entry=(0, fy(y0 + VID_DY, ty, th)), dashed=True)
     return ts
 
 
-TS_A = plant("A", 160)
-TS_B = plant("B", 770)
+A0, B0 = 160, 770
+TS_A = plant("A", A0)
+TS_B = plant("B", B0)
 
 # Pabrik C, D, ...
-box(30, 1362, 1192, 78, stroke="#9CA3AF", fill="none", sw=1.5, dashed=True, arc=12)
-text("<b>PABRIK C, D, &#8230;</b> &#8212; polanya sama: Kamera IP &#8594; Edge Node "
-     "(MediaMTX &#183; CV Worker &#183; RabbitMQ lokal &#183; Tailscale) &#183; MagicDNS "
-     "<b>edge-pabrik-c</b><br>Tambah pabrik = 1 edge node + kamera + join tailnet "
-     "(tag:edge) + 1 shovel + 1 baris di tabel <i>site</i>. Server pusat tidak berubah.",
-     50, 1372, 1160, 60, size=13, color=MUTE)
+box(30, 1362, 1752, 78, stroke="#9CA3AF", fill="none", sw=1.5, dashed=True, arc=12)
+text("<b>PABRIK C, D, &#8230;</b> &#8212; polanya sama: Kamera IP &#8594; Server Pabrik "
+     "(MediaMTX &#183; CV Worker &#183; RabbitMQ &#183; FastAPI &#183; PostgreSQL &#183; "
+     "Webapp &#183; Tailscale) &#183; MagicDNS <b>server-pabrik-c</b><br>"
+     "Tambah pabrik = 1 server + kamera + join tailnet (tag:pabrik) + 1 bookmark baru di "
+     "laptop. Server pabrik lain tidak berubah.", 50, 1372, 1720, 60, size=13, color=MUTE)
 
 # ============================================================ tailnet =======
-box(1280, 200, 175, 190,
-    "<br><br><br><b>TAILNET</b><br>WireGuard, terenkripsi end-to-end<br>"
-    "MagicDNS: edge-pabrik-a,<br>edge-pabrik-b, pusat<br>"
-    f"<font color='{MUTE}'>login user: SSO + MFA</font>",
+box(1820, 200, 270, 190,
+    "<br><br><br><b>TAILNET</b> (WireGuard, terenkripsi end-to-end)<br>"
+    "MagicDNS: server-pabrik-a, server-pabrik-b<br>"
+    f"<font color='{MUTE}'>login user: SSO + MFA<br>device harus di-approve admin</font>",
     stroke="#94A3B8", size=12)
-img("tailscale.svg", 1292, 210, 36, 36)
-box(1280, 410, 175, 170,
-    f"<b><font color='{RED}'>Yang lewat WAN</font></b><br>"
-    "&#8226; event/metadata: kecil, terus-menerus<br>"
-    "&#8226; video: hanya saat ada viewer<br><br>"
-    "Video tidak dikirim terus-menerus ke pusat.",
+img("tailscale.svg", 1832, 210, 36, 36)
+box(1820, 410, 270, 172,
+    f"<b><font color='{RED}'>Tanpa server pusat</font></b><br>"
+    "Laptop tersambung langsung ke server tiap pabrik (P2P lewat Tailscale). "
+    "Data tiap pabrik tetap di server pabriknya.<br><br>"
+    "Video hanya mengalir saat ada yang menonton.",
     stroke=RED, fill="#FEF2F2", size=12)
-box(1280, 700, 175, 490,
+box(1820, 700, 270, 490,
     "<b>ACL (policy file)</b><br><br>"
-    "<font face='Courier New'>tag:edge<br>&#8594; tag:pusat :5672</font><br><br>"
-    "<font face='Courier New'>group:viewer<br>&#8594; tag:pusat :443</font><br><br>"
-    "<font face='Courier New'>group:viewer<br>&#8594; tag:edge :8889,<br>&#160;&#160;UDP :8189</font><br><br>"
-    "<font face='Courier New'>tag:edge &#8596; tag:edge<br>&#8594; ditolak</font><br><br>"
-    f"<font color='{MUTE}'>Akses SSH ke edge hanya untuk group:ops (opsional).</font>",
-    stroke="#94A3B8", size=13)
-box(1280, 1300, 175, 112,
+    "<font face='Courier New'>group:viewer<br>&#8594; tag:pabrik :443</font><br>"
+    f"<font color='{MUTE}'>webapp, API, WebSocket</font><br><br>"
+    "<font face='Courier New'>group:viewer<br>&#8594; tag:pabrik :8889, UDP :8189</font><br>"
+    f"<font color='{MUTE}'>video live</font><br><br>"
+    "<font face='Courier New'>tag:pabrik &#8596; tag:pabrik<br>&#8594; ditolak</font><br>"
+    f"<font color='{MUTE}'>server A dan B tidak saling akses</font><br><br>"
+    "<font face='Courier New'>group:ops &#8594; tag:pabrik :22</font><br>"
+    f"<font color='{MUTE}'>maintenance (opsional)</font><br><br>"
+    f"<font color='{MUTE}'>Bisa dibatasi per pabrik: group:viewer-a hanya ke "
+    "server-pabrik-a.</font>",
+    stroke="#94A3B8", size=12)
+box(1820, 1310, 270, 112,
     "Tanpa port forwarding dan tanpa IP publik di pabrik. Jalur langsung (P2P); "
-    "relay DERP hanya jika NAT tidak tembus.", stroke="#94A3B8", size=11.5)
-
-# ============================================================ central =======
-box(1530, 300, 610, 900, stroke=NET, sw=2, arc=8)
-img("server.svg", 1546, 312, 24, 48)
-text("SERVER PUSAT / DC", 1580, 312, 400, 24, size=17, color=NET, bold=True)
-text("VM atau bare-metal &#183; Docker Compose &#183; Tailscale: MagicDNS <b>pusat</b> "
-     "(tag:pusat)", 1580, 338, 540, 18, size=11.5, color=MUTE)
-img("docker.svg", 2100, 314, 26, 26)
-
-rc = box(1550, 400, 270, 130,
-         "<b>RabbitMQ pusat</b><br>exchange <i>events</i> (topic)<br>"
-         "routing: &lt;site&gt;.&lt;cam&gt;.event<br>"
-         "&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;| &lt;site&gt;.&lt;cam&gt;.track"
-         "<br>shovel masuk dari tiap pabrik", stroke="#94A3B8", size=12.5)
-img("rabbitmq.svg", 1788, 408, 24, 24)
-api = box(1860, 400, 260, 130,
-          "<b>FastAPI</b> (uvicorn)<br>consumer &#8594; simpan &#8594; broadcast<br>"
-          "event &#8594; PostgreSQL<br>track &#8594; WebSocket (overlay live)<br>"
-          "REST /api &#183; WS /ws &#183; auth JWT", stroke="#94A3B8", size=12.5)
-img("fastapi.svg", 2088, 408, 24, 24)
-pg = box(1550, 580, 270, 140,
-         "<b>PostgreSQL</b> + TimescaleDB<br>event semua pabrik<br>"
-         "kolom site_id &#183; hypertable per waktu<br>retensi + compression",
-         stroke="#94A3B8", size=12.5)
-img("timescale.svg", 1758, 590, 22, 22)
-img("postgresql.svg", 1786, 588, 26, 26)
-web = box(1860, 580, 260, 140,
-          "<b>Nginx :443</b> + Frontend (React)<br>dashboard multi-pabrik<br>"
-          "proxy /api &amp; /ws &#8594; FastAPI<br>TLS: <i>tailscale cert</i>",
-          stroke="#94A3B8", size=12.5)
-img("react.svg", 2058, 590, 24, 24)
-img("nginx.svg", 2088, 590, 24, 24)
-edge(rc, api, color=EVENT, exit_=(1, .3), entry=(0, .3), label="consume")
-edge(api, pg, color=EVENT, exit_=(0, .85), entry=(1, .5), pts=[(1840, 510.5), (1840, 650)],
-     start=True)
-text("INSERT /<br>SELECT", 1822, 560, 60, 30, size=9.5, color=EVENT, align="center",
-     extra="labelBackgroundColor=#FFFFFF;")
-edge(api, web, color=EVENT, exit_=(.5, 1), entry=(.5, 0), label="/api &#183; /ws")
-
-# schema
-sch = box(1550, 750, 570, 300, stroke="#94A3B8", fill="#F8FAFC")
-text("Skema data &#183; PostgreSQL", 1562, 758, 400, 20, size=13, color=INK, bold=True)
-TABLES = [
-    ("site", "id<br>nama<br>lokasi<br>edge_host"),
-    ("camera", "id<br>site_id<br>rtsp_path<br>zona<br>status"),
-    ("event", "ts<br>site_id<br>cam_id<br>track_id<br>class, conf<br>bbox<br>event_type"),
-    ("alert", "event_id<br>status<br>user<br>catatan<br>ack_at"),
-]
-for i, (name, cols) in enumerate(TABLES):
-    x = 1562 + i * 140
-    chip(f"<b>{name}</b>", x, 788, 128, 26, fill="#DBE4F3", color=NET, size=12)
-    box(x, 818, 128, 150, cols, stroke="#CBD5E1", size=12, pad=8,
-        extra="fontFamily=Courier New;")
-chip("hypertable", 1856, 942, 100, 20, fill="#FEF3C7", color="#92400E")
-text("Satu baris event &#177; ratusan byte. <b>track</b> (bbox per frame) tidak disimpan, "
-     "hanya diteruskan ke WebSocket. Video tidak masuk database.",
-     1562, 980, 548, 50, size=12, color=MUTE)
-edge(pg, sch, color="#94A3B8", width=1.5, exit_=(.5, 1), entry=(fy(1685, 1550, 570), 0),
-     dashed=True, arrow=False)
-
-box(1550, 1080, 275, 100, "<b>Notifikasi</b> <font color='#9CA3AF'>(opsional)</font><br>"
-    "WhatsApp / email / webhook<br>dipicu event kritis", stroke="#9CA3AF", dashed=True,
-    size=12.5)
-img("whatsapp.svg", 1790, 1090, 24, 24)
-box(1845, 1080, 275, 100, "<b>Monitoring</b> <font color='#9CA3AF'>(opsional)</font><br>"
-    "Prometheus + Grafana<br>health edge &#183; antrean RabbitMQ", stroke="#9CA3AF",
-    dashed=True, size=12.5)
-img("prometheus.svg", 2056, 1090, 24, 24)
-img("grafana.svg", 2086, 1090, 24, 24)
+    "relay DERP hanya jika NAT tidak tembus.", stroke="#94A3B8", size=12)
 
 # ============================================================== user =======
-usr = box(2190, 420, 290, 470, stroke="#94A3B8", sw=1.5)
-img("laptop.svg", 2232, 438, 96, 61)
-img("smartphone.svg", 2342, 444, 46, 46)
-text("Laptop / HP user", 2190, 506, 290, 20, size=14, color=INK, align="center", bold=True)
-text("Tailscale client &#183; login SSO &#183; group:viewer", 2190, 528, 290, 18, size=11.5,
-     color=MUTE, align="center")
-# browser mock
-box(2205, 558, 260, 222, stroke="#CBD5E1", arc=6)
-box(2205, 558, 260, 20, "&#9679; &#9679; &#9679;&#160;&#160; dashboard multi-pabrik",
-    stroke="#CBD5E1", fill="#E5E7EB", size=9, color=MUTE, valign="middle", pad=6, arc=6)
-chip("Pabrik A", 2213, 586, 62, 18, fill=EVENT, color="#FFFFFF", size=9.5, bold=True)
-chip("Pabrik B", 2281, 586, 62, 18, size=9.5)
-box(2213, 610, 244, 162, stroke="none", fill="#1F2937", arc=4)
-chip("LIVE &#183; a_cam01", 2219, 616, 84, 16, fill=RED, color="#FFFFFF", size=8.5, bold=True)
-box(2262, 662, 50, 98, stroke="#22C55E", fill="none", sw=2, arc=2)
-chip("id 17 &#183; helm &#10003;", 2252, 644, 72, 15, fill="#22C55E", color="#FFFFFF", size=8)
-box(2362, 672, 46, 88, stroke="#EF4444", fill="none", sw=2, arc=2)
-chip("id 23 &#183; tanpa helm", 2340, 654, 90, 15, fill="#EF4444", color="#FFFFFF", size=8)
-text(f"<b><font color='{VIDEO}'>Video</font></b> &#8592; langsung dari edge "
-     "(WebRTC/WHEP)<br>"
-     f"<b><font color='{EVENT}'>Kotak &amp; label</font></b> &#8592; track/event via WSS dari "
-     "pusat, digambar di atas video (canvas)<br>"
-     "Dashboard tetap jalan walau video tidak dibuka.", 2204, 788, 266, 96, size=12)
-edge(web, usr, color=EVENT, exit_=(1, .5), entry=(0, fy(650, 420, 470)))
-text("HTTPS<br>+ WSS", 2142, 618, 46, 28, size=9.5, color=EVENT, align="center",
-     bold=True)
+UY, UH = 560, 780
+usr = box(2140, UY, 380, UH, stroke="#94A3B8", sw=1.5)
+
+
+def mock(y, L):
+    l = L.lower()
+    box(2160, y, 340, 200, stroke="#CBD5E1", arc=6)
+    box(2160, y, 340, 22, f"&#9679; &#9679; &#9679;&#160;&#160; https://server-pabrik-{l}"
+        ".&lt;tailnet&gt;.ts.net", stroke="#CBD5E1", fill="#E5E7EB", size=10, color=BODY,
+        valign="middle", pad=6, arc=6)
+    text(f"<b>Webapp Pabrik {L}</b>", 2170, y + 28, 200, 18, size=11, color=INK)
+    box(2170, y + 50, 200, 140, stroke="none", fill="#1F2937", arc=4)
+    chip(f"LIVE &#183; {l}_cam01", 2176, y + 56, 84, 16, fill=RED, color="#FFFFFF", size=8.5,
+         bold=True)
+    box(2205, y + 96, 44, 84, stroke="#22C55E", fill="none", sw=2, arc=2)
+    chip("id 17 &#183; helm &#10003;", 2192, y + 79, 72, 15, fill="#22C55E", color="#FFFFFF",
+         size=8)
+    box(2296, y + 104, 40, 76, stroke="#EF4444", fill="none", sw=2, arc=2)
+    chip("id 23 &#183; tanpa helm", 2276, y + 87, 88, 15, fill="#EF4444", color="#FFFFFF",
+         size=8)
+    for i, (k, v) in enumerate([("Event hari ini", "48"), ("Alert terbuka", "3"),
+                                ("Kamera online", "12/12")]):
+        box(2380, y + 50 + i * 48, 110, 42, f"<font style='font-size:9px' color='{MUTE}'>"
+            f"{k}</font><br><b>{v}</b>", stroke="#E5E7EB", size=13, color=INK, pad=5)
+
+
+mock(UY + 20, "A")
+mock(UY + UH - 220, "B")
+img("laptop.svg", 2205, 832, 110, 70)
+img("smartphone.svg", 2340, 838, 56, 56)
+text("Laptop / HP user", 2140, 910, 380, 22, size=15, color=INK, align="center", bold=True)
+text("di jaringan mana pun (kantor, rumah, 4G)<br>Tailscale client &#183; login SSO &#183; "
+     "group:viewer", 2140, 934, 380, 36, size=11.5, color=MUTE, align="center")
+text("Buka 2 alamat (bookmark), satu per pabrik.<br>"
+     f"<b><font color='{EVENT}'>Webapp, event, kotak &amp; label</font></b> &#8592; HTTPS + "
+     "WSS dari server pabrik<br>"
+     f"<b><font color='{VIDEO}'>Video live</font></b> &#8592; WebRTC/WHEP dari server pabrik "
+     "yang sama, hanya saat dibuka", 2156, 980, 350, 100, size=12)
+text("<i>Angka di layar contoh = ilustrasi.</i>", 2156, 1080, 350, 16, size=10,
+     color="#9CA3AF")
 
 # ======================================================== WAN flows =========
-# event / metadata (blue, continuous) into central RabbitMQ
-edge(TS_A, rc, color=EVENT, width=2.5, exit_=(1, fy(602.5, 270, 415)),
-     entry=(0, fy(430, 400, 130)), pts=[(1470, 602.5), (1470, 430)])
-edge(TS_B, rc, color=EVENT, width=2.5, exit_=(1, fy(1212.5, 880, 415)),
-     entry=(0, fy(490, 400, 130)), pts=[(1486, 1212.5), (1486, 490)])
-chip("event A &#183; AMQP :5672 &#183; terus", 1286, 593, 164, 20, fill="#FFFFFF",
-     color=EVENT, stroke=EVENT, size=10, bold=True)
-chip("event B &#183; AMQP :5672 &#183; terus", 1286, 1203, 164, 20, fill="#FFFFFF",
-     color=EVENT, stroke=EVENT, size=10, bold=True)
-
-# live video (purple dashed, on demand) straight from each edge to the user
-edge(TS_A, usr, color=VIDEO, width=2.5, dashed=True, exit_=(1, fy(670, 270, 415)),
-     entry=(fy(2300, 2190, 290), 0), pts=[(1262, 670), (1262, 180), (2300, 180)])
-edge(TS_B, usr, color=VIDEO, width=2.5, dashed=True, exit_=(1, fy(1280, 880, 415)),
-     entry=(fy(2300, 2190, 290), 1), pts=[(1262, 1280), (1262, 1432), (2300, 1432)])
-chip("video live A &#183; WebRTC/WHEP &#8594; edge-pabrik-a:8889 &#183; hanya saat ditonton",
-     1560, 170, 420, 20, fill="#FFFFFF", color=VIDEO, stroke=VIDEO, size=10.5, bold=True)
-chip("video live B &#183; WebRTC/WHEP &#8594; edge-pabrik-b:8889 &#183; hanya saat ditonton",
-     1560, 1422, 420, 20, fill="#FFFFFF", color=VIDEO, stroke=VIDEO, size=10.5, bold=True)
+for ts, y0, L in [(TS_A, A0, "A"), (TS_B, B0, "B")]:
+    l = L.lower()
+    edge(ts, usr, color=EVENT, width=2.5, exit_=(1, fy(y0 + WEB_DY, y0 + 110, 415)),
+         entry=(0, fy(y0 + WEB_DY, UY, UH)))
+    edge(ts, usr, color=VIDEO, width=2.5, dashed=True,
+         exit_=(1, fy(y0 + VID_DY, y0 + 110, 415)), entry=(0, fy(y0 + VID_DY, UY, UH)))
+    chip(f"webapp {L} &#183; HTTPS + WSS :443", 1838, y0 + WEB_DY - 10, 234, 20,
+         fill="#FFFFFF", color=EVENT, stroke=EVENT, size=10.5, bold=True)
+    chip(f"video {L} &#183; WHEP :8889 &#183; saat ditonton", 1838, y0 + VID_DY - 10, 234,
+         20, fill="#FFFFFF", color=VIDEO, stroke=VIDEO, size=10.5, bold=True)
 
 # ============================================================== footer =====
 FY = 1478
@@ -445,8 +431,8 @@ box(20, FY, 740, 166, stroke=LINE)
 text("Keterangan", 34, FY + 10, 200, 20, size=13, color=INK, bold=True)
 LEG = [
     (dict(color=CABLE, arrow=False), "kabel fisik (LAN / PoE)"),
-    (dict(color=RTSP), "RTSP / proses lokal di edge"),
-    (dict(color=EVENT, width=2.5), "event / metadata (terus-menerus)"),
+    (dict(color=RTSP), "RTSP / proses lokal di server"),
+    (dict(color=EVENT, width=2.5), "data aplikasi: event, webapp, API"),
     (dict(color=VIDEO, width=2.5, dashed=True), "video live (hanya saat ditonton)"),
     (dict(color=CABLE, dotted=True, arrow=False), "daya listrik"),
     (dict(color=RED, dashed=True, arrow=False), "batas lokasi pabrik"),
@@ -460,32 +446,32 @@ text("langkah di GPU", 54, FY + 139, 120, 18, size=11.5)
 box(190, FY + 140, 14, 14, stroke="#9CA3AF", dashed=True, arc=2)
 text("garis putus abu = opsional", 210, FY + 139, 220, 18, size=11.5)
 
-box(780, FY, 1720, 166, stroke=LINE)
-text("<b>Jika WAN putus:</b> CV Worker tetap jalan dan rekaman tetap di disk edge; "
-     "<i>event</i> ditahan di RabbitMQ lokal (queue durable, dibatasi ukuran disk) lalu "
-     "dikirim ulang otomatis oleh shovel saat tersambung. <i>track</i> lama dibuang (TTL), "
-     "karena hanya berguna untuk overlay live.<br>"
-     "<b>Port:</b> RTSP 8554 dan AMQP 5672 hanya lokal di edge; WHEP 8889 + UDP 8189 hanya "
-     "untuk group:viewer; 443 di pusat. Tidak ada port yang dibuka ke internet, semua lewat "
-     "Tailscale.<br>"
-     "<b>Bandwidth WAN:</b> metadata &#177; puluhan kbps per kamera (tergantung fps dan "
-     "jumlah objek); video hanya saat ditonton, &#177; 0,5&#8211;2 Mbps per sub-stream per "
-     "viewer. Angka ini perkiraan, ukur di lokasi.<br>"
-     "<b>Overlay:</b> track membawa ts + bbox; browser menggambar kotak di atas video WebRTC "
-     "dan menyelaraskan lewat ts. Penamaan stream: &lt;site&gt;_camNN (main) dan "
-     "&lt;site&gt;_camNN_sub (untuk AI dan viewer).<br>"
-     "<b>Keamanan:</b> kamera di VLAN sendiri dan hanya bisa dibaca edge node; user hanya "
-     "melihat pabrik sesuai haknya (ACL Tailscale + role di FastAPI).",
-     796, FY + 12, 1690, 124, size=13)
+box(780, FY, 1760, 166, stroke=LINE)
+text("<b>Jika internet pabrik putus:</b> server pabrik tetap jalan (deteksi, rekaman, "
+     "database). User di LAN pabrik tetap bisa membuka webapp lewat alamat lokal; dari luar "
+     "baru bisa lagi setelah tersambung. Data tidak hilang.<br>"
+     "<b>Port:</b> lewat Tailscale hanya 443 (webapp, API, WebSocket) dan 8889 + UDP 8189 "
+     "(video). RTSP 8554, AMQP 5672 dan PostgreSQL 5432 hanya lokal di server. Tidak ada port "
+     "yang dibuka ke internet.<br>"
+     "<b>Bandwidth internet pabrik:</b> hampir nol saat tidak ada yang membuka webapp. Saat "
+     "ditonton: &#177; 0,5&#8211;2 Mbps per sub-stream per viewer + overlay puluhan kbps. "
+     "Perkiraan, ukur di lokasi.<br>"
+     "<b>Konsekuensi tanpa server pusat:</b> tidak ada dashboard atau laporan gabungan "
+     "otomatis; akun, backup dan update dikelola per server. Jika nanti perlu gabungan, "
+     "tambahkan server pusat atau webapp yang membaca API kedua pabrik, tanpa mengubah "
+     "server pabrik.<br>"
+     "<b>Keamanan:</b> kamera di VLAN sendiri dan hanya bisa dibaca server pabrik; user hanya "
+     "melihat pabrik sesuai haknya (ACL Tailscale + role di webapp).",
+     796, FY + 12, 1730, 124, size=12.5)
 text("Logo &amp; ikon: Iconify (logos, Simple Icons CC0, MDI, Material Symbols), draw.io "
      "clip art (Apache 2.0), MediaMTX (bluenviron). Logo adalah merek dagang pemiliknya.",
-     796, FY + 144, 1690, 16, size=10.5, color="#9CA3AF")
+     796, FY + 144, 1730, 16, size=10.5, color="#9CA3AF")
 
 # ================================================================ write ====
 xml = (
     '<mxfile host="app.diagrams.net" agent="tools/build_multisite_diagram.py" '
     'version="24.7.17" type="device">\n'
-    '  <diagram id="multi-pabrik" name="Multi-Pabrik + Tailscale">\n'
+    '  <diagram id="multi-pabrik" name="2 Pabrik + Tailscale">\n'
     f'    <mxGraphModel dx="{W}" dy="{H}" grid="0" gridSize="10" guides="1" tooltips="1" '
     f'connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="{W}" '
     f'pageHeight="{H}" math="0" shadow="0" background="#FFFFFF">\n'
