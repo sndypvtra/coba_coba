@@ -26,12 +26,16 @@ import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import id.ukurpaket.app.ar.ArCheck
 import id.ukurpaket.app.ar.ArState
 import id.ukurpaket.app.ar.DeviceCaps
+import id.ukurpaket.app.ar.MeasureEngine
 import id.ukurpaket.app.ar.ResultData
+import id.ukurpaket.app.data.Locator
+import id.ukurpaket.app.data.MarkerPdf
 import id.ukurpaket.app.data.Measurement
 import id.ukurpaket.app.data.Mode
 import id.ukurpaket.app.data.Order
 import id.ukurpaket.app.data.Status
 import id.ukurpaket.app.data.Store
+import id.ukurpaket.app.measure.Segmenter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -47,14 +51,16 @@ sealed class Screen {
     object Settings : Screen()
     object Prep : Screen()
     object Measure : Screen()
-    object Manual : Screen()
+    object Marker : Screen()
     object Weight : Screen()
     data class Saved(val id: String) : Screen()
     data class Detail(val id: String) : Screen()
 }
 
 /** What is being measured right now. */
-data class Draft(val resi: String, val orderId: String?, val result: ResultData? = null, val manual: Measurement? = null)
+data class Draft(val resi: String, val orderId: String?, val result: ResultData? = null)
+
+enum class SamState { LOADING, READY, FAILED }
 
 class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean = true) : AndroidViewModel(app) {
     val store = Store(app)
@@ -63,8 +69,43 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
         internal set
     var draft by mutableStateOf<Draft?>(null)
     var message by mutableStateOf<String?>(null)
+    val locator = Locator(app)
 
-    init { if (checkDevice) viewModelScope.launch { check() } }
+    /** MobileSAM, loaded once in the background (about 30 MB of model). Null until ready. */
+    @Volatile var segmenter: Segmenter? = null
+        private set
+    var samState by mutableStateOf(SamState.LOADING)
+        internal set
+
+    /** The AR session lives across parcels of one pickup ("mode beruntun"): floor kept, measured parcels marked. */
+    private var engine: MeasureEngine? = null
+    private var engineOrder: String? = null
+
+    init {
+        if (checkDevice) {
+            viewModelScope.launch { check() }
+            viewModelScope.launch(Dispatchers.Default) { loadSam() }
+        }
+    }
+
+    private fun loadSam() {
+        samState = try {
+            val am = getApplication<Application>().assets
+            segmenter = Segmenter(am.open("sam/encoder.onnx").use { it.readBytes() }, am.open("sam/decoder.onnx").use { it.readBytes() })
+            SamState.READY
+        } catch (e: Throwable) { SamState.FAILED }
+    }
+
+    fun engineFor(activity: Activity, depth: Boolean, recordDir: File?): MeasureEngine {
+        val e = engine
+        if (e != null && e.activity === activity && engineOrder == draft?.orderId) return e
+        releaseEngine()
+        return MeasureEngine(activity, depth, store.photosDir, recordDir) { segmenter }.also { engine = it; engineOrder = draft?.orderId }
+    }
+
+    fun releaseEngine() { engine?.let { it.pause(); it.close() }; engine = null; engineOrder = null }
+
+    override fun onCleared() { releaseEngine(); segmenter?.close() }
 
     private suspend fun check() {
         val ctx = getApplication<Application>()
@@ -95,21 +136,27 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
     val screen get() = stack.last()
     fun go(s: Screen) { stack.add(s) }
     fun back() { if (stack.size > 1) stack.removeAt(stack.size - 1) }
-    fun home() { stack.clear(); stack.add(Screen.Home) }
-    fun tab(s: Screen) { stack.clear(); stack.add(Screen.Home); if (s != Screen.Home) stack.add(s) }
+    fun home() { releaseEngine(); stack.clear(); stack.add(Screen.Home) }
+    fun tab(s: Screen) { releaseEngine(); stack.clear(); stack.add(Screen.Home); if (s != Screen.Home) stack.add(s) }
 
     fun toast(m: String) { message = m }
 
     // ---------------------------------------------------------- measuring
     fun startMeasure(resi: String, orderId: String?) {
         draft = Draft(resi, orderId)
+        locator.refresh()
         val s = store.settings.value
         when {
-            caps.mode == Mode.MANUAL -> go(Screen.Manual)
+            caps.mode == Mode.MARKER -> go(Screen.Marker)          // its first step shows the rules itself
             s.prepShown < 3 -> { store.update { it.copy(prepShown = it.prepShown + 1) }; go(Screen.Prep) }
-            else -> go(Screen.Measure)
+            else -> go(measureScreen())
         }
     }
+
+    fun measureScreen(): Screen = if (caps.mode == Mode.MARKER) Screen.Marker else Screen.Measure
+
+    /** "Paket berikutnya": back to the list underneath, keeping the AR session for this pickup. */
+    fun nextParcel(resi: String, orderId: String?) { stack.clear(); stack.add(Screen.Home); startMeasure(resi, orderId) }
 
     fun scanResi(activity: Activity) {
         GmsBarcodeScanning.getClient(activity).startScan()
@@ -132,21 +179,40 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
         go(Screen.Weight)
     }
 
-    fun onManual(m: Measurement) {
-        draft = draft?.copy(manual = m)
+    /**
+     * "Tandai ukur di hub": after repeated failures the parcel is not measured here; the record keeps the
+     * photo, place and reason, and the hub's measuring station measures it.
+     */
+    fun markHub(reason: String, photo: String?) {
+        val d = draft ?: return
+        val loc = locator.fresh()
+        val m = Measurement(resi = d.resi, orderId = d.orderId, lengthCm = 0.0, widthCm = 0.0, heightCm = 0.0,
+            divisor = store.settings.value.divisor, mode = caps.mode, status = Status.HUB, confidence = 0, seconds = 0.0,
+            photo = photo, note = reason, lat = loc?.latitude, lon = loc?.longitude, gpsM = loc?.accuracy)
+        store.save(m)
+        draft = null
         stack.removeAt(stack.size - 1)
-        go(Screen.Weight)
+        if (stack.lastOrNull() == Screen.Prep) stack.removeAt(stack.size - 1)
+        go(Screen.Saved(m.id))
+    }
+
+    fun markerSheet(activity: Activity) {
+        val f = MarkerPdf.write(File(getApplication<Application>().cacheDir, "kertas_penanda_A4.pdf"))
+        share(activity, f, "application/pdf", "Cetak kertas penanda (A4, skala 100%)")
     }
 
     fun save(scaleKg: Double?) {
         val d = draft ?: return
         val div = store.settings.value.divisor
-        val m = d.manual?.copy(scaleKg = scaleKg, divisor = div) ?: d.result?.let { r ->
-            Measurement(resi = d.resi, orderId = d.orderId, lengthCm = r.lengthCm, widthCm = r.widthCm, heightCm = r.heightCm,
-                scaleKg = scaleKg, divisor = div, mode = r.mode, status = r.status, confidence = r.confidence,
-                seconds = r.seconds, photo = r.photo, recording = r.recording)
-        } ?: return
+        val r = d.result ?: return
+        val loc = locator.fresh()
+        val m = Measurement(resi = d.resi, orderId = d.orderId, lengthCm = r.lengthCm, widthCm = r.widthCm, heightCm = r.heightCm,
+            scaleKg = scaleKg, divisor = div, mode = r.mode, status = r.status, confidence = r.confidence,
+            seconds = r.seconds, photo = r.photo, recording = r.recording,
+            lat = loc?.latitude, lon = loc?.longitude, gpsM = loc?.accuracy)
         store.save(m)
+        // next parcel of this pickup: the AR session keeps the floor and marks this one as done
+        engine?.next("…" + d.resi.takeLast(4))
         draft = null
         stack.removeAt(stack.size - 1)
         if (stack.lastOrNull() == Screen.Prep) stack.removeAt(stack.size - 1)
@@ -179,12 +245,6 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
         }
         return out
     }
-
-    fun manualMeasurement(l: Double, w: Double, h: Double, photo: String?, note: String): Measurement? {
-        val d = draft ?: return null
-        return Measurement(resi = d.resi, orderId = d.orderId, lengthCm = l, widthCm = w, heightCm = h,
-            mode = Mode.MANUAL, status = Status.MANUAL, confidence = 0, seconds = 0.0, photo = photo, note = note)
-    }
 }
 
 @Composable
@@ -193,6 +253,7 @@ fun App(model: AppModel, activity: Activity) {
     Box(Modifier.fillMaxSize().background(C.bg)) {
         when (val s = model.screen) {
             Screen.Measure -> MeasureScreen(model, activity)
+            Screen.Marker -> MarkerScreen(model, activity)
             else -> Box(Modifier.fillMaxSize().safeDrawingPadding()) {
                 when (s) {
                     Screen.Start -> StartScreen(model, activity)
@@ -200,11 +261,10 @@ fun App(model: AppModel, activity: Activity) {
                     Screen.History -> HistoryScreen(model, activity)
                     Screen.Settings -> SettingsScreen(model, activity)
                     Screen.Prep -> PrepScreen(model)
-                    Screen.Manual -> ManualScreen(model, activity)
                     Screen.Weight -> WeightScreen(model)
                     is Screen.Saved -> SavedScreen(model, s.id)
                     is Screen.Detail -> DetailScreen(model, activity, s.id)
-                    Screen.Measure -> Unit
+                    Screen.Measure, Screen.Marker -> Unit
                 }
             }
         }

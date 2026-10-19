@@ -4,3 +4,6 @@
 -keep,includedescriptorclasses class id.ukurpaket.app.**$$serializer { *; }
 -keepclassmembers class id.ukurpaket.app.** { *** Companion; }
 -keepclasseswithmembers class id.ukurpaket.app.** { kotlinx.serialization.KSerializer serializer(...); }
+
+# ONNX Runtime: its Java classes are created and read from native code
+-keep class ai.onnxruntime.** { *; }

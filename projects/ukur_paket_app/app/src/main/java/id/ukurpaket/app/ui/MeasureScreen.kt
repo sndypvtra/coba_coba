@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.opengl.GLSurfaceView
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -14,6 +15,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,7 +36,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -48,6 +52,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
@@ -74,34 +79,45 @@ import id.ukurpaket.app.data.cm
 import id.ukurpaket.app.data.id
 import id.ukurpaket.app.measure.BoxResult
 import kotlinx.coroutines.delay
+import java.io.File
+import kotlin.math.abs
+import kotlin.math.min
 import kotlin.math.roundToInt
 
+/** Camera and (optional) location permission, asked together when measuring starts. */
 @Composable
-fun MeasureScreen(model: AppModel, activity: Activity) {
+fun CameraPermission(model: AppModel, activity: Activity, content: @Composable () -> Unit) {
     var granted by remember {
         mutableStateOf(ContextCompat.checkSelfPermission(activity, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
     }
-    val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted = it }
-    LaunchedEffect(Unit) { if (!granted) ask.launch(Manifest.permission.CAMERA) }
+    val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { r ->
+        granted = r[Manifest.permission.CAMERA] == true || granted
+        model.locator.refresh()
+    }
+    val perms = arrayOf(Manifest.permission.CAMERA, Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
+    LaunchedEffect(Unit) { if (!granted || !model.locator.allowed()) ask.launch(perms) }
     if (!granted) {
         Column(Modifier.fillMaxSize().background(C.bg).windowInsetsPadding(WindowInsets.statusBars).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)) {
             TopBar("Izin kamera", onBack = { model.back() })
-            T("UkurPaket memakai kamera untuk mengukur paket. Gambar diproses di HP ini dan tidak dikirim ke mana pun.", 15.sp, color = C.t2)
-            PrimaryButton("Izinkan kamera", "photo_camera", Modifier.fillMaxWidth()) { ask.launch(Manifest.permission.CAMERA) }
+            T("UkurPaket memakai kamera untuk mengukur paket. Gambar diproses di HP ini dan tidak dikirim ke mana pun. " +
+                "Lokasi (boleh ditolak) dicatat bersama hasil ukur sebagai bukti tempat pickup.", 15.sp, color = C.t2)
+            PrimaryButton("Izinkan kamera", "photo_camera", Modifier.fillMaxWidth()) { ask.launch(perms) }
         }
         return
     }
-    ArMeasure(model, activity)
+    content()
+}
+
+@Composable
+fun MeasureScreen(model: AppModel, activity: Activity) {
+    CameraPermission(model, activity) { ArMeasure(model, activity) }
 }
 
 @Composable
 private fun ArMeasure(model: AppModel, activity: Activity) {
     val settings by model.store.settings.collectAsState()
-    val engine = remember {
-        MeasureEngine(activity, useDepth = model.caps.depth, photosDir = model.store.photosDir,
-            recordDir = if (settings.record) model.store.recordingsDir else null)
-    }
+    val engine = remember { model.engineFor(activity, model.caps.depth, if (settings.record) model.store.recordingsDir else null) }
     var glView by remember { mutableStateOf<GLSurfaceView?>(null) }
     var openError by remember { mutableStateOf<String?>(null) }
     val owner = LocalLifecycleOwner.current
@@ -117,7 +133,8 @@ private fun ArMeasure(model: AppModel, activity: Activity) {
         if (v != null) owner.lifecycle.addObserver(obs)
         onDispose { owner.lifecycle.removeObserver(obs) }
     }
-    DisposableEffect(Unit) { onDispose { glView?.onPause(); engine.pause(); engine.close() } }
+    // the session is paused, not closed: the next parcel of this pickup reuses it (AppModel.releaseEngine closes it)
+    DisposableEffect(Unit) { onDispose { glView?.onPause(); engine.pause() } }
 
     val ui by engine.ui.collectAsState()
 
@@ -137,38 +154,67 @@ private fun ArMeasure(model: AppModel, activity: Activity) {
     }
 }
 
-/** Everything drawn over the camera: overlay, labels, top bar, warnings and the bottom sheet. */
+/**
+ * Everything drawn over the camera: overlay, labels, top bar, warnings and the bottom sheet.
+ * [demoBox] / [showHub] only set a state for the screenshots.
+ */
 @Composable
-internal fun ArChrome(ui: EngineUi, engine: MeasureEngine, model: AppModel, openError: String?) {
+internal fun ArChrome(ui: EngineUi, engine: MeasureEngine, model: AppModel, openError: String?,
+                      demoBox: FloatArray? = null, showHub: Boolean = false) {
+    var boxMode by remember { mutableStateOf(demoBox != null) }
+    var drag by remember { mutableStateOf(demoBox) }
+    var hub by remember { mutableStateOf(showHub) }
+    val canPick = ui.phase == Phase.SELECT && model.samState == SamState.READY || demoBox != null
     Box(Modifier.fillMaxSize()) {
-        Overlay(ui, Modifier.fillMaxSize().pointerInput(Unit) { detectTapGestures { engine.tap(it.x, it.y) } })
+        val gestures = if (boxMode && canPick) Modifier.pointerInput(boxMode) {
+            detectDragGestures(
+                onDragStart = { drag = floatArrayOf(it.x, it.y, it.x, it.y) },
+                onDrag = { ch, _ -> drag = drag?.let { d -> floatArrayOf(d[0], d[1], ch.position.x, ch.position.y) } },
+                onDragEnd = {
+                    drag?.let { d -> if (abs(d[2] - d[0]) > 30 && abs(d[3] - d[1]) > 30) engine.box(d[0], d[1], d[2], d[3]) }
+                    drag = null; boxMode = false
+                },
+            )
+        } else Modifier.pointerInput(Unit) { detectTapGestures { engine.tap(it.x, it.y) } }
+        Overlay(ui, drag, Modifier.fillMaxSize().then(gestures))
+        if (ui.phase == Phase.SELECT) OverlayLabels(ui)
         if (ui.phase == Phase.RESULT) DimLabels(ui)
         if (ui.phase == Phase.SEARCH) SwipeHint()
+        if (ui.phase == Phase.SCAN) ArcArrow()
 
         Box(Modifier.fillMaxWidth().height(120.dp).background(
             androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0x8C020617), Color.Transparent))))
         Column(Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.statusBars).padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 GlassButton("arrow_back") { model.back() }
-                StepPill(ui.phase)
+                StepPill(ui.phase, Modifier.weight(1f))
+                if (ui.torchSupported) GlassButton(if (ui.torch) "flashlight_on" else "flashlight_off", on = ui.torch) { engine.torch(!ui.torch) }
             }
-            val warn = ui.hint in setOf(Hint.SLOW, Hint.DARK, Hint.TEXTURE, Hint.LOST, Hint.BACK, Hint.STACKED, Hint.FAILED)
+            val warn = ui.hint in setOf(Hint.SLOW, Hint.DARK, Hint.TEXTURE, Hint.LOST, Hint.BACK, Hint.STACKED, Hint.FAILED, Hint.PICK_FAILED)
             val err = openError ?: ui.error
             if (err != null) Banner(err, C.red, Color.White)
             else if (warn) Banner(ui.hint.text, Color(0xFFF59E0B), Color(0xFF1F1300))
+            else if (boxMode && drag == null) Banner("Tarik jari dari satu sudut paket ke sudut seberangnya", C.blue, Color.White, "highlight_alt")
         }
-        Sheet(Modifier.align(Alignment.BottomCenter), ui, engine, model)
+        Sheet(Modifier.align(Alignment.BottomCenter), ui, engine, model, boxMode, canPick, { boxMode = !boxMode }, { hub = true })
+    }
+    if (hub) HubDialog(onDismiss = { hub = false }) { reason ->
+        hub = false
+        val f = File(model.store.photosDir, "hub_${System.currentTimeMillis()}.jpg")
+        engine.photo(f) { saved -> model.markHub(reason, saved?.path) }
     }
 }
 
 // ------------------------------------------------------------------ overlay
 @Composable
-private fun Overlay(ui: EngineUi, modifier: Modifier) {
+private fun Overlay(ui: EngineUi, drag: FloatArray?, modifier: Modifier) {
     val ov = ui.overlay
     val scan = ui.phase == Phase.SCAN
     Canvas(modifier) {
         dots(ov.floorDots, Color.White.copy(alpha = 0.85f), 2.6.dp.toPx())
         dots(ov.depthDots, C.cyan, 2.2.dp.toPx())
+        val dash = PathEffect.dashPathEffect(floatArrayOf(10.dp.toPx(), 7.dp.toPx()))
+        for (o in ov.others) poly(o)?.let { drawPath(it, Color.White.copy(alpha = 0.9f), style = Stroke(2.dp.toPx(), pathEffect = dash)) }
         ov.outline?.let { pts ->
             val path = poly(pts) ?: return@let
             val col = if (scan) C.live else Color(0xFF3B82F6)
@@ -179,10 +225,10 @@ private fun Overlay(ui: EngineUi, modifier: Modifier) {
             val col = if (ui.result?.status == Status.CHECK) Color(0xFFF59E0B) else C.live
             fun p(i: Int) = Offset(b[2 * i], b[2 * i + 1])
             fun ok(i: Int) = !b[2 * i].isNaN()
-            val dash = PathEffect.dashPathEffect(floatArrayOf(14f, 10f))
+            val dashed = PathEffect.dashPathEffect(floatArrayOf(14f, 10f))
             for (i in 0 until 4) {
                 val j = (i + 1) % 4
-                if (ok(i) && ok(j)) drawLine(col.copy(alpha = 0.9f), p(i), p(j), 2.5.dp.toPx(), pathEffect = dash)
+                if (ok(i) && ok(j)) drawLine(col.copy(alpha = 0.9f), p(i), p(j), 2.5.dp.toPx(), pathEffect = dashed)
                 if (ok(i) && ok(i + 4)) drawLine(col, p(i), p(i + 4), 2.5.dp.toPx())
             }
             val top = Path()
@@ -193,6 +239,17 @@ private fun Overlay(ui: EngineUi, modifier: Modifier) {
             drawPath(top, col, style = Stroke(3.5.dp.toPx(), cap = StrokeCap.Round))
             for (i in 4 until 8) if (ok(i)) { drawCircle(Color.White, 5.dp.toPx(), p(i)); drawCircle(col, 5.dp.toPx(), p(i), style = Stroke(2.dp.toPx())) }
         }
+        var k = 0
+        while (k + 1 < ov.marks.size) {
+            if (!ov.marks[k].isNaN()) {
+                val c = Offset(ov.marks[k], ov.marks[k + 1])
+                drawCircle(C.green, 15.dp.toPx(), c); drawCircle(Color.White, 15.dp.toPx(), c, style = Stroke(2.dp.toPx()))
+                val s = 6.dp.toPx()
+                drawLine(Color.White, Offset(c.x - s, c.y), Offset(c.x - s / 3, c.y + s * 0.65f), 3.dp.toPx(), StrokeCap.Round)
+                drawLine(Color.White, Offset(c.x - s / 3, c.y + s * 0.65f), Offset(c.x + s, c.y - s * 0.6f), 3.dp.toPx(), StrokeCap.Round)
+            }
+            k += 2
+        }
         ui.reticle?.let { (x, y) ->
             val c = Offset(x, y)
             drawCircle(Color.White, 20.dp.toPx(), c, style = Stroke(2.5.dp.toPx()))
@@ -202,6 +259,14 @@ private fun Overlay(ui: EngineUi, modifier: Modifier) {
             drawLine(Color.White, Offset(x, y + a), Offset(x, y + b), 2.5.dp.toPx())
             drawLine(Color.White, Offset(x - b, y), Offset(x - a, y), 2.5.dp.toPx())
             drawLine(Color.White, Offset(x + a, y), Offset(x + b, y), 2.5.dp.toPx())
+        }
+        drag?.let { d ->
+            val tl = Offset(min(d[0], d[2]), min(d[1], d[3]))
+            val sz = Size(abs(d[2] - d[0]), abs(d[3] - d[1]))
+            drawRect(Color.White.copy(alpha = 0.12f), tl, sz)
+            drawRect(Color.White, tl, sz, style = Stroke(2.5.dp.toPx(), pathEffect = dash))
+            for (c in listOf(tl, Offset(tl.x + sz.width, tl.y), Offset(tl.x, tl.y + sz.height), Offset(tl.x + sz.width, tl.y + sz.height)))
+                drawCircle(Color.White, 6.dp.toPx(), c)
         }
     }
 }
@@ -227,6 +292,40 @@ private fun poly(a: FloatArray): Path? {
     return path
 }
 
+/** Glass label at a surface-pixel position, centred above it. */
+@Composable
+private fun Tag(x: Float, y: Float, text: String, icon: String, bg: Color) {
+    val density = LocalDensity.current
+    val dx = with(density) { 58.dp.toPx() }; val dy = with(density) { 34.dp.toPx() }
+    Row(Modifier.offset { IntOffset((x - dx).roundToInt(), (y - dy).roundToInt()) }.clip(RoundedCornerShape(14.dp)).background(bg)
+        .padding(horizontal = 9.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+        Sym(icon, 15.dp, Color.White)
+        T(" $text", 12.5.sp, FontWeight.SemiBold, Color.White, maxLines = 1)
+    }
+}
+
+/** "Paket terpilih" over the picked parcel, "Paket lain" over the others, the label of each parcel already measured. */
+@Composable
+private fun OverlayLabels(ui: EngineUi) {
+    val ov = ui.overlay
+    // "Paket lain" sits inside the bottom edge of each other parcel (their tops are often cut off by the screen edge)
+    for (o in ov.others) {
+        val xs = o.filterIndexed { j, v -> j % 2 == 0 && !v.isNaN() }; val ys = o.filterIndexed { j, v -> j % 2 == 1 && !v.isNaN() }
+        if (xs.isNotEmpty()) Tag(xs.average().toFloat(), ys.max() - 6f, "Paket lain", "inventory_2", C.glass)
+    }
+    // "Paket terpilih" at the picked outline's top-left corner, clear of the labels of its neighbours
+    val density = LocalDensity.current
+    if (ui.picked) ov.outline?.let { o ->
+        val xs = o.filterIndexed { j, v -> j % 2 == 0 && !v.isNaN() }; val ys = o.filterIndexed { j, v -> j % 2 == 1 && !v.isNaN() }
+        if (xs.isNotEmpty()) Tag(xs.min() + with(density) { 58.dp.toPx() }, ys.min(), "Paket terpilih", "check_circle", Color(0xFF2563EB))
+    }
+    var k = 0
+    while (k + 1 < ov.marks.size) {
+        if (!ov.marks[k].isNaN()) Tag(ov.marks[k], ov.marks[k + 1] - 14f, "Sudah · " + ov.markLabels.getOrElse(k / 2) { "" }, "task_alt", C.green)
+        k += 2
+    }
+}
+
 /** Length, width and height written on the 3D box. */
 @Composable
 private fun DimLabels(ui: EngineUi) {
@@ -237,14 +336,20 @@ private fun DimLabels(ui: EngineUi) {
     val e12 = (r.floorCorners[1] - r.floorCorners[2]).norm()
     val first = if (e01 >= e12) res.lengthCm else res.widthCm
     val second = if (e01 >= e12) res.widthCm else res.lengthCm
+    DimTags(b, first, second, res.heightCm, res.status == Status.CHECK)
+}
+
+/** Three size labels on a projected box (corners floor 0-3, top 4-7). */
+@Composable
+internal fun DimTags(b: FloatArray, first: Double, second: Double, height: Double, check: Boolean) {
     val density = LocalDensity.current
     fun mid(i: Int, j: Int) = Offset((b[2 * i] + b[2 * j]) / 2, (b[2 * i + 1] + b[2 * j + 1]) / 2)
-    listOf(mid(4, 5) to first, mid(5, 6) to second, mid(2, 6) to res.heightCm).forEach { (o, v) ->
+    listOf(mid(4, 5) to first, mid(5, 6) to second, mid(2, 6) to height).forEach { (o, v) ->
         if (o.x.isNaN()) return@forEach
         val dx = with(density) { 32.dp.toPx() }; val dy = with(density) { 14.dp.toPx() }
         Box(Modifier.offset { IntOffset((o.x - dx).roundToInt(), (o.y - dy).roundToInt()) }
             .clip(RoundedCornerShape(8.dp)).background(Color.White).padding(horizontal = 8.dp, vertical = 4.dp)) {
-            T("${v.cm()} cm", 14.sp, FontWeight.Bold, if (res.status == Status.CHECK) Color(0xFFB45309) else Color(0xFF15803D))
+            T("${v.cm()} cm", 14.sp, FontWeight.Bold, if (check) Color(0xFFB45309) else Color(0xFF15803D))
         }
     }
 }
@@ -261,23 +366,49 @@ private fun BoxScope.SwipeHint() {
     }
 }
 
+/** Dashed arc with an arrowhead around the parcel's lower right: "move round toward the corner". */
+@Composable
+private fun BoxScope.ArcArrow() {
+    val phase = if (LocalStill.current) 0f else {
+        val t = rememberInfiniteTransition(label = "arc")
+        t.animateFloat(0f, 1f, infiniteRepeatable(tween(1400, easing = LinearEasing)), label = "p").value
+    }
+    Canvas(Modifier.align(Alignment.BottomEnd).padding(end = 18.dp, bottom = 250.dp).size(170.dp, 130.dp)) {
+        val w = size.width; val h = size.height
+        val path = Path().apply { moveTo(w * 0.05f, h * 0.92f); quadraticBezierTo(w * 0.95f, h * 0.98f, w * 0.88f, h * 0.10f) }
+        val dl = 12.dp.toPx(); val gap = 8.dp.toPx()
+        drawPath(path, Color.White, style = Stroke(3.dp.toPx(), cap = StrokeCap.Round,
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(dl, gap), -phase * (dl + gap) * 3)))
+        val tip = Offset(w * 0.88f, h * 0.10f)
+        val a = 12.dp.toPx()
+        drawLine(Color.White, tip, Offset(tip.x - a * 0.75f, tip.y + a * 0.75f), 3.dp.toPx(), StrokeCap.Round)
+        drawLine(Color.White, tip, Offset(tip.x + a * 0.55f, tip.y + a * 0.9f), 3.dp.toPx(), StrokeCap.Round)
+    }
+}
+
 // ------------------------------------------------------------------ chrome
 @Composable
-private fun GlassButton(icon: String, onClick: () -> Unit) {
-    Box(Modifier.size(44.dp).clip(CircleShape).background(C.glass).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
-        Sym(icon, 22.dp, Color.White)
+internal fun GlassButton(icon: String, on: Boolean = false, onClick: () -> Unit) {
+    Box(Modifier.size(44.dp).clip(CircleShape).background(if (on) Color(0xFFFACC15) else C.glass).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center) {
+        Sym(icon, 22.dp, if (on) Color(0xFF1F1300) else Color.White, filled = on)
     }
 }
 
 @Composable
-private fun StepPill(phase: Phase) {
+private fun StepPill(phase: Phase, modifier: Modifier) {
     val (n, label) = when (phase) {
         Phase.SEARCH -> 1 to "Cari alas"
         Phase.SELECT -> 2 to "Pilih paket"
         Phase.SCAN -> 3 to "Pindai"
         Phase.RESULT -> 0 to "Hasil ukur"
     }
-    Row(Modifier.height(44.dp).fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(C.glass).padding(horizontal = 16.dp),
+    StepPillOf(n, label, modifier)
+}
+
+@Composable
+internal fun StepPillOf(n: Int, label: String, modifier: Modifier) {
+    Row(modifier.height(44.dp).clip(RoundedCornerShape(22.dp)).background(C.glass).padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically) {
         T(if (n > 0) "$n/3 · $label" else label, 14.sp, FontWeight.SemiBold, Color.White, modifier = Modifier.weight(1f))
         if (n > 0) Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -288,15 +419,49 @@ private fun StepPill(phase: Phase) {
 }
 
 @Composable
-private fun Banner(text: String, bg: Color, fg: Color) {
+internal fun Banner(text: String, bg: Color, fg: Color, icon: String = "warning") {
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(bg).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-        Sym("warning", 24.dp, fg, filled = true)
+        Sym(icon, 24.dp, fg, filled = true)
         T(text, 14.sp, FontWeight.SemiBold, fg, modifier = Modifier.padding(start = 10.dp))
     }
 }
 
+/** Reasons a courier hands a parcel to the hub instead of measuring it. */
+val HUB_REASONS = listOf("Bentuk tidak beraturan", "Paket terlalu besar", "Tempat gelap / sempit", "Hasil ukur berubah-ubah")
+
 @Composable
-private fun Sheet(modifier: Modifier, ui: EngineUi, engine: MeasureEngine, model: AppModel) {
+internal fun HubDialog(onDismiss: () -> Unit, onPick: (String) -> Unit) {
+    AlertDialog(onDismissRequest = onDismiss,
+        title = { T("Ukur di hub?", 18.sp, FontWeight.SemiBold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                T("Paket tetap diambil. Foto dan lokasi disimpan; ukurannya diukur di hub. Pilih alasannya:", 13.5.sp, color = C.t2)
+                HUB_REASONS.forEach { r ->
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(C.bg).clickable { onPick(r) }.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Sym("warehouse", 20.dp, C.amber)
+                        T(r, 14.sp, FontWeight.Medium, modifier = Modifier.padding(start = 10.dp))
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { T("Batal", color = C.t2) } })
+}
+
+/** The quiet way out after repeated failures. */
+@Composable
+internal fun HubLink(onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(vertical = 6.dp),
+        horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+        Sym("warehouse", 18.dp, C.amber)
+        T(" Tidak bisa diukur? Tandai ukur di hub", 13.5.sp, FontWeight.SemiBold, C.amber)
+    }
+}
+
+@Composable
+private fun Sheet(modifier: Modifier, ui: EngineUi, engine: MeasureEngine, model: AppModel, boxMode: Boolean, canPick: Boolean,
+                  toggleBox: () -> Unit, openHub: () -> Unit) {
     val sheetSettings by model.store.settings.collectAsState()
     Column(modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp)).background(Color.White)
         .windowInsetsPadding(WindowInsets.navigationBars).padding(start = 18.dp, end = 18.dp, top = 10.dp, bottom = 14.dp),
@@ -310,10 +475,21 @@ private fun Sheet(modifier: Modifier, ui: EngineUi, engine: MeasureEngine, model
             }
             Phase.SELECT -> {
                 val lv = ui.live
-                T(if (ui.targetFound) "Paket terdeteksi" else "Arahkan titik ke paket", 18.sp, FontWeight.Bold)
-                T(if (lv != null) "Perkiraan ${(lv.lengthM * 100.0).cm()} × ${(lv.widthM * 100.0).cm()} × ${(lv.heightM * 100.0).cm()} cm. Kunci untuk mengukur teliti."
-                  else "Garis biru = paket yang akan diukur. Ketuk paket lain di layar untuk memilihnya.", 13.5.sp, color = C.t2)
-                PrimaryButton("Kunci paket", "lock", Modifier.fillMaxWidth(), enabled = ui.targetFound) { engine.lock() }
+                if (ui.selecting) Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.5.dp, color = C.blue)
+                    T("  Memilih paket…", 18.sp, FontWeight.Bold)
+                } else T(if (ui.picked) "Paket terpilih" else if (ui.targetFound) "Paket terdeteksi" else "Arahkan titik ke paket", 18.sp, FontWeight.Bold)
+                T(when {
+                    lv != null -> "Perkiraan ${(lv.lengthM * 100.0).cm()} × ${(lv.widthM * 100.0).cm()} × ${(lv.heightM * 100.0).cm()} cm. " +
+                        if (ui.picked) "Bukan paket ini? Ketuk paket yang benar." else "Kunci untuk mengukur teliti."
+                    else -> "Garis biru = paket yang akan diukur. Bukan paket ini? Ketuk paket yang benar."
+                }, 13.5.sp, color = C.t2)
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    if (model.samState == SamState.READY || canPick)
+                        SecondaryButton(if (boxMode) "Batal kotak" else "Gambar kotak", if (boxMode) "close" else "crop", Modifier.weight(1f)) { toggleBox() }
+                    PrimaryButton("Kunci paket", "lock", Modifier.weight(1f), enabled = (ui.targetFound || model.samState == SamState.READY) && !ui.selecting) { engine.lock() }
+                }
+                if (ui.attempts >= 2) HubLink(openHub)
             }
             Phase.SCAN -> {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -344,22 +520,31 @@ private fun Sheet(modifier: Modifier, ui: EngineUi, engine: MeasureEngine, model
                 }
                 T("${r.lengthCm.cm()} × ${r.widthCm.cm()} × ${r.heightCm.cm()} cm", 30.sp, FontWeight.Bold)
                 if (r.status == Status.CHECK) T("Pastikan kotak pas membungkus paket, atau ulangi dari sudut lain.", 13.sp, color = C.t2)
-                val div = sheetSettings.divisor
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Stat("Volume", "${(r.lengthCm * r.widthCm * r.heightCm / 1000).id()} L", Modifier.weight(1f))
-                    Stat("Berat volumetrik", "${(r.lengthCm * r.widthCm * r.heightCm / div).id(2)} kg", Modifier.weight(1.3f))
-                    Stat("Waktu ukur", "${r.seconds.id(0)} dtk", Modifier.weight(1f))
-                }
-                var wait by remember(r) { mutableIntStateOf(if (r.status == Status.CHECK) 2 else 0) }
-                LaunchedEffect(r) { while (wait > 0) { delay(1000); wait-- } }
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    SecondaryButton("Ulangi", "refresh", Modifier.width(130.dp)) { engine.rescan() }
-                    PrimaryButton(if (wait > 0) "Simpan ($wait)" else "Simpan", "check", Modifier.weight(1f), color = C.green, enabled = wait == 0) {
-                        model.onMeasured(r)
-                    }
-                }
+                ResultStats(r.lengthCm, r.widthCm, r.heightCm, sheetSettings.divisor, r.seconds)
+                SaveRow(r.status == Status.CHECK, r, { engine.rescan() }) { model.onMeasured(r) }
+                if (ui.attempts >= 2 && r.status == Status.CHECK) HubLink(openHub)
             }
         }
+    }
+}
+
+@Composable
+internal fun ResultStats(l: Double, w: Double, h: Double, div: Int, seconds: Double) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Stat("Volume", "${(l * w * h / 1000).id()} L", Modifier.weight(1f))
+        Stat("Berat volumetrik", "${(l * w * h / div).id(2)} kg", Modifier.weight(1.3f))
+        Stat("Waktu ukur", "${seconds.id(0)} dtk", Modifier.weight(1f))
+    }
+}
+
+/** Repeat / Save; Save waits 2 s on a doubtful result so it is not saved by reflex. */
+@Composable
+internal fun SaveRow(check: Boolean, key: Any, onRepeat: () -> Unit, onSave: () -> Unit) {
+    var wait by remember(key) { mutableIntStateOf(if (check) 2 else 0) }
+    LaunchedEffect(key) { while (wait > 0) { delay(1000); wait-- } }
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        SecondaryButton("Ulangi", "refresh", Modifier.width(130.dp)) { onRepeat() }
+        PrimaryButton(if (wait > 0) "Simpan ($wait)" else "Simpan", "check", Modifier.weight(1f), color = C.green, enabled = wait == 0) { onSave() }
     }
 }
 

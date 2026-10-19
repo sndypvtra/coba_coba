@@ -157,6 +157,50 @@ object BoxFitter {
         return Segment(plane, idx.map { p2[it] }, FloatArray(idx.size) { hs[idx[it]] }, kept.size, cell)
     }
 
+    /**
+     * Every separate thing standing on [plane] within [radius] of [centre]: the "other parcels" drawn around
+     * the one being picked. Coarser than [segment]; for display and tap targets only, never for the size.
+     */
+    fun clusters(
+        points: List<V3>, plane: FloorPlane, centre: V3,
+        cell: Float = 0.03f, minH: Float = 0.03f, maxH: Float = 1.6f, radius: Float = 1.8f, minCells: Int = 6,
+    ): List<BoxResult> {
+        val c2 = plane.to2d(centre)
+        val grid = HashMap<Long, MutableList<Int>>()
+        val p2 = ArrayList<P2>(); val hs = ArrayList<Float>()
+        for (p in points) {
+            val h = plane.height(p)
+            if (h < minH || h > maxH) continue
+            val q = plane.to2d(p)
+            if (hypot(q.a - c2.a, q.b - c2.b) > radius) continue
+            grid.getOrPut(ck(cellOf(q.a, cell), cellOf(q.b, cell))) { ArrayList() }.add(p2.size)
+            p2.add(q); hs.add(h)
+        }
+        grid.entries.removeIf { it.value.size < 2 }
+        val seen = HashSet<Long>()
+        val out = ArrayList<BoxResult>()
+        for (start in grid.keys) {
+            if (start in seen) continue
+            val comp = ArrayList<Long>()
+            val queue = ArrayDeque<Long>()
+            seen.add(start); queue.add(start)
+            while (queue.isNotEmpty()) {
+                val k = queue.removeFirst(); comp.add(k)
+                val i = (k shr 32).toInt(); val j = k.toInt()
+                for (di in -1..1) for (dj in -1..1) {
+                    val n = ck(i + di, j + dj)
+                    if (n !in seen && grid.containsKey(n)) { seen.add(n); queue.add(n) }
+                }
+            }
+            if (comp.size < minCells) continue
+            val idx = comp.flatMap { grid[it]!! }
+            fit(Segment(plane, idx.map { p2[it] }, FloatArray(idx.size) { hs[idx[it]] }, comp.size, cell))
+                ?.takeIf { it.lengthM in 0.08f..1.6f && it.widthM >= 0.05f }
+                ?.let { out.add(it) }
+        }
+        return out
+    }
+
     fun fit(seg: Segment): BoxResult? {
         if (seg.pts2.size < 12) return null
         val hull = convexHull(seg.pts2)

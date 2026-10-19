@@ -39,6 +39,28 @@ object Yuv {
         return out
     }
 
+    /** YUV_420_888 camera image to packed ARGB pixels (BT.601), for the segmentation model. */
+    fun toArgb(image: Image): IntArray {
+        val w = image.width; val h = image.height
+        val yP = image.planes[0]; val uP = image.planes[1]; val vP = image.planes[2]
+        val yb = yP.buffer; val ub = uP.buffer; val vb = vP.buffer
+        val out = IntArray(w * h)
+        for (row in 0 until h) {
+            val yr = row * yP.rowStride; val cr = (row / 2)
+            for (col in 0 until w) {
+                val y = (yb.get(yr + col * yP.pixelStride).toInt() and 255) - 16
+                val u = (ub.get(cr * uP.rowStride + (col / 2) * uP.pixelStride).toInt() and 255) - 128
+                val v = (vb.get(cr * vP.rowStride + (col / 2) * vP.pixelStride).toInt() and 255) - 128
+                val yy = 1.164f * y
+                val r = (yy + 1.596f * v).toInt().coerceIn(0, 255)
+                val g = (yy - 0.392f * u - 0.813f * v).toInt().coerceIn(0, 255)
+                val b = (yy + 2.017f * u).toInt().coerceIn(0, 255)
+                out[row * w + col] = (0xFF shl 24) or (r shl 16) or (g shl 8) or b
+            }
+        }
+        return out
+    }
+
     fun nv21ToJpeg(nv21: ByteArray, w: Int, h: Int, quality: Int): ByteArray {
         val bos = ByteArrayOutputStream()
         YuvImage(nv21, ImageFormat.NV21, w, h, null).compressToJpeg(Rect(0, 0, w, h), quality, bos)
@@ -46,13 +68,13 @@ object Yuv {
     }
 }
 
-/** The evidence photo: the camera frame at the moment of measuring, with the 3D box drawn on it. */
+/** The evidence photo: the camera frame at the moment of measuring, with the 3D box drawn on it (when there is one). */
 object Snapshot {
-    fun save(frame: Frame, cam: Camera, r: BoxResult, file: File): File? = try {
+    fun save(frame: Frame, cam: Camera, r: BoxResult?, file: File): File? = try {
         val img = frame.acquireCameraImage()
         val jpeg = try { Yuv.nv21ToJpeg(Yuv.toNv21(img), img.width, img.height, 90) } finally { img.close() }
         val bmp = BitmapFactory.decodeByteArray(jpeg, 0, jpeg.size).copy(Bitmap.Config.ARGB_8888, true)
-        draw(bmp, cam, r)
+        if (r != null) draw(bmp, cam, r)
         val rot = android.graphics.Matrix().apply { postRotate(90f) }     // sensor is landscape, the app is portrait
         var out = Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, rot, true)
         val scale = 1280f / max(out.width, out.height)

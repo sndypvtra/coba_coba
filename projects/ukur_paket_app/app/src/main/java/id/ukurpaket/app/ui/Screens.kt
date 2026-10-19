@@ -2,9 +2,6 @@ package id.ukurpaket.app.ui
 
 import android.app.Activity
 import android.graphics.BitmapFactory
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -48,7 +45,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.FileProvider
 import id.ukurpaket.app.BuildConfigInfo
 import id.ukurpaket.app.ar.ArState
 import id.ukurpaket.app.data.Measurement
@@ -62,20 +58,21 @@ import java.util.Date
 import java.util.Locale
 
 private val ID = Locale("id", "ID")
-private fun Measurement.dims() = "${lengthCm.cm()} × ${widthCm.cm()} × ${heightCm.cm()} cm"
+private fun Measurement.dims() = if (atHub) "Ukur di hub" else "${lengthCm.cm()} × ${widthCm.cm()} × ${heightCm.cm()} cm"
+private fun Measurement.place() = if (lat != null && lon != null) "GPS tercatat" else "tanpa GPS"
 
 @Composable
 private fun StatusChip(m: Measurement) = when (m.status) {
     Status.OK -> Chip("Akurat", Tone.OK, "check_circle")
     Status.CHECK -> Chip("Cek ulang", Tone.WARN, "warning")
-    Status.MANUAL -> Chip("Manual · audit", Tone.GREY, "edit_note")
+    Status.HUB -> Chip("Ukur di hub", Tone.WARN, "warehouse")
 }
 
 @Composable
 private fun ModeChip(mode: Mode) = when (mode) {
     Mode.AR_FULL -> Chip("AR penuh", Tone.OK, "view_in_ar")
     Mode.AR_BASIC -> Chip("AR dasar", Tone.BLUE, "view_in_ar")
-    Mode.MANUAL -> Chip("Mode manual", Tone.WARN, "edit_note")
+    Mode.MARKER -> Chip("Kertas penanda", Tone.BLUE, "grid_on")
 }
 
 @Composable
@@ -116,10 +113,11 @@ fun StartScreen(model: AppModel, activity: Activity) {
             T(when (c.mode) {
                 Mode.AR_FULL -> "Mode terbaik: alas, paket, dan kedalaman dibaca langsung oleh HP."
                 Mode.AR_BASIC -> "HP ini tidak punya Depth API. Pengukuran memakai titik fitur ARCore, hasilnya perlu dicek lebih sering."
-                Mode.MANUAL -> when (c.arcore) {
-                    ArState.NEEDS_INSTALL -> "ARCore (Google Play Services for AR) belum terpasang. Pasang sekali dari Play Store, lalu kembali ke sini."
-                    ArState.INSTALL_DECLINED -> "Pemasangan ARCore dibatalkan. Tanpa ARCore, ukuran diisi manual dan masuk audit."
-                    else -> "HP ini tidak didukung ARCore. Ukuran diisi manual dengan foto bukti dan masuk audit."
+                Mode.MARKER -> when (c.arcore) {
+                    ArState.NEEDS_INSTALL -> "ARCore (Google Play Services for AR) belum terpasang. Pasang sekali dari Play Store, lalu kembali ke sini. " +
+                        "Tanpa ARCore, paket diukur dari 1 foto dengan kertas penanda A4."
+                    ArState.INSTALL_DECLINED -> "Pemasangan ARCore dibatalkan. Paket diukur dari 1 foto dengan kertas penanda A4 di sampingnya."
+                    else -> "HP ini tidak didukung ARCore. Paket diukur dari 1 foto dengan kertas penanda A4 di sampingnya (cetak dari Pengaturan)."
                 }
             }, 13.5.sp, color = C.t2)
         }
@@ -127,7 +125,7 @@ fun StartScreen(model: AppModel, activity: Activity) {
         if (c.arcore == ArState.NEEDS_INSTALL || c.arcore == ArState.INSTALL_DECLINED)
             PrimaryButton("Pasang ARCore", "download", Modifier.fillMaxWidth()) { model.install(activity) }
         if (c.arcore != ArState.CHECKING)
-            SecondaryButton(if (c.arcore == ArState.READY) "Lanjut" else "Lanjut tanpa AR", "arrow_forward", Modifier.fillMaxWidth()) { model.home() }
+            SecondaryButton(if (c.arcore == ArState.READY) "Lanjut" else "Lanjut dengan kertas penanda", "arrow_forward", Modifier.fillMaxWidth()) { model.home() }
     }
 }
 
@@ -201,7 +199,7 @@ fun HomeScreen(model: AppModel, activity: Activity) {
                             .padding(vertical = 10.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                             Sym("qr_code_2", 18.dp, C.t3)
                             T(r, 13.5.sp, FontWeight.SemiBold, modifier = Modifier.padding(start = 8.dp).weight(1f))
-                            if (m != null) T(m.dims(), 12.5.sp, color = C.green) else T("Ukur", 12.5.sp, FontWeight.SemiBold, C.blue)
+                            if (m != null) T(m.dims(), 12.5.sp, color = if (m.atHub) C.amber else C.green) else T("Ukur", 12.5.sp, FontWeight.SemiBold, C.blue)
                             Sym("chevron_right", 18.dp, C.t3)
                         }
                     }
@@ -276,7 +274,7 @@ fun PrepScreen(model: AppModel) {
         }
         PrimaryButton("Mulai ukur", "photo_camera", Modifier.fillMaxWidth().padding(16.dp)) {
             if (dontShow) model.store.update { it.copy(prepShown = 99) }
-            model.back(); model.go(Screen.Measure)
+            model.back(); model.go(model.measureScreen())
         }
     }
 }
@@ -285,9 +283,9 @@ fun PrepScreen(model: AppModel) {
 @Composable
 fun WeightScreen(model: AppModel) {
     val d = model.draft ?: run { model.back(); return }
-    val l = d.result?.lengthCm ?: d.manual?.lengthCm ?: 0.0
-    val w = d.result?.widthCm ?: d.manual?.widthCm ?: 0.0
-    val h = d.result?.heightCm ?: d.manual?.heightCm ?: 0.0
+    val l = d.result?.lengthCm ?: 0.0
+    val w = d.result?.widthCm ?: 0.0
+    val h = d.result?.heightCm ?: 0.0
     val settingsW by model.store.settings.collectAsState()
     val div = settingsW.divisor
     val volKg = l * w * h / div
@@ -300,15 +298,14 @@ fun WeightScreen(model: AppModel) {
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Card {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Photo(d.result?.photo ?: d.manual?.photo, Modifier.size(58.dp, 80.dp).clip(RoundedCornerShape(10.dp)))
+                    Photo(d.result?.photo, Modifier.size(58.dp, 80.dp).clip(RoundedCornerShape(10.dp)))
                     Column(Modifier.weight(1f).padding(start = 12.dp)) {
                         T("${l.cm()} × ${w.cm()} × ${h.cm()} cm", 18.sp, FontWeight.Bold)
                         T("Volume ${(l * w * h / 1000).id()} L", 12.5.sp, color = C.t2)
                     }
-                    when (d.result?.status ?: Status.MANUAL) {
+                    when (d.result?.status) {
                         Status.OK -> Chip("Akurat", Tone.OK, "check_circle")
-                        Status.CHECK -> Chip("Cek ulang", Tone.WARN, "warning")
-                        Status.MANUAL -> Chip("Manual", Tone.GREY, "edit_note")
+                        else -> Chip("Cek ulang", Tone.WARN, "warning")
                     }
                 }
             }
@@ -361,9 +358,14 @@ fun SavedScreen(model: AppModel, id: String) {
         }
         MeasurementCard(m)
         Chip("Tersimpan di HP · siap dikirim saat server diatur", Tone.BLUE, "cloud_upload")
-        T("Foto, kotak 3D, ukuran, dan waktu disimpan sebagai bukti. Angka ukur tidak bisa diedit.", 12.5.sp, color = C.t2)
+        T(if (m.atHub) "Foto, waktu, lokasi, dan alasan disimpan. Ukuran diisi oleh hub."
+          else "Foto, kotak 3D, ukuran, waktu, dan lokasi disimpan sebagai bukti. Angka ukur tidak bisa diedit.", 12.5.sp, color = C.t2)
+        if (order != null && order.resi.size > 1) {
+            Row { T(order.name, 13.sp, color = C.t2, modifier = Modifier.weight(1f)); T("$doneInOrder dari ${order.resi.size} paket", 13.sp, FontWeight.SemiBold) }
+            ProgressLine(doneInOrder.toFloat() / order.resi.size)
+        }
         Spacer(Modifier.weight(1f))
-        if (next != null) PrimaryButton("Paket berikutnya", "arrow_forward", Modifier.fillMaxWidth()) { model.home(); model.startMeasure(next, m.orderId) }
+        if (next != null) PrimaryButton("Paket berikutnya", "arrow_forward", Modifier.fillMaxWidth()) { model.nextParcel(next, m.orderId) }
         SecondaryButton(if (next != null) "Selesai pickup" else "Kembali ke daftar", null, Modifier.fillMaxWidth()) { model.home() }
     }
 }
@@ -376,9 +378,10 @@ private fun MeasurementCard(m: Measurement) {
             Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
                 KV("Resi", m.resi)
                 KV("Ukuran", m.dims())
-                KV("Berat dipakai", "${m.chargedKg.id(2)} kg · ${if (m.volumetricWins) "volumetrik" else "timbangan"}")
-                KV("Cara ukur", m.mode.label + if (m.mode != Mode.MANUAL) " · ${m.confidence}%" else "")
-                KV("Waktu", SimpleDateFormat("d MMM, HH:mm", ID).format(Date(m.createdAt)) + if (m.seconds > 0) " · ${m.seconds.id(0)} dtk" else "")
+                if (m.atHub) KV("Alasan", m.note ?: "-")
+                else KV("Berat dipakai", "${m.chargedKg.id(2)} kg · ${if (m.volumetricWins) "volumetrik" else "timbangan"}")
+                KV("Cara ukur", if (m.atHub) "Diukur di hub" else m.mode.label + " · ${m.confidence}%")
+                KV("Waktu & lokasi", SimpleDateFormat("HH:mm", ID).format(Date(m.createdAt)) + " · " + m.place())
             }
         }
     }
@@ -409,7 +412,7 @@ fun HistoryScreen(model: AppModel, activity: Activity) {
                         Photo(m.photo, Modifier.size(48.dp, 64.dp).clip(RoundedCornerShape(8.dp)))
                         Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
                             T(m.resi, 14.sp, FontWeight.SemiBold)
-                            T(m.dims() + " · ${m.chargedKg.id(2)} kg", 12.5.sp, color = C.t2)
+                            T(if (m.atHub) m.dims() else m.dims() + " · ${m.chargedKg.id(2)} kg", 12.5.sp, color = C.t2)
                             T(SimpleDateFormat("d MMM, HH:mm", ID).format(Date(m.createdAt)), 11.5.sp, color = C.t3)
                         }
                         StatusChip(m)
@@ -430,15 +433,20 @@ fun DetailScreen(model: AppModel, activity: Activity, id: String) {
         TopBar(m.resi, m.mode.label, onBack = { model.back() })
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Photo(m.photo, Modifier.fillMaxWidth().height(360.dp).clip(RoundedCornerShape(16.dp)))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { StatusChip(m); if (m.mode != Mode.MANUAL) Chip("Keyakinan ${m.confidence}%", Tone.GREY) }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { StatusChip(m); if (!m.atHub) Chip("Keyakinan ${m.confidence}%", Tone.GREY) }
             T(m.dims(), 28.sp, FontWeight.Bold)
             Card {
-                WRow("Volume", "${m.volumeL.id()} L")
-                WRow("Berat volumetrik", "${m.volumetricKg.id(2)} kg", "÷ ${m.divisor.toDouble().id(0)}")
-                WRow("Berat timbangan", m.scaleKg?.let { "${it.id(2)} kg" } ?: "–")
-                WRow("Berat dipakai", "${m.chargedKg.id(2)} kg")
-                WRow("Waktu ukur", if (m.seconds > 0) "${m.seconds.id(0)} detik" else "–")
-                if (m.note != null) WRow("Catatan", m.note)
+                if (!m.atHub) {
+                    WRow("Volume", "${m.volumeL.id()} L")
+                    WRow("Berat volumetrik", "${m.volumetricKg.id(2)} kg", "÷ ${m.divisor.toDouble().id(0)}")
+                    WRow("Berat timbangan", m.scaleKg?.let { "${it.id(2)} kg" } ?: "–")
+                    WRow("Berat dipakai", "${m.chargedKg.id(2)} kg")
+                    WRow("Waktu ukur", if (m.seconds > 0) "${m.seconds.id(0)} detik" else "–")
+                }
+                WRow("Waktu", SimpleDateFormat("d MMM yyyy, HH:mm", ID).format(Date(m.createdAt)))
+                WRow("Lokasi", if (m.lat != null && m.lon != null) String.format(Locale.US, "%.5f, %.5f", m.lat, m.lon) else "–",
+                    m.gpsM?.let { "± ${it.toDouble().id(0)} m" })
+                if (m.note != null) WRow(if (m.atHub) "Alasan" else "Catatan", m.note)
             }
             if (m.recording != null) SecondaryButton("Bagikan rekaman scan", "folder_zip", Modifier.fillMaxWidth()) {
                 model.share(activity, model.zip(listOf(File(m.recording)), "scan_${m.resi}.zip"), "application/zip", "Bagikan rekaman scan")
@@ -502,6 +510,13 @@ fun SettingsScreen(model: AppModel, activity: Activity) {
                 }
             }
             Card {
+                T("Kertas penanda (A4)", 15.sp, FontWeight.SemiBold)
+                T("Untuk HP tanpa ARCore: paket diukur dari 1 foto dengan kertas ini di sampingnya. Cetak dengan skala 100%, lalu cek garis 10 cm dengan penggaris.",
+                    12.5.sp, color = C.t2)
+                Spacer(Modifier.height(8.dp))
+                SecondaryButton("Bagikan / cetak PDF", "print", Modifier.fillMaxWidth()) { model.markerSheet(activity) }
+            }
+            Card {
                 T("Data", 15.sp, FontWeight.SemiBold)
                 Spacer(Modifier.height(8.dp))
                 SecondaryButton("Bagikan semua hasil (JSON)", "share", Modifier.fillMaxWidth()) {
@@ -518,51 +533,5 @@ fun SettingsScreen(model: AppModel, activity: Activity) {
                 12.sp, color = C.t3)
         }
         BottomNav(model, Screen.Settings)
-    }
-}
-
-// ------------------------------------------------------------------ manual (phones without ARCore)
-@Composable
-fun ManualScreen(model: AppModel, activity: Activity) {
-    var l by remember { mutableStateOf("") }
-    var w by remember { mutableStateOf("") }
-    var h by remember { mutableStateOf("") }
-    var note by remember { mutableStateOf("") }
-    var photo by remember { mutableStateOf<String?>(null) }
-    val target = remember { File(model.store.photosDir, "manual_${System.currentTimeMillis()}.jpg") }
-    val uri: Uri = remember { FileProvider.getUriForFile(activity, "${activity.packageName}.files", target) }
-    val take = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok -> if (ok) photo = target.path }
-    fun num(s: String) = s.replace(',', '.').toDoubleOrNull()
-    val ok = listOf(l, w, h).all { (num(it) ?: 0.0) > 0 } && photo != null
-
-    Column(Modifier.fillMaxSize()) {
-        TopBar("Ukur manual", model.draft?.resi, onBack = { model.back() })
-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(Modifier.clip(RoundedCornerShape(14.dp)).background(C.amberL).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Sym("warning", 22.dp, C.amber, filled = true)
-                T("Ukur dengan meteran. Hasil manual wajib foto bukti dan masuk audit.", 13.sp, color = Color(0xFF7C4A03),
-                    modifier = Modifier.padding(start = 10.dp))
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("P" to l, "L" to w, "T" to h).forEachIndexed { i, (lab, v) ->
-                    OutlinedTextField(v, { x -> val f = x.filter { it.isDigit() || it == ',' || it == '.' }.take(5); when (i) { 0 -> l = f; 1 -> w = f; else -> h = f } },
-                        label = { T("$lab (cm)", 12.sp) }, singleLine = true, modifier = Modifier.weight(1f),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
-                }
-            }
-            OutlinedTextField(note, { note = it.take(120) }, label = { T("Alasan ukur manual", 12.sp) }, modifier = Modifier.fillMaxWidth())
-            Card(onClick = { take.launch(uri) }) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Photo(photo, Modifier.size(64.dp).clip(RoundedCornerShape(10.dp)))
-                    Column(Modifier.padding(start = 12.dp)) {
-                        T(if (photo == null) "Ambil foto bukti" else "Foto tersimpan", 15.sp, FontWeight.SemiBold)
-                        T("Paket dengan meteran terlihat", 12.5.sp, color = C.t2)
-                    }
-                }
-            }
-        }
-        PrimaryButton("Lanjut", "arrow_forward", Modifier.fillMaxWidth().padding(16.dp), enabled = ok) {
-            model.manualMeasurement(num(l)!!, num(w)!!, num(h)!!, photo, note.ifBlank { "HP tanpa ARCore" })?.let { model.onManual(it) }
-        }
     }
 }

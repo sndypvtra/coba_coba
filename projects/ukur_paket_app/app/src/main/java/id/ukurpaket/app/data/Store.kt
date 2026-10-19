@@ -20,8 +20,8 @@ data class Order(
     val kind: String = "store",          // store | home | warehouse
 )
 
-enum class Mode(val label: String) { AR_FULL("AR penuh"), AR_BASIC("AR dasar"), MANUAL("Manual") }
-enum class Status(val label: String) { OK("Akurat"), CHECK("Cek ulang"), MANUAL("Manual · audit") }
+enum class Mode(val label: String) { AR_FULL("AR penuh"), AR_BASIC("AR dasar"), MARKER("Kertas penanda") }
+enum class Status(val label: String) { OK("Akurat"), CHECK("Cek ulang"), HUB("Ukur di hub") }
 
 @Serializable
 data class Measurement(
@@ -42,7 +42,13 @@ data class Measurement(
     val recording: String? = null,
     val note: String? = null,
     val synced: Boolean = false,
+    val lat: Double? = null,
+    val lon: Double? = null,
+    /** GPS accuracy, metres. */
+    val gpsM: Float? = null,
 ) {
+    /** Not measured here: the parcel goes to the hub's measuring station. */
+    val atHub get() = status == Status.HUB
     val volumeL get() = lengthCm * widthCm * heightCm / 1000.0
     val volumetricKg get() = lengthCm * widthCm * heightCm / divisor
     /** The weight the tariff uses: the larger of scale and volumetric, rounded up to 0,01 kg. */

@@ -5,12 +5,16 @@ import android.opengl.GLES20
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import android.view.WindowManager
 import com.google.ar.core.Camera
 import com.google.ar.core.Config
+import com.google.ar.core.Coordinates2d
 import com.google.ar.core.Frame
 import com.google.ar.core.Plane
+import com.google.ar.core.Pose
 import com.google.ar.core.Session
 import com.google.ar.core.TrackingFailureReason
 import com.google.ar.core.TrackingState
@@ -21,13 +25,21 @@ import id.ukurpaket.app.data.Status
 import id.ukurpaket.app.measure.BoxFitter
 import id.ukurpaket.app.measure.BoxResult
 import id.ukurpaket.app.measure.FloorPlane
+import id.ukurpaket.app.measure.Mask
+import id.ukurpaket.app.measure.P2
 import id.ukurpaket.app.measure.PointAccumulator
+import id.ukurpaket.app.measure.Segmenter
 import id.ukurpaket.app.measure.V3
+import id.ukurpaket.app.measure.convexHull
+import id.ukurpaket.app.measure.dilate
+import id.ukurpaket.app.measure.inside
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.io.File
 import java.nio.ByteOrder
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicReference
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 import kotlin.math.hypot
@@ -40,10 +52,11 @@ enum class Hint(val text: String) {
     NONE(""),
     MOVE("Gerakkan HP pelan ke kiri dan kanan"),
     SLOW("Pelan-pelan"),
-    DARK("Terlalu gelap · cari tempat lebih terang"),
+    DARK("Terlalu gelap · nyalakan senter atau cari tempat terang"),
     TEXTURE("Arahkan ke lantai yang bertekstur"),
     LOST("Pelacakan hilang · gerakkan HP pelan"),
     NO_PARCEL("Arahkan titik ke paket"),
+    PICK_FAILED("Paket belum terbaca · ketuk lagi atau gambar kotak"),
     BACK("Mundur sedikit · paket terpotong layar"),
     STACKED("Taruh paket langsung di lantai atau meja"),
     SWEEP("Geser HP pelan memutar ke sudut paket"),
@@ -57,6 +70,11 @@ class Overlay(
     val outline: FloatArray? = null,
     /** 8 corners x,y: floor 0-3 then top 4-7; NaN where a corner is behind the camera. */
     val box: FloatArray? = null,
+    /** Other parcels in view, each a closed outline: drawn dashed, labelled "Paket lain", tap to pick. */
+    val others: List<FloatArray> = emptyList(),
+    /** Parcels already measured in this session (x, y per mark) with their labels. */
+    val marks: FloatArray = FloatArray(0),
+    val markLabels: List<String> = emptyList(),
 )
 
 data class ResultData(
@@ -76,18 +94,31 @@ data class EngineUi(
     val result: ResultData? = null,
     val error: String? = null,
     val reticle: Pair<Float, Float>? = null,
+    /** The segmentation model is cutting the parcel out of the picture. */
+    val selecting: Boolean = false,
+    /** The parcel was picked by tap / box (segmentation), not by the crosshair alone. */
+    val picked: Boolean = false,
+    /** Failed scans and repeats for this parcel: after two, the courier may hand it to the hub. */
+    val attempts: Int = 0,
+    val torch: Boolean = false,
+    val torchSupported: Boolean = true,
 )
 
 /**
  * The AR side of measuring: runs on the GL thread, owns the ARCore session, and turns frames into
  * an [EngineUi] the Compose screen draws. Method A: floor from ARCore plane finding, parcel points
- * from the Depth API (or feature points on phones without it), box from [BoxFitter].
+ * from the Depth API (or feature points on phones without it), the parcel cut out by a tap or drawn box
+ * (MobileSAM, [segmenter]) and the box from [BoxFitter].
+ *
+ * The engine outlives one parcel: "Paket berikutnya" calls [next], which keeps the session and the floor
+ * and marks the parcels already measured.
  */
 class MeasureEngine(
-    private val activity: Activity,
+    val activity: Activity,
     private val useDepth: Boolean,
     private val photosDir: File,
     private val recordDir: File?,
+    private val segmenter: () -> Segmenter? = { null },
 ) : GLSurfaceView.Renderer {
 
     private val _ui = MutableStateFlow(EngineUi())
@@ -104,7 +135,15 @@ class MeasureEngine(
     private val vp = FloatArray(16)
 
     private val commands = ConcurrentLinkedQueue<Cmd>()
-    private sealed class Cmd { data class Tap(val x: Float, val y: Float) : Cmd(); object Lock : Cmd(); object Rescan : Cmd() }
+    private sealed class Cmd {
+        data class Tap(val x: Float, val y: Float) : Cmd()
+        data class Box(val x0: Float, val y0: Float, val x1: Float, val y1: Float) : Cmd()
+        object Lock : Cmd()
+        object Rescan : Cmd()
+        data class Next(val label: String) : Cmd()
+        data class Torch(val on: Boolean) : Cmd()
+        data class Photo(val file: File, val done: (File?) -> Unit) : Cmd()
+    }
 
     private var phase = Phase.SEARCH
     private var frameNo = 0L
@@ -115,6 +154,8 @@ class MeasureEngine(
     private var live: BoxResult? = null
     private val liveAcc = PointAccumulator(0.01f)
     private val scanAcc = PointAccumulator(0.01f)
+    private val sceneAcc = PointAccumulator(0.02f)
+    private var others: List<BoxResult> = emptyList()
     private var travel = 0f
     private var lastPos: V3? = null
     private var lastPosTime = 0L
@@ -123,12 +164,58 @@ class MeasureEngine(
     private var resultData: ResultData? = null
     private var floorWorld: List<V3> = emptyList()
     private var depthWorld: List<V3> = emptyList()
-    private val startMs = SystemClock.elapsedRealtime()
+    private var startMs = SystemClock.elapsedRealtime()
     private val recorder = recordDir?.let { Recorder(it) }
+    private var attempts = 0
+    private var torch = false
+    private var torchSupported = true
+    private var pickHint = false
+    private val done = ArrayList<Pair<V3, String>>()
+
+    // segmentation: one job at a time on a worker thread; the GL thread picks up the finished mask
+    private val worker = Executors.newSingleThreadExecutor()
+    private var prompt: FloatArray? = null
+    private var lockAfterPick = false
+    @Volatile private var busy = false
+    private val finished = AtomicReference<Pick?>(null)
+    private var pick: Pick? = null
+
+    /**
+     * A parcel cut out in one camera image. A 3D point belongs to it when it projects inside the (slightly
+     * grown) mask as seen from that frame, and lies near the footprint of the depth points inside the mask:
+     * the back of the parcel, unseen in that frame, still projects inside; a neighbour standing behind it
+     * is outside the footprint.
+     */
+    private class Pick(
+        val mask: Mask, val inv: Pose, val fx: Float, val fy: Float, val cx: Float, val cy: Float,
+        val framePoints: List<V3>,
+    ) {
+        var footprint: List<P2>? = null
+        var plane: FloorPlane? = null
+
+        fun projects(p: V3): Boolean {
+            val l = inv.transformPoint(floatArrayOf(p.x, p.y, p.z))
+            if (l[2] > -0.05f) return false
+            return mask[cx + fx * l[0] / -l[2], cy - fy * l[1] / -l[2]]
+        }
+
+        fun contains(p: V3): Boolean {
+            if (!projects(p)) return false
+            val fp = footprint ?: return true
+            val q = plane!!.to2d(p)
+            return inside(fp, q.a, q.b) || nearEdge(fp, q, 0.04f)
+        }
+    }
 
     fun tap(x: Float, y: Float) = commands.add(Cmd.Tap(x, y))
+    fun box(x0: Float, y0: Float, x1: Float, y1: Float) = commands.add(Cmd.Box(x0, y0, x1, y1))
     fun lock() = commands.add(Cmd.Lock)
     fun rescan() = commands.add(Cmd.Rescan)
+    /** Next parcel in the same session: keep the floor, mark the one just measured with [label]. */
+    fun next(label: String) = commands.add(Cmd.Next(label))
+    fun torch(on: Boolean) = commands.add(Cmd.Torch(on))
+    /** A plain camera photo (for "ukur di hub"), delivered on the main thread. */
+    fun photo(file: File, done: (File?) -> Unit) = commands.add(Cmd.Photo(file, done))
 
     // ------------------------------------------------------------ lifecycle
     fun resume(): String? {
@@ -158,6 +245,7 @@ class MeasureEngine(
     fun close() {
         session?.close(); session = null
         recorder?.close()
+        worker.shutdown()
     }
 
     // ------------------------------------------------------------ GL
@@ -191,7 +279,7 @@ class MeasureEngine(
     private fun step(s: Session, frame: Frame) {
         frameNo++
         val cam = frame.camera
-        handleCommands(frame)
+        handleCommands(s, frame)
 
         if (cam.trackingState != TrackingState.TRACKING) {
             val hint = when (cam.trackingFailureReason) {
@@ -219,7 +307,7 @@ class MeasureEngine(
             Phase.SEARCH -> {
                 planeFrames = if (bigPlane) planeFrames + 1 else 0
                 if (planeFrames > 25) phase = Phase.SELECT
-                publish(if (bigPlane) Hint.NONE else Hint.MOVE, Overlay(floorDots = project(floorWorld)))
+                publish(if (bigPlane) Hint.NONE else Hint.MOVE, Overlay(floorDots = project(floorWorld), marks = marks(), markLabels = done.map { it.second }))
             }
             Phase.SELECT -> select(frame, cam, planes)
             Phase.SCAN -> scan(frame, cam)
@@ -227,25 +315,73 @@ class MeasureEngine(
         }
     }
 
-    private fun handleCommands(frame: Frame) {
+    private fun handleCommands(s: Session, frame: Frame) {
         while (true) {
             when (val c = commands.poll() ?: return) {
-                is Cmd.Tap -> if (phase == Phase.SELECT || phase == Phase.SEARCH) tap = c.x to c.y
-                Cmd.Lock -> if (phase == Phase.SELECT && live != null && seed != null && plane != null) startScan(frame)
+                is Cmd.Tap -> if (phase == Phase.SELECT || phase == Phase.SEARCH) {
+                    tap = c.x to c.y
+                    if (phase == Phase.SELECT && segmenter() != null) prompt = floatArrayOf(c.x, c.y)
+                }
+                is Cmd.Box -> if (phase == Phase.SELECT && segmenter() != null) {
+                    tap = (c.x0 + c.x1) / 2 to (c.y0 + c.y1) / 2
+                    prompt = floatArrayOf(c.x0, c.y0, c.x1, c.y1)
+                }
+                Cmd.Lock -> if (phase == Phase.SELECT) {
+                    when {
+                        pick == null && segmenter() != null -> { val r = reticle(); prompt = floatArrayOf(r.first, r.second); lockAfterPick = true }
+                        busy -> lockAfterPick = true
+                        live != null && seed != null && plane != null -> startScan(frame)
+                    }
+                }
                 Cmd.Rescan -> {
-                    phase = Phase.SELECT; result = null; resultData = null; live = null
-                    scanAcc.clear(); liveAcc.clear(); tap = null
-                    _ui.value = EngineUi(phase = Phase.SELECT, planeFound = true)
+                    if (phase == Phase.RESULT || phase == Phase.SCAN) attempts++
+                    resetPick()
+                    phase = Phase.SELECT
+                    _ui.value = EngineUi(phase = Phase.SELECT, planeFound = true, attempts = attempts, torch = torch, torchSupported = torchSupported)
+                }
+                is Cmd.Next -> {
+                    result?.let { r -> done.add(centre(r.topCorners) to c.label) }
+                    attempts = 0
+                    resetPick()
+                    startMs = SystemClock.elapsedRealtime()
+                    phase = if (planeFrames > 25) Phase.SELECT else Phase.SEARCH
+                    _ui.value = EngineUi(phase = phase, planeFound = phase == Phase.SELECT, torch = torch, torchSupported = torchSupported)
+                }
+                is Cmd.Torch -> {
+                    val cfg = s.config
+                    cfg.flashMode = if (c.on) Config.FlashMode.TORCH else Config.FlashMode.OFF
+                    try {
+                        if (!s.isSupported(cfg)) throw IllegalStateException()
+                        s.configure(cfg); torch = c.on
+                    } catch (e: Exception) { torchSupported = false; torch = false }
+                    _ui.value = _ui.value.copy(torch = torch, torchSupported = torchSupported)
+                }
+                is Cmd.Photo -> {
+                    val f = Snapshot.save(frame, frame.camera, null, c.file)
+                    Handler(Looper.getMainLooper()).post { c.done(f) }
                 }
             }
         }
+    }
+
+    private fun resetPick() {
+        result = null; resultData = null; live = null; pick = null; prompt = null; lockAfterPick = false
+        finished.set(null); seed = null; pickHint = false
+        scanAcc.clear(); liveAcc.clear(); tap = null
     }
 
     private fun reticle() = tap ?: (w / 2f to h * 0.40f)
 
     private fun select(frame: Frame, cam: Camera, planes: List<Plane>) {
         val (px, py) = reticle()
-        if (frameNo % 3 == 0L) {
+        val pts = if (useDepth && frameNo % 2 == 0L) framePoints(frame, cam) else null
+
+        // a finished cut-out replaces the crosshair pick
+        finished.getAndSet(null)?.let { p -> adopt(p, planes) }
+        prompt?.let { pr -> if (!busy) { prompt = null; startPick(frame, cam, pr, pts) } }
+
+        val pk = pick
+        if (pk == null && frameNo % 3 == 0L) {
             val hit = frame.hitTest(px, py).firstOrNull { it.trackable !is Plane }
                 ?: frame.hitTest(px, py).firstOrNull()
             val p = hit?.hitPose
@@ -259,21 +395,89 @@ class MeasureEngine(
         val sd = seed; val fl = plane
         if (sd != null && fl != null) {
             if (liveAcc.frames > 12) liveAcc.clear()
-            addPoints(frame, cam, liveAcc, fl, sd)
+            addPoints(frame, cam, liveAcc, fl, sd, pts = pts)
             if (frameNo % 3 == 0L) {
                 val seg = BoxFitter.segment(liveAcc.points(), fl, sd, cell = if (useDepth) 0.015f else 0.03f,
-                minH = 0.02f, minPerCell = if (useDepth) 2 else 1)
-                live = seg?.let { BoxFitter.fit(it) }?.takeIf { plausible(it) }
+                    minH = 0.02f, minPerCell = if (useDepth) 2 else 1)
+                live = seg?.let { BoxFitter.fit(it) }?.takeIf { plausible(it) } ?: if (pk != null) live else null
+            }
+        }
+        if (lockAfterPick && pk != null && live != null && !busy) { lockAfterPick = false; startScan(frame); return }
+
+        // the other parcels around: coarse clusters from a rolling cloud of the scene
+        if (useDepth && pts != null) {
+            val floor = fl ?: lowestPlane(planes)
+            if (floor != null) {
+                if (sceneAcc.frames > 40) sceneAcc.clear()
+                val c2 = cam.pose
+                val near = V3(c2.tx(), c2.ty(), c2.tz())
+                for (p in pts) if (floor.height(p) > 0.03f && (p - near).norm() < 2.5f) sceneAcc.add(p.x, p.y, p.z)
+                sceneAcc.endFrame()
+                if (frameNo % 16 == 0L) {
+                    val centre = sd ?: floor.to3d(floor.to2d(near))
+                    others = BoxFitter.clusters(sceneAcc.points(2), floor, centre)
+                }
             }
         }
         val lv = live
+        val otherOutlines = others.filter { o -> sd == null || !containsSeed(o, sd, fl) }.map { project(it.topCorners) }
+
         val hint = when {
+            pickHint -> Hint.PICK_FAILED
             lv == null -> Hint.NO_PARCEL
             stacked(fl, planes) -> Hint.STACKED
             else -> Hint.NONE
         }
-        publish(hint, Overlay(floorDots = project(floorWorld), outline = lv?.let { projectPoly(it.outline) }),
-            targetFound = lv != null, reticle = px to py)
+        publish(hint, Overlay(floorDots = project(floorWorld), outline = lv?.let { projectPoly(it.outline) },
+            others = otherOutlines, marks = marks(), markLabels = done.map { it.second }),
+            targetFound = lv != null, reticle = if (pk == null) px to py else null)
+    }
+
+    /** Hands the current camera image and a tap or box (view pixels) to the segmentation model. */
+    private fun startPick(frame: Frame, cam: Camera, pr: FloatArray, pts: List<V3>?) {
+        val sam = segmenter() ?: return
+        val img = try { frame.acquireCameraImage() } catch (e: NotYetAvailableException) { prompt = pr; return }
+        val argb: IntArray; val iw: Int; val ih: Int
+        try { argb = Yuv.toArgb(img); iw = img.width; ih = img.height } finally { img.close() }
+        val ip = FloatArray(pr.size)
+        frame.transformCoordinates2d(Coordinates2d.VIEW, pr, Coordinates2d.IMAGE_PIXELS, ip)
+        val intr = cam.imageIntrinsics
+        val f = intr.focalLength; val pp = intr.principalPoint; val dims = intr.imageDimensions
+        val sx = iw.toFloat() / dims[0]; val sy = ih.toFloat() / dims[1]
+        val inv = cam.pose.inverse()
+        val framePts = pts ?: if (useDepth) framePoints(frame, cam) else featurePoints(frame)
+        busy = true
+        worker.execute {
+            try {
+                val e = sam.embed(argb, iw, ih)
+                val m = if (ip.size == 2) sam.tap(e, ip[0], ip[1]) else sam.box(e, ip[0], ip[1], ip[2], ip[3])
+                val grown = m.largestPart().dilate(max(2, iw / 200))
+                finished.set(Pick(grown, inv, f[0] * sx, f[1] * sy, pp[0] * sx, pp[1] * sy, framePts))
+            } catch (e: Throwable) {
+                pickHint = true
+            } finally { busy = false }
+        }
+        publish(Hint.NONE, _ui.value.overlay, selecting = true)
+    }
+
+    /** A finished cut-out becomes the parcel: seed, surface, footprint fence. */
+    private fun adopt(p: Pick, planes: List<Plane>) {
+        val inMask = p.framePoints.filter { p.projects(it) }
+        if (inMask.size < (if (useDepth) 40 else 4)) { pickHint = true; lockAfterPick = false; return }
+        val ys = inMask.map { it.y }.sorted()
+        val top = ys[(ys.size * 0.9f).toInt().coerceAtMost(ys.size - 1)]
+        val sd = V3(inMask.map { it.x }.average().toFloat(), top, inMask.map { it.z }.average().toFloat())
+        val fl = choosePlane(planes, sd) ?: run { pickHint = true; lockAfterPick = false; return }
+        val above = inMask.filter { fl.height(it) > 0.02f }
+        if (above.size >= (if (useDepth) 30 else 4)) p.footprint = convexHull(above.map { fl.to2d(it) })
+        p.plane = fl
+        pick = p; seed = sd; plane = fl; pickHint = false
+        liveAcc.clear(); live = null
+        // reuse this frame's points straight away so the outline appears without waiting
+        for (q in inMask) if (p.contains(q)) liveAcc.add(q.x, q.y, q.z)
+        liveAcc.endFrame()
+        BoxFitter.segment(liveAcc.points(), fl, sd, cell = if (useDepth) 0.015f else 0.03f, minH = 0.02f, minPerCell = 1)
+            ?.let { BoxFitter.fit(it) }?.takeIf { plausible(it) }?.let { live = it }
     }
 
     private fun startScan(frame: Frame) {
@@ -311,6 +515,7 @@ class MeasureEngine(
                 minH = 0.02f, minPerCell = if (useDepth) 2 else 1)
             val r = seg?.let { BoxFitter.fit(it) }?.takeIf { plausible(it) }
             if (r == null) {
+                attempts++
                 phase = Phase.SELECT; scanAcc.clear()
                 publish(Hint.FAILED, Overlay())
                 return
@@ -342,32 +547,47 @@ class MeasureEngine(
     private fun round1(x: Float) = Math.round(x * 10.0) / 10.0
 
     // ------------------------------------------------------------ points
-    /** Adds this frame's points near the parcel to [acc]; returns how many were added. */
-    private fun addPoints(frame: Frame, cam: Camera, acc: PointAccumulator, fl: FloorPlane, sd: V3, record: Boolean = false): Int {
+    /** Adds this frame's points near the parcel (and inside the picked cut-out) to [acc]; returns how many. */
+    private fun addPoints(frame: Frame, cam: Camera, acc: PointAccumulator, fl: FloorPlane, sd: V3,
+                          record: Boolean = false, pts: List<V3>? = null): Int {
         val s2 = fl.to2d(sd)
+        val pk = pick
         var n = 0
         val sink = { x: Float, y: Float, z: Float ->
             val p = V3(x, y, z)
             val hh = fl.height(p)
             if (hh > -0.02f && hh < 1.6f) {
                 val q = fl.to2d(p)
-                if (hypot(q.a - s2.a, q.b - s2.b) < 1.2f) { acc.add(x, y, z); n++ }
+                if (hypot(q.a - s2.a, q.b - s2.b) < 1.2f && (pk == null || hh < 0.02f || pk.contains(p))) { acc.add(x, y, z); n++ }
             }
         }
         if (useDepth) {
+            if (pts != null) { for (p in pts) sink(p.x, p.y, p.z); return n }
             if (frameNo % 2 != 0L) return 0
             depthPoints(frame, cam, sink, if (record) recorder else null)
         } else {
-            val pc = frame.acquirePointCloud()
-            try {
-                val b = pc.points
-                while (b.remaining() >= 4) {
-                    val x = b.get(); val y = b.get(); val z = b.get(); val c = b.get()
-                    if (c >= 0.2f) sink(x, y, z)
-                }
-            } finally { pc.close() }
+            for (p in featurePoints(frame)) sink(p.x, p.y, p.z)
         }
         return n
+    }
+
+    private fun framePoints(frame: Frame, cam: Camera): List<V3> {
+        val out = ArrayList<V3>(3000)
+        depthPoints(frame, cam, { x, y, z -> out.add(V3(x, y, z)) }, null)
+        return out
+    }
+
+    private fun featurePoints(frame: Frame): List<V3> {
+        val out = ArrayList<V3>()
+        val pc = frame.acquirePointCloud()
+        try {
+            val b = pc.points
+            while (b.remaining() >= 4) {
+                val x = b.get(); val y = b.get(); val z = b.get(); val c = b.get()
+                if (c >= 0.2f) out.add(V3(x, y, z))
+            }
+        } finally { pc.close() }
+        return out
     }
 
     private fun depthPoints(frame: Frame, cam: Camera, sink: (Float, Float, Float) -> Unit, rec: Recorder?) {
@@ -406,10 +626,25 @@ class MeasureEngine(
     private fun choosePlane(planes: List<Plane>, sd: V3): FloorPlane? =
         planes.filter { it.centerPose.ty() < sd.y - 0.012f && it.centerPose.ty() > sd.y - 1.6f }
             .maxByOrNull { it.centerPose.ty() }
-            ?.let { p ->
-                val c = p.centerPose; val yA = c.yAxis
-                FloorPlane(V3(c.tx(), c.ty(), c.tz()), V3(yA[0], yA[1], yA[2]))
-            }
+            ?.let { toFloor(it) }
+
+    private fun lowestPlane(planes: List<Plane>): FloorPlane? =
+        planes.filter { it.extentX * it.extentZ > 0.06f }.minByOrNull { it.centerPose.ty() }?.let { toFloor(it) }
+
+    private fun toFloor(p: Plane): FloorPlane {
+        val c = p.centerPose; val yA = c.yAxis
+        return FloorPlane(V3(c.tx(), c.ty(), c.tz()), V3(yA[0], yA[1], yA[2]))
+    }
+
+    private fun containsSeed(o: BoxResult, sd: V3, fl: FloorPlane?): Boolean {
+        val p = fl ?: return false
+        val q = p.to2d(sd)
+        return inside(o.floorCorners.map { p.to2d(it) }, q.a, q.b)
+    }
+
+    private fun centre(c: List<V3>) = V3(c.map { it.x }.average().toFloat(), c.map { it.y }.average().toFloat(), c.map { it.z }.average().toFloat())
+
+    private fun marks(): FloatArray = project(done.map { it.first })
 
     /** A plane right under the parcel that is not the floor the courier set it on: probably another parcel. */
     private fun stacked(fl: FloorPlane?, planes: List<Plane>): Boolean {
@@ -444,7 +679,7 @@ class MeasureEngine(
             while (x <= xs.max()) {
                 var z = zs.min()
                 while (z <= zs.max()) {
-                    if (inside(xs, zs, x, z)) {
+                    if (insideAny(xs, zs, x, z)) {
                         local[0] = x; local[1] = 0f; local[2] = z
                         p.centerPose.transformPoint(local, 0, world, 0)
                         out.add(V3(world[0], world[1], world[2]))
@@ -458,7 +693,7 @@ class MeasureEngine(
         return out
     }
 
-    private fun inside(xs: FloatArray, zs: FloatArray, x: Float, z: Float): Boolean {
+    private fun insideAny(xs: FloatArray, zs: FloatArray, x: Float, z: Float): Boolean {
         var c = false; var j = xs.size - 1
         for (i in xs.indices) {
             if ((zs[i] > z) != (zs[j] > z) && x < (xs[j] - xs[i]) * (z - zs[i]) / (zs[j] - zs[i]) + xs[i]) c = !c
@@ -499,13 +734,30 @@ class MeasureEngine(
     }
 
     private fun publish(hint: Hint, overlay: Overlay, progress: Float = _ui.value.progress,
-                        targetFound: Boolean = _ui.value.targetFound, reticle: Pair<Float, Float>? = null) {
+                        targetFound: Boolean = _ui.value.targetFound, reticle: Pair<Float, Float>? = null,
+                        selecting: Boolean = busy) {
         _ui.value = EngineUi(
             phase = phase,
             planeFound = phase != Phase.SEARCH || planeFrames > 0,
             targetFound = targetFound,
             progress = if (phase == Phase.SCAN) progress else if (phase == Phase.RESULT) 1f else 0f,
             hint = hint, overlay = overlay, live = live, result = resultData, reticle = reticle,
+            selecting = selecting || prompt != null, picked = pick != null, attempts = attempts,
+            torch = torch, torchSupported = torchSupported,
         )
+    }
+
+    companion object {
+        /** Within [d] of a polygon's edge. */
+        internal fun nearEdge(poly: List<P2>, q: P2, d: Float): Boolean {
+            for (i in poly.indices) {
+                val a = poly[i]; val b = poly[(i + 1) % poly.size]
+                val ex = b.a - a.a; val ey = b.b - a.b
+                val l2 = ex * ex + ey * ey
+                val t = if (l2 < 1e-9f) 0f else (((q.a - a.a) * ex + (q.b - a.b) * ey) / l2).coerceIn(0f, 1f)
+                if (hypot(q.a - (a.a + t * ex), q.b - (a.b + t * ey)) <= d) return true
+            }
+            return false
+        }
     }
 }
