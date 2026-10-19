@@ -12,20 +12,20 @@ Unggah semua file PNG dari folder ini ke **satu proyek** Claude Design. Jangan g
 |---|---|---|
 | `alur_kurir.png` | Board 8 langkah alur kurir, dari scan resi sampai data tersimpan | 3840 × 2160 |
 | `fitur_lapangan.png` | Board 8 fitur untuk kondisi lapangan | 3840 × 2160 |
-| `screens/01_pickup.png` … `screens/16_riwayat.png` | Setiap layar app di dalam bingkai HP, latar transparan | 1348 × ±2860 |
+| `screens/01_scan_resi.png` … `screens/17_riwayat.png` | Setiap layar app di dalam bingkai HP, latar transparan | 1348 × ±2860 |
 
 Daftar layar di folder `screens/`:
 
 | File | Layar |
 |---|---|
-| `01_pickup.png` | Pickup hari ini: daftar resi, tombol Scan resi |
+| `01_scan_resi.png` | Scan Resi: layar utama saat app dibuka, tombol Scan resi dan Ketik Resi, daftar hari ini masih kosong |
 | `02_persiapan.png` | Persiapan: 4 aturan foto |
 | `03_scan_lantai.png` | Scan Lantai: titik putih di lantai |
 | `04_pilih_paket.png` | Pilih Paket: paket dipilih (garis magenta), paket lain diabaikan |
 | `05_scan_paket.png` | Scan Paket: progres 64%, titik data 3D |
 | `06_hasil_ukur.png` | Hasil Ukur: kotak 3D dan ukuran 27 × 15 × 6 cm, status Akurat |
 | `07_berat.png` | Berat: berat timbangan, berat volumetrik, Berat Tagih |
-| `08_tersimpan.png` | Tersimpan: foto, ukuran, waktu, lokasi GPS, progres pickup |
+| `08_tersimpan.png` | Tersimpan: foto, ukuran, waktu, lokasi GPS; tombol Paket berikutnya (scan resi lagi) dan Selesai |
 | `09_pilih_area.png` | Pilih Area: kurir menandai area paket dengan jari |
 | `10_paket_berikutnya.png` | Paket berikutnya: paket yang sudah diukur diberi tanda ✓ |
 | `11_peringatan.png` | Arahan langsung: "Mundur sedikit · paket terpotong layar" |
@@ -33,7 +33,8 @@ Daftar layar di folder `screens/`:
 | `13_ukur_di_hub.png` | Ukur di Hub: pilih alasan setelah 2× gagal |
 | `14_detail_ukur_di_hub.png` | Data Ukur di Hub: foto, waktu, lokasi, dan alasan |
 | `15_cek_hp.png` | Cek HP: HP kurir siap mengukur |
-| `16_riwayat.png` | Riwayat: semua hasil ukur di HP |
+| `16_hari_ini.png` | Hari ini: daftar paket yang sudah diukur hari ini, dengan status Akurat / Perlu Dicek / Ukur di Hub |
+| `17_riwayat.png` | Riwayat: semua hasil ukur di HP, siap dibagikan |
 
 Semua gambar adalah **tampilan asli dari aplikasi uji coba** (APK v0.1), bukan desain konsep. Foto paketnya asli
 dengan label resi disamarkan. Ukuran 27 × 15 × 6 cm di layar adalah contoh untuk menunjukkan alur, bukan hasil
@@ -53,15 +54,15 @@ ukur sungguhan. Jangan ubah isi gambar, dan jangan memotong layar HP.
 |---|---|---|---|
 | 1 | Sampul | `06_hasil_ukur.png` + `04_pilih_paket.png` | UkurPaket: ukur P × L × T paket saat pickup, cukup dengan HP kurir |
 | 2 | Masalah | – | Ukuran dan berat paket sering hanya berdasarkan deklarasi penjual |
-| 3 | Solusi dalam 3 langkah | `01_pickup.png`, `05_scan_paket.png`, `08_tersimpan.png` | Scan resi → ukur dengan kamera → data tersimpan sebagai bukti |
+| 3 | Solusi dalam 3 langkah | `01_scan_resi.png`, `05_scan_paket.png`, `08_tersimpan.png` | Scan resi → ukur dengan kamera → data tersimpan sebagai bukti |
 | 4 | Alur kurir | `alur_kurir.png` (satu slide penuh) | 8 langkah dari scan resi sampai data tersimpan |
-| 5 | Banyak paket di satu lokasi | `04_pilih_paket.png`, `09_pilih_area.png`, `10_paket_berikutnya.png` | Kurir memilih paket yang diukur; paket lain tidak ikut terukur |
+| 5 | Banyak paket sekaligus | `04_pilih_paket.png`, `09_pilih_area.png`, `10_paket_berikutnya.png` | Kurir memilih paket yang diukur; paket lain tidak ikut terukur |
 | 6 | Berat Tagih yang benar | `06_hasil_ukur.png`, `07_berat.png` | Ongkir dihitung dari berat yang lebih besar: timbangan atau volumetrik |
 | 7 | Siap untuk kondisi lapangan | `fitur_lapangan.png` (satu slide penuh) | Paket menempel, tempat gelap, hasil meragukan: ada jalan keluarnya |
 | 8 | Kontrol mutu data | `12_perlu_dicek.png`, `13_ukur_di_hub.png`, `14_detail_ukur_di_hub.png` | Hasil meragukan tidak lolos begitu saja; tidak ada paket yang tertinggal |
 | 9 | Manfaat bisnis | – | Revenue assurance, tagihan akurat, bukti untuk dispute, data untuk operasional |
 | 10 | Cara kerja (ringkas) | `15_cek_hp.png` | On-device AI + AR di HP Android, berjalan offline, data terikat ke resi |
-| 11 | Status saat ini | `16_riwayat.png` | Prototipe APK siap diuji; sudah lolos uji otomatis, belum uji lapangan |
+| 11 | Status saat ini | `16_hari_ini.png` | Prototipe APK siap diuji; sudah lolos uji otomatis, belum uji lapangan |
 | 12 | Rencana pilot & keputusan | – | 3 fase, KPI yang diukur, dukungan yang dibutuhkan dari management |
 
 ## 4. Isi setiap slide
@@ -82,7 +83,8 @@ ukur sungguhan. Jangan ubah isi gambar, dan jangan memotong layar HP.
 **Slide 3 · Solusi dalam 3 langkah**
 - Judul: Diukur di titik pertama: saat pickup
 - Tiga kolom, masing-masing dengan satu layar HP:
-  1. **Scan resi** (`01_pickup.png`): hasil ukur langsung terikat ke nomor resi.
+  1. **Scan resi** (`01_scan_resi.png`): cukup barcode di label; hasil ukur langsung terikat ke nomor resi.
+     Tidak perlu data nama, alamat, atau daftar order di HP.
   2. **Ukur dengan kamera** (`05_scan_paket.png`): kurir menggerakkan HP mengitari paket beberapa detik.
   3. **Tersimpan sebagai bukti** (`08_tersimpan.png`): foto dengan kotak 3D, ukuran, waktu, dan lokasi.
 
@@ -90,12 +92,13 @@ ukur sungguhan. Jangan ubah isi gambar, dan jangan memotong layar HP.
 - Judul: Alur kurir, 8 langkah
 - Tampilkan `alur_kurir.png` satu slide penuh, tanpa teks tambahan selain judul.
 
-**Slide 5 · Banyak paket di satu lokasi**
+**Slide 5 · Banyak paket sekaligus**
 - Judul: Kurir menentukan paket yang diukur
 - Poin:
   - Ketuk paketnya; paket di sebelahnya otomatis diabaikan (ditandai "Paket lain").
   - Kalau ketukan kurang pas, kurir menandai area paket dengan jari (Pilih Area).
-  - Paket berikutnya di lokasi yang sama: tanpa scan lantai ulang, paket yang selesai diberi tanda ✓.
+  - Tekan **Paket berikutnya**: scan resi paket berikutnya, lalu langsung ukur. Tanpa scan lantai ulang,
+    paket yang selesai diberi tanda ✓, sampai kurir menekan **Selesai**.
 - Gambar: `04_pilih_paket.png`, `09_pilih_area.png`, `10_paket_berikutnya.png`.
 
 **Slide 6 · Berat Tagih yang benar**
@@ -140,10 +143,10 @@ ukur sungguhan. Jangan ubah isi gambar, dan jangan memotong layar HP.
 - Judul: Prototipe siap diuji
 - Poin:
   - **Sudah ada**: aplikasi Android uji coba (APK v0.1) dengan alur lengkap, dari scan resi sampai riwayat.
-  - **Sudah diuji otomatis**: 17 tes, termasuk alur kurir, perhitungan ukuran pada data simulasi, pemilihan paket
+  - **Sudah diuji otomatis**: 19 tes, termasuk alur kurir, perhitungan ukuran pada data simulasi, pemilihan paket
     di antara banyak paket, dan pembacaan barcode dari label resi AnterAja asli.
   - **Belum**: uji lapangan di HP Android, dan integrasi dengan sistem order/resi.
-- Gambar: `16_riwayat.png`.
+- Gambar: `16_hari_ini.png`.
 
 **Slide 12 · Rencana pilot & keputusan**
 - Judul: Langkah berikutnya
@@ -162,7 +165,7 @@ Buat presentasi 12 slide (16:9) untuk management berjudul "UkurPaket". Ikuti sus
 slide_ukur_mobileapp.md (bagian 3 dan 4) persis, dalam bahasa Indonesia dengan istilah bisnis yang umum.
 
 Gambar terlampir: alur_kurir.png dan fitur_lapangan.png (board 3840×2160, pakai satu slide penuh, jangan dipotong),
-dan screens/01_pickup.png sampai screens/16_riwayat.png (layar HP berbingkai, latar transparan). Pakai gambar
+dan screens/01_scan_resi.png sampai screens/17_riwayat.png (layar HP berbingkai, latar transparan). Pakai gambar
 sesuai tabel; jangan ubah isi gambar dan jangan memotong layar HP.
 
 Gaya: warna utama magenta #ED0677, aksen kuning #FFCB08, teks #0F172A, abu-abu #475569, latar #F6F7FA.

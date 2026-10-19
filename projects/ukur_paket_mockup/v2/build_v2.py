@@ -20,14 +20,14 @@ BEZEL = (17, 20, 28)
 
 # (screen, title, caption)
 MAIN = [
-    ("02_pickup", "Pickup hari ini", "Scan resi atau pilih dari daftar; ukuran langsung terikat ke resi"),
+    ("02_scan_resi", "Scan Resi", "Scan barcode di label, atau ketik resi; ukuran langsung terikat ke resi"),
     ("03_persiapan", "Persiapan", "4 aturan foto bergambar, muncul di 3 kali pertama"),
     ("04_scan_lantai", "Scan Lantai", "Gerakkan HP pelan sampai titik putih muncul di lantai"),
     ("05_pilih_paket", "Pilih Paket", "Ketuk paket yang diukur; paket lain di sekitarnya diabaikan"),
     ("06_scan_paket", "Scan Paket", "Gerakkan HP pelan mengitari sudut paket sampai 100%"),
     ("07_hasil_ukur", "Hasil Ukur", "Kotak 3D menempel di paket, lengkap dengan P × L × T"),
     ("08_berat", "Berat", "Isi berat timbangan; Berat Tagih = yang lebih besar"),
-    ("09_tersimpan", "Tersimpan", "Foto, ukuran, waktu, dan lokasi tersimpan sebagai bukti"),
+    ("09_tersimpan", "Tersimpan", "Bukti tersimpan; Paket berikutnya langsung scan resi lagi"),
 ]
 FIELD = [
     ("05b_pilih_area", "Pilih Area", "Kalau ketukan kurang pas, tandai area paket dengan jari"),
@@ -37,14 +37,16 @@ FIELD = [
     ("07c_ukur_di_hub", "Ukur di Hub", "Setelah 2× gagal, paket tetap diambil dan diukur di hub"),
     ("15_detail_ukur_di_hub", "Data Ukur di Hub", "Foto, waktu, lokasi, dan alasan tersimpan untuk hub"),
     ("01_cek_hp", "Cek HP", "Saat pertama dibuka, app memastikan HP kurir siap mengukur"),
-    ("10_riwayat", "Riwayat", "Semua hasil ukur di HP, siap dibagikan ke sistem"),
+    ("16_hari_ini", "Hari ini", "Semua paket yang diukur hari ini, lengkap dengan statusnya"),
 ]
+# exported to screens/ too, not on a board
+EXTRA = [("10_riwayat", "Riwayat", "")]
 BOARDS = [
     ("alur_kurir.png", MAIN, "UKURPAKET · ALUR KURIR", "Mengukur P × L × T paket dengan kamera HP",
      "8 langkah dari scan resi sampai data tersimpan. Ukuran, foto, waktu, dan lokasi langsung terikat ke nomor resi.",
      [("Kalau hasil meragukan", "Status Perlu Dicek, tombol Simpan dikunci 2 detik, kurir diminta cek kotak 3D atau ulangi dari sudut lain."),
       ("Kalau paket menempel paket lain", "Kurir cukup ketuk paketnya, atau tandai area paket. Paket di sebelahnya tidak ikut terukur."),
-      ("Banyak paket di satu lokasi", "Setelah Simpan, langsung ke paket berikutnya. Lantai sudah dikenali, paket yang selesai diberi tanda.")]),
+      ("Banyak paket sekaligus", "Tekan Paket berikutnya: scan resi, lalu ukur. Lantai sudah dikenali, paket yang selesai diberi tanda ✓.")]),
     ("fitur_lapangan.png", FIELD, "UKURPAKET · DI LAPANGAN", "Dibuat untuk kondisi nyata kurir",
      "Paket menempel, tempat gelap, hasil meragukan, sampai paket yang sulit diukur: semuanya ada jalan keluarnya.",
      [("Bukti untuk setiap resi", "Setiap hasil ukur menyimpan foto dengan kotak 3D, waktu, dan lokasi, terikat ke resi hasil scan barcode."),
@@ -165,7 +167,7 @@ def main():
     scr.mkdir(exist_ok=True)
     for f in scr.glob("*"):
         f.unlink()
-    for i, (name, _, _) in enumerate(MAIN + FIELD, 1):
+    for i, (name, _, _) in enumerate(MAIN + FIELD + EXTRA, 1):
         ph = phone(name, 1236)
         ph.save(scr / f"{i:02d}_{name.split('_', 1)[1]}.png", optimize=True)
     for out, items, eyebrow, title, subtitle, cards in BOARDS:

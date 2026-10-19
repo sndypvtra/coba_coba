@@ -7,9 +7,9 @@ no product or library names on the boards. The screens are the app's own renders
 
 | File | |
 |---|---|
-| `alur_kurir.png` (3840 × 2160) | the main flow in 8 steps: Pickup → Persiapan → Scan Lantai → Pilih Paket → Scan Paket → Hasil Ukur → Berat → Tersimpan |
-| `fitur_lapangan.png` (3840 × 2160) | field situations: Pilih Area, Paket berikutnya, arahan langsung, Perlu Dicek, Ukur di Hub, Data Ukur di Hub, Cek HP, Riwayat |
-| `screens/01…16_*.png` (1348 × ±2860, transparent) | each screen in its phone frame, full size, for slides |
+| `alur_kurir.png` (3840 × 2160) | the main flow in 8 steps: Scan Resi → Persiapan → Scan Lantai → Pilih Paket → Scan Paket → Hasil Ukur → Berat → Tersimpan |
+| `fitur_lapangan.png` (3840 × 2160) | field situations: Pilih Area, Paket berikutnya, arahan langsung, Perlu Dicek, Ukur di Hub, Data Ukur di Hub, Cek HP, Hari ini |
+| `screens/01…17_*.png` (1348 × ±2860, transparent) | each screen in its phone frame, full size, for slides |
 | `slide_ukur_mobileapp.md` | the 12-slide management deck for Claude Design: images, slide order, slide text, ready-to-paste prompt |
 
 ```bash
@@ -18,4 +18,4 @@ cd - && python build_v2.py                                                      
 ```
 
 The parcel photo is real with the shipping label blurred; the size on screen (27 × 15 × 6 cm) illustrates the flow,
-it is not a measurement. Names, addresses and tracking numbers in the app's example pickups are made up.
+it is not a measurement. The tracking numbers on screen (`TSA-901000001…`) are made up.

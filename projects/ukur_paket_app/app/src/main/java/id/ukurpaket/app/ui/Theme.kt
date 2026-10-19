@@ -201,10 +201,3 @@ fun TopBar(title: String, subtitle: String? = null, onBack: (() -> Unit)? = null
         action()
     }
 }
-
-@Composable
-fun ProgressLine(fraction: Float, color: Color = C.brand) {
-    Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(Color(0xFFE5E9F0))) {
-        Box(Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).height(6.dp).clip(RoundedCornerShape(3.dp)).background(color))
-    }
-}

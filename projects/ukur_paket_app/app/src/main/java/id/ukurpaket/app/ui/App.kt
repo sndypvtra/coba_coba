@@ -33,7 +33,6 @@ import id.ukurpaket.app.ar.ResultData
 import id.ukurpaket.app.data.Locator
 import id.ukurpaket.app.data.Measurement
 import id.ukurpaket.app.data.Mode
-import id.ukurpaket.app.data.Order
 import id.ukurpaket.app.data.Status
 import id.ukurpaket.app.data.Store
 import id.ukurpaket.app.measure.Segmenter
@@ -42,6 +41,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.util.UUID
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
@@ -61,7 +61,7 @@ sealed class Screen {
 
 /** What is being measured right now. */
 /** [replaces]: the earlier record of this parcel when it is measured again ("Ukur ulang"); dropped once the new one is saved. */
-data class Draft(val resi: String, val orderId: String?, val result: ResultData? = null, val replaces: String? = null)
+data class Draft(val resi: String, val result: ResultData? = null, val replaces: String? = null)
 
 enum class SamState { LOADING, READY, FAILED }
 
@@ -80,9 +80,14 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
     var samState by mutableStateOf(SamState.LOADING)
         internal set
 
-    /** The AR session lives across parcels of one pickup ("mode beruntun"): floor kept, measured parcels marked. */
+    /**
+     * One measuring session: scan, measure, "Paket berikutnya"… until "Selesai". The AR session lives across its
+     * parcels (floor kept, measured parcels marked), and the saved screen counts them.
+     */
+    var session by mutableStateOf<String?>(null)
+        private set
     private var engine: MeasureEngine? = null
-    private var engineOrder: String? = null
+    private var engineSession: String? = null
 
     init { if (checkDevice) viewModelScope.launch { check() } }
 
@@ -106,12 +111,12 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
 
     fun engineFor(activity: Activity, depth: Boolean, recordDir: File?): MeasureEngine {
         val e = engine
-        if (e != null && e.activity === activity && engineOrder == draft?.orderId) return e
+        if (e != null && e.activity === activity && engineSession == session) return e
         releaseEngine()
-        return MeasureEngine(activity, depth, store.photosDir, recordDir) { segmenter }.also { engine = it; engineOrder = draft?.orderId }
+        return MeasureEngine(activity, depth, store.photosDir, recordDir) { segmenter }.also { engine = it; engineSession = session }
     }
 
-    fun releaseEngine() { engine?.let { it.pause(); it.close() }; engine = null; engineOrder = null }
+    fun releaseEngine() { engine?.let { it.pause(); it.close() }; engine = null; engineSession = null }
 
     override fun onCleared() {
         val e = engine
@@ -152,14 +157,18 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
     val screen get() = stack.last()
     fun go(s: Screen) { stack.add(s) }
     fun back() { if (stack.size > 1) stack.removeAt(stack.size - 1) }
-    fun home() { releaseEngine(); stack.clear(); stack.add(Screen.Home) }
-    fun tab(s: Screen) { releaseEngine(); stack.clear(); stack.add(Screen.Home); if (s != Screen.Home) stack.add(s) }
+    fun home() { endSession(); stack.clear(); stack.add(Screen.Home) }
+    fun tab(s: Screen) { endSession(); stack.clear(); stack.add(Screen.Home); if (s != Screen.Home) stack.add(s) }
+
+    /** "Selesai": the AR session is closed; the next scan starts a new measuring session. */
+    private fun endSession() { releaseEngine(); session = null }
 
     fun toast(m: String) { message = m }
 
     // ---------------------------------------------------------- measuring
-    fun startMeasure(resi: String, orderId: String?, replaces: String? = null) {
-        draft = Draft(resi, orderId, replaces = replaces)
+    fun startMeasure(resi: String, replaces: String? = null) {
+        if (session == null) session = UUID.randomUUID().toString()
+        draft = Draft(resi, replaces = replaces)
         locator.refresh()
         val s = store.settings.value
         when {
@@ -168,9 +177,6 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
             else -> go(Screen.Measure)
         }
     }
-
-    /** "Paket berikutnya": back to the list underneath, keeping the AR session for this pickup. */
-    fun nextParcel(resi: String, orderId: String?) { stack.clear(); stack.add(Screen.Home); startMeasure(resi, orderId) }
 
     /**
      * Reads the label's barcode and uses its content as it is: no rules on the tracking number itself.
@@ -186,12 +192,16 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
             .addOnFailureListener { toast("Scan tidak bisa dibuka. Ketik nomor resi.") }
     }
 
+    /**
+     * The scanned or typed number opens its parcel: measured already -> its record, otherwise measuring starts.
+     * From the saved screen ("Paket berikutnya") the parcel opens on top of the home screen, the session goes on.
+     */
     fun openResi(raw: String) {
         val code = raw.trim()
         if (code.isEmpty()) return
-        val order = store.orders.firstOrNull { code in it.resi } ?: store.addAdHocOrder(code)
+        stack.clear(); stack.add(Screen.Home)
         val done = store.measurementFor(code)
-        if (done != null) { go(Screen.Detail(done.id)); toast("Resi $code sudah diukur") } else startMeasure(code, order.id)
+        if (done != null) { go(Screen.Detail(done.id)); toast("Resi $code sudah diukur") } else startMeasure(code)
     }
 
     fun onMeasured(r: ResultData) {
@@ -210,7 +220,7 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
         // the hub photo arrives a moment later: only act if the courier is still on this parcel's screen
         if (screen != Screen.Measure && screen != Screen.NoAr) return
         val loc = locator.fresh()
-        val m = Measurement(resi = d.resi, orderId = d.orderId, lengthCm = 0.0, widthCm = 0.0, heightCm = 0.0,
+        val m = Measurement(resi = d.resi, session = session, lengthCm = 0.0, widthCm = 0.0, heightCm = 0.0,
             divisor = store.settings.value.divisor, mode = caps.mode, status = Status.HUB, confidence = 0, seconds = 0.0,
             photo = photo, note = reason, lat = loc?.latitude, lon = loc?.longitude, gpsM = loc?.accuracy)
         store.save(m)
@@ -231,25 +241,22 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
         val div = store.settings.value.divisor
         val r = d.result ?: return
         val loc = locator.fresh()
-        val m = Measurement(resi = d.resi, orderId = d.orderId, lengthCm = r.lengthCm, widthCm = r.widthCm, heightCm = r.heightCm,
+        val m = Measurement(resi = d.resi, session = session, lengthCm = r.lengthCm, widthCm = r.widthCm, heightCm = r.heightCm,
             scaleKg = scaleKg, divisor = div, mode = r.mode, status = r.status, confidence = r.confidence,
             seconds = r.seconds, photo = r.photo, recording = r.recording,
             lat = loc?.latitude, lon = loc?.longitude, gpsM = loc?.accuracy)
         store.save(m)
         d.replaces?.let { store.delete(it) }
-        // next parcel of this pickup: the AR session keeps the floor and marks this one as done
+        // next parcel of this session: the AR session keeps the floor and marks this one as done
         engine?.next("…" + d.resi.takeLast(4))
         draft = null
         leaveMeasuring()
         go(Screen.Saved(m.id))
     }
 
-    fun nextInOrder(orderId: String?): String? {
-        val o = store.orders.firstOrNull { it.id == orderId } ?: return null
-        return o.resi.firstOrNull { store.measurementFor(it) == null }
-    }
-
-    fun order(id: String?): Order? = store.orders.firstOrNull { it.id == id }
+    /** How many parcels the session of [m] holds so far (1 for a record from no session). */
+    fun sessionCount(m: Measurement, all: List<Measurement>): Int =
+        if (m.session == null) 1 else all.count { it.session == m.session }
 
     // ---------------------------------------------------------- sharing
     /** Builds the file off the main thread (a ZIP of recordings can be large), then opens the share sheet. */
@@ -303,7 +310,7 @@ fun App(model: AppModel, activity: Activity) {
                     Screen.Settings -> SettingsScreen(model, activity)
                     Screen.Prep -> PrepScreen(model)
                     Screen.Weight -> WeightScreen(model)
-                    is Screen.Saved -> SavedScreen(model, s.id)
+                    is Screen.Saved -> SavedScreen(model, activity, s.id)
                     is Screen.Detail -> DetailScreen(model, activity, s.id)
                     Screen.NoAr -> NoArScreen(model, activity)
                     Screen.Measure -> Unit

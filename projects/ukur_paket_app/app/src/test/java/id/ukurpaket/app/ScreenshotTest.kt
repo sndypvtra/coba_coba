@@ -94,13 +94,13 @@ class ScreenshotTest {
 
     private val thumb by lazy { resource("thumb.jpg") }
 
-    private fun measured(resi: String, order: String, l: Double, w: Double, h: Double, kg: Double?, status: Status = Status.OK) =
-        Measurement(resi = resi, orderId = order, lengthCm = l, widthCm = w, heightCm = h, scaleKg = kg, mode = Mode.AR_FULL,
+    private fun measured(resi: String, l: Double, w: Double, h: Double, kg: Double?, status: Status = Status.OK) =
+        Measurement(resi = resi, session = "s1", lengthCm = l, widthCm = w, heightCm = h, scaleKg = kg, mode = Mode.AR_FULL,
             status = status, confidence = if (status == Status.OK) 92 else 61, seconds = 8.0, photo = thumb,
             lat = -6.30421, lon = 107.15232, gpsM = 6f)
 
-    private fun hubRecord(resi: String, order: String) =
-        Measurement(resi = resi, orderId = order, lengthCm = 0.0, widthCm = 0.0, heightCm = 0.0, mode = Mode.AR_FULL,
+    private fun hubRecord(resi: String) =
+        Measurement(resi = resi, session = "s1", lengthCm = 0.0, widthCm = 0.0, heightCm = 0.0, mode = Mode.AR_FULL,
             status = Status.HUB, confidence = 0, seconds = 0.0, photo = thumb, note = "Bentuk tidak beraturan",
             lat = -6.30421, lon = 107.15232, gpsM = 6f)
 
@@ -117,28 +117,31 @@ class ScreenshotTest {
         screen("01_cek_hp", m, Screen.Start)
 
         m = model()
-        m.store.save(measured("TSA-90100000110", "o2", 30.0, 20.0, 12.0, 1.2))
-        screen("02_pickup", m, Screen.Home)
+        screen("02_scan_resi", m, Screen.Home)                  // first open: nothing measured yet
 
-        m.draft = Draft("TSA-90100000107", "o1")
+        m.draft = Draft("TSA-90100000104")
         screen("03_persiapan", m, Screen.Prep)
 
-        m.draft = Draft("TSA-90100000107", "o1", ResultData(27.0, 15.0, 6.0, 92, Status.OK, 8.0, thumb, null, Mode.AR_FULL))
+        m.draft = Draft("TSA-90100000104", ResultData(27.0, 15.0, 6.0, 92, Status.OK, 8.0, thumb, null, Mode.AR_FULL))
         screen("08_berat", m, Screen.Weight)
 
-        val saved = measured("TSA-90100000107", "o1", 27.0, 15.0, 6.0, 0.10)
+        // the parcels measured so far today, a minute apart
+        val t0 = System.currentTimeMillis() - 30 * 60_000L
+        m.store.save(measured("TSA-90100000101", 30.0, 20.0, 12.0, 1.2).copy(createdAt = t0))
+        m.store.save(measured("TSA-90100000102", 41.5, 33.0, 24.5, 3.4, Status.CHECK).copy(createdAt = t0 + 6 * 60_000L))
+        val saved = measured("TSA-90100000104", 27.0, 15.0, 6.0, 0.10).copy(createdAt = t0 + 12 * 60_000L)
         m.store.save(saved)
         screen("09_tersimpan", m, Screen.Saved(saved.id))
-        m.store.save(measured("TSA-90100000111", "o3", 41.5, 33.0, 24.5, 3.4, Status.CHECK))
-        val hub = hubRecord("TSA-90100000112", "o3")
+        val hub = hubRecord("TSA-90100000103").copy(createdAt = t0 + 9 * 60_000L)
         m.store.save(hub)
+        screen("16_hari_ini", m, Screen.Home)
         screen("10_riwayat", m, Screen.History)
         screen("11_pengaturan", m, Screen.Settings)
         screen("15_detail_ukur_di_hub", m, Screen.Detail(hub.id))
 
         m = model(Mode.NONE)
         screen("12_cek_hp_tanpa_arcore", m, Screen.Start)
-        m.draft = Draft("TSA-90100000108", "o1")
+        m.draft = Draft("TSA-90100000104")
         screen("13_hp_tanpa_arcore_ukur", m, Screen.NoAr)
     }
 
@@ -173,16 +176,16 @@ class ScreenshotTest {
             overlay = Overlay(box = px(base + top, -59f)), result = ok.copy(confidence = 61, status = Status.CHECK), attempts = 2)
         cam("07b_perlu_dicek", -59f, doubtful)
         cam("07c_ukur_di_hub", -59f, doubtful, showHub = true)
-        // the third parcel of a pickup: the floor is kept, the two cartons already measured carry a check mark
+        // the third parcel of a session: the floor is kept, the two cartons already measured carry a check mark
         val marks = othersAt.map { o -> floatArrayOf((o[0] + o[2]) / 2, o[5] - 30f * d) }
         cam("14_paket_berikutnya", oy, EngineUi(Phase.SELECT, planeFound = true, targetFound = true, hint = Hint.NONE, live = box,
             overlay = Overlay(floorDots = px(grid, oy), outline = px(outline, oy), marks = marks[0] + marks[1],
-                markLabels = listOf("…0007", "…0008")), reticle = 206f * d to (400f + oy) * d), resi = "TSA-90100000109")
+                markLabels = listOf("…0101", "…0102")), reticle = 206f * d to (400f + oy) * d), resi = "TSA-90100000104")
     }
 
-    private fun cam(name: String, oyDp: Float, ui: EngineUi, demoBox: FloatArray? = null, showHub: Boolean = false, resi: String = "TSA-90100000107") {
+    private fun cam(name: String, oyDp: Float, ui: EngineUi, demoBox: FloatArray? = null, showHub: Boolean = false, resi: String = "TSA-90100000104") {
         val m = model()
-        m.draft = Draft(resi, "o1")
+        m.draft = Draft(resi)
         val photo = BitmapFactory.decodeStream(javaClass.getResourceAsStream("/paket.jpg")).asImageBitmap()
         shot(name) {
             val act = LocalContext.current as Activity

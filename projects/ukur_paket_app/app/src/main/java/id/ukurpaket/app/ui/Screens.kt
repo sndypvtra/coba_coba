@@ -140,15 +140,19 @@ private fun CheckRow(icon: String, label: String, value: String, ok: Boolean, bu
 }
 
 // ------------------------------------------------------------------ home
+private fun Long.isToday(): Boolean {
+    val f = SimpleDateFormat("yyyyMMdd", Locale.US)
+    return f.format(Date(this)) == f.format(Date())
+}
+
+/** Home: scan the label's barcode (or type the number); below, the parcels measured today. Nothing else is needed. */
 @Composable
 fun HomeScreen(model: AppModel, activity: Activity) {
     val ms by model.store.measurements.collectAsState()
     val settings by model.store.settings.collectAsState()
-    val orders = model.store.orders
-    val all = orders.flatMap { it.resi }
-    val done = all.count { r -> ms.any { it.resi == r } }
+    val today = ms.filter { it.createdAt.isToday() }.sortedByDescending { it.createdAt }
+    val inSession = model.session?.let { s -> ms.count { it.session == s } } ?: 0
     var typing by remember { mutableStateOf(false) }
-    val nextOrder = orders.firstOrNull { o -> o.resi.any { r -> ms.none { it.resi == r } } }
 
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -162,49 +166,63 @@ fun HomeScreen(model: AppModel, activity: Activity) {
         LazyColumn(Modifier.weight(1f), contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp, 4.dp, 16.dp, 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
-                T("Pickup hari ini", 24.sp, FontWeight.Bold)
-                T(SimpleDateFormat("EEEE, d MMM", ID).format(Date()) + " · ${orders.size} lokasi · ${all.size} paket", 13.sp, color = C.t2)
-                Spacer(Modifier.height(10.dp))
-                Row { T("Paket sudah diukur", 12.5.sp, color = C.t2, modifier = Modifier.weight(1f)); T("$done dari ${all.size}", 12.5.sp, FontWeight.SemiBold) }
-                Spacer(Modifier.height(6.dp))
-                ProgressLine(if (all.isEmpty()) 0f else done.toFloat() / all.size)
-            }
-            items(orders, key = { it.id }) { o ->
-                val measured = o.resi.count { r -> ms.any { it.resi == r } }
-                val active = o == nextOrder
-                Card(highlight = active) {
+                Card(highlight = true) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconTile(when (o.kind) { "home" -> "home"; "warehouse" -> "inventory_2"; else -> "storefront" },
-                            if (measured == o.resi.size) C.green else if (active) C.brand else C.t2,
-                            if (measured == o.resi.size) C.greenL else if (active) C.brandL else Color(0xFFEEF1F5))
-                        Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                            T(o.name, 15.sp, FontWeight.SemiBold)
-                            T("${o.address} · ${o.note}", 12.5.sp, color = C.t2, maxLines = 1)
-                        }
-                        when {
-                            measured == o.resi.size -> Chip("Selesai", Tone.OK, "check_circle")
-                            active -> Chip("Berikutnya", Tone.ACCENT)
-                            else -> Chip("$measured/${o.resi.size}", Tone.GREY)
+                        IconTile("barcode_scanner", Color.White, C.brand, 52.dp)
+                        Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                            T("Scan Resi", 20.sp, FontWeight.Bold)
+                            T("Arahkan kamera ke barcode di label paket", 13.sp, color = C.t2)
                         }
                     }
-                    Spacer(Modifier.height(8.dp))
-                    o.resi.forEach { r ->
-                        val m = ms.lastOrNull { it.resi == r }
-                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
-                            .clickable { if (m != null) model.go(Screen.Detail(m.id)) else model.startMeasure(r, o.id) }
-                            .padding(vertical = 10.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Sym("qr_code_2", 18.dp, C.t3)
-                            T(r, 13.5.sp, FontWeight.SemiBold, modifier = Modifier.padding(start = 8.dp).weight(1f))
-                            if (m != null) T(m.dims(), 12.5.sp, color = if (m.atHub) C.amber else C.green) else T("Ukur", 12.5.sp, FontWeight.SemiBold, C.brand)
-                            Sym("chevron_right", 18.dp, C.t3)
+                    Spacer(Modifier.height(14.dp))
+                    PrimaryButton("Scan resi", "barcode_scanner", Modifier.fillMaxWidth()) { model.scanResi(activity) }
+                    Spacer(Modifier.height(10.dp))
+                    SecondaryButton("Ketik Resi", "keyboard", Modifier.fillMaxWidth()) { typing = true }
+                    if (inSession > 0) {
+                        Spacer(Modifier.height(12.dp))
+                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(C.brandL).padding(start = 12.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically) {
+                            T("Sesi ukur berjalan · $inSession paket", 13.sp, FontWeight.SemiBold, C.brandD, modifier = Modifier.weight(1f))
+                            Chip("Selesai", Tone.BRAND, "check") { model.home() }
                         }
                     }
                 }
             }
-        }
-        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            PrimaryButton("Scan resi", "barcode_scanner", Modifier.weight(1f)) { model.scanResi(activity) }
-            SecondaryButton("Ketik Resi", "keyboard", Modifier.width(150.dp)) { typing = true }
+            item {
+                Spacer(Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.Bottom) {
+                    T("Hari ini", 18.sp, FontWeight.Bold, modifier = Modifier.weight(1f))
+                    T(SimpleDateFormat("EEEE, d MMM", ID).format(Date()), 12.5.sp, color = C.t2)
+                }
+                T(if (today.isEmpty()) "Belum ada paket yang diukur" else "${today.size} paket diukur" +
+                    today.count { it.atHub }.let { if (it > 0) " · $it Ukur di Hub" else "" }, 13.sp, color = C.t2)
+            }
+            if (today.isEmpty()) item {
+                Card {
+                    Column(Modifier.fillMaxWidth().padding(vertical = 18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        IconTile("inventory_2", C.t3, Color(0xFFEEF1F5), 56.dp)
+                        Spacer(Modifier.height(10.dp))
+                        T("Scan resi paket pertama", 15.sp, FontWeight.SemiBold)
+                        T("Hasil ukur hari ini muncul di sini", 12.5.sp, color = C.t2)
+                    }
+                }
+            } else item {
+                Card(padding = 6.dp) {
+                    today.forEachIndexed { i, m ->
+                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable { model.go(Screen.Detail(m.id)) }
+                            .padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Photo(m.photo, Modifier.size(40.dp, 54.dp).clip(RoundedCornerShape(8.dp)), sample = 4)
+                            Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                                T(m.resi, 14.sp, FontWeight.SemiBold, maxLines = 1)
+                                T((if (m.atHub) m.note ?: m.dims() else m.dims()) + " · " + SimpleDateFormat("HH:mm", ID).format(Date(m.createdAt)),
+                                    12.5.sp, color = C.t2, maxLines = 1)
+                            }
+                            StatusChip(m)
+                        }
+                        if (i < today.size - 1) Box(Modifier.fillMaxWidth().padding(horizontal = 10.dp).height(1.dp).background(C.line))
+                    }
+                }
+            }
         }
         BottomNav(model, Screen.Home)
     }
@@ -229,7 +247,7 @@ private fun ResiDialog(onDismiss: () -> Unit, onOk: (String) -> Unit) {
 @Composable
 fun BottomNav(model: AppModel, current: Screen) {
     Row(Modifier.fillMaxWidth().background(Color.White).padding(vertical = 8.dp), horizontalArrangement = Arrangement.SpaceAround) {
-        listOf(Triple(Screen.Home, "local_shipping", "Pickup"), Triple(Screen.History, "history", "Riwayat"),
+        listOf(Triple(Screen.Home, "barcode_scanner", "Ukur"), Triple(Screen.History, "history", "Riwayat"),
             Triple(Screen.Settings, "settings", "Pengaturan")).forEach { (s, icon, label) ->
             val on = s == current
             Column(Modifier.clip(RoundedCornerShape(12.dp)).clickable { model.tab(s) }.padding(horizontal = 18.dp, vertical = 4.dp),
@@ -347,32 +365,32 @@ private fun WRow(label: String, value: String, sub: String? = null) {
 
 // ------------------------------------------------------------------ saved
 @Composable
-fun SavedScreen(model: AppModel, id: String) {
+fun SavedScreen(model: AppModel, activity: Activity, id: String) {
     val ms by model.store.measurements.collectAsState()
     val m = ms.firstOrNull { it.id == id }
+    var typing by remember { mutableStateOf(false) }
     if (m == null) { LaunchedEffect(Unit) { model.home() }; return }
-    val order = model.order(m.orderId)
-    val next = model.nextInOrder(m.orderId)
-    val doneInOrder = order?.resi?.count { r -> ms.any { it.resi == r } } ?: 1
+    val n = model.sessionCount(m, ms)
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Column(Modifier.fillMaxWidth().padding(top = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Box(Modifier.size(64.dp).clip(CircleShape).background(C.green), contentAlignment = Alignment.Center) { Sym("check", 40.dp, Color.White, filled = true) }
             Spacer(Modifier.height(12.dp))
             T("Paket tersimpan", 21.sp, FontWeight.Bold)
-            T(order?.let { "Paket $doneInOrder dari ${it.resi.size} · ${it.name}" } ?: m.resi, 13.sp, color = C.t2)
+            T("Paket ke-$n di sesi ini", 13.sp, color = C.t2)
         }
         MeasurementCard(m)
         Chip("Tersimpan di HP · belum sinkron", Tone.BRAND, "cloud_upload")
         T(if (m.atHub) "Foto, waktu, lokasi, dan alasan disimpan. Ukuran diisi oleh hub."
           else "Foto, kotak 3D, ukuran, waktu, dan lokasi disimpan sebagai bukti. Angka ukur tidak bisa diedit.", 12.5.sp, color = C.t2)
-        if (order != null && order.resi.size > 1) {
-            Row { T(order.name, 13.sp, color = C.t2, modifier = Modifier.weight(1f)); T("$doneInOrder dari ${order.resi.size} paket", 13.sp, FontWeight.SemiBold) }
-            ProgressLine(doneInOrder.toFloat() / order.resi.size)
-        }
         Spacer(Modifier.weight(1f))
-        if (next != null) PrimaryButton("Paket berikutnya", "arrow_forward", Modifier.fillMaxWidth()) { model.nextParcel(next, m.orderId) }
-        SecondaryButton(if (next != null) "Selesai pickup" else "Kembali ke daftar", null, Modifier.fillMaxWidth()) { model.home() }
+        if (!m.atHub && model.caps.mode != Mode.NONE) T("Lantai sudah dikenali: paket berikutnya langsung bisa diukur.", 12.5.sp, color = C.t3)
+        PrimaryButton("Paket berikutnya", "barcode_scanner", Modifier.fillMaxWidth()) { model.scanResi(activity) }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            SecondaryButton("Ketik Resi", "keyboard", Modifier.weight(1f)) { typing = true }
+            SecondaryButton("Selesai", "check", Modifier.weight(1f)) { model.home() }
+        }
     }
+    if (typing) ResiDialog(onDismiss = { typing = false }) { typing = false; model.openResi(it) }
 }
 
 @Composable
@@ -460,7 +478,7 @@ fun DetailScreen(model: AppModel, activity: Activity, id: String) {
         }
         Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             SecondaryButton("Hapus", "delete", Modifier.weight(1f)) { confirm = true }
-            PrimaryButton("Ukur ulang", "refresh", Modifier.weight(1.4f)) { model.back(); model.startMeasure(m.resi, m.orderId, replaces = m.id) }
+            PrimaryButton("Ukur ulang", "refresh", Modifier.weight(1.4f)) { model.back(); model.startMeasure(m.resi, replaces = m.id) }
         }
     }
     if (confirm) AlertDialog(onDismissRequest = { confirm = false },

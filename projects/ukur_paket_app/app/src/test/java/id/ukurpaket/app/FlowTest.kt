@@ -35,10 +35,17 @@ class FlowTest {
 
     private val result = ResultData(27.0, 15.0, 6.0, 92, Status.OK, 8.0, null, null, Mode.AR_FULL)
 
+    @Test fun firstOpenHasNothingButTheScanner() {
+        val m = model()
+        assertTrue(m.store.measurements.value.isEmpty())
+        assertNull(m.session)
+    }
+
     @Test fun measureWeighSaveThenNextParcel() {
         val m = model()
-        m.startMeasure("TSA-90100000107", "o1")
+        m.openResi("TSA-90100000104")
         assertEquals(Screen.Measure, m.screen)
+        val session = m.session!!
         m.onMeasured(result)
         assertEquals(Screen.Weight, m.screen)
         m.onMeasured(result)                                    // a second tap on "Simpan" does nothing
@@ -48,17 +55,27 @@ class FlowTest {
         assertEquals(Screen.Saved(saved.id), m.screen)
         assertEquals(listOf(Screen.Home, Screen.Saved(saved.id)), m.stack.toList())
         assertEquals(1.2, saved.scaleKg!!, 1e-9)
+        assertEquals(session, saved.session)
         assertNull(m.draft)
-        assertEquals("TSA-90100000108", m.nextInOrder("o1"))
-        m.nextParcel("TSA-90100000108", "o1")
+        // "Paket berikutnya": the next scanned label opens on top of home, in the same session
+        m.openResi("TSA-90100000105")
         assertEquals(listOf(Screen.Home, Screen.Measure), m.stack.toList())
+        m.onMeasured(result); m.save(null)
+        val all = m.store.measurements.value
+        assertEquals(listOf(session, session), all.map { it.session })
+        assertEquals(2, m.sessionCount(all.last(), all))
+        // "Selesai": the next parcel starts a new session
+        m.home()
+        assertNull(m.session)
+        m.openResi("TSA-90100000106")
+        assertTrue(m.session != session)
     }
 
     @Test fun remeasureReplacesTheOldRecord() {
         val m = model()
-        m.startMeasure("TSA-90100000110", "o2"); m.onMeasured(result); m.save(null)
+        m.startMeasure("TSA-90100000104"); m.onMeasured(result); m.save(null)
         val first = m.store.measurements.value.single()
-        m.startMeasure("TSA-90100000110", "o2", replaces = first.id)
+        m.startMeasure("TSA-90100000104", replaces = first.id)
         m.onMeasured(result.copy(lengthCm = 30.0)); m.save(null)
         val all = m.store.measurements.value
         assertEquals(1, all.size)
@@ -67,7 +84,7 @@ class FlowTest {
 
     @Test fun hubFlagFromThePhoneWithoutArcore() {
         val m = model(ArState.UNSUPPORTED)
-        m.startMeasure("TSA-90100000111", "o3")
+        m.openResi("TSA-90100000104")
         assertEquals(Screen.NoAr, m.screen)
         m.markHub("HP kurir tanpa ARCore", null)
         val r = m.store.measurements.value.single()
@@ -78,25 +95,35 @@ class FlowTest {
 
     @Test fun scannedResiOpensItsParcel() {
         val m = model()
-        m.openResi(" TSA-90100000109 ")                         // the scanned text is used as it is, minus outer spaces
+        m.openResi(" TSA-90100000104 ")                         // the scanned text is used as it is, minus outer spaces
         assertEquals(Screen.Measure, m.screen)
-        assertEquals("TSA-90100000109", m.draft!!.resi)
-        assertEquals("o1", m.draft!!.orderId)
-        // a real label not in today's list is still taken, as a pickup of its own
-        m.back(); m.openResi("TSA-80745081104")
-        assertEquals("TSA-80745081104", m.draft!!.resi)
-        assertTrue(m.store.orders.any { "TSA-80745081104" in it.resi })
+        assertEquals("TSA-90100000104", m.draft!!.resi)
         // no format rules: whatever the barcode holds becomes the parcel's number
         m.back(); m.openResi("AJ-0001/xyz")
         assertEquals("AJ-0001/xyz", m.draft!!.resi)
+        // a number measured already opens its record instead of measuring it twice
+        m.onMeasured(result); m.save(null)
+        m.openResi("AJ-0001/xyz")
+        assertEquals(Screen.Detail(m.store.measurements.value.single().id), m.screen)
+        m.openResi("   ")                                       // nothing scanned: nothing happens
+        assertEquals(Screen.Detail(m.store.measurements.value.single().id), m.screen)
     }
 
     @Test fun lateHubPhotoAfterLeavingDoesNothing() {
         val m = model()
-        m.startMeasure("TSA-90100000112", "o3")
+        m.openResi("TSA-90100000104")
         m.back()                                                // the courier left before the photo arrived
         m.markHub("Paket terlalu besar", "/x.jpg")
         assertTrue(m.store.measurements.value.isEmpty())
         assertEquals(listOf(Screen.Home), m.stack.toList())
+    }
+
+    @Test fun oldDataFileWithExamplePickupsStillLoads() {
+        File(app.filesDir, "ukurpaket.json").writeText("""{"orders":[{"id":"o1","name":"Toko","address":"Jl.","note":"","resi":["X"]}],
+            "measurements":[{"id":"a","resi":"X","orderId":"o1","lengthCm":1.0,"widthCm":2.0,"heightCm":3.0,"mode":"AR_FULL",
+            "status":"OK","confidence":90,"seconds":5.0}],"settings":{"divisor":5000}}""")
+        val m = AppModel(app, checkDevice = false)
+        assertEquals("X", m.store.measurements.value.single().resi)
+        assertEquals(5000, m.store.settings.value.divisor)
     }
 }
