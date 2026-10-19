@@ -17,7 +17,7 @@ mockup made from these very screens is `../ukur_paket_mockup/v2`.
 |---|---|
 | Device check | First screen: phone model, ARCore installed or not, Depth API or not, and the state that follows (Siap Ukur / Mode Dasar / Tidak Didukung), in plain words. Asks Google Play to install *Google Play Services for AR* when it is missing. |
 | Pickup list | Example pickups (made-up names and tracking numbers in the AnterAja format `TSA-` + digits), progress, scan the label (Google code scanner) or type the number. |
-| Scan resi | Google's code scanner reads the label's barcode and its content is used as it is, with no format rules on the number (on a real AnterAja label the long Code 128 barcode holds `TSA-80745081104`). **Ketik Resi** takes the number as typed. |
+| Scan resi | Google's code scanner reads linear (1D) barcodes only, so the label's QR codes (and other 2D codes) are never picked up; the barcode's content is used as it is, with no rules on the number (on a real AnterAja label the long Code 128 barcode holds `TSA-80745081104`). **Ketik Resi** takes the number as typed. |
 | Measuring (ARCore) | 1/3 find the floor (white dots), 2/3 pick the parcel, 3/3 scan (move the phone round toward the corner, animated arc arrow, depth dots, progress), result (3D box drawn on the parcel, size labels, confidence, Save locked 2 s when the result is doubtful). Flashlight button (ARCore torch). |
 | Picking among many parcels | Tap the parcel, or **Pilih Area** and drag a box around it (the fix when a tap picks only part). MobileSAM cuts it out of the camera image; only depth points inside that cut-out and its footprint are measured. Other parcels in view get a dashed outline labelled **Paket lain**; tapping one picks it. **Mulai Scan** without a tap uses the crosshair as the tap. |
 | Next parcel of a pickup | **Paket berikutnya** keeps the AR session: no floor search again, and the parcels already measured carry a ✓ with their tracking number. |
@@ -66,6 +66,7 @@ Tested here, on the PC:
 | `ConveyorReplayTest` | the conveyor scene in 3D, each parcel measured from geometry alone and from the tap/box cut-out | geometry alone merges touching parcels; with the cut-out every parcel stays separate (README section below) |
 | `FlowTest` | the courier's path through the screens: measure → weight → save → next parcel; a second tap on Simpan; re-measuring replaces the old record; Ukur di Hub on a phone without ARCore; a late hub photo after the courier left; a scanned number opens its parcel, any content is taken as it is | 5 flows, records and screen stack as expected |
 | `BarcodeTest` | the barcode cut from a photo of a real AnterAja label (bars only, no personal data) read with ZXing | Code 128, `TSA-80745081104` |
+| `ScannerFormatsTest` | the scanner's barcode types | the 9 linear types; QR, Data Matrix, PDF417 and Aztec left out |
 | `ScreenshotTest` | every screen rendered on the JVM (`screenshots/`); camera screens on the mockup photo with the overlay the engine draws | 19 screens |
 | Android lint | | no errors |
 

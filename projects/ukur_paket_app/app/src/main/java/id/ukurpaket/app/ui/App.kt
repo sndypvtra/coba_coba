@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import id.ukurpaket.app.ar.ArCheck
@@ -171,9 +172,15 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
     /** "Paket berikutnya": back to the list underneath, keeping the AR session for this pickup. */
     fun nextParcel(resi: String, orderId: String?) { stack.clear(); stack.add(Screen.Home); startMeasure(resi, orderId) }
 
-    /** Reads the label's barcode and uses its content as it is: no format rules on the tracking number. */
+    /**
+     * Reads the label's barcode and uses its content as it is: no rules on the tracking number itself.
+     * Only linear (1D) barcodes are read, so the label's QR codes are never picked up by mistake.
+     */
     fun scanResi(activity: Activity) {
-        val options = GmsBarcodeScannerOptions.Builder().enableAutoZoom().build()
+        val options = GmsBarcodeScannerOptions.Builder()
+            .setBarcodeFormats(LINEAR_BARCODES.first(), *LINEAR_BARCODES.drop(1).toIntArray())
+            .enableAutoZoom()
+            .build()
         GmsBarcodeScanning.getClient(activity, options).startScan()
             .addOnSuccessListener { b -> b.rawValue?.let { openResi(it) } }
             .addOnFailureListener { toast("Scan tidak bisa dibuka. Ketik nomor resi.") }
@@ -271,6 +278,14 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
             }
         }
         return out
+    }
+
+    companion object {
+        /** Every linear (1D) barcode type; QR, Data Matrix, PDF417 and Aztec (2D codes) are left out. */
+        val LINEAR_BARCODES = listOf(
+            Barcode.FORMAT_CODE_128, Barcode.FORMAT_CODE_39, Barcode.FORMAT_CODE_93, Barcode.FORMAT_CODABAR,
+            Barcode.FORMAT_EAN_13, Barcode.FORMAT_EAN_8, Barcode.FORMAT_ITF, Barcode.FORMAT_UPC_A, Barcode.FORMAT_UPC_E,
+        )
     }
 }
 
