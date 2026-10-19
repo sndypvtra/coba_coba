@@ -58,7 +58,8 @@ sealed class Screen {
 }
 
 /** What is being measured right now. */
-data class Draft(val resi: String, val orderId: String?, val result: ResultData? = null)
+/** [replaces]: the earlier record of this parcel when it is measured again ("Ukur ulang"); dropped once the new one is saved. */
+data class Draft(val resi: String, val orderId: String?, val result: ResultData? = null, val replaces: String? = null)
 
 enum class SamState { LOADING, READY, FAILED }
 
@@ -81,20 +82,25 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
     private var engine: MeasureEngine? = null
     private var engineOrder: String? = null
 
-    init {
-        if (checkDevice) {
-            viewModelScope.launch { check() }
-            viewModelScope.launch(Dispatchers.Default) { loadSam() }
+    init { if (checkDevice) viewModelScope.launch { check() } }
+
+    /** Only phones that can measure need the model: it takes ~100 MB of memory once loaded. */
+    private fun loadSamIfNeeded() {
+        if (caps.arcore != ArState.READY || segmenter != null || samLoading) return
+        samLoading = true
+        viewModelScope.launch {
+            samState = withContext(Dispatchers.Default) { loadSam() }
+            samLoading = false
         }
     }
+    private var samLoading = false
 
-    private fun loadSam() {
-        samState = try {
+    private fun loadSam(): SamState =
+        try {
             val am = getApplication<Application>().assets
             segmenter = Segmenter(am.open("sam/encoder.onnx").use { it.readBytes() }, am.open("sam/decoder.onnx").use { it.readBytes() })
             SamState.READY
         } catch (e: Throwable) { SamState.FAILED }
-    }
 
     fun engineFor(activity: Activity, depth: Boolean, recordDir: File?): MeasureEngine {
         val e = engine
@@ -105,7 +111,14 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
 
     fun releaseEngine() { engine?.let { it.pause(); it.close() }; engine = null; engineOrder = null }
 
-    override fun onCleared() { releaseEngine(); segmenter?.close() }
+    override fun onCleared() {
+        val e = engine
+        releaseEngine()
+        // the model is freed only once the engine's worker has finished any cut-out still running
+        val sam = segmenter
+        segmenter = null
+        if (sam != null) Thread { e?.awaitWorker(); sam.close() }.start()
+    }
 
     private suspend fun check() {
         val ctx = getApplication<Application>()
@@ -116,6 +129,7 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
         } catch (e: Exception) {
             DeviceCaps(ArState.ERROR, depth = false)
         }
+        loadSamIfNeeded()
     }
 
     fun recheck() { caps = caps.copy(arcore = ArState.CHECKING); viewModelScope.launch { check() } }
@@ -142,8 +156,8 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
     fun toast(m: String) { message = m }
 
     // ---------------------------------------------------------- measuring
-    fun startMeasure(resi: String, orderId: String?) {
-        draft = Draft(resi, orderId)
+    fun startMeasure(resi: String, orderId: String?, replaces: String? = null) {
+        draft = Draft(resi, orderId, replaces = replaces)
         locator.refresh()
         val s = store.settings.value
         when {
@@ -172,6 +186,7 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
     }
 
     fun onMeasured(r: ResultData) {
+        if (screen != Screen.Measure) return
         draft = draft?.copy(result = r)
         stack.removeAt(stack.size - 1)          // the camera screen is done; back from weight goes to the list
         go(Screen.Weight)
@@ -183,15 +198,23 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
      */
     fun markHub(reason: String, photo: String?) {
         val d = draft ?: return
+        // the hub photo arrives a moment later: only act if the courier is still on this parcel's screen
+        if (screen != Screen.Measure && screen != Screen.NoAr) return
         val loc = locator.fresh()
         val m = Measurement(resi = d.resi, orderId = d.orderId, lengthCm = 0.0, widthCm = 0.0, heightCm = 0.0,
             divisor = store.settings.value.divisor, mode = caps.mode, status = Status.HUB, confidence = 0, seconds = 0.0,
             photo = photo, note = reason, lat = loc?.latitude, lon = loc?.longitude, gpsM = loc?.accuracy)
         store.save(m)
+        d.replaces?.let { store.delete(it) }
         draft = null
-        stack.removeAt(stack.size - 1)
-        if (stack.lastOrNull() == Screen.Prep) stack.removeAt(stack.size - 1)
+        leaveMeasuring()
         go(Screen.Saved(m.id))
+    }
+
+    /** Drops the measuring screens (camera / no-AR / weight, and the prep page under them) from the stack. */
+    private fun leaveMeasuring() {
+        while (stack.size > 1 && stack.last().let { it == Screen.Measure || it == Screen.NoAr || it == Screen.Weight || it == Screen.Prep })
+            stack.removeAt(stack.size - 1)
     }
 
     fun save(scaleKg: Double?) {
@@ -204,11 +227,11 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
             seconds = r.seconds, photo = r.photo, recording = r.recording,
             lat = loc?.latitude, lon = loc?.longitude, gpsM = loc?.accuracy)
         store.save(m)
+        d.replaces?.let { store.delete(it) }
         // next parcel of this pickup: the AR session keeps the floor and marks this one as done
         engine?.next("…" + d.resi.takeLast(4))
         draft = null
-        stack.removeAt(stack.size - 1)
-        if (stack.lastOrNull() == Screen.Prep) stack.removeAt(stack.size - 1)
+        leaveMeasuring()
         go(Screen.Saved(m.id))
     }
 
@@ -220,6 +243,15 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
     fun order(id: String?): Order? = store.orders.firstOrNull { it.id == id }
 
     // ---------------------------------------------------------- sharing
+    /** Builds the file off the main thread (a ZIP of recordings can be large), then opens the share sheet. */
+    fun shareFile(activity: Activity, mime: String, title: String, build: () -> File) {
+        toast("Menyiapkan file…")
+        viewModelScope.launch {
+            val f = runCatching { withContext(Dispatchers.IO) { build() } }.getOrNull()
+            if (f == null) toast("File tidak bisa dibuat. Coba lagi.") else { message = null; share(activity, f, mime, title) }
+        }
+    }
+
     fun share(activity: Activity, file: File, mime: String, title: String) {
         val uri = FileProvider.getUriForFile(activity, "${activity.packageName}.files", file)
         val i = Intent(Intent.ACTION_SEND).setType(mime).putExtra(Intent.EXTRA_STREAM, uri)

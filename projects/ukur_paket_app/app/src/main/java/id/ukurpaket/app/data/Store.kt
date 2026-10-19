@@ -20,8 +20,8 @@ data class Order(
     val kind: String = "store",          // store | home | warehouse
 )
 
-enum class Mode(val label: String) { AR_FULL("AR penuh"), AR_BASIC("AR dasar"), NONE("Tanpa AR") }
-enum class Status(val label: String) { OK("Akurat"), CHECK("Cek ulang"), HUB("Ukur di hub") }
+enum class Mode(val label: String) { AR_FULL("AR + Depth"), AR_BASIC("AR Standar"), NONE("Tidak Didukung") }
+enum class Status(val label: String) { OK("Akurat"), CHECK("Perlu Dicek"), HUB("Ukur di Hub") }
 
 @Serializable
 data class Measurement(
@@ -128,7 +128,11 @@ class Store(private val ctx: Context) {
     }
 
     private fun load(): Db {
-        if (file.exists()) runCatching { return json.decodeFromString<Db>(file.readText()) }
+        if (file.exists()) {
+            runCatching { return json.decodeFromString<Db>(file.readText()) }
+            // unreadable (e.g. written by an older test build): keep a copy instead of silently losing it
+            file.copyTo(File(ctx.filesDir, "ukurpaket_${System.currentTimeMillis()}.bak.json"), overwrite = true)
+        }
         return Db(orders = SAMPLE_ORDERS)
     }
 

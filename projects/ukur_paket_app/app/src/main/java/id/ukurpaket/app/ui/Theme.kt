@@ -49,17 +49,23 @@ object C {
     val line = Color(0xFFE2E8F0)
     val bg = Color(0xFFF3F5F8)
     val card = Color.White
-    val blue = Color(0xFF2563EB)
-    val blueL = Color(0xFFEFF4FF)
+    // AnterAja brand: magenta #ED0677 (anteraja.id buttons and logo), yellow #FFCB08 (logo)
+    val brand = Color(0xFFED0677)
+    val brandL = Color(0xFFFDE8F2)
+    val brandD = Color(0xFFB0005A)
+    val yellow = Color(0xFFFFCB08)
+    val yellowL = Color(0xFFFFF6D6)
+    val onYellow = Color(0xFF3A2C00)
     val green = Color(0xFF16A34A)
     val greenL = Color(0xFFECFDF3)
     val live = Color(0xFF22C55E)
-    val amber = Color(0xFFD97706)
-    val amberL = Color(0xFFFFF7E6)
+    // warnings stay orange, apart from the brand yellow
+    val amber = Color(0xFFC2410C)
+    val amberL = Color(0xFFFFF1E6)
+    val warn = Color(0xFFF97316)
     val red = Color(0xFFDC2626)
     val redL = Color(0xFFFEF2F2)
     val glass = Color(0xA80F172A)
-    val cyan = Color(0xFF22D3EE)
 }
 
 val Inter = FontFamily(
@@ -74,7 +80,14 @@ private val SymFill = FontFamily(Font(R.font.msym_fill))
 @Composable
 fun UkurTheme(content: @Composable () -> Unit) {
     MaterialTheme(
-        colorScheme = lightColorScheme(primary = C.blue, background = C.bg, surface = C.card, onSurface = C.ink),
+        colorScheme = lightColorScheme(
+            primary = C.brand, onPrimary = Color.White, secondary = C.yellow, onSecondary = C.onYellow,
+            background = C.bg, surface = C.card, onSurface = C.ink, error = C.red,
+            // dialogs, menus and switches: neutral surfaces, not Material's default lilac
+            surfaceContainerLowest = Color.White, surfaceContainerLow = Color.White, surfaceContainer = Color.White,
+            surfaceContainerHigh = Color.White, surfaceContainerHighest = Color(0xFFE9EDF2), surfaceVariant = Color(0xFFE9EDF2),
+            outline = Color(0xFF94A3B8), outlineVariant = C.line,
+        ),
         typography = MaterialTheme.typography.let { t ->
             t.copy(
                 bodyLarge = t.bodyLarge.copy(fontFamily = Inter),
@@ -111,21 +124,22 @@ fun Card(modifier: Modifier = Modifier, highlight: Boolean = false, padding: Dp 
             .fillMaxWidth()
             .clip(shape)
             .background(C.card)
-            .border(if (highlight) 1.5.dp else 1.dp, if (highlight) C.blue else C.line, shape)
+            .border(if (highlight) 1.5.dp else 1.dp, if (highlight) C.brand else C.line, shape)
             .let { if (onClick != null) it.clickable(onClick = onClick) else it }
             .padding(padding),
         content = content,
     )
 }
 
-enum class Tone { OK, WARN, BLUE, GREY, RED }
+enum class Tone { OK, WARN, BRAND, ACCENT, GREY, RED }
 
 @Composable
 fun Chip(text: String, tone: Tone, icon: String? = null, onClick: (() -> Unit)? = null) {
     val (bg, fg) = when (tone) {
         Tone.OK -> C.greenL to C.green
         Tone.WARN -> C.amberL to C.amber
-        Tone.BLUE -> C.blueL to C.blue
+        Tone.BRAND -> C.brandL to C.brandD
+        Tone.ACCENT -> C.yellow to C.onYellow
         Tone.GREY -> Color(0xFFEEF1F5) to C.t2
         Tone.RED -> C.redL to C.red
     }
@@ -141,14 +155,14 @@ fun Chip(text: String, tone: Tone, icon: String? = null, onClick: (() -> Unit)? 
 }
 
 @Composable
-fun IconTile(icon: String, tint: Color = C.blue, bg: Color = C.blueL, size: Dp = 40.dp) {
+fun IconTile(icon: String, tint: Color = C.brand, bg: Color = C.brandL, size: Dp = 40.dp) {
     Box(Modifier.size(size).clip(RoundedCornerShape(12.dp)).background(bg), contentAlignment = Alignment.Center) {
         Sym(icon, (size.value * 0.55f).dp, tint, filled = true)
     }
 }
 
 @Composable
-fun PrimaryButton(text: String, icon: String? = null, modifier: Modifier = Modifier, color: Color = C.blue,
+fun PrimaryButton(text: String, icon: String? = null, modifier: Modifier = Modifier, color: Color = C.brand,
                   enabled: Boolean = true, onClick: () -> Unit) {
     Button(
         onClick = onClick, enabled = enabled, modifier = modifier.height(54.dp),
@@ -189,7 +203,7 @@ fun TopBar(title: String, subtitle: String? = null, onBack: (() -> Unit)? = null
 }
 
 @Composable
-fun ProgressLine(fraction: Float, color: Color = C.blue) {
+fun ProgressLine(fraction: Float, color: Color = C.brand) {
     Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(Color(0xFFE5E9F0))) {
         Box(Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).height(6.dp).clip(RoundedCornerShape(3.dp)).background(color))
     }

@@ -157,25 +157,25 @@ class ScreenshotTest {
         val ok = ResultData(27.0, 15.0, 6.0, 92, Status.OK, 8.0, null, null, Mode.AR_FULL)
         val xs = outline.map { it.first }; val ys = outline.map { it.second }
 
-        cam("04_cari_alas", 0f, EngineUi(Phase.SEARCH, planeFound = true, hint = Hint.NONE, overlay = Overlay(floorDots = px(grid, 0f))))
+        cam("04_scan_lantai", 0f, EngineUi(Phase.SEARCH, planeFound = true, hint = Hint.NONE, overlay = Overlay(floorDots = px(grid, 0f))))
         cam("05_pilih_paket", oy, EngineUi(Phase.SELECT, planeFound = true, targetFound = true, hint = Hint.NONE, live = box, picked = true,
             overlay = Overlay(floorDots = px(grid, oy), outline = px(outline, oy), others = othersAt)))
-        cam("05b_gambar_kotak", oy, EngineUi(Phase.SELECT, planeFound = true, targetFound = false, hint = Hint.NONE,
+        cam("05b_pilih_area", oy, EngineUi(Phase.SELECT, planeFound = true, targetFound = false, hint = Hint.NONE,
             overlay = Overlay(floorDots = px(grid, oy), others = othersAt)),
             demoBox = px(listOf(xs.min() - 12 to ys.min() - 12, xs.max() + 12 to ys.max() + 12), oy))
-        cam("06_pindai", -59f, EngineUi(Phase.SCAN, planeFound = true, targetFound = true, progress = 0.64f, hint = Hint.SWEEP,
+        cam("06_scan_paket", -59f, EngineUi(Phase.SCAN, planeFound = true, targetFound = true, progress = 0.64f, hint = Hint.SWEEP,
             overlay = Overlay(depthDots = px(dots.take((dots.size * 0.64f).toInt()), -59f), outline = px(outline, -59f))))
         cam("06b_peringatan", 30f, EngineUi(Phase.SCAN, planeFound = true, targetFound = true, progress = 0.38f, hint = Hint.BACK,
             overlay = Overlay(depthDots = px(dots.take((dots.size * 0.38f).toInt()), 30f), outline = px(outline, 30f))))
-        cam("07_hasil", -59f, EngineUi(Phase.RESULT, planeFound = true, targetFound = true, progress = 1f, hint = Hint.NONE, live = box,
+        cam("07_hasil_ukur", -59f, EngineUi(Phase.RESULT, planeFound = true, targetFound = true, progress = 1f, hint = Hint.NONE, live = box,
             overlay = Overlay(box = px(base + top, -59f)), result = ok))
         val doubtful = EngineUi(Phase.RESULT, planeFound = true, targetFound = true, progress = 1f, hint = Hint.NONE, live = box,
             overlay = Overlay(box = px(base + top, -59f)), result = ok.copy(confidence = 61, status = Status.CHECK), attempts = 2)
-        cam("07b_cek_ulang", -59f, doubtful)
-        cam("07c_tandai_ukur_di_hub", -59f, doubtful, showHub = true)
+        cam("07b_perlu_dicek", -59f, doubtful)
+        cam("07c_ukur_di_hub", -59f, doubtful, showHub = true)
         // the third parcel of a pickup: the floor is kept, the two cartons already measured carry a check mark
         val marks = othersAt.map { o -> floatArrayOf((o[0] + o[2]) / 2, o[5] - 30f * d) }
-        cam("14_beruntun", oy, EngineUi(Phase.SELECT, planeFound = true, targetFound = true, hint = Hint.NONE, live = box,
+        cam("14_paket_berikutnya", oy, EngineUi(Phase.SELECT, planeFound = true, targetFound = true, hint = Hint.NONE, live = box,
             overlay = Overlay(floorDots = px(grid, oy), outline = px(outline, oy), marks = marks[0] + marks[1],
                 markLabels = listOf("…0007", "…0008")), reticle = 206f * d to (400f + oy) * d), resi = "UKP-260419-0009")
     }

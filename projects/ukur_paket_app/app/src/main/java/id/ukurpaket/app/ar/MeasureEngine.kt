@@ -54,12 +54,12 @@ enum class Hint(val text: String) {
     SLOW("Pelan-pelan"),
     DARK("Terlalu gelap · nyalakan senter atau cari tempat terang"),
     TEXTURE("Arahkan ke lantai yang bertekstur"),
-    LOST("Pelacakan hilang · gerakkan HP pelan"),
-    NO_PARCEL("Arahkan titik ke paket"),
-    PICK_FAILED("Paket belum terbaca · ketuk lagi atau gambar kotak"),
+    LOST("Tracking hilang · gerakkan HP pelan"),
+    NO_PARCEL("Arahkan bidikan ke paket"),
+    PICK_FAILED("Paket belum terbaca · ketuk lagi atau Pilih Area"),
     BACK("Mundur sedikit · paket terpotong layar"),
     STACKED("Taruh paket langsung di lantai atau meja"),
-    SWEEP("Geser HP pelan memutar ke sudut paket"),
+    SWEEP("Gerakkan HP pelan mengitari sudut paket"),
     FAILED("Paket belum terbaca · ulangi dari sudut lain"),
 }
 
@@ -157,6 +157,7 @@ class MeasureEngine(
     private val sceneAcc = PointAccumulator(0.02f)
     private var others: List<BoxResult> = emptyList()
     private var travel = 0f
+    private var scanStartMs = 0L
     private var lastPos: V3? = null
     private var lastPosTime = 0L
     private var speed = 0f
@@ -177,6 +178,7 @@ class MeasureEngine(
     private var prompt: FloatArray? = null
     private var lockAfterPick = false
     @Volatile private var busy = false
+    @Volatile private var pickFailed = false
     private val finished = AtomicReference<Pick?>(null)
     private var pick: Pick? = null
 
@@ -212,7 +214,12 @@ class MeasureEngine(
     fun lock() = commands.add(Cmd.Lock)
     fun rescan() = commands.add(Cmd.Rescan)
     /** Next parcel in the same session: keep the floor, mark the one just measured with [label]. */
-    fun next(label: String) = commands.add(Cmd.Next(label))
+    fun next(label: String) {
+        commands.add(Cmd.Next(label))
+        // drop the finished result right away, so it cannot be shown (or saved) again before the next frame
+        _ui.value = EngineUi(phase = if (planeFrames > 25) Phase.SELECT else Phase.SEARCH, planeFound = planeFrames > 25,
+            torch = torch, torchSupported = torchSupported)
+    }
     fun torch(on: Boolean) = commands.add(Cmd.Torch(on))
     /** A plain camera photo (for "ukur di hub"), delivered on the main thread. */
     fun photo(file: File, done: (File?) -> Unit) = commands.add(Cmd.Photo(file, done))
@@ -247,6 +254,9 @@ class MeasureEngine(
         recorder?.close()
         worker.shutdown()
     }
+
+    /** Waits (off the main thread) for a cut-out still running on the worker. */
+    fun awaitWorker() { runCatching { worker.awaitTermination(15, java.util.concurrent.TimeUnit.SECONDS) } }
 
     // ------------------------------------------------------------ GL
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
@@ -378,6 +388,7 @@ class MeasureEngine(
 
         // a finished cut-out replaces the crosshair pick
         finished.getAndSet(null)?.let { p -> adopt(p, planes) }
+        if (pickFailed) { pickFailed = false; pickHint = true; lockAfterPick = false }
         prompt?.let { pr -> if (!busy) { prompt = null; startPick(frame, cam, pr, pts) } }
 
         val pk = pick
@@ -454,7 +465,7 @@ class MeasureEngine(
                 val grown = m.largestPart().dilate(max(2, iw / 200))
                 finished.set(Pick(grown, inv, f[0] * sx, f[1] * sy, pp[0] * sx, pp[1] * sy, framePts))
             } catch (e: Throwable) {
-                pickHint = true
+                pickFailed = true                  // read back on the GL thread
             } finally { busy = false }
         }
         publish(Hint.NONE, _ui.value.overlay, selecting = true)
@@ -483,6 +494,7 @@ class MeasureEngine(
     private fun startScan(frame: Frame) {
         phase = Phase.SCAN
         scanAcc.clear(); travel = 0f
+        scanStartMs = SystemClock.elapsedRealtime()
         val pose = frame.camera.pose
         lastPos = V3(pose.tx(), pose.ty(), pose.tz())
         recorder?.begin(seed!!, plane!!)
@@ -496,7 +508,7 @@ class MeasureEngine(
         lastPos?.let { travel += (pos - it).norm() }
         lastPos = pos
         val added = addPoints(frame, cam, scanAcc, fl, sd, record = true)
-        if (added > (if (useDepth) 60 else 4)) scanAcc.endFrame()
+        if (added > (if (useDepth) 25 else 4)) scanAcc.endFrame()
 
         if (frameNo % 4 == 0L) {
             val seg = BoxFitter.segment(scanAcc.points(if (useDepth) 2 else 1), fl, sd, cell = if (useDepth) 0.015f else 0.03f,
@@ -510,6 +522,13 @@ class MeasureEngine(
         val cut = outline != null && edgeCut(outline)
         val hint = when { speed > 0.7f -> Hint.SLOW; cut -> Hint.BACK; else -> Hint.SWEEP }
 
+        // never leave the courier stuck: a scan that cannot fill up in 25 s counts as a failed attempt
+        if (progress < 1f && SystemClock.elapsedRealtime() - scanStartMs > 25_000) {
+            attempts++
+            phase = Phase.SELECT; scanAcc.clear()
+            publish(Hint.FAILED, Overlay())
+            return
+        }
         if (progress >= 1f) {
             val seg = BoxFitter.segment(scanAcc.points(if (useDepth) 2 else 1), fl, sd, cell = if (useDepth) 0.015f else 0.03f,
                 minH = 0.02f, minPerCell = if (useDepth) 2 else 1)

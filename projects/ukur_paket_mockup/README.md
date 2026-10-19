@@ -1,5 +1,8 @@
 # UkurPaket: courier app mockup (measure L × W × H with the phone camera)
 
+> **v2** (`v2/`): the flow step by step in AnterAja colours with the agreed field terms, made from the app's own
+> screens. This first version below is kept for reference.
+
 Mockup of the flow a courier follows to measure a parcel with method A (ARCore depth + floor detection),
 made to test the flow with couriers before the app is built. Screen text is Indonesian.
 

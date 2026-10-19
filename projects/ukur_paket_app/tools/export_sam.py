@@ -7,8 +7,9 @@ encoder.onnx  image [1,3,1024,1024] float (RGB, normalised, longest side resized
 decoder.onnx  embeddings, coords [1,N,2] (pixels in the 1024 frame), labels [1,N] (1 tap, 0 not here,
               2/3 box corners, -1 padding) -> masks [1,3,256,256] logits, scores [1,3]
 The encoder is stored in float16 (inputs/outputs stay float32): 13,8 MB, embeddings within 0,3 % of float32.
-The decoder stays float32 (16 MB): its float16 version does not load in ONNX Runtime. int8 dynamic quantisation
-was tried and rejected: it breaks the encoder (masks cover the whole image). Check with tools/check_sam_onnx.py.
+The decoder's MatMul/Gemm weights are int8 (signed, dynamic quantisation): 4,6 MB instead of 16 MB, masks within
+IoU 0,989 of float32 on the conveyor frame (mean 0,997). int8 on the encoder was tried and rejected: it breaks the
+masks (they cover the whole image). Check with tools/check_sam_onnx.py.
 """
 import sys
 from pathlib import Path
@@ -50,13 +51,17 @@ def main(weights):
     dec = Decoder(sam).eval()
     emb = sam.image_encoder(x).detach()
     coords = torch.tensor([[[500.0, 400.0], [0.0, 0.0]]]); labels = torch.tensor([[1.0, -1.0]])
-    torch.onnx.export(dec, (emb, coords, labels), OUT / "decoder.onnx", input_names=["embeddings", "coords", "labels"],
+    dec_tmp = OUT / "decoder_fp32.onnx"
+    torch.onnx.export(dec, (emb, coords, labels), dec_tmp, input_names=["embeddings", "coords", "labels"],
                       output_names=["masks", "scores"], dynamic_axes={"coords": {1: "n"}, "labels": {1: "n"}},
                       opset_version=17, dynamo=False)
     import onnx
     from onnxconverter_common import float16
     onnx.save(float16.convert_float_to_float16(onnx.load(str(tmp)), keep_io_types=True), str(OUT / "encoder.onnx"))
     tmp.unlink()
+    from onnxruntime.quantization import QuantType, quantize_dynamic
+    quantize_dynamic(str(dec_tmp), str(OUT / "decoder.onnx"), weight_type=QuantType.QInt8, op_types_to_quantize=["MatMul", "Gemm"])
+    dec_tmp.unlink()
     for f in sorted(OUT.glob("*.onnx")):
         print(f.name, f.stat().st_size // 1024, "KB")
 

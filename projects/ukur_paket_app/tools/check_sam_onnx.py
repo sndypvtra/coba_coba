@@ -1,5 +1,6 @@
 """Check the exported ONNX MobileSAM against the PyTorch one on the conveyor frame (mask IoU per tap/box),
 and write the ONNX masks as references for the app's own Segmenter (SegmenterTest compares against them).
+The committed references were made with the float32 decoder, so the test also covers the int8 decoder's loss.
 
     python tools/check_sam_onnx.py <mobile_sam.pt>
 """

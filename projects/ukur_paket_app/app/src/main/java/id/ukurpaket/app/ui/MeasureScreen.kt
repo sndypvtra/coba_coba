@@ -47,6 +47,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -79,6 +80,7 @@ import id.ukurpaket.app.data.cm
 import id.ukurpaket.app.data.id
 import id.ukurpaket.app.measure.BoxResult
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.io.File
 import kotlin.math.abs
 import kotlin.math.min
@@ -165,6 +167,8 @@ internal fun ArChrome(ui: EngineUi, engine: MeasureEngine, model: AppModel, open
     var drag by remember { mutableStateOf(demoBox) }
     var hub by remember { mutableStateOf(showHub) }
     val canPick = ui.phase == Phase.SELECT && model.samState == SamState.READY || demoBox != null
+    LaunchedEffect(ui.phase) { if (ui.phase != Phase.SELECT && demoBox == null) { boxMode = false; drag = null } }
+    val scope = rememberCoroutineScope()
     Box(Modifier.fillMaxSize()) {
         val gestures = if (boxMode && canPick) Modifier.pointerInput(boxMode) {
             detectDragGestures(
@@ -193,15 +197,18 @@ internal fun ArChrome(ui: EngineUi, engine: MeasureEngine, model: AppModel, open
             val warn = ui.hint in setOf(Hint.SLOW, Hint.DARK, Hint.TEXTURE, Hint.LOST, Hint.BACK, Hint.STACKED, Hint.FAILED, Hint.PICK_FAILED)
             val err = openError ?: ui.error
             if (err != null) Banner(err, C.red, Color.White)
-            else if (warn) Banner(ui.hint.text, Color(0xFFF59E0B), Color(0xFF1F1300))
-            else if (boxMode && drag == null) Banner("Tarik jari dari satu sudut paket ke sudut seberangnya", C.blue, Color.White, "highlight_alt")
+            else if (warn) Banner(ui.hint.text, C.warn, Color(0xFF1F1300))
+            else if (boxMode && drag == null) Banner("Geser jari untuk menandai area paket", C.brand, Color.White, "highlight_alt")
         }
         Sheet(Modifier.align(Alignment.BottomCenter), ui, engine, model, boxMode, canPick, { boxMode = !boxMode }, { hub = true })
     }
     if (hub) HubDialog(onDismiss = { hub = false }) { reason ->
         hub = false
         val f = File(model.store.photosDir, "hub_${System.currentTimeMillis()}.jpg")
-        engine.photo(f) { saved -> model.markHub(reason, saved?.path) }
+        var sent = false
+        engine.photo(f) { saved -> if (!sent) { sent = true; model.markHub(reason, saved?.path) } }
+        // no camera frame within 3 s (tracking stopped, camera busy): save without the photo rather than hang
+        scope.launch { delay(3000); if (!sent) { sent = true; model.markHub(reason, null) } }
     }
 }
 
@@ -212,17 +219,17 @@ private fun Overlay(ui: EngineUi, drag: FloatArray?, modifier: Modifier) {
     val scan = ui.phase == Phase.SCAN
     Canvas(modifier) {
         dots(ov.floorDots, Color.White.copy(alpha = 0.85f), 2.6.dp.toPx())
-        dots(ov.depthDots, C.cyan, 2.2.dp.toPx())
+        dots(ov.depthDots, C.yellow, 2.2.dp.toPx())
         val dash = PathEffect.dashPathEffect(floatArrayOf(10.dp.toPx(), 7.dp.toPx()))
         for (o in ov.others) poly(o)?.let { drawPath(it, Color.White.copy(alpha = 0.9f), style = Stroke(2.dp.toPx(), pathEffect = dash)) }
         ov.outline?.let { pts ->
             val path = poly(pts) ?: return@let
-            val col = if (scan) C.live else Color(0xFF3B82F6)
+            val col = if (scan) C.live else C.brand
             drawPath(path, col.copy(alpha = 0.16f))
             drawPath(path, col, style = Stroke(3.dp.toPx()))
         }
         ov.box?.let { b ->
-            val col = if (ui.result?.status == Status.CHECK) Color(0xFFF59E0B) else C.live
+            val col = if (ui.result?.status == Status.CHECK) C.warn else C.live
             fun p(i: Int) = Offset(b[2 * i], b[2 * i + 1])
             fun ok(i: Int) = !b[2 * i].isNaN()
             val dashed = PathEffect.dashPathEffect(floatArrayOf(14f, 10f))
@@ -317,11 +324,11 @@ private fun OverlayLabels(ui: EngineUi) {
     val density = LocalDensity.current
     if (ui.picked) ov.outline?.let { o ->
         val xs = o.filterIndexed { j, v -> j % 2 == 0 && !v.isNaN() }; val ys = o.filterIndexed { j, v -> j % 2 == 1 && !v.isNaN() }
-        if (xs.isNotEmpty()) Tag(xs.min() + with(density) { 58.dp.toPx() }, ys.min(), "Paket terpilih", "check_circle", Color(0xFF2563EB))
+        if (xs.isNotEmpty()) Tag(xs.min() + with(density) { 58.dp.toPx() }, ys.min(), "Paket dipilih", "check_circle", C.brand)
     }
     var k = 0
     while (k + 1 < ov.marks.size) {
-        if (!ov.marks[k].isNaN()) Tag(ov.marks[k], ov.marks[k + 1] - 14f, "Sudah · " + ov.markLabels.getOrElse(k / 2) { "" }, "task_alt", C.green)
+        if (!ov.marks[k].isNaN()) Tag(ov.marks[k], ov.marks[k + 1] - 14f, "Selesai · " + ov.markLabels.getOrElse(k / 2) { "" }, "task_alt", C.green)
         k += 2
     }
 }
@@ -349,7 +356,7 @@ internal fun DimTags(b: FloatArray, first: Double, second: Double, height: Doubl
         val dx = with(density) { 32.dp.toPx() }; val dy = with(density) { 14.dp.toPx() }
         Box(Modifier.offset { IntOffset((o.x - dx).roundToInt(), (o.y - dy).roundToInt()) }
             .clip(RoundedCornerShape(8.dp)).background(Color.White).padding(horizontal = 8.dp, vertical = 4.dp)) {
-            T("${v.cm()} cm", 14.sp, FontWeight.Bold, if (check) Color(0xFFB45309) else Color(0xFF15803D))
+            T("${v.cm()} cm", 14.sp, FontWeight.Bold, if (check) C.amber else Color(0xFF15803D))
         }
     }
 }
@@ -389,19 +396,19 @@ private fun BoxScope.ArcArrow() {
 // ------------------------------------------------------------------ chrome
 @Composable
 internal fun GlassButton(icon: String, on: Boolean = false, onClick: () -> Unit) {
-    Box(Modifier.size(44.dp).clip(CircleShape).background(if (on) Color(0xFFFACC15) else C.glass).clickable(onClick = onClick),
+    Box(Modifier.size(44.dp).clip(CircleShape).background(if (on) C.yellow else C.glass).clickable(onClick = onClick),
         contentAlignment = Alignment.Center) {
-        Sym(icon, 22.dp, if (on) Color(0xFF1F1300) else Color.White, filled = on)
+        Sym(icon, 22.dp, if (on) C.onYellow else Color.White, filled = on)
     }
 }
 
 @Composable
 private fun StepPill(phase: Phase, modifier: Modifier) {
     val (n, label) = when (phase) {
-        Phase.SEARCH -> 1 to "Cari alas"
-        Phase.SELECT -> 2 to "Pilih paket"
-        Phase.SCAN -> 3 to "Pindai"
-        Phase.RESULT -> 0 to "Hasil ukur"
+        Phase.SEARCH -> 1 to "Scan Lantai"
+        Phase.SELECT -> 2 to "Pilih Paket"
+        Phase.SCAN -> 3 to "Scan Paket"
+        Phase.RESULT -> 0 to "Hasil Ukur"
     }
     StepPillOf(n, label, modifier)
 }
@@ -432,7 +439,7 @@ val HUB_REASONS = listOf("Bentuk tidak beraturan", "Paket terlalu besar", "Tempa
 @Composable
 internal fun HubDialog(onDismiss: () -> Unit, onPick: (String) -> Unit) {
     AlertDialog(onDismissRequest = onDismiss,
-        title = { T("Ukur di hub?", 18.sp, FontWeight.SemiBold) },
+        title = { T("Ukur di Hub?", 18.sp, FontWeight.SemiBold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 T("Paket tetap diambil. Foto dan lokasi disimpan; ukurannya diukur di hub. Pilih alasannya:", 13.5.sp, color = C.t2)
@@ -455,7 +462,7 @@ internal fun HubLink(onClick: () -> Unit) {
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(vertical = 6.dp),
         horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
         Sym("warehouse", 18.dp, C.amber)
-        T(" Tidak bisa diukur? Tandai ukur di hub", 13.5.sp, FontWeight.SemiBold, C.amber)
+        T(" Gagal ukur? Ukur di Hub", 13.5.sp, FontWeight.SemiBold, C.amber)
     }
 }
 
@@ -469,32 +476,32 @@ private fun Sheet(modifier: Modifier, ui: EngineUi, engine: MeasureEngine, model
         Box(Modifier.align(Alignment.CenterHorizontally).size(40.dp, 4.dp).clip(RoundedCornerShape(2.dp)).background(C.line))
         when (ui.phase) {
             Phase.SEARCH -> {
-                if (ui.planeFound) Chip("Alas terdeteksi", Tone.OK, "check_circle") else Chip("Mencari alas…", Tone.WARN, "sync")
+                if (ui.planeFound) Chip("Lantai terdeteksi", Tone.OK, "check_circle") else Chip("Mencari lantai…", Tone.WARN, "sync")
                 T("Gerakkan HP pelan ke kiri dan kanan", 18.sp, FontWeight.Bold)
-                T("Titik putih muncul di lantai berarti alas sudah dikenali. Paket harus berdiri di alas itu.", 13.5.sp, color = C.t2)
+                T("Titik putih muncul di lantai berarti lantai sudah dikenali. Paket harus berdiri di lantai itu.", 13.5.sp, color = C.t2)
             }
             Phase.SELECT -> {
                 val lv = ui.live
                 if (ui.selecting) Row(verticalAlignment = Alignment.CenterVertically) {
-                    CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.5.dp, color = C.blue)
+                    CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.5.dp, color = C.brand)
                     T("  Memilih paket…", 18.sp, FontWeight.Bold)
-                } else T(if (ui.picked) "Paket terpilih" else if (ui.targetFound) "Paket terdeteksi" else "Arahkan titik ke paket", 18.sp, FontWeight.Bold)
+                } else T(if (ui.picked) "Paket dipilih" else if (ui.targetFound) "Paket terdeteksi" else "Arahkan bidikan ke paket", 18.sp, FontWeight.Bold)
                 T(when {
                     lv != null -> "Perkiraan ${(lv.lengthM * 100.0).cm()} × ${(lv.widthM * 100.0).cm()} × ${(lv.heightM * 100.0).cm()} cm. " +
-                        if (ui.picked) "Bukan paket ini? Ketuk paket yang benar." else "Kunci untuk mengukur teliti."
-                    else -> "Garis biru = paket yang akan diukur. Bukan paket ini? Ketuk paket yang benar."
+                        if (ui.picked) "Bukan paket ini? Ketuk paket yang benar." else "Tekan Mulai Scan untuk mengukur teliti."
+                    else -> "Garis magenta = paket yang akan diukur. Bukan paket ini? Ketuk paket yang benar."
                 }, 13.5.sp, color = C.t2)
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     if (model.samState == SamState.READY || canPick)
-                        SecondaryButton(if (boxMode) "Batal kotak" else "Gambar kotak", if (boxMode) "close" else "crop", Modifier.weight(1f)) { toggleBox() }
-                    PrimaryButton("Kunci paket", "lock", Modifier.weight(1f), enabled = (ui.targetFound || model.samState == SamState.READY) && !ui.selecting) { engine.lock() }
+                        SecondaryButton(if (boxMode) "Batal" else "Pilih Area", if (boxMode) "close" else "crop", Modifier.weight(1f)) { toggleBox() }
+                    PrimaryButton("Mulai Scan", "view_in_ar", Modifier.weight(1f), enabled = (ui.targetFound || model.samState == SamState.READY) && !ui.selecting) { engine.lock() }
                 }
                 if (ui.attempts >= 2) HubLink(openHub)
             }
             Phase.SCAN -> {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(58.dp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(progress = { ui.progress }, modifier = Modifier.size(58.dp), color = C.blue,
+                        CircularProgressIndicator(progress = { ui.progress }, modifier = Modifier.size(58.dp), color = C.brand,
                             trackColor = C.line, strokeWidth = 6.dp)
                         T("${(ui.progress * 100).roundToInt()}%", 13.sp, FontWeight.Bold)
                     }
@@ -502,24 +509,24 @@ private fun Sheet(modifier: Modifier, ui: EngineUi, engine: MeasureEngine, model
                         modifier = Modifier.padding(start = 14.dp))
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Check("Alas"); Check("Paket terkunci")
+                    Check("Lantai"); Check("Paket dipilih")
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Sym("deployed_code", 16.dp, C.blue, filled = true)
-                        T(" ${if (model.caps.depth) "Kedalaman" else "Titik fitur"} ${(ui.progress * 100).roundToInt()}%", 12.5.sp, color = C.blue)
+                        Sym("deployed_code", 16.dp, C.brand, filled = true)
+                        T(" Data 3D ${(ui.progress * 100).roundToInt()}%", 12.5.sp, color = C.brand)
                     }
                 }
-                SecondaryButton("Ulangi pindai", "refresh", Modifier.fillMaxWidth()) { engine.rescan() }
+                SecondaryButton("Scan Ulang", "refresh", Modifier.fillMaxWidth()) { engine.rescan() }
             }
             Phase.RESULT -> {
                 val r = ui.result ?: return@Column
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (r.status == Status.OK) Chip("Akurat · keyakinan ${r.confidence}%", Tone.OK, "check_circle")
-                    else Chip("Cek ulang · keyakinan ${r.confidence}%", Tone.WARN, "warning")
+                    if (r.status == Status.OK) Chip("Akurat · Skor ${r.confidence}%", Tone.OK, "check_circle")
+                    else Chip("Perlu Dicek · Skor ${r.confidence}%", Tone.WARN, "warning")
                     Spacer(Modifier.weight(1f))
                     T("…" + (model.draft?.resi?.takeLast(4) ?: ""), 12.sp, color = C.t3)
                 }
                 T("${r.lengthCm.cm()} × ${r.widthCm.cm()} × ${r.heightCm.cm()} cm", 30.sp, FontWeight.Bold)
-                if (r.status == Status.CHECK) T("Pastikan kotak pas membungkus paket, atau ulangi dari sudut lain.", 13.sp, color = C.t2)
+                if (r.status == Status.CHECK) T("Pastikan garis kotak 3D pas dengan paket, atau ulangi dari sudut lain.", 13.sp, color = C.t2)
                 ResultStats(r.lengthCm, r.widthCm, r.heightCm, sheetSettings.divisor, r.seconds)
                 SaveRow(r.status == Status.CHECK, r, { engine.rescan() }) { model.onMeasured(r) }
                 if (ui.attempts >= 2 && r.status == Status.CHECK) HubLink(openHub)
@@ -533,7 +540,7 @@ internal fun ResultStats(l: Double, w: Double, h: Double, div: Int, seconds: Dou
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Stat("Volume", "${(l * w * h / 1000).id()} L", Modifier.weight(1f))
         Stat("Berat volumetrik", "${(l * w * h / div).id(2)} kg", Modifier.weight(1.3f))
-        Stat("Waktu ukur", "${seconds.id(0)} dtk", Modifier.weight(1f))
+        Stat("Durasi", "${seconds.id(0)} dtk", Modifier.weight(1f))
     }
 }
 
