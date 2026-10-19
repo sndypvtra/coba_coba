@@ -119,9 +119,6 @@ class ScreenshotTest {
         m = model()
         m.store.save(measured("TSA-90100000110", "o2", 30.0, 20.0, 12.0, 1.2))
         screen("02_pickup", m, Screen.Home)
-        m.scanRejected = "OJKX1234567AB68"                 // a QR from the label that is not the tracking number
-        screen("02b_bukan_resi", m, Screen.Home)
-        m.scanRejected = null
 
         m.draft = Draft("TSA-90100000107", "o1")
         screen("03_persiapan", m, Screen.Prep)

@@ -8,7 +8,7 @@ no product or library names on the boards. The screens are the app's own renders
 | File | |
 |---|---|
 | `alur_kurir.png` (3840 × 2160) | the main flow in 8 steps: Pickup → Persiapan → Scan Lantai → Pilih Paket → Scan Paket → Hasil Ukur → Berat → Tersimpan |
-| `fitur_lapangan.png` (3840 × 2160) | field situations: Pilih Area, Paket berikutnya, arahan langsung, Perlu Dicek, Ukur di Hub, Cek resi, Cek HP, Riwayat |
+| `fitur_lapangan.png` (3840 × 2160) | field situations: Pilih Area, Paket berikutnya, arahan langsung, Perlu Dicek, Ukur di Hub, Data Ukur di Hub, Cek HP, Riwayat |
 | `screens/01…16_*.png` (1348 × ±2860, transparent) | each screen in its phone frame, full size, for slides |
 | `slide_ukur_mobileapp.md` | the 12-slide management deck for Claude Design: images, slide order, slide text, ready-to-paste prompt |
 

@@ -22,7 +22,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import id.ukurpaket.app.ar.ArCheck
@@ -34,7 +33,6 @@ import id.ukurpaket.app.data.Locator
 import id.ukurpaket.app.data.Measurement
 import id.ukurpaket.app.data.Mode
 import id.ukurpaket.app.data.Order
-import id.ukurpaket.app.data.Resi
 import id.ukurpaket.app.data.Status
 import id.ukurpaket.app.data.Store
 import id.ukurpaket.app.measure.Segmenter
@@ -73,8 +71,6 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
         internal set
     var draft by mutableStateOf<Draft?>(null)
     var message by mutableStateOf<String?>(null)
-    /** Text a scan returned that is not a tracking number (e.g. one of the label's QR codes); shown in a dialog. */
-    var scanRejected by mutableStateOf<String?>(null)
     val locator = Locator(app)
 
     /** MobileSAM, loaded once in the background (about 30 MB of model). Null until ready. */
@@ -175,33 +171,17 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
     /** "Paket berikutnya": back to the list underneath, keeping the AR session for this pickup. */
     fun nextParcel(resi: String, orderId: String?) { stack.clear(); stack.add(Screen.Home); startMeasure(resi, orderId) }
 
+    /** Reads the label's barcode and uses its content as it is: no format rules on the tracking number. */
     fun scanResi(activity: Activity) {
-        // the label's long barcode is Code 128; QR stays allowed because some labels carry the number there too
-        val options = GmsBarcodeScannerOptions.Builder()
-            .setBarcodeFormats(Barcode.FORMAT_CODE_128, Barcode.FORMAT_CODE_39, Barcode.FORMAT_CODE_93, Barcode.FORMAT_QR_CODE)
-            .enableAutoZoom()
-            .build()
+        val options = GmsBarcodeScannerOptions.Builder().enableAutoZoom().build()
         GmsBarcodeScanning.getClient(activity, options).startScan()
-            .addOnSuccessListener { b ->
-                val code = Resi.normalize(b.rawValue.orEmpty())
-                when {
-                    code.isEmpty() -> Unit
-                    acceptsResi(code) -> openResi(code)
-                    else -> scanRejected = code
-                }
-            }
+            .addOnSuccessListener { b -> b.rawValue?.let { openResi(it) } }
             .addOnFailureListener { toast("Scan tidak bisa dibuka. Ketik nomor resi.") }
     }
 
-    /** The format check from Settings (on by default). */
-    fun acceptsResi(code: String): Boolean {
-        val s = store.settings.value
-        return code.isNotEmpty() && (!s.resiCheck || Resi.isValid(code, s.resiPattern))
-    }
-
     fun openResi(raw: String) {
-        val code = Resi.normalize(raw)
-        if (!acceptsResi(code)) { scanRejected = code; return }
+        val code = raw.trim()
+        if (code.isEmpty()) return
         val order = store.orders.firstOrNull { code in it.resi } ?: store.addAdHocOrder(code)
         val done = store.measurementFor(code)
         if (done != null) { go(Screen.Detail(done.id)); toast("Resi $code sudah diukur") } else startMeasure(code, order.id)

@@ -35,7 +35,7 @@ FIELD = [
     ("06b_peringatan", "Arahan langsung", "Paket terpotong, HP terlalu cepat, atau gelap: app memberi tahu"),
     ("07b_perlu_dicek", "Perlu Dicek", "Skor rendah: tombol Simpan dikunci 2 detik, kurir cek ulang"),
     ("07c_ukur_di_hub", "Ukur di Hub", "Setelah 2× gagal, paket tetap diambil dan diukur di hub"),
-    ("02b_bukan_resi", "Cek resi", "QR lain di label ditolak, jadi ukuran tidak salah resi"),
+    ("15_detail_ukur_di_hub", "Data Ukur di Hub", "Foto, waktu, lokasi, dan alasan tersimpan untuk hub"),
     ("01_cek_hp", "Cek HP", "Saat pertama dibuka, app memastikan HP kurir siap mengukur"),
     ("10_riwayat", "Riwayat", "Semua hasil ukur di HP, siap dibagikan ke sistem"),
 ]
@@ -46,8 +46,8 @@ BOARDS = [
       ("Kalau paket menempel paket lain", "Kurir cukup ketuk paketnya, atau tandai area paket. Paket di sebelahnya tidak ikut terukur."),
       ("Banyak paket di satu lokasi", "Setelah Simpan, langsung ke paket berikutnya. Lantai sudah dikenali, paket yang selesai diberi tanda.")]),
     ("fitur_lapangan.png", FIELD, "UKURPAKET · DI LAPANGAN", "Dibuat untuk kondisi nyata kurir",
-     "Paket menempel, label dengan banyak kode, tempat gelap, sampai HP yang belum mendukung: semuanya ada jalan keluarnya.",
-     [("Tidak salah resi", "Hanya nomor resi yang diterima (contoh TSA-80745081104). Kode lain di label ditolak dengan arahan yang jelas."),
+     "Paket menempel, tempat gelap, hasil meragukan, sampai paket yang sulit diukur: semuanya ada jalan keluarnya.",
+     [("Bukti untuk setiap resi", "Setiap hasil ukur menyimpan foto dengan kotak 3D, waktu, dan lokasi, terikat ke resi hasil scan barcode."),
       ("Tidak ada paket tertinggal", "Paket yang sulit diukur tetap diambil dan ditandai Ukur di Hub, lengkap dengan foto, lokasi, dan alasan."),
       ("Data tetap di HP", "Semua proses berjalan di HP, tanpa internet. Data siap dikirim ke sistem saat sudah terhubung.")]),
 ]

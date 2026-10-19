@@ -31,7 +31,7 @@ Daftar layar di folder `screens/`:
 | `11_peringatan.png` | Arahan langsung: "Mundur sedikit · paket terpotong layar" |
 | `12_perlu_dicek.png` | Perlu Dicek: skor rendah, Simpan dikunci 2 detik |
 | `13_ukur_di_hub.png` | Ukur di Hub: pilih alasan setelah 2× gagal |
-| `14_bukan_resi.png` | Cek resi: QR lain di label ditolak |
+| `14_detail_ukur_di_hub.png` | Data Ukur di Hub: foto, waktu, lokasi, dan alasan |
 | `15_cek_hp.png` | Cek HP: HP kurir siap mengukur |
 | `16_riwayat.png` | Riwayat: semua hasil ukur di HP |
 
@@ -57,8 +57,8 @@ ukur sungguhan. Jangan ubah isi gambar, dan jangan memotong layar HP.
 | 4 | Alur kurir | `alur_kurir.png` (satu slide penuh) | 8 langkah dari scan resi sampai data tersimpan |
 | 5 | Banyak paket di satu lokasi | `04_pilih_paket.png`, `09_pilih_area.png`, `10_paket_berikutnya.png` | Kurir memilih paket yang diukur; paket lain tidak ikut terukur |
 | 6 | Berat Tagih yang benar | `06_hasil_ukur.png`, `07_berat.png` | Ongkir dihitung dari berat yang lebih besar: timbangan atau volumetrik |
-| 7 | Siap untuk kondisi lapangan | `fitur_lapangan.png` (satu slide penuh) | Paket menempel, banyak kode di label, tempat gelap: ada jalan keluarnya |
-| 8 | Kontrol mutu data | `12_perlu_dicek.png`, `13_ukur_di_hub.png`, `14_bukan_resi.png` | Hasil meragukan tidak lolos begitu saja; tidak ada paket yang tertinggal |
+| 7 | Siap untuk kondisi lapangan | `fitur_lapangan.png` (satu slide penuh) | Paket menempel, tempat gelap, hasil meragukan: ada jalan keluarnya |
+| 8 | Kontrol mutu data | `12_perlu_dicek.png`, `13_ukur_di_hub.png`, `14_detail_ukur_di_hub.png` | Hasil meragukan tidak lolos begitu saja; tidak ada paket yang tertinggal |
 | 9 | Manfaat bisnis | – | Revenue assurance, tagihan akurat, bukti untuk dispute, data untuk operasional |
 | 10 | Cara kerja (ringkas) | `15_cek_hp.png` | On-device AI + AR di HP Android, berjalan offline, data terikat ke resi |
 | 11 | Status saat ini | `16_riwayat.png` | Prototipe APK siap diuji; sudah lolos uji otomatis, belum uji lapangan |
@@ -115,8 +115,8 @@ ukur sungguhan. Jangan ubah isi gambar, dan jangan memotong layar HP.
 - Poin:
   - **Perlu Dicek**: hasil dengan skor rendah ditandai, tombol Simpan dikunci 2 detik agar kurir memeriksa ulang.
   - **Ukur di Hub**: setelah 2× gagal, paket tetap diambil dan diukur di hub, lengkap dengan foto, lokasi, dan alasan.
-  - **Cek resi**: hanya nomor resi yang diterima; kode lain di label ditolak, sehingga ukuran tidak tercatat di resi yang salah.
-- Gambar: `12_perlu_dicek.png`, `13_ukur_di_hub.png`, `14_bukan_resi.png`.
+  - **Bukti per resi**: nomor resi diambil dari scan barcode label, lalu setiap hasil ukur menyimpan foto dengan kotak 3D, waktu, dan lokasi.
+- Gambar: `12_perlu_dicek.png`, `13_ukur_di_hub.png`, `14_detail_ukur_di_hub.png`.
 
 **Slide 9 · Manfaat bisnis**
 - Judul: Manfaat bagi bisnis
@@ -140,7 +140,7 @@ ukur sungguhan. Jangan ubah isi gambar, dan jangan memotong layar HP.
 - Judul: Prototipe siap diuji
 - Poin:
   - **Sudah ada**: aplikasi Android uji coba (APK v0.1) dengan alur lengkap, dari scan resi sampai riwayat.
-  - **Sudah diuji otomatis**: 19 tes, termasuk alur kurir, perhitungan ukuran pada data simulasi, pemilihan paket
+  - **Sudah diuji otomatis**: 16 tes, termasuk alur kurir, perhitungan ukuran pada data simulasi, pemilihan paket
     di antara banyak paket, dan pembacaan barcode dari label resi AnterAja asli.
   - **Belum**: uji lapangan di HP Android, dan integrasi dengan sistem order/resi.
 - Gambar: `16_riwayat.png`.

@@ -67,9 +67,6 @@ data class Settings(
     val record: Boolean = false,
     val prepShown: Int = 0,
     val courier: String = "Andi",
-    /** Accept only tracking numbers that match [resiPattern] (see [Resi]). */
-    val resiCheck: Boolean = true,
-    val resiPattern: String = Resi.DEFAULT_PATTERN,
 )
 
 @Serializable

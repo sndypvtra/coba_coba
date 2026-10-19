@@ -48,7 +48,6 @@ import androidx.compose.ui.unit.sp
 import id.ukurpaket.app.BuildConfigInfo
 import id.ukurpaket.app.ar.ArState
 import id.ukurpaket.app.data.Measurement
-import id.ukurpaket.app.data.Resi
 import id.ukurpaket.app.data.Mode
 import id.ukurpaket.app.data.Status
 import id.ukurpaket.app.data.cm
@@ -209,36 +208,21 @@ fun HomeScreen(model: AppModel, activity: Activity) {
         }
         BottomNav(model, Screen.Home)
     }
-    if (typing) ResiDialog(model, onDismiss = { typing = false }) { typing = false; model.openResi(it) }
-    model.scanRejected?.let { code ->
-        AlertDialog(onDismissRequest = { model.scanRejected = null },
-            title = { T("Bukan barcode resi", 18.sp, FontWeight.SemiBold) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    T("Yang terbaca: ${code.take(40)}", 13.5.sp, color = C.t2)
-                    T("Arahkan kamera ke barcode panjang di samping tulisan Nomor Pengiriman.", 14.sp)
-                }
-            },
-            confirmButton = { TextButton(onClick = { model.scanRejected = null; model.scanResi(activity) }) { T("Scan lagi", weight = FontWeight.SemiBold, color = C.brand) } },
-            dismissButton = { TextButton(onClick = { model.scanRejected = null; typing = true }) { T("Ketik Resi", color = C.t2) } })
-    }
+    if (typing) ResiDialog(onDismiss = { typing = false }) { typing = false; model.openResi(it) }
 }
 
 @Composable
-private fun ResiDialog(model: AppModel, onDismiss: () -> Unit, onOk: (String) -> Unit) {
+private fun ResiDialog(onDismiss: () -> Unit, onOk: (String) -> Unit) {
     var v by remember { mutableStateOf("") }
-    val code = Resi.normalize(v)
-    val bad = code.isNotEmpty() && !model.acceptsResi(code)
+    val code = v.trim()
     AlertDialog(onDismissRequest = onDismiss,
         title = { T("Nomor resi", 18.sp, FontWeight.SemiBold) },
         text = {
-            OutlinedTextField(v, { v = it.uppercase().take(40) }, singleLine = true, isError = bad,
-                placeholder = { T(Resi.EXAMPLE, color = C.t3) },
-                supportingText = { T(if (bad) "Format resi tidak dikenal. Contoh: ${Resi.EXAMPLE}" else "Lihat Nomor Pengiriman di label paket", 12.sp,
-                    color = if (bad) C.red else C.t3) })
+            OutlinedTextField(v, { v = it.take(60) }, singleLine = true,
+                supportingText = { T("Lihat Nomor Pengiriman di label paket", 12.sp, color = C.t3) })
         },
-        confirmButton = { TextButton(onClick = { if (code.isNotEmpty() && !bad) onOk(code) }, enabled = code.isNotEmpty() && !bad) {
-            T("Ukur", weight = FontWeight.SemiBold, color = if (code.isNotEmpty() && !bad) C.brand else C.t3) } },
+        confirmButton = { TextButton(onClick = { onOk(code) }, enabled = code.isNotEmpty()) {
+            T("Ukur", weight = FontWeight.SemiBold, color = if (code.isNotEmpty()) C.brand else C.t3) } },
         dismissButton = { TextButton(onClick = onDismiss) { T("Batal", color = C.t2) } })
 }
 
@@ -519,16 +503,6 @@ fun SettingsScreen(model: AppModel, activity: Activity) {
                             model.store.update { it.copy(divisor = v) }
                         }
                     }
-                }
-            }
-            Card {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        T("Cek format resi", 15.sp, FontWeight.SemiBold)
-                        T("Hanya terima nomor resi seperti ${Resi.EXAMPLE}, supaya QR lain di label tidak tercatat sebagai resi. " +
-                            "Matikan kalau format resi di lapangan berbeda.", 12.5.sp, color = C.t2)
-                    }
-                    Switch(s.resiCheck, { v -> model.store.update { it.copy(resiCheck = v) } })
                 }
             }
             Card {

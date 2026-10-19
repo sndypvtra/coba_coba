@@ -76,19 +76,9 @@ class FlowTest {
         assertEquals(listOf(Screen.Home, Screen.Saved(r.id)), m.stack.toList())
     }
 
-    @Test fun scannedQrThatIsNotAResiIsRejected() {
-        val m = model()
-        m.openResi("OJKX1234567AB68")                           // e.g. the order code in one of the label's QR codes
-        assertEquals("OJKX1234567AB68", m.scanRejected)
-        assertEquals(listOf(Screen.Home), m.stack.toList())     // nothing opened, nothing recorded
-        assertTrue(m.store.measurements.value.isEmpty())
-        assertNull(m.draft)
-    }
-
     @Test fun scannedResiOpensItsParcel() {
         val m = model()
-        m.openResi(" tsa-90100000109 ")                         // spaces and case from the scanner are cleaned up
-        assertNull(m.scanRejected)
+        m.openResi(" TSA-90100000109 ")                         // the scanned text is used as it is, minus outer spaces
         assertEquals(Screen.Measure, m.screen)
         assertEquals("TSA-90100000109", m.draft!!.resi)
         assertEquals("o1", m.draft!!.orderId)
@@ -96,14 +86,9 @@ class FlowTest {
         m.back(); m.openResi("TSA-80745081104")
         assertEquals("TSA-80745081104", m.draft!!.resi)
         assertTrue(m.store.orders.any { "TSA-80745081104" in it.resi })
-    }
-
-    @Test fun formatCheckCanBeSwitchedOff() {
-        val m = model()
-        m.store.update { it.copy(resiCheck = false) }
-        m.openResi("AJ1234567890")
-        assertNull(m.scanRejected)
-        assertEquals(Screen.Measure, m.screen)
+        // no format rules: whatever the barcode holds becomes the parcel's number
+        m.back(); m.openResi("AJ-0001/xyz")
+        assertEquals("AJ-0001/xyz", m.draft!!.resi)
     }
 
     @Test fun lateHubPhotoAfterLeavingDoesNothing() {
