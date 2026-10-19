@@ -15,8 +15,9 @@ mockup made from these very screens is `../ukur_paket_mockup/v2`.
 
 | | |
 |---|---|
-| Device check | First screen: phone model, ARCore installed or not, Depth API or not, and the mode that follows (AR + Depth / AR Standar / Tidak Didukung). Asks Google Play to install *Google Play Services for AR* when it is missing. |
-| Pickup list | Example pickups (made-up names and tracking numbers), progress, scan the label (Google code scanner) or type the number. |
+| Device check | First screen: phone model, ARCore installed or not, Depth API or not, and the state that follows (Siap Ukur / Mode Dasar / Tidak Didukung), in plain words. Asks Google Play to install *Google Play Services for AR* when it is missing. |
+| Pickup list | Example pickups (made-up names and tracking numbers in the AnterAja format `TSA-` + digits), progress, scan the label (Google code scanner) or type the number. |
+| Tracking number check | Only a tracking number is accepted (Settings → Cek format resi, pattern `TSA-` + 8–14 digits). A label carries several codes: on a real AnterAja label the long Code 128 barcode holds `TSA-80745081104` while the small QR codes hold other things; scanning one of those shows **Bukan barcode resi** with Scan lagi / Ketik Resi, so a size is never tied to the wrong number. |
 | Measuring (ARCore) | 1/3 find the floor (white dots), 2/3 pick the parcel, 3/3 scan (move the phone round toward the corner, animated arc arrow, depth dots, progress), result (3D box drawn on the parcel, size labels, confidence, Save locked 2 s when the result is doubtful). Flashlight button (ARCore torch). |
 | Picking among many parcels | Tap the parcel, or **Pilih Area** and drag a box around it (the fix when a tap picks only part). MobileSAM cuts it out of the camera image; only depth points inside that cut-out and its footprint are measured. Other parcels in view get a dashed outline labelled **Paket lain**; tapping one picks it. **Mulai Scan** without a tap uses the crosshair as the tap. |
 | Next parcel of a pickup | **Paket berikutnya** keeps the AR session: no floor search again, and the parcels already measured carry a ✓ with their tracking number. |
@@ -63,8 +64,9 @@ Tested here, on the PC:
 | `GeometryTest` | box turned 30°, 40 × 30 × 20 cm, 2 mm noise, a taller box 8 cm away; 30 × 20 × 10 cm on a floor with 0,8 cm depth noise | within 1,2 cm, neighbour left out; within 2 cm |
 | `SegmenterTest` | the app's own MobileSAM code on the conveyor frame (7 parcels, some touching), one tap and one box each, vs the Python reference from the same ONNX files | mask IoU ≥ 0,985 for every tap and box (references made with the float32 decoder) |
 | `ConveyorReplayTest` | the conveyor scene in 3D, each parcel measured from geometry alone and from the tap/box cut-out | geometry alone merges touching parcels; with the cut-out every parcel stays separate (README section below) |
-| `FlowTest` | the courier's path through the screens: measure → weight → save → next parcel; a second tap on Simpan; re-measuring replaces the old record; Ukur di Hub on a phone without ARCore; a late hub photo after the courier left | 4 flows, records and screen stack as expected |
-| `ScreenshotTest` | every screen rendered on the JVM (`screenshots/`); camera screens on the mockup photo with the overlay the engine draws | 19 screens |
+| `FlowTest` | the courier's path through the screens: measure → weight → save → next parcel; a second tap on Simpan; re-measuring replaces the old record; Ukur di Hub on a phone without ARCore; a late hub photo after the courier left; a scanned QR that is not a tracking number; a scanned tracking number with spaces/lower case; the format check switched off | 7 flows, records and screen stack as expected |
+| `ResiTest` | the barcode cut from a photo of a real AnterAja label (bars only, no personal data) read with ZXing; accepted and rejected numbers | Code 128, `TSA-80745081104`; QR/order codes, product EAN-13 and URLs rejected |
+| `ScreenshotTest` | every screen rendered on the JVM (`screenshots/`); camera screens on the mockup photo with the overlay the engine draws | 20 screens |
 | Android lint | | no errors |
 
 **Not tested yet**: anything that needs a real phone: ARCore tracking, depth quality, how the cut-out lines up with
@@ -81,7 +83,7 @@ thresholds get tuned, ideally from recorded scans of 50–100 parcels with tape-
 | `ar/MeasureEngine.kt` | ARCore session, per-frame steps, tap/box pick, depth to 3D points, fence, other parcels, done marks, torch |
 | `ar/BackgroundRenderer.kt`, `ar/Snapshot.kt`, `ar/Recorder.kt` | camera image; evidence photo; raw scan recording |
 | `ar/ArCheck.kt` | ARCore availability, install request, Depth API check |
-| `data/Store.kt`, `data/Locator.kt` | records and settings in one JSON file; GPS |
+| `data/Store.kt`, `data/Locator.kt`, `data/Resi.kt` | records and settings in one JSON file; GPS; tracking number check |
 | `ui/` | Compose: `Screens.kt` (start, pickup, prep, weight, saved, history, detail, settings, phone without ARCore), `MeasureScreen.kt` (camera) |
 | `tools/` | `export_sam.py`, `check_sam_onnx.py` (model export and check), `fetch_icons.py`, conveyor replay scripts |
 

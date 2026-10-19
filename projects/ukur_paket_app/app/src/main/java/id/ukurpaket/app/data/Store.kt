@@ -20,7 +20,12 @@ data class Order(
     val kind: String = "store",          // store | home | warehouse
 )
 
-enum class Mode(val label: String) { AR_FULL("AR + Depth"), AR_BASIC("AR Standar"), NONE("Tidak Didukung") }
+/** [label]: the phone's state on the start screen; [method]: how a record was measured. Plain words, no product names. */
+enum class Mode(val label: String, val method: String) {
+    AR_FULL("Siap Ukur", "Kamera AR + sensor jarak"),
+    AR_BASIC("Mode Dasar", "Kamera AR"),
+    NONE("Tidak Didukung", "Tidak diukur"),
+}
 enum class Status(val label: String) { OK("Akurat"), CHECK("Perlu Dicek"), HUB("Ukur di Hub") }
 
 @Serializable
@@ -62,6 +67,9 @@ data class Settings(
     val record: Boolean = false,
     val prepShown: Int = 0,
     val courier: String = "Andi",
+    /** Accept only tracking numbers that match [resiPattern] (see [Resi]). */
+    val resiCheck: Boolean = true,
+    val resiPattern: String = Resi.DEFAULT_PATTERN,
 )
 
 @Serializable
@@ -129,7 +137,13 @@ class Store(private val ctx: Context) {
 
     private fun load(): Db {
         if (file.exists()) {
-            runCatching { return json.decodeFromString<Db>(file.readText()) }
+            runCatching {
+                val d = json.decodeFromString<Db>(file.readText())
+                // the example pickups of earlier test builds used made-up "UKP-…" numbers: swap in the current ones
+                return if (d.orders.any { o -> o.resi.any { it.startsWith("UKP-260419-") } })
+                    d.copy(orders = SAMPLE_ORDERS + d.orders.filter { o -> o.resi.none { it.startsWith("UKP-260419-") } })
+                else d
+            }
             // unreadable (e.g. written by an older test build): keep a copy instead of silently losing it
             file.copyTo(File(ctx.filesDir, "ukurpaket_${System.currentTimeMillis()}.bak.json"), overwrite = true)
         }
@@ -139,9 +153,9 @@ class Store(private val ctx: Context) {
     companion object {
         /** Example pickups so the app opens in a working state. Names and numbers are made up. */
         val SAMPLE_ORDERS = listOf(
-            Order("o1", "Toko Sinar Jaya", "Jl. Contoh Raya No. 12", "1,2 km", listOf("UKP-260419-0007", "UKP-260419-0008", "UKP-260419-0009"), "store"),
-            Order("o2", "Rumah · Ibu Rina", "Jl. Mawar No. 3", "2,8 km", listOf("UKP-260419-0010"), "home"),
-            Order("o3", "Gudang Mitra Cikarang", "Kawasan Industri Blok C-7", "jadwal 13:00", listOf("UKP-260419-0011", "UKP-260419-0012", "UKP-260419-0013"), "warehouse"),
+            Order("o1", "Toko Sinar Jaya", "Jl. Contoh Raya No. 12", "1,2 km", listOf("TSA-90100000107", "TSA-90100000108", "TSA-90100000109"), "store"),
+            Order("o2", "Rumah · Ibu Rina", "Jl. Mawar No. 3", "2,8 km", listOf("TSA-90100000110"), "home"),
+            Order("o3", "Gudang Mitra Cikarang", "Kawasan Industri Blok C-7", "jadwal 13:00", listOf("TSA-90100000111", "TSA-90100000112", "TSA-90100000113"), "warehouse"),
         )
     }
 }

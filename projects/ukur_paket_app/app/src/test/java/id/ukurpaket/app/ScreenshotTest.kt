@@ -117,20 +117,23 @@ class ScreenshotTest {
         screen("01_cek_hp", m, Screen.Start)
 
         m = model()
-        m.store.save(measured("UKP-260419-0010", "o2", 30.0, 20.0, 12.0, 1.2))
+        m.store.save(measured("TSA-90100000110", "o2", 30.0, 20.0, 12.0, 1.2))
         screen("02_pickup", m, Screen.Home)
+        m.scanRejected = "OJKX1234567AB68"                 // a QR from the label that is not the tracking number
+        screen("02b_bukan_resi", m, Screen.Home)
+        m.scanRejected = null
 
-        m.draft = Draft("UKP-260419-0007", "o1")
+        m.draft = Draft("TSA-90100000107", "o1")
         screen("03_persiapan", m, Screen.Prep)
 
-        m.draft = Draft("UKP-260419-0007", "o1", ResultData(27.0, 15.0, 6.0, 92, Status.OK, 8.0, thumb, null, Mode.AR_FULL))
+        m.draft = Draft("TSA-90100000107", "o1", ResultData(27.0, 15.0, 6.0, 92, Status.OK, 8.0, thumb, null, Mode.AR_FULL))
         screen("08_berat", m, Screen.Weight)
 
-        val saved = measured("UKP-260419-0007", "o1", 27.0, 15.0, 6.0, 0.10)
+        val saved = measured("TSA-90100000107", "o1", 27.0, 15.0, 6.0, 0.10)
         m.store.save(saved)
         screen("09_tersimpan", m, Screen.Saved(saved.id))
-        m.store.save(measured("UKP-260419-0011", "o3", 41.5, 33.0, 24.5, 3.4, Status.CHECK))
-        val hub = hubRecord("UKP-260419-0012", "o3")
+        m.store.save(measured("TSA-90100000111", "o3", 41.5, 33.0, 24.5, 3.4, Status.CHECK))
+        val hub = hubRecord("TSA-90100000112", "o3")
         m.store.save(hub)
         screen("10_riwayat", m, Screen.History)
         screen("11_pengaturan", m, Screen.Settings)
@@ -138,7 +141,7 @@ class ScreenshotTest {
 
         m = model(Mode.NONE)
         screen("12_cek_hp_tanpa_arcore", m, Screen.Start)
-        m.draft = Draft("UKP-260419-0008", "o1")
+        m.draft = Draft("TSA-90100000108", "o1")
         screen("13_hp_tanpa_arcore_ukur", m, Screen.NoAr)
     }
 
@@ -177,10 +180,10 @@ class ScreenshotTest {
         val marks = othersAt.map { o -> floatArrayOf((o[0] + o[2]) / 2, o[5] - 30f * d) }
         cam("14_paket_berikutnya", oy, EngineUi(Phase.SELECT, planeFound = true, targetFound = true, hint = Hint.NONE, live = box,
             overlay = Overlay(floorDots = px(grid, oy), outline = px(outline, oy), marks = marks[0] + marks[1],
-                markLabels = listOf("…0007", "…0008")), reticle = 206f * d to (400f + oy) * d), resi = "UKP-260419-0009")
+                markLabels = listOf("…0007", "…0008")), reticle = 206f * d to (400f + oy) * d), resi = "TSA-90100000109")
     }
 
-    private fun cam(name: String, oyDp: Float, ui: EngineUi, demoBox: FloatArray? = null, showHub: Boolean = false, resi: String = "UKP-260419-0007") {
+    private fun cam(name: String, oyDp: Float, ui: EngineUi, demoBox: FloatArray? = null, showHub: Boolean = false, resi: String = "TSA-90100000107") {
         val m = model()
         m.draft = Draft(resi, "o1")
         val photo = BitmapFactory.decodeStream(javaClass.getResourceAsStream("/paket.jpg")).asImageBitmap()

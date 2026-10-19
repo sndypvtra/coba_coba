@@ -13,7 +13,7 @@ android {
         applicationId = "id.ukurpaket.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
+        versionCode = 4
         versionName = "0.1.0-uji"
         // 32-bit kept too, so the app still installs (and can mark parcels for the hub) on older phones.
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
@@ -65,6 +65,8 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     // the same segmentation code on the PC: the desktop ONNX Runtime instead of the Android one
     testImplementation("com.microsoft.onnxruntime:onnxruntime:1.20.0")
+    // reads the barcode of a real AnterAja label in ResiTest (the phone uses Google's scanner)
+    testImplementation("com.google.zxing:core:3.5.3")
     // Screenshots of every screen on the JVM (no phone or emulator needed): ./gradlew testDebugUnitTest
     testImplementation("org.robolectric:robolectric:4.14.1")
     testImplementation("io.github.takahirom.roborazzi:roborazzi:1.40.1")

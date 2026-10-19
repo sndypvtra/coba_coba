@@ -23,11 +23,11 @@ data class DeviceCaps(
 
 enum class ArState(val label: String) {
     CHECKING("Memeriksa…"),
-    READY("ARCore siap"),
-    NEEDS_INSTALL("ARCore perlu dipasang"),
-    INSTALL_DECLINED("Pemasangan ARCore dibatalkan"),
-    UNSUPPORTED("HP ini tidak didukung ARCore"),
-    ERROR("ARCore tidak bisa dibuka"),
+    READY("Siap"),
+    NEEDS_INSTALL("Perlu dipasang"),
+    INSTALL_DECLINED("Batal dipasang"),
+    UNSUPPORTED("Tidak didukung"),
+    ERROR("Tidak bisa dibuka"),
 }
 
 object ArCheck {

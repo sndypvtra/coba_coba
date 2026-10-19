@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.sp
 import id.ukurpaket.app.BuildConfigInfo
 import id.ukurpaket.app.ar.ArState
 import id.ukurpaket.app.data.Measurement
+import id.ukurpaket.app.data.Resi
 import id.ukurpaket.app.data.Mode
 import id.ukurpaket.app.data.Status
 import id.ukurpaket.app.data.cm
@@ -70,9 +71,9 @@ private fun StatusChip(m: Measurement) = when (m.status) {
 
 @Composable
 private fun ModeChip(mode: Mode) = when (mode) {
-    Mode.AR_FULL -> Chip("AR + Depth", Tone.OK, "view_in_ar")
-    Mode.AR_BASIC -> Chip("AR Standar", Tone.BRAND, "view_in_ar")
-    Mode.NONE -> Chip("Tidak Didukung", Tone.WARN, "error")
+    Mode.AR_FULL -> Chip(mode.label, Tone.OK, "check_circle")
+    Mode.AR_BASIC -> Chip(mode.label, Tone.BRAND, "view_in_ar")
+    Mode.NONE -> Chip(mode.label, Tone.WARN, "error")
 }
 
 @Composable
@@ -102,8 +103,8 @@ fun StartScreen(model: AppModel, activity: Activity) {
             T("Cek Perangkat", 15.sp, FontWeight.SemiBold)
             Spacer(Modifier.height(10.dp))
             CheckRow("smartphone", "HP", c.model, true)
-            CheckRow("view_in_ar", "ARCore", c.arcore.label, c.arcore == ArState.READY, c.arcore == ArState.CHECKING)
-            CheckRow("deployed_code", "Depth", if (c.arcore != ArState.READY) "–" else if (c.depth) "Didukung" else "Tidak didukung",
+            CheckRow("view_in_ar", "Kamera AR", c.arcore.label, c.arcore == ArState.READY, c.arcore == ArState.CHECKING)
+            CheckRow("deployed_code", "Sensor jarak", if (c.arcore != ArState.READY) "–" else if (c.depth) "Ada" else "Tidak ada",
                 c.depth, c.arcore == ArState.CHECKING)
         }
         if (c.arcore != ArState.CHECKING) Card(padding = 14.dp) {
@@ -112,14 +113,14 @@ fun StartScreen(model: AppModel, activity: Activity) {
             }
             Spacer(Modifier.height(8.dp))
             T(when (c.mode) {
-                Mode.AR_FULL -> "Mode terbaik: lantai, paket, dan jarak (Depth) dibaca langsung oleh HP."
-                Mode.AR_BASIC -> "HP ini tidak punya sensor jarak (Depth). Ukuran dihitung dari titik ARCore saja, hasilnya lebih sering Perlu Dicek."
+                Mode.AR_FULL -> "HP ini siap mengukur: lantai, paket, dan jarak dibaca langsung oleh kamera."
+                Mode.AR_BASIC -> "HP ini bisa mengukur tanpa sensor jarak. Hasilnya lebih sering Perlu Dicek."
                 Mode.NONE -> noArText(c.arcore)
             }, 13.5.sp, color = C.t2)
         }
         Spacer(Modifier.weight(1f))
         if (c.arcore == ArState.NEEDS_INSTALL || c.arcore == ArState.INSTALL_DECLINED)
-            PrimaryButton("Pasang ARCore", "download", Modifier.fillMaxWidth()) { model.install(activity) }
+            PrimaryButton("Pasang Komponen AR", "download", Modifier.fillMaxWidth()) { model.install(activity) }
         if (c.arcore != ArState.CHECKING)
             SecondaryButton(if (c.arcore == ArState.READY) "Lanjut" else "Lanjut tanpa AR", "arrow_forward", Modifier.fillMaxWidth()) { model.home() }
     }
@@ -129,7 +130,7 @@ fun StartScreen(model: AppModel, activity: Activity) {
 private fun CheckRow(icon: String, label: String, value: String, ok: Boolean, busy: Boolean = false) {
     Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
         Sym(icon, 20.dp, C.t2)
-        T(label, 14.sp, modifier = Modifier.padding(start = 10.dp).width(90.dp), color = C.t2)
+        T(label, 14.sp, modifier = Modifier.padding(start = 10.dp).width(112.dp), color = C.t2)
         T(value, 14.sp, FontWeight.SemiBold, modifier = Modifier.weight(1f))
         when {
             busy -> CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
@@ -208,16 +209,36 @@ fun HomeScreen(model: AppModel, activity: Activity) {
         }
         BottomNav(model, Screen.Home)
     }
-    if (typing) ResiDialog(onDismiss = { typing = false }) { typing = false; model.openResi(it) }
+    if (typing) ResiDialog(model, onDismiss = { typing = false }) { typing = false; model.openResi(it) }
+    model.scanRejected?.let { code ->
+        AlertDialog(onDismissRequest = { model.scanRejected = null },
+            title = { T("Bukan barcode resi", 18.sp, FontWeight.SemiBold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    T("Yang terbaca: ${code.take(40)}", 13.5.sp, color = C.t2)
+                    T("Arahkan kamera ke barcode panjang di samping tulisan Nomor Pengiriman.", 14.sp)
+                }
+            },
+            confirmButton = { TextButton(onClick = { model.scanRejected = null; model.scanResi(activity) }) { T("Scan lagi", weight = FontWeight.SemiBold, color = C.brand) } },
+            dismissButton = { TextButton(onClick = { model.scanRejected = null; typing = true }) { T("Ketik Resi", color = C.t2) } })
+    }
 }
 
 @Composable
-private fun ResiDialog(onDismiss: () -> Unit, onOk: (String) -> Unit) {
+private fun ResiDialog(model: AppModel, onDismiss: () -> Unit, onOk: (String) -> Unit) {
     var v by remember { mutableStateOf("") }
+    val code = Resi.normalize(v)
+    val bad = code.isNotEmpty() && !model.acceptsResi(code)
     AlertDialog(onDismissRequest = onDismiss,
         title = { T("Nomor resi", 18.sp, FontWeight.SemiBold) },
-        text = { OutlinedTextField(v, { v = it.uppercase() }, singleLine = true, placeholder = { T("UKP-…", color = C.t3) }) },
-        confirmButton = { TextButton(onClick = { if (v.isNotBlank()) onOk(v.trim()) }) { T("Ukur", weight = FontWeight.SemiBold, color = C.brand) } },
+        text = {
+            OutlinedTextField(v, { v = it.uppercase().take(40) }, singleLine = true, isError = bad,
+                placeholder = { T(Resi.EXAMPLE, color = C.t3) },
+                supportingText = { T(if (bad) "Format resi tidak dikenal. Contoh: ${Resi.EXAMPLE}" else "Lihat Nomor Pengiriman di label paket", 12.sp,
+                    color = if (bad) C.red else C.t3) })
+        },
+        confirmButton = { TextButton(onClick = { if (code.isNotEmpty() && !bad) onOk(code) }, enabled = code.isNotEmpty() && !bad) {
+            T("Ukur", weight = FontWeight.SemiBold, color = if (code.isNotEmpty() && !bad) C.brand else C.t3) } },
         dismissButton = { TextButton(onClick = onDismiss) { T("Batal", color = C.t2) } })
 }
 
@@ -380,7 +401,7 @@ private fun MeasurementCard(m: Measurement) {
                 KV("Ukuran", m.dims())
                 if (m.atHub) KV("Alasan", m.note ?: "-")
                 else KV("Berat Tagih", "${m.chargedKg.id(2)} kg · ${if (m.volumetricWins) "volumetrik" else "aktual"}")
-                KV("Metode", if (m.atHub) "Ukur di Hub" else m.mode.label + " · Skor ${m.confidence}%")
+                KV("Metode", if (m.atHub) "Ukur di Hub" else m.mode.method + " · Skor ${m.confidence}%")
                 KV("Waktu & lokasi", SimpleDateFormat("HH:mm", ID).format(Date(m.createdAt)) + " · " + m.place())
             }
         }
@@ -431,7 +452,7 @@ fun DetailScreen(model: AppModel, activity: Activity, id: String) {
     var confirm by remember { mutableStateOf(false) }
     if (m == null) { LaunchedEffect(Unit) { model.back() }; return }
     Column(Modifier.fillMaxSize()) {
-        TopBar(m.resi, if (m.atHub) m.status.label else m.mode.label, onBack = { model.back() })
+        TopBar(m.resi, if (m.atHub) m.status.label else m.mode.method, onBack = { model.back() })
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Photo(m.photo, Modifier.fillMaxWidth().height(360.dp).clip(RoundedCornerShape(16.dp)), sample = 1)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { StatusChip(m); if (!m.atHub) Chip("Skor ${m.confidence}%", Tone.GREY) }
@@ -477,14 +498,14 @@ fun SettingsScreen(model: AppModel, activity: Activity) {
                 T("HP ini", 15.sp, FontWeight.SemiBold)
                 Spacer(Modifier.height(6.dp))
                 CheckRow("smartphone", "Model", c.model, true)
-                CheckRow("view_in_ar", "ARCore", c.arcore.label, c.arcore == ArState.READY, c.arcore == ArState.CHECKING)
-                CheckRow("deployed_code", "Depth", if (c.depth) "Didukung" else "Tidak didukung", c.depth, c.arcore == ArState.CHECKING)
+                CheckRow("view_in_ar", "Kamera AR", c.arcore.label, c.arcore == ArState.READY, c.arcore == ArState.CHECKING)
+                CheckRow("deployed_code", "Sensor jarak", if (c.depth) "Ada" else "Tidak ada", c.depth, c.arcore == ArState.CHECKING)
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     ModeChip(c.mode)
                     Spacer(Modifier.weight(1f))
                     if (c.arcore == ArState.NEEDS_INSTALL || c.arcore == ArState.INSTALL_DECLINED)
-                        Chip("Pasang ARCore", Tone.BRAND, "download") { model.install(activity) }
+                        Chip("Pasang Komponen AR", Tone.BRAND, "download") { model.install(activity) }
                     else Chip("Periksa ulang", Tone.GREY, "refresh") { model.recheck() }
                 }
             }
@@ -503,8 +524,18 @@ fun SettingsScreen(model: AppModel, activity: Activity) {
             Card {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
+                        T("Cek format resi", 15.sp, FontWeight.SemiBold)
+                        T("Hanya terima nomor resi seperti ${Resi.EXAMPLE}, supaya QR lain di label tidak tercatat sebagai resi. " +
+                            "Matikan kalau format resi di lapangan berbeda.", 12.5.sp, color = C.t2)
+                    }
+                    Switch(s.resiCheck, { v -> model.store.update { it.copy(resiCheck = v) } })
+                }
+            }
+            Card {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
                         T("Rekam Data Scan (uji coba)", 15.sp, FontWeight.SemiBold)
-                        T("Untuk uji coba: menyimpan depth, posisi HP, dan foto setiap scan supaya bisa dianalisis di PC. Memakai ±5–20 MB per paket.",
+                        T("Untuk uji coba: menyimpan data jarak, posisi HP, dan foto setiap scan supaya bisa dianalisis di PC. Memakai ±5–20 MB per paket.",
                             12.5.sp, color = C.t2)
                     }
                     Switch(s.record, { v -> model.store.update { it.copy(record = v) } })
@@ -531,9 +562,9 @@ fun SettingsScreen(model: AppModel, activity: Activity) {
 }
 
 private fun noArText(st: ArState) = when (st) {
-    ArState.NEEDS_INSTALL -> "ARCore (Google Play Services for AR) belum terpasang. Pasang sekali dari Play Store, lalu kembali ke sini."
-    ArState.INSTALL_DECLINED -> "Pemasangan ARCore dibatalkan. Tanpa ARCore, HP ini tidak bisa mengukur paket."
-    else -> "HP ini tidak didukung ARCore, jadi tidak bisa mengukur paket. Paket tetap bisa diambil dan diukur di hub."
+    ArState.NEEDS_INSTALL -> "Komponen AR dari Google belum terpasang. Pasang sekali lewat Play Store, lalu kembali ke sini."
+    ArState.INSTALL_DECLINED -> "Pemasangan komponen AR dibatalkan. Tanpa komponen itu, HP ini belum bisa mengukur paket."
+    else -> "HP ini belum mendukung kamera AR, jadi tidak bisa mengukur paket. Paket tetap bisa diambil dan diukur di hub."
 }
 
 // ------------------------------------------------------------------ phone without ARCore
@@ -554,12 +585,12 @@ fun NoArScreen(model: AppModel, activity: Activity) {
                 Spacer(Modifier.height(10.dp))
                 T(noArText(c.arcore), 13.5.sp, color = C.t2)
             }
-            T("Untuk mengukur, pakai HP yang didukung ARCore (daftar resmi Google: developers.google.com/ar/devices).", 12.5.sp, color = C.t3)
+            T("Untuk mengukur, pakai HP yang mendukung kamera AR (daftar resmi Google: developers.google.com/ar/devices).", 12.5.sp, color = C.t3)
         }
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (c.arcore == ArState.NEEDS_INSTALL || c.arcore == ArState.INSTALL_DECLINED)
-                PrimaryButton("Pasang ARCore", "download", Modifier.fillMaxWidth()) { model.install(activity) }
-            SecondaryButton("Ukur di Hub", "warehouse", Modifier.fillMaxWidth()) { model.markHub("HP kurir tanpa ARCore", null) }
+                PrimaryButton("Pasang Komponen AR", "download", Modifier.fillMaxWidth()) { model.install(activity) }
+            SecondaryButton("Ukur di Hub", "warehouse", Modifier.fillMaxWidth()) { model.markHub("HP kurir belum mendukung kamera AR", null) }
         }
     }
 }
