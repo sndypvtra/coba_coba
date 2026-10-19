@@ -293,3 +293,15 @@ fun minAreaRect(hull: List<P2>): Rect2 {
     }
     return best!!
 }
+
+/** Point in a convex polygon (either winding). */
+fun inside(poly: List<P2>, x: Float, y: Float): Boolean {
+    var pos = false; var neg = false
+    for (i in poly.indices) {
+        val a = poly[i]; val b = poly[(i + 1) % poly.size]
+        val c = (b.a - a.a) * (y - a.b) - (b.b - a.b) * (x - a.a)
+        if (c > 0) pos = true else if (c < 0) neg = true
+        if (pos && neg) return false
+    }
+    return true
+}

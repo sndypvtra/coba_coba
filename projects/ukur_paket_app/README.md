@@ -10,23 +10,22 @@ Play: once to install ARCore, and for the label scanner module.
 
 | | |
 |---|---|
-| Device check | First screen: phone model, ARCore installed or not, Depth API or not, and the mode that follows (AR penuh / AR dasar / kertas penanda). Asks Google Play to install *Google Play Services for AR* when it is missing. |
+| Device check | First screen: phone model, ARCore installed or not, Depth API or not, and the mode that follows (AR penuh / AR dasar / tanpa AR). Asks Google Play to install *Google Play Services for AR* when it is missing. |
 | Pickup list | Example pickups (made-up names and tracking numbers), progress, scan the label (Google code scanner) or type the number. |
 | Measuring (ARCore) | 1/3 find the floor (white dots), 2/3 pick the parcel, 3/3 scan (move the phone round toward the corner, animated arc arrow, depth dots, progress), result (3D box drawn on the parcel, size labels, confidence, Save locked 2 s when the result is doubtful). Flashlight button (ARCore torch). |
 | Picking among many parcels | Tap the parcel, or **Gambar kotak** and drag a box around it (the fix when a tap picks only part). MobileSAM cuts it out of the camera image; only depth points inside that cut-out and its footprint are measured. Other parcels in view get a dashed outline labelled **Paket lain**; tapping one picks it. "Kunci paket" without a tap uses the crosshair as the tap. |
 | Next parcel of a pickup | **Paket berikutnya** keeps the AR session: no floor search again, and the parcels already measured carry a ✓ with their tracking number. |
-| Phones without ARCore | **Kertas penanda**: the courier lays a printed A4 sheet (black square ring + 10 cm check bar) next to the parcel and takes one photo. The sheet gives floor, scale and camera; the courier taps the parcel or draws a box; the size comes from the parcel's outline (see below). The PDF is in Settings and in `docs/kertas_penanda_A4.pdf`. |
+| Phones without ARCore | Cannot measure: the app says so, offers the ARCore install when Google Play can install it, and lets the courier mark the parcel **ukur di hub**. |
 | Cannot be measured | After two failed attempts: **Tandai ukur di hub** with a reason. The record keeps photo, time, place and reason, without a size; the hub measures it. |
 | Weight | Scale weight vs volumetric weight (divisor 4.000 / 5.000 / 6.000 in Settings); the larger is used. |
 | Records | Saved on the phone with the evidence photo (photo with the 3D box), time and GPS (when the courier allows location). History, detail, delete, re-measure, share all as JSON. |
 | Recording for the PC | Settings → "Rekam data scan": every AR scan also saves raw depth, confidence, camera pose, intrinsics and some frames, to replay on a PC with the same code. |
 
-There is no manual size entry: every size comes from the camera. When neither ARCore nor the sheet gives one, the
-parcel is marked for the hub instead of being typed in.
+There is no manual size entry: every size comes from the camera. When it cannot give one, the parcel is marked for
+the hub instead of being typed in.
 
-## How it measures
+## How it measures (method A)
 
-**ARCore (method A)**
 1. ARCore finds horizontal planes and tracks the phone in metres.
 2. The courier taps or draws a box; MobileSAM (Apache 2.0, ONNX Runtime) cuts the parcel out of that camera image.
    A 3D point belongs to the parcel when it projects inside the (slightly grown) cut-out as seen from that frame
@@ -37,15 +36,6 @@ parcel is marked for the hub instead of being typed in.
    smallest rectangle around its footprint (rotating calipers, 0,5/99,5 % extents): L × W. H is the 95th percentile height.
 5. Confidence (0–100) from point count, frames, footprint fill and top flatness. ≥ 75 is "Akurat", below is "Cek ulang".
    Phones without the Depth API use ARCore feature points and are never "Akurat" on their own.
-
-**Marker sheet (one photo)**
-1. `MarkerDetector` (plain Kotlin, no OpenCV): local threshold, dark blobs, a quadrilateral around each, check that ring /
-   hole / margin are dark / light / light, then the 8 ring edges re-fitted on the image gradient: sub-pixel corners.
-2. Homography sheet → photo; focal length from the photo's EXIF (35 mm equivalent) or, without it, from the homography
-   itself; camera pose from both.
-3. MobileSAM cuts out the tapped parcel. `SingleView` tries heights: for each, the footprint is every floor point whose
-   column projects inside the outline (silhouette carving); the box on that footprint is projected back, and the height
-   whose box matches the outline best wins. A wide band of almost-as-good heights lowers the confidence.
 
 ## Build
 
@@ -68,14 +58,12 @@ Tested here, on the PC:
 | `GeometryTest` | box turned 30°, 40 × 30 × 20 cm, 2 mm noise, a taller box 8 cm away; 30 × 20 × 10 cm on a floor with 0,8 cm depth noise | within 1,2 cm, neighbour left out; within 2 cm |
 | `SegmenterTest` | the app's own MobileSAM code on the conveyor frame (7 parcels, some touching), one tap and one box each, vs the Python reference from the same ONNX files | mask IoU 0,996–1,000 for every tap and box |
 | `ConveyorReplayTest` | the conveyor scene in 3D, each parcel measured from geometry alone and from the tap/box cut-out | geometry alone merges touching parcels; with the cut-out every parcel stays separate (README section below) |
-| `SingleViewTest` | marker mode on rendered photos (4 views, 2 × 2 supersampled, noise): sheet corners, focal length, size | corners ≤ 0,9 px; focal from the sheet within 1 %; size within 1 cm (exact outline). Full chain on a ray-traced photo (sheet → MobileSAM tap → size): 37,9 × 27,7 × 18,4 cm for a 38 × 28 × 18 cm carton |
-| `ScreenshotTest` | every screen rendered on the JVM (`screenshots/`); AR screens on the mockup photo with the overlay the engine draws, marker screens with the real chain on the ray-traced photo | 21 screens |
+| `ScreenshotTest` | every screen rendered on the JVM (`screenshots/`, `fitur_baru.jpg` = the new ones on one board); camera screens on the mockup photo with the overlay the engine draws | 19 screens |
 | Android lint | | no errors |
 
 **Not tested yet**: anything that needs a real phone: ARCore tracking, depth quality, how the cut-out lines up with
 depth on a moving phone, MobileSAM speed on a phone CPU (about 3–5 s per tap on this PC's CPU in the tests; a phone
-may be similar or slower), heat, battery, real photos of the marker sheet (printing, glare, crumpled paper). The first
-test on an ARCore phone (for example a Galaxy A35 5G / A55 5G) and on one cheap phone without ARCore is where the
+may be similar or slower), heat, battery. The first test on an ARCore phone (for example a Galaxy A35 5G / A55 5G) is where the
 thresholds get tuned, ideally from recorded scans of 50–100 parcels with tape-measure sizes.
 
 ## Code
@@ -84,13 +72,12 @@ thresholds get tuned, ideally from recorded scans of 50–100 parcels with tape-
 |---|---|
 | `measure/Geometry.kt` | Android-free measuring core: voxel merge, segmentation, clusters ("Paket lain"), convex hull, minimum-area rectangle, confidence |
 | `measure/Segmenter.kt` | MobileSAM through ONNX Runtime: tap / box → mask; mask outline, largest part, dilation |
-| `measure/Marker.kt`, `measure/SingleView.kt` | the printed sheet, its detector, homography, camera from the sheet, size from one photo |
 | `ar/MeasureEngine.kt` | ARCore session, per-frame steps, tap/box pick, depth to 3D points, fence, other parcels, done marks, torch |
 | `ar/BackgroundRenderer.kt`, `ar/Snapshot.kt`, `ar/Recorder.kt` | camera image; evidence photo; raw scan recording |
 | `ar/ArCheck.kt` | ARCore availability, install request, Depth API check |
-| `data/Store.kt`, `data/Locator.kt`, `data/MarkerPdf.kt` | records and settings in one JSON file; GPS; the printable sheet |
-| `ui/` | Compose: `Screens.kt` (start, pickup, prep, weight, saved, history, detail, settings), `MeasureScreen.kt` (AR), `MarkerScreen.kt` (one photo + sheet) |
-| `tools/` | `export_sam.py`, `check_sam_onnx.py` (model export and check), `marker_sheet.py` (PDF), `fetch_icons.py`, conveyor replay scripts |
+| `data/Store.kt`, `data/Locator.kt` | records and settings in one JSON file; GPS |
+| `ui/` | Compose: `Screens.kt` (start, pickup, prep, weight, saved, history, detail, settings, phone without ARCore), `MeasureScreen.kt` (camera) |
+| `tools/` | `export_sam.py`, `check_sam_onnx.py` (model export and check), `fetch_icons.py`, conveyor replay scripts |
 
 Fonts: Inter (SIL OFL 1.1). Icons: Material Symbols Rounded (Apache 2.0), bundled subset. Model: MobileSAM (Apache 2.0).
 Runtime: ONNX Runtime (MIT).

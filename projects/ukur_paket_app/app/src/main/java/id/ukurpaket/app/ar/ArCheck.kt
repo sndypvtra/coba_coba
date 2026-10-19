@@ -15,7 +15,7 @@ data class DeviceCaps(
     val model: String = "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}",
 ) {
     val mode: Mode get() = when {
-        arcore != ArState.READY -> Mode.MARKER
+        arcore != ArState.READY -> Mode.NONE
         depth -> Mode.AR_FULL
         else -> Mode.AR_BASIC
     }

@@ -2,7 +2,6 @@ package id.ukurpaket.app
 
 import android.app.Activity
 import android.app.Application
-import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -33,20 +32,12 @@ import id.ukurpaket.app.data.Measurement
 import id.ukurpaket.app.data.Mode
 import id.ukurpaket.app.data.Status
 import id.ukurpaket.app.measure.BoxResult
-import id.ukurpaket.app.measure.FloorCamera
-import id.ukurpaket.app.measure.MarkerDetector
-import id.ukurpaket.app.measure.Segmenter
-import id.ukurpaket.app.measure.SingleView
 import id.ukurpaket.app.measure.V3
 import id.ukurpaket.app.ui.App
 import id.ukurpaket.app.ui.AppModel
 import id.ukurpaket.app.ui.ArChrome
 import id.ukurpaket.app.ui.Draft
 import id.ukurpaket.app.ui.LocalStill
-import id.ukurpaket.app.ui.MStep
-import id.ukurpaket.app.ui.MarkerActions
-import id.ukurpaket.app.ui.MarkerChrome
-import id.ukurpaket.app.ui.MarkerUi
 import id.ukurpaket.app.ui.SamState
 import id.ukurpaket.app.ui.Screen
 import id.ukurpaket.app.ui.UkurTheme
@@ -62,14 +53,12 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.io.File
-import java.util.Locale
 import kotlin.math.hypot
 
 /**
  * Renders every screen on the JVM, phone size 412 x 892 dp at 3x, into app/screenshots/.
  * The AR camera screens use the parcel photo from the mockup with the overlay the engine would draw;
- * the camera picture itself only exists on a real phone. The marker-mode screens run the real chain
- * (sheet detection, MobileSAM tap, single-view size) on a ray-traced photo with a known 38 x 28 x 18 cm carton.
+ * the camera picture itself only exists on a real phone.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -97,7 +86,7 @@ class ScreenshotTest {
         m.caps = when (mode) {
             Mode.AR_FULL -> DeviceCaps(ArState.READY, true, "samsung SM-A356E")
             Mode.AR_BASIC -> DeviceCaps(ArState.READY, false, "samsung SM-A245F")
-            Mode.MARKER -> DeviceCaps(ArState.UNSUPPORTED, false, "samsung SM-A055F")
+            Mode.NONE -> DeviceCaps(ArState.UNSUPPORTED, false, "samsung SM-A055F")
         }
         m.samState = SamState.READY
         return m
@@ -145,10 +134,12 @@ class ScreenshotTest {
         m.store.save(hub)
         screen("10_riwayat", m, Screen.History)
         screen("11_pengaturan", m, Screen.Settings)
-        screen("17_detail_ukur_di_hub", m, Screen.Detail(hub.id))
+        screen("15_detail_ukur_di_hub", m, Screen.Detail(hub.id))
 
-        m = model(Mode.MARKER)
+        m = model(Mode.NONE)
         screen("12_cek_hp_tanpa_arcore", m, Screen.Start)
+        m.draft = Draft("UKP-260419-0008", "o1")
+        screen("13_hp_tanpa_arcore_ukur", m, Screen.NoAr)
     }
 
     @Test fun cameraScreens() {
@@ -184,7 +175,7 @@ class ScreenshotTest {
         cam("07c_tandai_ukur_di_hub", -59f, doubtful, showHub = true)
         // the third parcel of a pickup: the floor is kept, the two cartons already measured carry a check mark
         val marks = othersAt.map { o -> floatArrayOf((o[0] + o[2]) / 2, o[5] - 30f * d) }
-        cam("16_beruntun", oy, EngineUi(Phase.SELECT, planeFound = true, targetFound = true, hint = Hint.NONE, live = box,
+        cam("14_beruntun", oy, EngineUi(Phase.SELECT, planeFound = true, targetFound = true, hint = Hint.NONE, live = box,
             overlay = Overlay(floorDots = px(grid, oy), outline = px(outline, oy), marks = marks[0] + marks[1],
                 markLabels = listOf("…0007", "…0008")), reticle = 206f * d to (400f + oy) * d), resi = "UKP-260419-0009")
     }
@@ -201,46 +192,5 @@ class ScreenshotTest {
                 ArChrome(ui, engine, m, null, demoBox, showHub)
             }
         }
-    }
-
-    @Test fun markerScreens() {
-        val sc = SyntheticScene()
-        val argb = sc.argb()
-        val bmp = Bitmap.createBitmap(argb, sc.w, sc.h, Bitmap.Config.ARGB_8888).asImageBitmap()
-        val gray = IntArray(argb.size) { i -> val p = argb[i]; (((p shr 16) and 255) * 299 + ((p shr 8) and 255) * 587 + (p and 255) * 114) / 1000 }
-        val hit = MarkerDetector.detect(gray, sc.w, sc.h)!!
-        val cam = FloorCamera.fromHomography(hit.h, sc.w, sc.h, sc.f)!!
-        val tap = sc.tapPoint()
-        // the app's MobileSAM when ONNX Runtime loads here; the ray-traced outline otherwise
-        val mask = try {
-            Segmenter(File("src/main/assets/sam/encoder.onnx").readBytes(), File("src/main/assets/sam/decoder.onnx").readBytes()).use { s ->
-                s.tap(s.embed(argb, sc.w, sc.h), tap.a, tap.b)
-            }
-        } catch (e: Throwable) { sc.mask() }
-        val r = SingleView.measure(mask, cam)!!
-        val corners = (r.floorCorners + r.topCorners).map { cam.project(it.x.toDouble(), it.y.toDouble(), it.z.toDouble())!! }
-        val box = FloatArray(16) { i -> if (i % 2 == 0) corners[i / 2].a else corners[i / 2].b }
-        val conf = SingleView.confidence(r)
-        fun r1(x: Float) = Math.round(x * 1000.0) / 10.0
-        val res = ResultData(r1(r.lengthM), r1(r.widthM), r1(r.heightM), conf, if (conf >= 75) Status.OK else Status.CHECK, 14.0, null, null, Mode.MARKER)
-        File("build/conveyor").mkdirs()
-        File("build/conveyor/marker_screens.txt").writeText(String.format(Locale.US,
-            "marker screenshot: %.1f x %.1f x %.1f cm (truth 38 x 28 x 18), conf %d\n", res.lengthCm, res.widthCm, res.heightCm, conf))
-
-        val base = MarkerUi(photo = bmp, iw = sc.w, ih = sc.h, sheet = hit.corners)
-        marker("13_kertas_penanda_foto", MarkerUi())
-        marker("14_kertas_penanda_pilih", base.copy(step = MStep.PICK))
-        marker("15_kertas_penanda_hasil", base.copy(step = MStep.RESULT, outline = mask.outline(), box = box, result = res))
-    }
-
-    private fun marker(name: String, ui: MarkerUi) {
-        val m = model(Mode.MARKER)
-        m.draft = Draft("UKP-260419-0008", "o1")
-        val none = object : MarkerActions {
-            override fun back() {}; override fun take() {}; override fun sheet() {}
-            override fun tap(x: Float, y: Float) {}; override fun box(x0: Float, y0: Float, x1: Float, y1: Float) {}
-            override fun repeat() {}; override fun retake() {}; override fun save(r: ResultData) {}; override fun hub(reason: String) {}
-        }
-        shot(name) { MarkerChrome(ui, m, none) }
     }
 }

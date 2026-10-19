@@ -29,7 +29,6 @@ import id.ukurpaket.app.ar.DeviceCaps
 import id.ukurpaket.app.ar.MeasureEngine
 import id.ukurpaket.app.ar.ResultData
 import id.ukurpaket.app.data.Locator
-import id.ukurpaket.app.data.MarkerPdf
 import id.ukurpaket.app.data.Measurement
 import id.ukurpaket.app.data.Mode
 import id.ukurpaket.app.data.Order
@@ -51,7 +50,8 @@ sealed class Screen {
     object Settings : Screen()
     object Prep : Screen()
     object Measure : Screen()
-    object Marker : Screen()
+    /** This phone cannot measure (no ARCore): explain, offer ARCore install, or hand the parcel to the hub. */
+    object NoAr : Screen()
     object Weight : Screen()
     data class Saved(val id: String) : Screen()
     data class Detail(val id: String) : Screen()
@@ -147,13 +147,11 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
         locator.refresh()
         val s = store.settings.value
         when {
-            caps.mode == Mode.MARKER -> go(Screen.Marker)          // its first step shows the rules itself
+            caps.mode == Mode.NONE -> go(Screen.NoAr)
             s.prepShown < 3 -> { store.update { it.copy(prepShown = it.prepShown + 1) }; go(Screen.Prep) }
-            else -> go(measureScreen())
+            else -> go(Screen.Measure)
         }
     }
-
-    fun measureScreen(): Screen = if (caps.mode == Mode.MARKER) Screen.Marker else Screen.Measure
 
     /** "Paket berikutnya": back to the list underneath, keeping the AR session for this pickup. */
     fun nextParcel(resi: String, orderId: String?) { stack.clear(); stack.add(Screen.Home); startMeasure(resi, orderId) }
@@ -194,11 +192,6 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
         stack.removeAt(stack.size - 1)
         if (stack.lastOrNull() == Screen.Prep) stack.removeAt(stack.size - 1)
         go(Screen.Saved(m.id))
-    }
-
-    fun markerSheet(activity: Activity) {
-        val f = MarkerPdf.write(File(getApplication<Application>().cacheDir, "kertas_penanda_A4.pdf"))
-        share(activity, f, "application/pdf", "Cetak kertas penanda (A4, skala 100%)")
     }
 
     fun save(scaleKg: Double?) {
@@ -253,7 +246,6 @@ fun App(model: AppModel, activity: Activity) {
     Box(Modifier.fillMaxSize().background(C.bg)) {
         when (val s = model.screen) {
             Screen.Measure -> MeasureScreen(model, activity)
-            Screen.Marker -> MarkerScreen(model, activity)
             else -> Box(Modifier.fillMaxSize().safeDrawingPadding()) {
                 when (s) {
                     Screen.Start -> StartScreen(model, activity)
@@ -264,7 +256,8 @@ fun App(model: AppModel, activity: Activity) {
                     Screen.Weight -> WeightScreen(model)
                     is Screen.Saved -> SavedScreen(model, s.id)
                     is Screen.Detail -> DetailScreen(model, activity, s.id)
-                    Screen.Measure, Screen.Marker -> Unit
+                    Screen.NoAr -> NoArScreen(model, activity)
+                    Screen.Measure -> Unit
                 }
             }
         }

@@ -15,7 +15,7 @@ android {
         targetSdk = 35
         versionCode = 2
         versionName = "0.1.0-uji"
-        // Every ARCore phone is 64-bit; 32-bit is kept for the cheaper phones that use the marker sheet.
+        // 32-bit kept too, so the app still installs (and can mark parcels for the hub) on older phones.
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
     }
 

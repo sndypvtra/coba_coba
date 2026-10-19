@@ -72,7 +72,7 @@ private fun StatusChip(m: Measurement) = when (m.status) {
 private fun ModeChip(mode: Mode) = when (mode) {
     Mode.AR_FULL -> Chip("AR penuh", Tone.OK, "view_in_ar")
     Mode.AR_BASIC -> Chip("AR dasar", Tone.BLUE, "view_in_ar")
-    Mode.MARKER -> Chip("Kertas penanda", Tone.BLUE, "grid_on")
+    Mode.NONE -> Chip("Tanpa AR", Tone.WARN, "error")
 }
 
 @Composable
@@ -113,19 +113,14 @@ fun StartScreen(model: AppModel, activity: Activity) {
             T(when (c.mode) {
                 Mode.AR_FULL -> "Mode terbaik: alas, paket, dan kedalaman dibaca langsung oleh HP."
                 Mode.AR_BASIC -> "HP ini tidak punya Depth API. Pengukuran memakai titik fitur ARCore, hasilnya perlu dicek lebih sering."
-                Mode.MARKER -> when (c.arcore) {
-                    ArState.NEEDS_INSTALL -> "ARCore (Google Play Services for AR) belum terpasang. Pasang sekali dari Play Store, lalu kembali ke sini. " +
-                        "Tanpa ARCore, paket diukur dari 1 foto dengan kertas penanda A4."
-                    ArState.INSTALL_DECLINED -> "Pemasangan ARCore dibatalkan. Paket diukur dari 1 foto dengan kertas penanda A4 di sampingnya."
-                    else -> "HP ini tidak didukung ARCore. Paket diukur dari 1 foto dengan kertas penanda A4 di sampingnya (cetak dari Pengaturan)."
-                }
+                Mode.NONE -> noArText(c.arcore)
             }, 13.5.sp, color = C.t2)
         }
         Spacer(Modifier.weight(1f))
         if (c.arcore == ArState.NEEDS_INSTALL || c.arcore == ArState.INSTALL_DECLINED)
             PrimaryButton("Pasang ARCore", "download", Modifier.fillMaxWidth()) { model.install(activity) }
         if (c.arcore != ArState.CHECKING)
-            SecondaryButton(if (c.arcore == ArState.READY) "Lanjut" else "Lanjut dengan kertas penanda", "arrow_forward", Modifier.fillMaxWidth()) { model.home() }
+            SecondaryButton(if (c.arcore == ArState.READY) "Lanjut" else "Lanjut tanpa AR", "arrow_forward", Modifier.fillMaxWidth()) { model.home() }
     }
 }
 
@@ -274,7 +269,7 @@ fun PrepScreen(model: AppModel) {
         }
         PrimaryButton("Mulai ukur", "photo_camera", Modifier.fillMaxWidth().padding(16.dp)) {
             if (dontShow) model.store.update { it.copy(prepShown = 99) }
-            model.back(); model.go(model.measureScreen())
+            model.back(); model.go(Screen.Measure)
         }
     }
 }
@@ -510,13 +505,6 @@ fun SettingsScreen(model: AppModel, activity: Activity) {
                 }
             }
             Card {
-                T("Kertas penanda (A4)", 15.sp, FontWeight.SemiBold)
-                T("Untuk HP tanpa ARCore: paket diukur dari 1 foto dengan kertas ini di sampingnya. Cetak dengan skala 100%, lalu cek garis 10 cm dengan penggaris.",
-                    12.5.sp, color = C.t2)
-                Spacer(Modifier.height(8.dp))
-                SecondaryButton("Bagikan / cetak PDF", "print", Modifier.fillMaxWidth()) { model.markerSheet(activity) }
-            }
-            Card {
                 T("Data", 15.sp, FontWeight.SemiBold)
                 Spacer(Modifier.height(8.dp))
                 SecondaryButton("Bagikan semua hasil (JSON)", "share", Modifier.fillMaxWidth()) {
@@ -533,5 +521,39 @@ fun SettingsScreen(model: AppModel, activity: Activity) {
                 12.sp, color = C.t3)
         }
         BottomNav(model, Screen.Settings)
+    }
+}
+
+private fun noArText(st: ArState) = when (st) {
+    ArState.NEEDS_INSTALL -> "ARCore (Google Play Services for AR) belum terpasang. Pasang sekali dari Play Store, lalu kembali ke sini."
+    ArState.INSTALL_DECLINED -> "Pemasangan ARCore dibatalkan. Tanpa ARCore, HP ini tidak bisa mengukur paket."
+    else -> "HP ini tidak didukung ARCore, jadi tidak bisa mengukur paket. Paket tetap bisa diambil dan ditandai ukur di hub."
+}
+
+// ------------------------------------------------------------------ phone without ARCore
+@Composable
+fun NoArScreen(model: AppModel, activity: Activity) {
+    val c = model.caps
+    Column(Modifier.fillMaxSize()) {
+        TopBar("Ukur paket", model.draft?.resi, onBack = { model.back() })
+        Column(Modifier.weight(1f).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Card {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconTile("view_in_ar", C.amber, C.amberL)
+                    Column(Modifier.padding(start = 12.dp)) {
+                        T("HP ini belum bisa mengukur", 16.sp, FontWeight.SemiBold)
+                        T(c.model, 12.5.sp, color = C.t2)
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
+                T(noArText(c.arcore), 13.5.sp, color = C.t2)
+            }
+            T("Untuk mengukur, pakai HP yang didukung ARCore (daftar resmi Google: developers.google.com/ar/devices).", 12.5.sp, color = C.t3)
+        }
+        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            if (c.arcore == ArState.NEEDS_INSTALL || c.arcore == ArState.INSTALL_DECLINED)
+                PrimaryButton("Pasang ARCore", "download", Modifier.fillMaxWidth()) { model.install(activity) }
+            SecondaryButton("Tandai ukur di hub", "warehouse", Modifier.fillMaxWidth()) { model.markHub("HP kurir tanpa ARCore", null) }
+        }
     }
 }

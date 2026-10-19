@@ -11,7 +11,7 @@ chevron_right location_on local_shipping cloud_done cloud_upload history person 
 swipe lock crop view_in_ar straighten scale bluetooth warning refresh check done_all front_hand info arrow_forward close
 flashlight_on flashlight_off deployed_code package_2 home storefront pin_drop timer gps_fixed touch_app open_with sync qr_code_2
 settings share delete edit_note keyboard add search smartphone error tune folder_zip download fiber_manual_record
-radio_button_checked expand_more task_alt help print warehouse highlight_alt add_a_photo location_off grid_on""".split()))
+radio_button_checked expand_more task_alt help warehouse highlight_alt location_off""".split()))
 
 for fill, fn in ((0, "msym_line.ttf"), (1, "msym_fill.ttf")):
     url = ("https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,"

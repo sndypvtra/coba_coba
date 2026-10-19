@@ -20,7 +20,7 @@ data class Order(
     val kind: String = "store",          // store | home | warehouse
 )
 
-enum class Mode(val label: String) { AR_FULL("AR penuh"), AR_BASIC("AR dasar"), MARKER("Kertas penanda") }
+enum class Mode(val label: String) { AR_FULL("AR penuh"), AR_BASIC("AR dasar"), NONE("Tanpa AR") }
 enum class Status(val label: String) { OK("Akurat"), CHECK("Cek ulang"), HUB("Ukur di hub") }
 
 @Serializable
