@@ -62,3 +62,21 @@ ARCore 1.47.0, minSdk 26, targetSdk 35. The debug APK is signed with the debug k
 | `ui/` | Compose screens: `Screens.kt` (start, pickup, prep, weight, saved, history, detail, settings, manual), `MeasureScreen.kt` (camera + overlay + sheets) |
 
 Fonts: Inter (SIL OFL 1.1). Icons: Material Symbols Rounded (Apache 2.0), bundled subset.
+
+## Many parcels in one view: replay on the conveyor PoC
+
+`tools/conveyor_scene.py` turns frame 471 of the parcel-belt PoC (`../03_parcel_dimensioning`, 7 parcels, some
+touching, its calibrated Depth Anything 3 depth) into 3D points plus one "tap" per parcel; `ConveyorReplayTest`
+measures each tap with this app's core. `tools/conveyor_masks.py` adds MobileSAM masks (prompted by the tap point,
+and by a box as with a snipping tool) and the test measures only the depth points inside each mask.
+`tools/conveyor_draw.py` draws both: `docs/conveyor_test.jpg`.
+
+| | Result |
+|---|---|
+| Geometry only (v0.1) | parcels that touch are merged: #28, the printed 720 × 500 × 340 mm carton, comes out 140 × 42 × 70 cm |
+| Tap or box → MobileSAM mask → depth inside the mask | every parcel is cut out on its own; #28 stays one carton |
+| Tap point vs box | same mask for 6 of 7 parcels; on the sports bag (#41) the tap took only its top, the box took the whole bag |
+| Absolute size from this view | off (#28 reads 84 × 40 × 28 cm): the camera is low, 2–3 m away and very oblique, so the back and the top of each parcel are barely seen. The PoC needed an empirical footprint correction for the same reason. The app's own view (0,5–1,5 m, from above at 30–45°, moving the phone) is different; its accuracy is a phone test, not this replay. |
+
+So the replay proves selection among many parcels, and shows that geometry alone is not enough for parcels that touch:
+the next version cuts the parcel out with a tap/box-prompted mask, with the box as the fix when a tap picks only part.
