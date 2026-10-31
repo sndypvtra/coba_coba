@@ -1,12 +1,10 @@
 """Client quotation for the Minyakita loading-dock project, built from the internal budget (build_budget.py + recalc first).
 
-Shows only selling prices, totals, terms and scope. Nothing internal: no purchase prices or price ranges, markup,
+Shows only selling prices, totals, terms and scope. Nothing internal: no purchase prices, markup, contingency,
 margin, day rates, exchange rate, CV income or purchase sources. Totals equal the internal ones.
 
     python build_client.py   # -> Penawaran_Minyakita_Loading_Dock.xlsx (then recalc with LibreOffice)
 """
-import math
-import re
 from pathlib import Path
 
 from openpyxl import Workbook, load_workbook
@@ -27,42 +25,59 @@ BOX = Border(top=THIN, bottom=THIN, left=THIN, right=THIN)
 # ---------------------------------------------------------------- internal values (never written to the client file)
 src = load_workbook(SRC, data_only=True)
 kb = src["Keputusan Bisnis"]
-mk_hw, mk_inst, warranty, ppn = kb["B6"].value, kb["B7"].value, kb["B8"].value, kb["B11"].value
+
+
+def by_label(ws, label, col="B"):
+    """Value next to a label in column A (the scenario sheets are label/value lists)."""
+    for r in range(1, ws.max_row + 1):
+        if ws[f"A{r}"].value == label:
+            return ws[f"{col}{r}"].value
+    raise KeyError(f"{ws.title}: {label}")
+
+
+warranty = by_label(kb, "Garansi layanan termasuk harga Opsi A (bulan)")
+ppn = by_label(kb, "PPN efektif (isi 0 bila belum PKP)")
 sa, sb = src["Skenario A"], src["Skenario B"]
-total_a = sa["B14"].value
-maint_a = sa["B28"].value
-year1, renew = sb["B13"].value, sb["B28"].value
+total_a = by_label(sa, "Total harga (sebelum PPN)")
+garansi_a = by_label(sa, "Garansi layanan")
+maint_a = by_label(sa, "Maintenance opsional per tahun setelah garansi")
+rent_year1 = by_label(sb, "Sewa perangkat dan pemasangan, 12 bulan")
+support_year = by_label(sb, "Layanan support 12 bulan")
+year1 = by_label(sb, "Langganan tahun pertama (sebelum PPN)")
+rent_renew = by_label(sb, "Sewa perangkat 12 bulan (perangkat sudah lunas)")
+renew = by_label(sb, "Langganan perpanjangan (sebelum PPN)")
 
+CLIENT_NAME = {   # internal item names -> client wording
+    "PC server AI (rakitan Agres)": "PC server AI (workstation GPU)",
+    "Jasa pasang IP camera (jasa saja)": "Jasa pasang kamera per titik",
+}
+goods = []          # (category, item, brand, spec, qty, unit_sell)
+rab = src["RAB"]
+for r in range(5, rab.max_row + 1):
+    a, b, e, h = (rab[f"{c}{r}"].value for c in "ABEH")
+    if a and b and e is not None and h is not None:
+        spec = rab[f"D{r}"].value
+        if b == "Jasa pasang IP camera (jasa saja)":
+            spec = "Tarik kabel dan pasang conduit, pasang kamera, setting sudut pandang"
+        goods.append((a, CLIENT_NAME.get(b, b), rab[f"C{r}"].value, spec, e, h))
+goods_total = sum(q * u for *_, q, u in goods)
 
-def up1000(x):
-    return int(math.ceil(x / 1000.0) * 1000)
-
-
-def clean(name):
-    return re.sub(r"\s*\([^)]*Rp[^)]*\)", "", name).strip()
-
-
-goods = []          # (group, item, brand, qty, unit_sell)
-hw = src["Hardware"]
-group = None
-for r in range(5, hw.max_row + 1):
-    a, b, e = hw[f"A{r}"].value, hw[f"B{r}"].value, hw[f"E{r}"].value
-    if a and not b:
-        group = a
-    elif b and e is not None and hw[f"D{r}"].value is not None:
-        goods.append((group, b, clean(hw[f"C{r}"].value), hw[f"D{r}"].value, up1000(e * (1 + mk_hw))))
-ins = src["Instalasi"]
-for r in range(5, ins.max_row + 1):
-    b, e = ins[f"B{r}"].value, ins[f"E{r}"].value
-    if b and e is not None and ins[f"D{r}"].value is not None:
-        goods.append(("Instalasi", b, clean(ins[f"C{r}"].value), ins[f"D{r}"].value, up1000(e * (1 + mk_inst))))
-goods_total = sum(q * u for _, _, _, q, u in goods)
-package_a = total_a - goods_total
-# subscription lines, rounded to Rp 100.000, adding up exactly to the internal totals
-support_year = round(sb["B12"].value, -5)
-rent_year1 = round(sb["B10"].value, -5)
-impl_year1 = year1 - rent_year1 - support_year
-rent_renew = renew - support_year
+# service groups from the jasa sheet: name -> (value, task list without days or rates)
+js = src["Jasa INKINDO"]
+services, grp = {}, None
+for r in range(1, js.max_row + 1):
+    a, b, h = js[f"A{r}"].value, js[f"B{r}"].value, js[f"H{r}"].value
+    if a in ("Pembuatan AI", "Pembuatan Web App", "Implementasi Lapangan", "Manajemen Proyek"):
+        grp = a
+        services[grp] = [0, []]
+    elif grp and isinstance(a, int):
+        services[grp][1].append(b)
+    elif grp and b == f"Subtotal {grp}":
+        services[grp][0] = h
+        grp = None
+assert goods_total + sum(v for v, _ in services.values()) + garansi_a == total_a, "Opsi A tidak sama dengan budget"
+assert rent_year1 + sum(v for v, _ in services.values()) + support_year == year1, "Opsi B tidak sama dengan budget"
+assert rent_renew + support_year == renew
 
 # ---------------------------------------------------------------- client workbook
 wb = Workbook()
@@ -111,99 +126,96 @@ def bullets(ws, row, lines, ncols, height=22):
     return row
 
 
-def totals(ws, r, first, last):
-    put(ws, f"C{r}", "Total (sebelum PPN)", bold=True, fill=TOTAL)
-    put(ws, f"F{r}", f"=SUM(F{first}:F{last})", bold=True, fmt=RP, fill=TOTAL)
-    put(ws, f"C{r + 1}", "PPN")
-    put(ws, f"D{r + 1}", ppn, fmt="0%")
-    put(ws, f"F{r + 1}", f"=F{r}*D{r + 1}", fmt=RP)
-    put(ws, f"C{r + 2}", "Total tagihan", bold=True, fill=TOTAL)
-    put(ws, f"F{r + 2}", f"=F{r}+F{r + 1}", bold=True, fmt=RP, fill=TOTAL)
+def line(ws, r, n, item, brand, spec, qty, unit, height=None):
+    put(ws, f"A{r}", n)
+    put(ws, f"B{r}", item, wrap=True)
+    put(ws, f"C{r}", brand, wrap=True, color="404040")
+    put(ws, f"D{r}", spec, wrap=True, color="404040")
+    put(ws, f"E{r}", qty, fmt="0")
+    put(ws, f"F{r}", unit, fmt=RP if unit != "termasuk" else None, right=True)
+    put(ws, f"G{r}", f"=E{r}*F{r}" if unit != "termasuk" else 0, fmt=RP)
+    longest = max(len(str(item or "")) / 30, len(str(brand or "")) / 28, len(str(spec or "")) / 52)
+    ws.row_dimensions[r].height = height or max(15, 13 * (int(longest) + 1))
+
+
+def totals(ws, r, first, last, label="Total (sebelum PPN)"):
+    put(ws, f"D{r}", label, bold=True, fill=TOTAL)
+    put(ws, f"G{r}", f"=SUM(G{first}:G{last})", bold=True, fmt=RP, fill=TOTAL)
+    put(ws, f"D{r + 1}", "PPN")
+    put(ws, f"F{r + 1}", ppn, fmt="0%")
+    put(ws, f"G{r + 1}", f"=G{r}*F{r + 1}", fmt=RP)
+    put(ws, f"D{r + 2}", "Total tagihan", bold=True, fill=TOTAL)
+    put(ws, f"G{r + 2}", f"=G{r}+G{r + 1}", bold=True, fmt=RP, fill=TOTAL)
     return r, r + 2
 
 
-IMPL_SCOPE = ("Aplikasi AI hitung karton per palet + web app on-premise (lisensi 1 lokasi, 8 kamera), survey dock, "
-              "pelabelan dan training model khusus kemasan Minyakita, rekonsiliasi per DO, kalibrasi 8 kamera, "
-              "uji paralel 2 minggu dibanding hitung manual, training pengguna dan SOP, serah terima")
+SERVICE_TEXT = {
+    "Pembuatan AI": "Model AI khusus kemasan Minyakita, berjalan realtime 8 kamera pada 20-30 fps",
+    "Pembuatan Web App": "Web app on-premise untuk dock dan manajemen",
+    "Implementasi Lapangan": "Pemasangan, kalibrasi, uji paralel, dan serah terima di lokasi",
+    "Manajemen Proyek": "Pengelolaan proyek selama 8-10 minggu",
+}
+SUPPORT_TEXT = ("Kunjungan rutin bulanan (cek kamera, lensa, server, rekaman), pemantauan akurasi dan retraining model, "
+                "perbaikan dan update web app")
+WIDTHS = [5, 30, 28, 52, 6, 17, 18]
+COLS = ["No", "Item", "Merek / Tipe", "Spesifikasi / lingkup", "Qty", "Harga satuan (Rp)", "Jumlah (Rp)"]
+
+
+def service_lines(ws, r, n):
+    for name, (value, tasks) in services.items():
+        line(ws, r, n, f"Jasa {name}", SERVICE_TEXT[name], "; ".join(tasks), 1, value)
+        r, n = r + 1, n + 1
+    return r, n
+
 
 # ---------------------------------------------------------------- Rincian Opsi A
-A = sheet("Rincian Opsi A", [5, 36, 62, 7, 17, 18])
+A = sheet("Rincian Opsi A", WIDTHS)
 put(A, "A1", "Rincian Opsi A: Beli Putus", bold=True, size=14)
-put(A, "A2", "Semua perangkat, instalasi, dan aplikasi menjadi milik perusahaan. Harga dalam Rupiah, belum termasuk PPN.", italic=True, color="595959")
-header(A, 4, ["No", "Item", "Merek / Tipe", "Qty", "Harga satuan (Rp)", "Jumlah (Rp)"])
+put(A, "A2", "Semua perangkat, instalasi, aplikasi AI, dan web app menjadi milik perusahaan. Harga dalam Rupiah, belum termasuk PPN.",
+    italic=True, color="595959")
+header(A, 4, COLS)
 r, n, cur, first = 5, 1, None, 5
-for grp, item, brand, q, u in goods:
-    g = grp.replace(" (rakit)", "")
-    if g != cur:
-        band(A, r, g, 6)
-        r += 1
-        cur = g
-    put(A, f"A{r}", n)
-    put(A, f"B{r}", item, wrap=True)
-    put(A, f"C{r}", brand, wrap=True, color="404040")
-    put(A, f"D{r}", q, fmt="0")
-    put(A, f"E{r}", u, fmt=RP)
-    put(A, f"F{r}", f"=D{r}*E{r}", fmt=RP)
-    r += 1
-    n += 1
-band(A, r, "Implementasi dan aplikasi", 6)
-r += 1
-put(A, f"A{r}", n)
-put(A, f"B{r}", "Implementasi, aplikasi AI dan web app (paket)", wrap=True)
-put(A, f"C{r}", IMPL_SCOPE + f", garansi layanan {warranty} bulan.", wrap=True, color="404040")
-A.row_dimensions[r].height = 64
-put(A, f"D{r}", 1, fmt="0")
-put(A, f"E{r}", package_a, fmt=RP)
-put(A, f"F{r}", f"=D{r}*E{r}", fmt=RP)
+for cat, item, brand, spec, q, u in goods:
+    if cat != cur:
+        band(A, r, cat, 7)
+        r, cur = r + 1, cat
+    line(A, r, n, item, brand, spec, q, u if u else "termasuk")
+    r, n = r + 1, n + 1
+band(A, r, "Aplikasi AI, web app, dan implementasi", 7)
+r, n = service_lines(A, r + 1, n)
+line(A, r, n, f"Garansi layanan {warranty} bulan", "Setelah serah terima", SUPPORT_TEXT, 1, garansi_a)
 tot_a, grand_a = totals(A, r + 2, first, r)
 
 # ---------------------------------------------------------------- Rincian Opsi B
-B = sheet("Rincian Opsi B", [5, 40, 62, 7, 17, 18])
+B = sheet("Rincian Opsi B", WIDTHS)
 put(B, "A1", "Rincian Opsi B: Langganan per Tahun", bold=True, size=14)
-put(B, "A2", "Perangkat disediakan dan tetap milik penyedia, ditagih per tahun. Harga dalam Rupiah, belum termasuk PPN.", italic=True, color="595959")
-header(B, 4, ["No", "Komponen langganan", "Keterangan", "Qty", "Harga (Rp)", "Jumlah (Rp)"])
-band(B, 5, "Tahun pertama", 6)
-lines1 = [
-    ("Sewa perangkat dan instalasi, 12 bulan", "8 kamera, NVR + HDD 8 TB, PC server AI, UPS online, rack, switch, monitor, layar dock (daftar di bawah), terpasang di 8 titik", rent_year1),
-    ("Implementasi, aplikasi AI dan web app (paket)", IMPL_SCOPE + ".", impl_year1),
-    ("Layanan support dan maintenance, 12 bulan", "Kunjungan rutin bulanan, pemantauan akurasi dan retraining model, perbaikan dan update web app, laporan bulanan, penggantian perangkat rusak", support_year),
-]
-r = 6
-for i, (lab, ket, v) in enumerate(lines1, 1):
-    put(B, f"A{r}", i)
-    put(B, f"B{r}", lab, wrap=True)
-    put(B, f"C{r}", ket, wrap=True, color="404040")
-    B.row_dimensions[r].height = 42
-    put(B, f"D{r}", 1, fmt="0")
-    put(B, f"E{r}", v, fmt=RP)
-    put(B, f"F{r}", f"=D{r}*E{r}", fmt=RP)
-    r += 1
-tot_b1, grand_b1 = totals(B, r + 1, 6, r - 1)
+put(B, "A2", "Perangkat disediakan dan tetap milik penyedia, ditagih per tahun (12 bulan). Harga dalam Rupiah, belum termasuk PPN.",
+    italic=True, color="595959")
+header(B, 4, COLS)
+band(B, 5, "Tahun pertama", 7)
+line(B, 6, 1, "Sewa perangkat dan pemasangan, 12 bulan", "Seluruh perangkat di daftar bawah",
+     "8 kamera, PC server AI, penyimpanan rekaman dan backup, UPS, rak dan jaringan, monitor, TV dashboard dock; "
+     "terpasang di 8 titik; penggantian perangkat rusak selama langganan", 1, rent_year1)
+r, n = service_lines(B, 7, 2)
+line(B, r, n, "Layanan support dan maintenance, 12 bulan", "Selama masa langganan", SUPPORT_TEXT, 1, support_year)
+tot_b1, grand_b1 = totals(B, r + 2, 6, r)
 r = grand_b1 + 2
-band(B, r, "Perpanjangan tahun berikutnya", 6)
-r += 1
-first_renew = r
-for i, (lab, ket, v) in enumerate([
-    ("Sewa perangkat, 12 bulan", "Perangkat yang sama, tetap terpasang", rent_renew),
-    ("Layanan support dan maintenance, 12 bulan", "Sama seperti tahun pertama", support_year),
-], 1):
-    put(B, f"A{r}", i)
-    put(B, f"B{r}", lab, wrap=True)
-    put(B, f"C{r}", ket, wrap=True, color="404040")
-    put(B, f"D{r}", 1, fmt="0")
-    put(B, f"E{r}", v, fmt=RP)
-    put(B, f"F{r}", f"=D{r}*E{r}", fmt=RP)
-    r += 1
-tot_bn, grand_bn = totals(B, r + 1, first_renew, r - 1)
+band(B, r, "Perpanjangan tahun berikutnya", 7)
+first_renew = r + 1
+line(B, r + 1, 1, "Sewa perangkat, 12 bulan", "Perangkat yang sama", "Tetap terpasang, penggantian perangkat rusak", 1, rent_renew)
+line(B, r + 2, 2, "Layanan support dan maintenance, 12 bulan", "Sama seperti tahun pertama", SUPPORT_TEXT, 1, support_year)
+tot_bn, grand_bn = totals(B, r + 4, first_renew, r + 2)
 r = grand_bn + 2
-band(B, r, "Perangkat yang disediakan (tanpa harga, tetap milik penyedia)", 6)
+band(B, r, "Perangkat yang disediakan (tanpa harga, tetap milik penyedia)", 7)
 r += 1
-for grp, item, brand, q, u in goods:
-    if grp == "Instalasi":
+for cat, item, brand, spec, q, u in goods:
+    if cat == "Jasa pasang":
         continue
     put(B, f"B{r}", item, wrap=True)
     put(B, f"C{r}", brand, wrap=True, color="404040")
-    put(B, f"D{r}", q, fmt="0")
+    put(B, f"D{r}", spec, wrap=True, color="404040")
+    put(B, f"E{r}", q, fmt="0")
+    B.row_dimensions[r].height = max(15, 13 * (int(max(len(str(brand)) / 28, len(str(spec)) / 52)) + 1))
     r += 1
 
 # ---------------------------------------------------------------- Ringkasan Penawaran
@@ -213,9 +225,9 @@ put(R, "A2", "Kepada: PT [nama perusahaan], Gudang Minyakita  ·  Tanggal: [isi 
     italic=True, color="595959")
 header(R, 4, ["", "Opsi A: Beli putus", "Opsi B: Langganan, tahun pertama", "Opsi B: Langganan, tahun berikutnya"])
 rows = [
-    ("Total (sebelum PPN)", f"='Rincian Opsi A'!F{tot_a}", f"='Rincian Opsi B'!F{tot_b1}", f"='Rincian Opsi B'!F{tot_bn}"),
-    ("PPN", f"='Rincian Opsi A'!F{tot_a + 1}", f"='Rincian Opsi B'!F{tot_b1 + 1}", f"='Rincian Opsi B'!F{tot_bn + 1}"),
-    ("Total tagihan", f"='Rincian Opsi A'!F{grand_a}", f"='Rincian Opsi B'!F{grand_b1}", f"='Rincian Opsi B'!F{grand_bn}"),
+    ("Total (sebelum PPN)", f"='Rincian Opsi A'!G{tot_a}", f"='Rincian Opsi B'!G{tot_b1}", f"='Rincian Opsi B'!G{tot_bn}"),
+    ("PPN", f"='Rincian Opsi A'!G{tot_a + 1}", f"='Rincian Opsi B'!G{tot_b1 + 1}", f"='Rincian Opsi B'!G{tot_bn + 1}"),
+    ("Total tagihan", f"='Rincian Opsi A'!G{grand_a}", f"='Rincian Opsi B'!G{grand_b1}", f"='Rincian Opsi B'!G{grand_bn}"),
 ]
 r = 5
 for lab, fa, fb, fc in rows:
@@ -244,15 +256,17 @@ r += 1
 band(R, r, "Yang didapatkan", 4)
 r = bullets(R, r + 1, [
     "Hitung karton setiap palet (standar 60 karton) di zona cek depan dock, dan peringatan langsung bila palet kurang.",
+    "Video analytics realtime 8 kamera pada 20-30 fps, diproses di PC server AI dengan GPU NVIDIA RTX 5070 Ti 16 GB di lokasi.",
     "Rekonsiliasi jumlah karton per DO, per truk, dan per palet sebelum barang naik ke armada ekspedisi.",
-    "Dashboard web on-premise di kantor gudang dan layar status di loading dock; laporan per DO, truk, dan palet.",
-    "Rekaman 8 kamera di NVR sebagai bukti audit dan penyelesaian selisih.",
+    "Web app on-premise: dashboard di kantor gudang dan layar status di loading dock; laporan per DO, truk, dan palet.",
+    "Rekaman 8 kamera sebagai bukti audit dan penyelesaian selisih.",
     "Seluruh sistem berjalan di lokasi (on-premise), tanpa cloud; data tetap di gudang.",
 ], 4)
 r += 1
 band(R, r, "Jadwal", 4)
 r = bullets(R, r + 1, [
-    "Sekitar 8 sampai 10 minggu sejak PO: survey dan desain, pengambilan data dan training model, instalasi dan kalibrasi, uji paralel 2 minggu, serah terima.",
+    "Sekitar 8 sampai 10 minggu sejak PO: survey dan desain, pengambilan data dan training model, pembuatan web app, "
+    "instalasi dan kalibrasi, uji paralel 2 minggu (termasuk uji performa 8 kamera), serah terima.",
 ], 4, 30)
 r += 1
 band(R, r, "Garansi dan layanan", 4)
@@ -268,9 +282,10 @@ r = bullets(R, r + 1, [
     "SOP: palet berhenti sejenak di zona cek, plastik wrap bening agar karton terlihat kamera.",
 ], 4)
 r += 1
-band(R, r, "Tidak termasuk", 4)
+band(R, r, "Catatan", 4)
 bullets(R, r + 1, [
-    "Pekerjaan sipil, instalasi listrik baru, dan perjalanan di luar Jabodetabek (ditagihkan sesuai biaya aktual bila ada).",
+    "Jumlah kabel dan conduit berdasarkan perkiraan; disesuaikan setelah survey lokasi.",
+    "Tidak termasuk pekerjaan sipil, instalasi listrik baru, dan perjalanan di luar Jabodetabek (ditagihkan sesuai biaya aktual bila ada).",
 ], 4)
 
 wb._sheets = [wb[n] for n in ["Ringkasan Penawaran", "Rincian Opsi A", "Rincian Opsi B"]]

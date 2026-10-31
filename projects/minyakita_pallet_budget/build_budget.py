@@ -1,10 +1,9 @@
-"""Budget workbook: Minyakita pallet box counting at the loading dock, 8 cameras, on-premise standalone (no cloud).
+"""Budget workbook: Minyakita pallet box counting at the loading dock, 8 cameras at 20-30 fps, on-premise, no cloud.
 
-Two scenarios: A = one-off purchase (hardware, installation, web app and AI become the client's inventory);
-B = annual subscription (all infrastructure stays ours, the client rents it with the software and service).
-Every price comes from a public web source listed on the 'Sumber Harga' sheet. The team is the CV itself: its work is
-priced at market service rates (USD outsourcing rate cards converted at Bank Indonesia's JISDOR rate), and all of it is
-the CV's income. Everything is counted per year (12 months).
+Layout follows the RAB slides of Factory_Vision_Presentation.pptx (Kategori, Komponen, Merek/Tipe, Spesifikasi kunci,
+Harga satuan, Link) with the deck's 10% price contingency. The AI server is an Agres Komputer build. Services are
+priced with INKINDO's 2026 minimum billing rates (Pedoman Standar Minimal 2026), converted to a day rate the way the
+guideline prescribes (SBOH = SBOB / 22 x 1.1). Two scenarios: A one-off purchase, B annual subscription (12 months).
 
     python build_budget.py   # -> Budget_Minyakita_Pallet_Counting.xlsx (then recalc with LibreOffice)
 """
@@ -15,7 +14,6 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
 OUT = Path(__file__).resolve().parent / "Budget_Minyakita_Pallet_Counting.xlsx"
-ACCESSED = "31 Okt 2026"
 F = "Arial"
 BLUE, GREEN, BLACK, GREY = "0000FF", "008000", "000000", "404040"
 YELLOW = PatternFill("solid", fgColor="FFFF00")
@@ -24,7 +22,6 @@ SUB = PatternFill("solid", fgColor="D9E1F2")
 TOTAL = PatternFill("solid", fgColor="F2F2F2")
 RP = '#,##0;(#,##0);"-"'
 PCT = '0.0%;(0.0%);"-"'
-NUM = '#,##0.0;(#,##0.0);"-"'
 THIN = Side(style="thin", color="BFBFBF")
 BOX = Border(top=THIN, bottom=THIN, left=THIN, right=THIN)
 
@@ -68,329 +65,335 @@ def section(ws, row, text, ncols):
     put(ws, f"A{row}", text, bold=True, fill=SUB)
 
 
-# ------------------------------------------------------------------ Sumber Harga
-SRC = [
-    ("S1", "Viraindo (Vira Jaya Computer), daftar harga VGA", "https://www.viraindo.com/vga.html"),
-    ("S2", "Viraindo, daftar harga processor", "https://www.viraindo.com/proc.html"),
-    ("S3", "Viraindo, daftar harga motherboard", "https://www.viraindo.com/motherboard.html"),
-    ("S4", "Viraindo, daftar harga memory", "https://www.viraindo.com/memory.html"),
-    ("S5", "Viraindo, daftar harga storage (SSD, HDD)", "https://www.viraindo.com/storage.html"),
-    ("S6", "Viraindo, daftar harga power supply", "https://www.viraindo.com/psu.html"),
-    ("S7", "Viraindo, daftar harga casing", "https://www.viraindo.com/casing.html"),
-    ("S8", "Viraindo, daftar harga UPS dan stabilizer", "https://www.viraindo.com/ups-stabilizer.html"),
-    ("S9", "Viraindo, daftar harga networking", "https://www.viraindo.com/networking.html"),
-    ("S10", "Viraindo, daftar harga rack server", "https://www.viraindo.com/rackserver.html"),
-    ("S11", "Viraindo, daftar harga monitor dan TV", "https://www.viraindo.com/lcd.html"),
-    ("S12", "Viraindo, daftar harga keyboard dan mouse", "https://www.viraindo.com/keymouse.html"),
-    ("S13", "Hikvision Indonesia, Daftar Harga CCTV Hikvision Terbaru 2026 (terbit 14 Mar 2026). Dipakai batas atas kisaran.",
-     "https://hikvision-indonesia.com/daftar-harga-cctv-hikvision-terbaru-2026-seri-2mp-hingga-5mp/"),
-    ("S14", "GSI Indonesia, Harga Pasang CCTV Per Titik 2026 (terbit 17 Apr 2026): IP camera jasa + material Rp 900.000 sampai Rp 1.500.000 per titik. Dipakai batas atas.",
-     "https://gsi-indo.com/2026/04/17/harga-pasang-cctv-per-titik/"),
-    ("S15", "Second Talent, Cost to Hire a Software Developer in Indonesia (diperbarui 25 Sep 2026, tabel Okt 2026): tarif per jam USD. Machine Learning Engineer mid-level USD 33 sampai 86; Full-Stack mid-level USD 24 sampai 62; Full-Stack senior USD 34 sampai 86; 160 jam per bulan.",
-     "https://www.secondtalent.com/resources/cost-to-hire-a-software-developer-in-indonesia/"),
-    ("S16", "Bank Indonesia, kurs JISDOR USD/IDR 30 Oktober 2026: Rp 18.138",
-     "https://www.bi.go.id/id/statistik/informasi-kurs/jisdor/default.aspx"),
-    ("S17", "servicecctv.id, Biaya Layanan CCTV 2026: kunjungan teknisi dan pengecekan CCTV Rp 150.000 (termasuk transport Jabodetabek)",
-     "https://servicecctv.id/biaya-layanan-cctv/"),
-    ("S18", "PMK No. 131 Tahun 2024: PPN 12% dengan DPP 11/12, tarif efektif 11% untuk barang dan jasa non mewah", "Peraturan Menteri Keuangan No. 131 Tahun 2024"),
-]
-SS = sheet("Sumber Harga", [7, 90, 70])
-title(SS, "Sumber Harga", f"Semua harga diambil dari sumber publik di bawah, diakses {ACCESSED}. Harga toko dapat berubah; minta penawaran tertulis sebelum pembelian.")
-header(SS, 4, ["Kode", "Sumber dan angka yang dipakai", "Tautan / dasar hukum"])
-for i, (code, desc, url) in enumerate(SRC, 5):
-    put(SS, f"A{i}", code, bold=True)
-    put(SS, f"B{i}", desc, wrap=True)
-    put(SS, f"C{i}", url, wrap=True, color="0563C1" if url.startswith("http") else GREY)
-    if url.startswith("http"):
-        SS[f"C{i}"].hyperlink = url
+def note(ws, row, text, ncols, height=28):
+    put(ws, f"A{row}", text, wrap=True, italic=True, color="595959")
+    ws.merge_cells(f"A{row}:{get_column_letter(ncols)}{row}")
+    ws.row_dimensions[row].height = height
 
-# ------------------------------------------------------------------ Hardware
-H = sheet("Hardware", [5, 32, 62, 6, 15, 16, 8])
-title(H, "Hardware (8 kamera, 1 lokasi, on-premise)", "Harga beli kita dari sumber publik. Kode sumber merujuk ke sheet Sumber Harga.")
-header(H, 4, ["No", "Item", "Produk persis seperti tercantum di sumber", "Qty", "Harga satuan (Rp)", "Total (Rp)", "Sumber"])
-HW = [
-    ("Kamera", None),
-    ("IP Camera 4MP bullet", "Hikvision DS-2CD1043G0-I (kisaran Rp 950.000 sampai Rp 1.150.000)", 8, 1150000, "S13"),
-    ("NVR 8 kanal PoE", "Hikvision DS-7608NI-K1/8P, NVR 8 Channel (kisaran Rp 2.200.000 sampai Rp 2.800.000)", 1, 2800000, "S13"),
-    ("HDD rekaman 8 TB", "Seagate 3.5\" Surveillance 8 TB Sata SkyHawk Series", 1, 5900000, "S5"),
-    ("PC server AI (rakit)", None),
-    ("Processor", "AMD Ryzen 7 7700 3.8Ghz Up To 5.3Ghz Cache 32MB 65W AM5 [Box] - 8 Core - with AMD Wraith Prism Cooler", 1, 5200000, "S2"),
-    ("Motherboard", "MSI PRO B650M-P", 1, 1890000, "S3"),
-    ("Memory 32 GB", "G.Skill Ripjaws S5 White DDR5 PC48000 6000MHz 32GB (2x16GB) - F5-6000J3648D16GX2-RS5W", 1, 4150000, "S4"),
-    ("SSD 1 TB (sistem, aplikasi, database)", "Kingston SSD NV3 1TB M.2 NVMe PCIe Gen 4.0 x4", 1, 3100000, "S5"),
-    ("GPU 16 GB (AI 8 kamera)", "Gigabyte GeForce RTX 5060 Ti 16 GB - WindForce - GV-N506TWF2-16GD", 1, 9700000, "S1"),
-    ("Power supply 750W Gold", "Seasonic G12 GM-750 750W - Semi Modular - 80+ Gold - 5 Years Warranty Replacement", 1, 1430000, "S6"),
-    ("Casing", "Cooler Master MasterBox TD500 Mesh V2", 1, 1240000, "S7"),
-    ("Pendukung", None),
-    ("UPS online 2 kVA", "APC Easy UPS On-Line, 2000VA/1800W 230V - SRV2KI-E", 1, 9100000, "S8"),
-    ("Switch gigabit 8 port", "TP-Link Switch 8 Port Gigabit 10/100/1000 - TL-SG108", 1, 310000, "S9"),
-    ("Rack wallmount 8U (NVR, switch)", "Indorack Wallmount Rack Single Door 19 inch WIR5508S 8U Width:600mm Depth: 550mm", 1, 2050000, "S10"),
-    ("Monitor dashboard 27 inch", "LG 27 27MS500-B FHD IPS 100Hz Monitor", 1, 1420000, "S11"),
-    ("Layar status di loading dock 43 inch", "Xiaomi TV A 43 FHD - 2025", 1, 2870000, "S11"),
-    ("Keyboard dan mouse", "Logitech Classic MK120 USB (K120 + B100)", 1, 165000, "S12"),
+
+def line(ws, row, label, formula, fmt=RP, bold=False, fill=None, nt=None, color=BLACK):
+    put(ws, f"A{row}", label, bold=bold, fill=fill, wrap=True)
+    put(ws, f"B{row}", formula, fmt=fmt, bold=bold, fill=fill, color=color)
+    if nt:
+        put(ws, f"C{row}", nt, wrap=True, color=GREY)
+
+
+# ------------------------------------------------------------------ Keputusan Bisnis (fixed addresses)
+K = sheet("Keputusan Bisnis", [62, 14, 72])
+title(K, "Keputusan Bisnis (bukan harga)", "Kebijakan perusahaan. Ubah di sini, semua angka ikut berubah.")
+header(K, 4, ["Parameter", "Nilai", "Keterangan"])
+DEC = [
+    ("cont", "Kontinjensi harga perangkat", 0.10, PCT, "Sama dengan RAB di Factory_Vision_Presentation.pptx: fluktuasi harga RAM, GPU, storage; rupiah sedang melemah."),
+    ("mk_hw", "Markup perangkat", 0.15, PCT, "Atas harga beli + kontinjensi."),
+    ("mk_inst", "Markup jasa pasang kamera", 0.20, PCT, "Atas tarif vendor pemasang."),
+    ("warranty", "Garansi layanan termasuk harga Opsi A (bulan)", 3, "0", "Support setelah serah terima."),
+    ("m_rent", "Margin sewa perangkat (Opsi B)", 0.40, PCT, "Sewa perangkat per tahun = biaya perangkat dan pemasangan / (1 - margin)."),
+    ("ppn", "PPN efektif (isi 0 bila belum PKP)", 0.11, PCT, "PMK 131/2024: 12% x DPP 11/12."),
+]
+DK = {}
+for i, (key, lab, v, fmt, nt) in enumerate(DEC, 5):
+    put(K, f"A{i}", lab)
+    put(K, f"B{i}", v, color=BLUE, fmt=fmt, fill=YELLOW)
+    put(K, f"C{i}", nt, wrap=True, color=GREY)
+    DK[key] = f"'Keputusan Bisnis'!$B${i}"
+
+# ------------------------------------------------------------------ RAB (format pptx)
+RB = sheet("RAB", [15, 22, 36, 50, 6, 15, 15, 15, 16, 36])
+title(RB, "RAB Infrastruktur On-Premise, Loading Dock 8 Kamera (20-30 fps realtime)",
+      "Format mengikuti slide RAB Factory_Vision_Presentation.pptx. Harga satuan = harga beli; harga jual = harga beli x (1 + kontinjensi) x (1 + markup).")
+header(RB, 4, ["Kategori", "Komponen", "Merek / Tipe", "Spesifikasi kunci", "Qty", "Harga satuan (Rp)", "Total (Rp)", "Harga jual satuan (Rp)", "Total jual (Rp)", "Link / sumber"])
+TOKO = "https://www.tokopedia.com/find/"
+AGRES = "https://www.tokopedia.com/agreskomputerofficial/agres-cryo-pc-ultra-5-245kf-rtx-5070-ti-16g-32gb-1tb-rakitan-pc-gaming-1731083491745892256"
+ITEMS = [
+    ("Server AI on-prem", [
+        ("PC server AI (rakitan Agres)", "AGRES CRYO PC ULTRA 5 245KF RTX 5070 TI 16G / 32GB 1TB",
+         "Intel Core Ultra 5 245KF 14 core, NVIDIA GeForce RTX 5070 Ti 16 GB GDDR7 (decode video di GPU + inferensi TensorRT), RAM 32 GB DDR5, SSD NVMe 1 TB. Untuk 8 kamera 4MP pada 20-30 fps.",
+         1, 35000000, AGRES),
+        ("HDD rekaman video", "WD Purple Pro 8TB", "3,5\" SATA, 7.200 rpm, kelas surveillance/AI 24/7, sekitar 2 minggu rekaman 8 kamera 25 fps", 1, 8006000, TOKO + "wd-purple-pro-8tb"),
+        ("HDD backup eksternal", "Seagate Expansion Desktop 12TB (STKP12000400)", "USB 3.0, backup database dan klip bukti", 1, 9980000, TOKO + "seagate-expansion-12tb"),
+        ("Sistem operasi & software", "Ubuntu Server 24.04 LTS, driver NVIDIA, TensorRT, MediaMTX, PostgreSQL", "Open source / gratis", 1, 0, "https://docs.nvidia.com/metropolis/deepstream/8.0/text/DS_Installation.html"),
+    ]),
+    ("Control room & dock", [
+        ("Mini PC operator & dashboard TV", "ASUS NUC 13 Pro", "Intel Core i5-1340P, 16GB, SSD 512GB, Windows 11 Pro, 2x HDMI 2.1", 1, 7794000, TOKO + "asus-nuc-13-pro-i5"),
+        ("Monitor operator", "Dell P2725H", "27\" IPS FHD 100Hz, garansi 3 tahun", 1, 3479000, TOKO + "dell-monitor-p2725h"),
+        ("TV dashboard loading dock", "Samsung Business TV BE55FX-H (LH55BEFHVGKXXD)", "55\" 4K, rating 16 jam/hari x 7 hari, garansi 3 tahun", 1, 8899000, TOKO + "samsung-business-tv-55"),
+        ("Bracket TV", "Krisbow bracket fixed 32-55\"", "Wall mount", 1, 129000, TOKO + "bracket-tv-55-inch-fixed"),
+        ("Kabel HDMI", "UGREEN 45437 HDMI 2.1 15m", "4K, 48Gbps", 1, 644000, TOKO + "kabel-hdmi-15-meter-ugreen"),
+        ("Keyboard & mouse", "Logitech MK540 Advanced", "Wireless 2.4GHz", 1, 995000, TOKO + "logitech-mk540"),
+    ]),
+    ("Jaringan", [
+        ("Router", "MikroTik RB5009UG+S+IN", "7x GbE, 1x 2.5GbE, 1x SFP+, VLAN kamera terpisah", 1, 4175000, TOKO + "rb5009ug-s-in"),
+        ("Switch PoE CCTV", "TP-Link Omada TL-SG2218P", "16x Gigabit PoE+ (budget 150W) + 2x SFP, managed", 1, 4944000, TOKO + "tl-sg2218p"),
+        ("Rak jaringan", "Indorack WR5012S", "Wall mount 12U, kedalaman 500mm, pintu kaca", 1, 2280000, TOKO + "indorack-wallmount-12u"),
+        ("PDU rak", "Indorack PDU6G", "6 outlet, rack mount 19\"", 1, 395000, TOKO + "pdu-indorack"),
+        ("Patch panel", "CommScope/AMP 24-port Cat6 (1933796-2)", "24 port, Cat6, 1U", 1, 1565000, TOKO + "patch-panel-24-port-cat6-commscope"),
+        ("Patch cord", "CommScope Cat6 1m (NPC06UVDB)", "Cat6 UTP 1 m", 12, 66000, TOKO + "patch-cord-cat6-commscope-1m"),
+    ]),
+    ("CCTV & kabel", [
+        ("Kamera IP CCTV", "Hikvision DS-2CD2143G2-IU (AcuSense)", "4MP dome, 2,8 mm, H.265+, IR 30 m, WDR 120dB, PoE, RTSP/ONVIF, sampai 25-30 fps", 8, 1687000, TOKO + "ds-2cd2143g2-iu"),
+        ("Junction box kamera", "Hikvision DS-1280ZJ-XS", "Back box seri dome 2xx3G2", 8, 910000, TOKO + "junction-box-hikvision"),
+        ("Kabel LAN (box 305 m)", "Belden Cat6 UTP 7814A", "Cat6 UTP 23AWG solid; 2 box untuk 8 titik (perkiraan, final setelah survey)", 2, 3365000, TOKO + "belden-cat-6-roll"),
+        ("Konektor RJ45", "CommScope/AMP RJ45 Cat6", "Isi 100 pcs", 1, 1210000, TOKO + "connector-rj45-cat6-commscope"),
+        ("Boot RJ45", "Belden AP700022 boot Cat6", "1 pack", 1, 190000, TOKO + "boot-rj45-cat6"),
+        ("Pipa conduit", "Clipsal pipa PVC 20mm", "2,9 m per batang; sekitar 400 m jalur kabel (perkiraan)", 140, 15534, TOKO + "pipa-conduit-clipsal-20mm"),
+        ("Klem pipa", "Clamp/saddle conduit 20mm", "Per pcs, jarak 1 m", 400, 2000, TOKO + "pipa-conduit-clipsal-20mm"),
+    ]),
+    ("Kelistrikan", [
+        ("UPS server", "APC Easy UPS Online SRV2KI-E", "2000VA / 1800W, online double-conversion", 1, 9065000, TOKO + "apc-srv2ki"),
+        ("UPS rak jaringan", "APC Easy UPS BVX1200LI-MS", "1200VA / 650W, AVR", 1, 1975000, TOKO + "apc-bvx1200li-ms"),
+    ]),
 ]
 r = 5
 first = r
-for item in HW:
-    if item[1] is None:
-        section(H, r, item[0], 7)
-    else:
-        it, prod, q, p, src = item
-        put(H, f"B{r}", it)
-        put(H, f"C{r}", prod, wrap=True, color=GREY)
-        put(H, f"D{r}", q, color=BLUE, fmt="0")
-        put(H, f"E{r}", p, color=BLUE, fmt=RP)
-        put(H, f"F{r}", f"=D{r}*E{r}", fmt=RP)
-        put(H, f"G{r}", src)
+for cat, rows in ITEMS:
+    section(RB, r, cat, 10)
     r += 1
-put(H, f"B{r}", "Total hardware", bold=True, fill=TOTAL)
-put(H, f"F{r}", f"=SUM(F{first}:F{r - 1})", bold=True, fmt=RP, fill=TOTAL)
-HW_TOTAL = f"Hardware!$F${r}"
-r += 2
-put(H, f"B{r}", "Kecocokan untuk 8 kamera: GPU 16 GB menjalankan deteksi dan hitung karton 8 stream secara bersamaan; CPU 8 core untuk decode dan web app; NVR merekam semua kamera sebagai bukti.", wrap=True, italic=True, color="595959")
-H.merge_cells(f"B{r}:G{r}")
-H.row_dimensions[r].height = 28
+    for comp, brand, spec, q, price, link in rows:
+        put(RB, f"A{r}", cat, color=GREY)
+        put(RB, f"B{r}", comp, wrap=True)
+        put(RB, f"C{r}", brand, wrap=True)
+        put(RB, f"D{r}", spec, wrap=True, color=GREY)
+        put(RB, f"E{r}", q, color=BLUE, fmt="0")
+        put(RB, f"F{r}", price, color=BLUE, fmt=RP)
+        put(RB, f"G{r}", f"=E{r}*F{r}", fmt=RP)
+        put(RB, f"H{r}", f"=ROUNDUP(F{r}*(1+{DK['cont']})*(1+{DK['mk_hw']}),-3)", fmt=RP)
+        put(RB, f"I{r}", f"=E{r}*H{r}", fmt=RP)
+        put(RB, f"J{r}", link, wrap=True, color="0563C1")
+        RB[f"J{r}"].hyperlink = link
+        r += 1
+last_hw = r - 1
+put(RB, f"B{r}", "Subtotal perangkat", bold=True, fill=TOTAL)
+put(RB, f"G{r}", f"=SUM(G{first}:G{last_hw})", bold=True, fmt=RP, fill=TOTAL)
+put(RB, f"I{r}", f"=SUM(I{first}:I{last_hw})", bold=True, fmt=RP, fill=TOTAL)
+HW_COST, HW_SELL = f"RAB!$G${r}", f"RAB!$I${r}"
 r += 1
-put(H, f"B{r}", "Sistem operasi Ubuntu Server dan seluruh software pendukung memakai lisensi open source, tanpa biaya lisensi.", italic=True, color="595959")
-H.merge_cells(f"B{r}:G{r}")
-
-# ------------------------------------------------------------------ Instalasi
-I = sheet("Instalasi", [5, 40, 62, 6, 15, 16, 8])
-title(I, "Instalasi", "Jasa pasang per titik sudah termasuk material standar (kabel, konektor, bracket) menurut sumber.")
-header(I, 4, ["No", "Item", "Keterangan", "Qty", "Harga satuan (Rp)", "Total (Rp)", "Sumber"])
-INST = [
-    ("Jasa + material pasang IP camera per titik", "Termasuk kabel standar, konektor, pemasangan, setting sudut", 8, 1500000, "S14"),
-    ("Kabel UTP Cat6 tambahan 305 m", "Belden Cable UTP Cat.6 305 Meters (7814A), untuk jarak kamera ke NVR di atas panjang standar", 1, 2900000, "S9"),
-    ("Konektor RJ45 Cat6", "Belden Connector Cat6 (50 Pieces) BL AP700008", 1, 340000, "S9"),
-]
-r = 5
-for i, (it, ket, q, p, src) in enumerate(INST, 1):
-    put(I, f"A{r}", i)
-    put(I, f"B{r}", it, wrap=True)
-    put(I, f"C{r}", ket, wrap=True, color=GREY)
-    put(I, f"D{r}", q, color=BLUE, fmt="0")
-    put(I, f"E{r}", p, color=BLUE, fmt=RP)
-    put(I, f"F{r}", f"=D{r}*E{r}", fmt=RP)
-    put(I, f"G{r}", src)
-    r += 1
-put(I, f"B{r}", "Total instalasi", bold=True, fill=TOTAL)
-put(I, f"F{r}", f"=SUM(F5:F{r - 1})", bold=True, fmt=RP, fill=TOTAL)
-INST_TOTAL = f"Instalasi!$F${r}"
+put(RB, f"B{r}", "Kontinjensi (fluktuasi harga perangkat)")
+put(RB, f"G{r}", f"=G{r - 1}*{DK['cont']}", fmt=RP)
+HW_CONT = f"RAB!$G${r}"
+r += 1
+put(RB, f"B{r}", "Total perangkat + kontinjensi", bold=True, fill=TOTAL)
+put(RB, f"G{r}", f"=G{r - 2}+G{r - 1}", bold=True, fmt=RP, fill=TOTAL)
 r += 2
-put(I, f"B{r}", "Tidak termasuk: alat kerja ketinggian (umumnya memakai forklift atau man basket milik gudang), listrik, dan pekerjaan sipil. Panjang kabel final mengikuti hasil survey.", wrap=True, italic=True, color="595959")
-I.merge_cells(f"B{r}:G{r}")
-I.row_dimensions[r].height = 28
+section(RB, r, "Jasa pasang", 10)
+r += 1
+put(RB, f"A{r}", "Jasa pasang", color=GREY)
+put(RB, f"B{r}", "Jasa pasang IP camera (jasa saja)", wrap=True)
+put(RB, f"C{r}", "Per titik kamera")
+put(RB, f"D{r}", "Tarik kabel dan pasang conduit, pasang kamera, setting sudut; material sudah dihitung di atas", wrap=True, color=GREY)
+put(RB, f"E{r}", 8, color=BLUE, fmt="0")
+put(RB, f"F{r}", 350000, color=BLUE, fmt=RP)
+put(RB, f"G{r}", f"=E{r}*F{r}", fmt=RP)
+put(RB, f"H{r}", f"=ROUNDUP(F{r}*(1+{DK['mk_inst']}),-3)", fmt=RP)
+put(RB, f"I{r}", f"=E{r}*H{r}", fmt=RP)
+link = "https://gsi-indo.com/2026/04/17/harga-pasang-cctv-per-titik/"
+put(RB, f"J{r}", link, wrap=True, color="0563C1")
+RB[f"J{r}"].hyperlink = link
+INST_COST, INST_SELL = f"RAB!$G${r}", f"RAB!$I${r}"
+r += 2
+note(RB, r, "Harga Tokopedia dari RAB Factory_Vision_Presentation.pptx (dicek 12 Okt 2026, umumnya sudah termasuk PPN). PC server: Agres Komputer Official, dicek 31 Okt 2026. "
+     "Panjang kabel dan conduit adalah perkiraan; angka final setelah survey dock.", 10, 30)
 
-# ------------------------------------------------------------------ Implementasi
-M = sheet("Implementasi", [5, 56, 8, 10, 10, 16, 16, 42])
-title(M, "Jasa Tim CV: Pembangunan Web App, AI, dan Implementasi", "Tarif jual jasa pasar (USD per jam, rate card outsourcing Indonesia) x kurs JISDOR x 8 jam per hari. Sudah termasuk keuntungan.")
-section(M, 4, "1. Tarif jual jasa tim CV per hari kerja", 8)
-header(M, 5, ["", "Peran", "", "USD/jam bawah", "USD/jam atas", "USD/jam dipakai", "Tarif per hari (Rp)", "Sumber dan catatan"])
-put(M, "B6", "Kurs USD/IDR (JISDOR)")
-put(M, "G6", 18138, color=BLUE, fmt=RP)
-put(M, "H6", "S16, 30 Okt 2026")
-put(M, "B7", "Jam kerja per hari")
-put(M, "G7", 8, color=BLUE, fmt="0")
-put(M, "H7", "S15: 160 jam per bulan = 20 hari x 8 jam")
-FX, HOURS = "Implementasi!$G$6", "Implementasi!$G$7"
-RATEPOS = "'Keputusan Bisnis'!$B$5"
+# ------------------------------------------------------------------ Jasa (INKINDO 2026)
+J = sheet("Jasa INKINDO", [5, 58, 9, 9, 9, 9, 9, 17, 34])
+title(J, "Jasa Pembuatan AI, Web App, dan Implementasi (tarif INKINDO 2026)",
+      "Pedoman Standar Minimal INKINDO 2026, DKI Jakarta (indeks 1,000). Tarif sudah termasuk gaji, beban sosial, overhead, dan keuntungan.")
+header(J, 4, ["", "Peran", "", "", "", "", "Tarif per bulan (Rp)", "Tarif per hari (Rp)", "Acuan INKINDO 2026"])
+ROLES = [
+    ("pm", "Team Leader / Project Manager", 37400000, "Tabel 3-26: Tenaga Ahli S1, pengalaman 8 tahun"),
+    ("ai", "AI / Computer Vision Engineer", 32300000, "Tabel 3-26: Tenaga Ahli S1, pengalaman 5 tahun"),
+    ("dev", "Pemrogram perangkat lunak (web app)", 17600000, "Tabel 4-26: Pemrogram Perangkat Lunak"),
+    ("asst", "Asisten tenaga ahli (pelabelan data)", 17600000, "Tabel 4-26: Asisten Tenaga Ahli/Teknisi/Analis"),
+    ("tech", "Teknisi jaringan TI", 16900000, "Tabel 4-26: Teknisi Jaringan Teknologi Informasi"),
+]
 RATE = {}
-r = 8
-for key, lab, lo, hi, note in [
-    ("pm", "Project Manager / Lead", 34, 86, "S15, Full-Stack senior (sumber tidak punya tarif PM terpisah)"),
-    ("ai", "AI / Computer Vision Engineer", 33, 86, "S15, Machine Learning Engineer mid-level"),
-    ("fs", "Fullstack Developer (web app)", 24, 62, "S15, Full-Stack Developer mid-level"),
-]:
-    put(M, f"B{r}", lab)
-    put(M, f"D{r}", lo, color=BLUE, fmt="0")
-    put(M, f"E{r}", hi, color=BLUE, fmt="0")
-    put(M, f"F{r}", f"=D{r}+(E{r}-D{r})*" + RATEPOS, fmt="0.0")
-    put(M, f"G{r}", f"=F{r}*{HOURS}*{FX}", fmt=RP, bold=True)
-    put(M, f"H{r}", note, wrap=True, color=GREY)
-    RATE[key] = f"Implementasi!$G${r}"
-    r += 1
-put(M, f"B{r}", "Posisi tarif dalam rentang diatur di sheet Keputusan Bisnis (0 = batas bawah, 1 = batas atas).", italic=True, color="595959")
-section(M, r + 2, "2. Pekerjaan dan nilai jasa tim", 8)
-ACT0 = r + 4
-header(M, ACT0 - 1, ["No", "Pekerjaan", "PM", "AI/CV", "Fullstack", "", "Nilai jasa (Rp)", "Hasil"])
-ACTS = [
-    ("Survey lokasi, layout dock, desain posisi kamera dan zona cek palet", 1, 1, 0, "Gambar posisi kamera per dock"),
-    ("Pengambilan dan pelabelan gambar karton dan palet dari CCTV lokasi", 0, 6, 0, "Dataset karton dan palet Minyakita"),
-    ("Training dan tuning model AI (karton, palet, lapisan)", 0, 10, 0, "Model deteksi khusus kemasan Minyakita"),
-    ("Logika hitung karton per palet (60 karton) dan rekonsiliasi per DO", 0, 8, 3, "Status palet lengkap atau kurang, selisih per DO"),
-    ("Web app on-premise: dashboard, input DO, laporan per DO, truk, palet, alert, user", 0, 0, 20, "Web app berjalan di server lokal"),
-    ("Pipeline video 8 kamera dan deploy di PC server", 0, 5, 3, "Sistem realtime di lokasi"),
-    ("Rakit dan setting PC server, kalibrasi 8 kamera", 0, 3, 0, "Server dan kamera siap"),
-    ("UAT: uji paralel 2 minggu dibanding hitung manual", 2, 5, 5, "Laporan akurasi, sign-off klien"),
-    ("Training pengguna, SOP, serah terima", 2, 0, 1, "SOP checker dan supervisor"),
-    ("Manajemen proyek", 8, 0, 0, "Rapat mingguan, laporan progres"),
-]
-r = ACT0
-for i, (act, pm, ai, fs, out) in enumerate(ACTS, 1):
-    put(M, f"A{r}", i)
-    put(M, f"B{r}", act, wrap=True)
-    for col, v in zip("CDE", (pm, ai, fs)):
-        put(M, f"{col}{r}", v, color=BLUE, fmt="0")
-    put(M, f"G{r}", f"=C{r}*{RATE['pm']}+D{r}*{RATE['ai']}+E{r}*{RATE['fs']}", fmt=RP)
-    put(M, f"H{r}", out, wrap=True, color=GREY)
-    r += 1
-put(M, f"B{r}", "Total nilai jasa tim CV", bold=True, fill=TOTAL)
-for col in "CDEG":
-    put(M, f"{col}{r}", f"=SUM({col}{ACT0}:{col}{r - 1})", bold=True, fmt=RP if col == "G" else "0", fill=TOTAL)
-IMPL_TOTAL = f"Implementasi!$G${r}"
-r += 2
-put(M, f"B{r}", "Durasi proyek dari survey sampai serah terima: sekitar 8 sampai 10 minggu.", italic=True, color="595959")
-
-# ------------------------------------------------------------------ Layanan (support)
-L = sheet("Layanan", [52, 9, 9, 9, 12, 16, 40])
-title(L, "Layanan Support Tim CV (on-site, tanpa cloud)", "Nilai jasa per bulan. Skenario A: garansi 3 bulan termasuk harga. Skenario B: 12 bulan termasuk langganan.")
-header(L, 4, ["Kegiatan per bulan", "PM", "AI/CV", "Fullstack", "Kunjungan teknisi", "Nilai per bulan (Rp)", "Keterangan"])
-put(L, "A5", "Tarif kunjungan teknisi (S17)")
-put(L, "F5", 150000, color=BLUE, fmt=RP)
-VISIT = "Layanan!$F$5"
-SUPPORT = [
-    ("Kunjungan rutin: cek kamera, bersihkan lensa, cek server dan rekaman", 0, 0.5, 0, 1, "1 kali per bulan"),
-    ("Pemantauan akurasi dan retraining model", 0, 1, 0, 0, "Rata-rata per bulan"),
-    ("Perbaikan dan update web app", 0, 0, 0.5, 0, "Rata-rata per bulan"),
-    ("Laporan bulanan dan koordinasi dengan klien", 0.25, 0, 0, 0, ""),
-]
-r = 6
-for act, pm, ai, fs, vis, note in SUPPORT:
-    put(L, f"A{r}", act, wrap=True)
-    for col, v in zip("BCDE", (pm, ai, fs, vis)):
-        put(L, f"{col}{r}", v, color=BLUE, fmt="0.00")
-    put(L, f"F{r}", f"=B{r}*{RATE['pm']}+C{r}*{RATE['ai']}+D{r}*{RATE['fs']}+E{r}*{VISIT}", fmt=RP)
-    put(L, f"G{r}", note, color=GREY)
-    r += 1
-put(L, f"A{r}", "Total nilai layanan per bulan", bold=True, fill=TOTAL)
-put(L, f"F{r}", f"=SUM(F6:F{r - 1})", bold=True, fmt=RP, fill=TOTAL)
-SUPPORT_M = f"Layanan!$F${r}"
-r += 2
-put(L, f"A{r}", "Penggantian perangkat rusak ditanggung garansi pabrikan selama masa garansi masing-masing. Kunjungan di luar Jabodetabek ditagihkan sesuai biaya aktual.", wrap=True, italic=True, color="595959")
-L.merge_cells(f"A{r}:G{r}")
-L.row_dimensions[r].height = 28
-
-# ------------------------------------------------------------------ Keputusan bisnis
-K = sheet("Keputusan Bisnis", [58, 14, 70])
-title(K, "Keputusan Bisnis (bukan harga)", "Margin, markup, dan masa kontrak adalah kebijakan perusahaan. Ubah di sini, semua angka ikut berubah.")
-header(K, 4, ["Parameter", "Nilai", "Keterangan"])
-DEC = [
-    ("ratepos", "Posisi tarif jasa dalam rentang sumber (0 = bawah, 1 = atas)", 0, "0.00", "0 = batas bawah (paling realistis untuk klien lokal). 0,5 = nilai tengah."),
-    ("mk_hw", "Markup hardware (skenario A)", 0.15, PCT, "Selisih harga jual perangkat terhadap harga beli."),
-    ("mk_inst", "Markup instalasi (skenario A)", 0.20, PCT, "Selisih harga jual instalasi terhadap biaya vendor."),
-    ("warranty", "Garansi layanan termasuk harga (bulan, skenario A)", 3, "0", "Layanan support selama masa garansi, nilainya masuk ke harga."),
-    ("m_rent", "Margin sewa perangkat (skenario B)", 0.40, PCT, "Harga sewa perangkat dan instalasi per tahun = biaya / (1 - margin)."),
-]
-DK = {}
 r = 5
-for key, lab, v, fmt, note in DEC:
-    put(K, f"A{r}", lab)
-    put(K, f"B{r}", v, color=BLUE, fmt=fmt, fill=YELLOW)
-    put(K, f"C{r}", note, wrap=True, color=GREY)
-    DK[key] = f"'Keputusan Bisnis'!$B${r}"
+for key, lab, monthly, ref in ROLES:
+    put(J, f"B{r}", lab)
+    put(J, f"G{r}", monthly, color=BLUE, fmt=RP)
+    put(J, f"H{r}", f"=G{r}/22*1.1", fmt=RP, bold=True)
+    put(J, f"I{r}", ref, wrap=True, color=GREY)
+    RATE[key] = f"'Jasa INKINDO'!$H${r}"
     r += 1
-put(K, f"A{r + 1}", "PPN efektif (S18)")
-put(K, f"B{r + 1}", 0.11, color=BLUE, fmt=PCT)
-put(K, f"C{r + 1}", "Ditambahkan di invoice. Untuk jasa dan sewa (skenario B), klien memotong PPh 23 sebesar 2%.", wrap=True, color=GREY)
-DK["ppn"] = f"'Keputusan Bisnis'!$B${r + 1}"
-
-
-def line(ws, row, label, formula, fmt=RP, bold=False, fill=None, note=None, color=BLACK):
-    put(ws, f"A{row}", label, bold=bold, fill=fill, wrap=True)
-    put(ws, f"B{row}", formula, fmt=fmt, bold=bold, fill=fill, color=color)
-    if note:
-        put(ws, f"C{row}", note, wrap=True, color=GREY)
-
+put(J, f"B{r}", "Konversi harian sesuai pedoman: tarif per hari = tarif per bulan / 22 x 1,1 (Perlem LKPP 12/2021 bagian 2.2.2).", italic=True, color="595959")
+r += 2
+header(J, r, ["No", "Pekerjaan", "PM", "AI/CV", "Pemrogram", "Asisten", "Teknisi", "Nilai jasa (Rp)", "Hasil"])
+r += 1
+GROUPS = [
+    ("Pembuatan AI", [
+        ("Pengambilan data dan pelabelan sekitar 3.000 gambar karton dan palet dari CCTV dock", 0, 2, 0, 8, 0, "Dataset kemasan Minyakita"),
+        ("Training dan tuning model (karton, palet, lapisan)", 0, 10, 0, 0, 0, "Model deteksi khusus kemasan"),
+        ("Logika hitung 60 karton per palet dan rekonsiliasi per DO", 0, 8, 0, 0, 0, "Status palet lengkap atau kurang, selisih per DO"),
+        ("Optimasi pipeline realtime 8 kamera 20-30 fps (decode GPU, TensorRT)", 0, 6, 0, 0, 0, "Sistem realtime stabil"),
+    ]),
+    ("Pembuatan Web App", [
+        ("Dashboard dock dan manajemen, input DO, laporan per DO/truk/palet, alert, user", 0, 0, 20, 0, 0, "Web app on-premise"),
+        ("Integrasi data DO dari WMS/ERP (file CSV atau API)", 0, 0, 5, 0, 0, "DO otomatis di sistem"),
+    ]),
+    ("Implementasi Lapangan", [
+        ("Survey dock dan desain posisi kamera serta zona cek palet", 1, 1, 0, 0, 1, "Gambar posisi kamera"),
+        ("Instalasi rak, jaringan, server, dan setting 8 kamera", 0, 0, 0, 0, 4, "Infrastruktur siap"),
+        ("Kalibrasi 8 kamera dan zona cek palet", 0, 3, 0, 0, 2, "Kamera terkalibrasi"),
+        ("Uji paralel 2 minggu dibanding hitung manual", 2, 5, 3, 0, 4, "Laporan akurasi, sign-off"),
+        ("Training pengguna, SOP, serah terima", 2, 0, 1, 0, 0, "SOP checker dan supervisor"),
+    ]),
+    ("Manajemen Proyek", [
+        ("Koordinasi, rapat mingguan, laporan progres selama 8-10 minggu", 10, 0, 0, 0, 0, "Laporan progres"),
+    ]),
+]
+GROUP_TOTAL = {}
+n = 1
+for gname, acts in GROUPS:
+    section(J, r, gname, 9)
+    r += 1
+    g0 = r
+    for act, pm, ai, dev, asst, tech, out in acts:
+        put(J, f"A{r}", n)
+        put(J, f"B{r}", act, wrap=True)
+        for col, v in zip("CDEFG", (pm, ai, dev, asst, tech)):
+            put(J, f"{col}{r}", v, color=BLUE, fmt="0")
+        put(J, f"H{r}", f"=C{r}*{RATE['pm']}+D{r}*{RATE['ai']}+E{r}*{RATE['dev']}+F{r}*{RATE['asst']}+G{r}*{RATE['tech']}", fmt=RP)
+        put(J, f"I{r}", out, wrap=True, color=GREY)
+        r += 1
+        n += 1
+    put(J, f"B{r}", f"Subtotal {gname}", bold=True, fill=TOTAL)
+    put(J, f"H{r}", f"=SUM(H{g0}:H{r - 1})", bold=True, fmt=RP, fill=TOTAL)
+    GROUP_TOTAL[gname] = f"'Jasa INKINDO'!$H${r}"
+    r += 1
+put(J, f"B{r}", "Total jasa", bold=True, fill=TOTAL)
+put(J, f"H{r}", "=" + "+".join(v.split("!")[1] for v in GROUP_TOTAL.values()), bold=True, fmt=RP, fill=TOTAL)
+JASA = f"'Jasa INKINDO'!$H${r}"
+r += 2
+section(J, r, "Layanan support per bulan (garansi dan langganan)", 9)
+r += 1
+s0 = r
+for act, pm, ai, dev, asst, tech in [
+    ("Kunjungan rutin: cek kamera, bersihkan lensa, cek server dan rekaman", 0, 0, 0, 0, 1),
+    ("Pemantauan akurasi dan retraining model", 0, 1, 0, 0, 0),
+    ("Perbaikan dan update web app", 0, 0, 1, 0, 0),
+]:
+    put(J, f"B{r}", act, wrap=True)
+    for col, v in zip("CDEFG", (pm, ai, dev, asst, tech)):
+        put(J, f"{col}{r}", v, color=BLUE, fmt="0")
+    put(J, f"H{r}", f"=C{r}*{RATE['pm']}+D{r}*{RATE['ai']}+E{r}*{RATE['dev']}+F{r}*{RATE['asst']}+G{r}*{RATE['tech']}", fmt=RP)
+    r += 1
+put(J, f"B{r}", "Total layanan per bulan", bold=True, fill=TOTAL)
+put(J, f"H{r}", f"=SUM(H{s0}:H{r - 1})", bold=True, fmt=RP, fill=TOTAL)
+SUPPORT = f"'Jasa INKINDO'!$H${r}"
 
 # ------------------------------------------------------------------ Skenario A
-SA = sheet("Skenario A", [62, 18, 60])
-title(SA, "Skenario A: Beli Putus", "Klien membeli semua: kamera, NVR, PC server, instalasi, web app dan AI. Semua menjadi inventaris Minyakita. Sekali bayar.")
+SA = sheet("Skenario A", [64, 18, 58])
+title(SA, "Skenario A: Beli Putus", "Semua perangkat, jasa pasang, web app dan AI menjadi milik perusahaan. Sekali bayar.")
 section(SA, 4, "1. Uang keluar ke vendor", 3)
-line(SA, 5, "Hardware", f"={HW_TOTAL}", color=GREEN)
-line(SA, 6, "Instalasi", f"={INST_TOTAL}", color=GREEN)
-line(SA, 7, "Total uang keluar", "=B5+B6", bold=True, fill=TOTAL)
-section(SA, 9, "2. Harga ke klien", 3)
-line(SA, 10, "Hardware", f"=B5*(1+{DK['mk_hw']})")
-line(SA, 11, "Instalasi", f"=B6*(1+{DK['mk_inst']})")
-line(SA, 12, "Jasa tim CV: web app, AI, implementasi (lisensi selamanya, 1 lokasi, 8 kamera)", f"={IMPL_TOTAL}", color=GREEN)
-line(SA, 13, "Jasa tim CV: garansi layanan", f"={SUPPORT_M}*{DK['warranty']}", color=GREEN)
-line(SA, 14, "Total harga (sebelum PPN)", "=ROUNDUP(SUM(B10:B13),-6)", bold=True, fill=TOTAL, note="Dibulatkan ke atas ke juta terdekat.")
-line(SA, 15, "PPN", f"=B14*{DK['ppn']}")
-line(SA, 16, "Total tagihan (termasuk PPN)", "=B14+B15", bold=True)
-section(SA, 18, "3. Pendapatan CV", 3)
-line(SA, 19, "Jasa tim CV", "=B12+B13")
-line(SA, 20, "Margin hardware dan instalasi", "=B14-B7-B19")
-line(SA, 21, "Pendapatan bersih CV (sebelum pajak penghasilan)", "=B14-B7", bold=True, fill=TOTAL)
-line(SA, 22, "Setara per bulan dalam 1 tahun", "=B21/12", bold=True)
-section(SA, 24, "4. Termin pembayaran yang diusulkan", 3)
-line(SA, 25, "DP 50% saat PO (membiayai pembelian hardware)", "=B16*50%")
-line(SA, 26, "30% saat instalasi selesai", "=B16*30%")
-line(SA, 27, "20% setelah UAT dan serah terima", "=B16*20%")
-line(SA, 28, "Setelah garansi: kontrak maintenance opsional per tahun", f"=ROUNDUP({SUPPORT_M}*12,-6)", note="Tidak termasuk dalam harga beli putus.")
+line(SA, 5, "Perangkat", f"={HW_COST}", color=GREEN)
+line(SA, 6, "Kontinjensi perangkat", f"={HW_CONT}", color=GREEN)
+line(SA, 7, "Jasa pasang kamera (vendor)", f"={INST_COST}", color=GREEN)
+line(SA, 8, "Total uang keluar", "=SUM(B5:B7)", bold=True, fill=TOTAL)
+section(SA, 10, "2. Harga ke klien", 3)
+line(SA, 11, "Perangkat (harga jual)", f"={HW_SELL}", color=GREEN)
+line(SA, 12, "Jasa pasang kamera", f"={INST_SELL}", color=GREEN)
+line(SA, 13, "Pembuatan AI", f"={GROUP_TOTAL['Pembuatan AI']}", color=GREEN)
+line(SA, 14, "Pembuatan Web App", f"={GROUP_TOTAL['Pembuatan Web App']}", color=GREEN)
+line(SA, 15, "Implementasi Lapangan", f"={GROUP_TOTAL['Implementasi Lapangan']}", color=GREEN)
+line(SA, 16, "Manajemen Proyek", f"={GROUP_TOTAL['Manajemen Proyek']}", color=GREEN)
+line(SA, 17, "Garansi layanan", f"={SUPPORT}*{DK['warranty']}")
+line(SA, 18, "Total harga (sebelum PPN)", "=SUM(B11:B17)", bold=True, fill=TOTAL)
+line(SA, 19, "PPN", f"=B18*{DK['ppn']}")
+line(SA, 20, "Total tagihan", "=B18+B19", bold=True)
+section(SA, 22, "3. Pendapatan", 3)
+line(SA, 23, "Jasa tim (AI, web app, implementasi, manajemen, garansi)", "=SUM(B13:B17)")
+line(SA, 24, "Margin perangkat dan jasa pasang", "=B11+B12-B8")
+line(SA, 25, "Pendapatan bersih (sebelum pajak penghasilan)", "=B18-B8", bold=True, fill=TOTAL)
+line(SA, 26, "Setara per bulan dalam 1 tahun", "=B25/12", bold=True)
+section(SA, 28, "4. Termin dan opsi", 3)
+line(SA, 29, "DP 50% saat PO", "=B20*50%")
+line(SA, 30, "30% setelah instalasi selesai", "=B20*30%")
+line(SA, 31, "20% setelah uji paralel dan serah terima", "=B20*20%")
+line(SA, 32, "Maintenance opsional per tahun setelah garansi", f"=ROUNDUP({SUPPORT}*12,-5)")
 
 # ------------------------------------------------------------------ Skenario B
-SB = sheet("Skenario B", [62, 18, 60])
-title(SB, "Skenario B: Langganan per Tahun (12 bulan)", "Semua infrastruktur milik kita. Klien menyewa perangkat beserta web app, AI, dan layanan support. Ditagih per tahun di muka.")
-section(SB, 4, "1. Uang keluar ke vendor (di depan, tahun pertama)", 3)
-line(SB, 5, "Hardware", f"={HW_TOTAL}", color=GREEN)
-line(SB, 6, "Instalasi", f"={INST_TOTAL}", color=GREEN)
-line(SB, 7, "Total uang keluar", "=B5+B6", bold=True, fill=TOTAL)
-section(SB, 9, "2. Langganan tahun pertama", 3)
-line(SB, 10, "Sewa perangkat dan instalasi (12 bulan)", f"=B7/(1-{DK['m_rent']})", note="Biaya perangkat dipulihkan dalam 12 bulan.")
-line(SB, 11, "Jasa tim CV: web app, AI, implementasi", f"={IMPL_TOTAL}", color=GREEN)
-line(SB, 12, "Jasa tim CV: layanan support 12 bulan", f"={SUPPORT_M}*12", color=GREEN)
-line(SB, 13, "Langganan tahun pertama (sebelum PPN)", "=ROUNDUP(SUM(B10:B12),-6)", bold=True, fill=TOTAL)
-line(SB, 14, "Setara per bulan", "=B13/12")
-line(SB, 15, "PPN", f"=B13*{DK['ppn']}")
-line(SB, 16, "Tagihan tahun pertama (termasuk PPN)", "=B13+B15", bold=True)
-section(SB, 18, "3. Pendapatan CV tahun pertama", 3)
-line(SB, 19, "Jasa tim CV", "=B11+B12")
-line(SB, 20, "Margin sewa perangkat", "=B13-B7-B19")
-line(SB, 21, "Pendapatan bersih CV per tahun (sebelum pajak penghasilan)", "=B13-B7", bold=True, fill=TOTAL)
-line(SB, 22, "Setara per bulan", "=B21/12", bold=True)
-line(SB, 23, "Balik modal", '="langsung, langganan dibayar di muka"')
-section(SB, 25, "4. Perpanjangan tahun berikutnya (perangkat sudah lunas)", 3)
-line(SB, 26, "Sewa perangkat (margin saja, perangkat sudah lunas)", "=B10-B7")
-line(SB, 27, "Jasa tim CV: layanan support 12 bulan", "=B12")
-line(SB, 28, "Langganan perpanjangan per tahun (sebelum PPN)", "=ROUNDUP(B26+B27,-6)", bold=True, fill=TOTAL)
-line(SB, 29, "Pendapatan bersih CV per tahun", "=B28", note="Tidak ada uang keluar ke vendor selama perangkat dalam garansi.")
+SB = sheet("Skenario B", [64, 18, 58])
+title(SB, "Skenario B: Langganan per Tahun (12 bulan)", "Perangkat milik kita, disewa perusahaan beserta web app, AI, dan layanan. Ditagih per tahun.")
+section(SB, 4, "1. Uang keluar ke vendor (tahun pertama)", 3)
+line(SB, 5, "Perangkat", f"={HW_COST}", color=GREEN)
+line(SB, 6, "Kontinjensi perangkat", f"={HW_CONT}", color=GREEN)
+line(SB, 7, "Jasa pasang kamera (vendor)", f"={INST_COST}", color=GREEN)
+line(SB, 8, "Total uang keluar", "=SUM(B5:B7)", bold=True, fill=TOTAL)
+section(SB, 10, "2. Langganan tahun pertama", 3)
+line(SB, 11, "Sewa perangkat dan pemasangan, 12 bulan", f"=ROUNDUP(B8/(1-{DK['m_rent']}),-5)", nt="Biaya perangkat kembali dalam 12 bulan.")
+line(SB, 12, "Pembuatan AI", f"={GROUP_TOTAL['Pembuatan AI']}", color=GREEN)
+line(SB, 13, "Pembuatan Web App", f"={GROUP_TOTAL['Pembuatan Web App']}", color=GREEN)
+line(SB, 14, "Implementasi Lapangan", f"={GROUP_TOTAL['Implementasi Lapangan']}", color=GREEN)
+line(SB, 15, "Manajemen Proyek", f"={GROUP_TOTAL['Manajemen Proyek']}", color=GREEN)
+line(SB, 16, "Layanan support 12 bulan", f"={SUPPORT}*12")
+line(SB, 17, "Langganan tahun pertama (sebelum PPN)", "=SUM(B11:B16)", bold=True, fill=TOTAL)
+line(SB, 18, "PPN", f"=B17*{DK['ppn']}")
+line(SB, 19, "Tagihan tahun pertama", "=B17+B18", bold=True)
+section(SB, 21, "3. Pendapatan tahun pertama", 3)
+line(SB, 22, "Pendapatan bersih (sebelum pajak penghasilan)", "=B17-B8", bold=True, fill=TOTAL)
+line(SB, 23, "Setara per bulan", "=B22/12", bold=True)
+section(SB, 25, "4. Perpanjangan tahun berikutnya", 3)
+line(SB, 26, "Sewa perangkat 12 bulan (perangkat sudah lunas)", "=ROUNDUP(B11-B8,-5)")
+line(SB, 27, "Layanan support 12 bulan", "=B16")
+line(SB, 28, "Langganan perpanjangan (sebelum PPN)", "=B26+B27", bold=True, fill=TOTAL)
+line(SB, 29, "Pendapatan bersih per tahun", "=B28")
 line(SB, 30, "Setara per bulan", "=B29/12", bold=True)
 
+# ------------------------------------------------------------------ Sumber
+SS = sheet("Sumber Harga", [7, 95, 70])
+title(SS, "Sumber Harga", "Harga toko dapat berubah; minta penawaran tertulis sebelum membeli.")
+header(SS, 4, ["Kode", "Sumber", "Tautan"])
+for i, (c, d, u) in enumerate([
+    ("S1", "RAB Factory_Vision_Presentation.pptx (slide RAB 1/3 sampai 3/3): harga Tokopedia dicek 12 Okt 2026, umumnya sudah termasuk PPN. Tautan per item ada di sheet RAB.", "Factory_Vision_Presentation.pptx"),
+    ("S2", "Agres Komputer Official (Tokopedia): AGRES CRYO PC ULTRA 5 245KF RTX 5070 TI 16G / 32GB 1TB, Rp 35.000.000 (dicek 31 Okt 2026 lewat hasil pencarian). Konfirmasi varian, PSU, dan casing ke penjual.", AGRES),
+    ("S3", "Pembanding: e-katalog INAPROC/LKPP, AGRES CRYO PC ULTRA 5 245KF RTX 5070 12G 32GB/1TB + Win 11 Pro: Rp 34.234.234 + PPN Rp 3.765.766. Situs Agres (agres.id, agreskomputer.com) saat ini tidak menampilkan stok PC Ready/workstation.",
+     "https://katalog.inaproc.id/pt-bangun-jaya-pedia/agres-cryo-pc-ultra-5-245kf-rtx-5070-12g-32gb-1tb-win-11-pro-rakitan-pc-gaming"),
+    ("S4", "INKINDO, Pedoman Standar Minimal Tahun 2026 Remunerasi (Billing Rate): Tabel 3-26 (Tenaga Ahli tanpa SKK) dan Tabel 4-26 (Teknisi/Analis); SBOH = SBOB / 22 x 1,1.", "https://www.inkindo.org/documents/ikdweb-billing-rate-2026.pdf"),
+    ("S5", "GSI Indonesia, Harga Pasang CCTV Per Titik 2026: IP camera jasa saja Rp 200.000 sampai Rp 350.000 per titik. Dipakai batas atas.", "https://gsi-indo.com/2026/04/17/harga-pasang-cctv-per-titik/"),
+    ("S6", "PMK No. 131 Tahun 2024: PPN 12% x DPP 11/12, efektif 11%.", "Peraturan Menteri Keuangan No. 131 Tahun 2024"),
+], 5):
+    put(SS, f"A{i}", c, bold=True)
+    put(SS, f"B{i}", d, wrap=True)
+    put(SS, f"C{i}", u, wrap=True, color="0563C1" if u.startswith("http") else GREY)
+    if u.startswith("http"):
+        SS[f"C{i}"].hyperlink = u
+
 # ------------------------------------------------------------------ Ringkasan
-R = sheet("Ringkasan", [50, 24, 24, 24])
-title(R, "Ringkasan: Hitung Karton per Palet di Loading Dock, 8 Kamera, On-Premise", "Semua harga dari sumber publik (sheet Sumber Harga). Tanpa cloud. Hitungan per tahun (12 bulan).")
+R = sheet("Ringkasan", [52, 22, 22, 22])
+title(R, "Ringkasan: Hitung Karton per Palet di Loading Dock, 8 Kamera 20-30 fps, On-Premise",
+      "Format RAB mengikuti pptx; PC server dari Agres; jasa dengan tarif INKINDO 2026. Hitungan per tahun (12 bulan).")
 header(R, 4, ["", "A. Beli putus", "B. Langganan tahun pertama", "B. Perpanjangan per tahun"])
 SUM = [
-    ("Pemilik perangkat", '="Minyakita"', '="Kita (disewakan)"', '="Kita (disewakan)"', None),
-    ("Uang keluar ke vendor (hardware + instalasi)", "='Skenario A'!B7", "='Skenario B'!B7", "=0", RP),
-    ("Tagihan ke klien (sebelum PPN)", "='Skenario A'!B14", "='Skenario B'!B13", "='Skenario B'!B28", RP),
-    ("Tagihan termasuk PPN", "='Skenario A'!B16", "='Skenario B'!B16", f"='Skenario B'!B28*(1+{DK['ppn']})", RP),
-    ("Jasa tim CV di dalam tagihan", "='Skenario A'!B19", "='Skenario B'!B19", "='Skenario B'!B27", RP),
-    ("Margin perangkat dan instalasi", "='Skenario A'!B20", "='Skenario B'!B20", "='Skenario B'!B26", RP),
-    ("Pendapatan bersih CV per tahun", "='Skenario A'!B21", "='Skenario B'!B21", "='Skenario B'!B29", RP),
-    ("Pendapatan bersih CV per bulan (dibagi 12)", "='Skenario A'!B22", "='Skenario B'!B22", "='Skenario B'!B30", RP),
+    ("Uang keluar ke vendor", "='Skenario A'!B8", "='Skenario B'!B8", "=0"),
+    ("Harga ke klien (sebelum PPN)", "='Skenario A'!B18", "='Skenario B'!B17", "='Skenario B'!B28"),
+    ("Tagihan termasuk PPN", "='Skenario A'!B20", "='Skenario B'!B19", f"='Skenario B'!B28*(1+{DK['ppn']})"),
+    ("Pendapatan bersih per tahun", "='Skenario A'!B25", "='Skenario B'!B22", "='Skenario B'!B29"),
+    ("Pendapatan bersih per bulan (dibagi 12)", "='Skenario A'!B26", "='Skenario B'!B23", "='Skenario B'!B30"),
 ]
 r = 5
-for lab, fa, fb, fc, fmt in SUM:
+for lab, fa, fb, fc in SUM:
     put(R, f"A{r}", lab, bold=True)
     for col, f in zip("BCD", (fa, fb, fc)):
-        put(R, f"{col}{r}", f, color=GREEN, fmt=fmt, right=True)
+        put(R, f"{col}{r}", f, color=GREEN, fmt=RP, right=True)
     r += 1
 r += 1
-put(R, f"A{r}", "Isi paket di kedua skenario", bold=True)
-for n in [
-    "8 IP camera 4MP, NVR 8 kanal + HDD 8 TB (rekaman bukti), PC server AI dengan GPU 16 GB, UPS online 2 kVA, rack, switch, monitor dashboard, layar status di dock.",
-    "Web app on-premise: dashboard per dock, input DO, hitung karton per palet (60 karton), alert palet kurang, laporan per DO, truk, dan palet.",
-    "Instalasi 8 titik, kalibrasi, UAT paralel 2 minggu, training pengguna dan SOP.",
-    "Tidak termasuk: listrik, alat kerja ketinggian, pekerjaan sipil, transport di luar Jabodetabek.",
-    "Pendapatan bersih CV = tagihan dikurangi uang keluar ke vendor, sebelum pajak penghasilan dan pembagian ke anggota tim.",
-]:
+put(R, f"A{r}", "Rincian jasa (sama di kedua opsi)", bold=True)
+r += 1
+for g, ref in GROUP_TOTAL.items():
+    put(R, f"A{r}", g)
+    put(R, f"B{r}", f"={ref}", color=GREEN, fmt=RP, right=True)
     r += 1
-    put(R, f"A{r}", "• " + n, wrap=True, color=GREY)
+r += 1
+for t in [
+    "PC server: GPU RTX 5070 Ti 16 GB mendekode 8 stream 4MP di GPU dan menjalankan model TensorRT; target 20-30 fps per kamera. Kapasitas final dibuktikan dengan benchmark saat uji paralel.",
+    "Tarif jasa INKINDO adalah standar minimal nasional untuk badan usaha jasa konsultansi dan sudah termasuk overhead dan keuntungan.",
+]:
+    put(R, f"A{r}", "• " + t, wrap=True, color=GREY)
     R.merge_cells(f"A{r}:D{r}")
-    R.row_dimensions[r].height = 28
+    R.row_dimensions[r].height = 30
+    r += 1
 
-wb.move_sheet("Ringkasan", offset=-(len(wb.sheetnames) - 1))
+order = ["Ringkasan", "RAB", "Jasa INKINDO", "Skenario A", "Skenario B", "Keputusan Bisnis", "Sumber Harga"]
+wb._sheets = [wb[n] for n in order]
 wb.active = 0
 for ws in wb.worksheets:
     ws.freeze_panes = "A5"
