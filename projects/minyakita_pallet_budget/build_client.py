@@ -41,10 +41,16 @@ sa, sb = src["Skenario A"], src["Skenario B"]
 total_a = by_label(sa, "Total harga (sebelum PPN)")
 garansi_a = by_label(sa, "Garansi layanan")
 maint_a = by_label(sa, "Maintenance opsional per tahun setelah garansi")
-free_b = by_label(kb, "Layanan termasuk di tahun pertama Opsi B (bulan)")
-support_b1 = by_label(sb, "Layanan support tahun pertama")
-year1 = by_label(sb, "Total tahun pertama (sebelum PPN)")
-renew = by_label(sb, "Langganan per tahun (sebelum PPN)")
+term = by_label(kb, "Kontrak minimum Opsi B (bulan)")
+late = by_label(kb, "Batas telat bayar sebelum layanan dihentikan sementara (hari)")
+setup_b = by_label(sb, "Total biaya setup")
+rent_b = by_label(sb, "Sewa perangkat dan pemasangan")
+support_b = by_label(sb, "Layanan support dan maintenance 12 bulan")
+reserve_b = by_label(sb, "Jaminan penggantian perangkat")
+sub_b = by_label(sb, "Langganan per tahun (sebelum PPN)")
+year1 = by_label(sb, "Tahun pertama (setup + langganan)")
+total_b = by_label(sb, "Total selama kontrak minimum")
+YEARS = int(term // 12)
 
 CLIENT_NAME = {   # internal item names -> client wording
     "PC server AI (rakitan Agres)": "PC server AI (workstation GPU)",
@@ -75,7 +81,8 @@ for r in range(1, js.max_row + 1):
         services[grp][0] = h
         grp = None
 assert goods_total + sum(v for v, _ in services.values()) + garansi_a == total_a, "Opsi A tidak sama dengan budget"
-assert goods_total + sum(v for v, _ in services.values()) + support_b1 == year1, "Opsi B tidak sama dengan budget"
+assert sum(v for v, _ in services.values()) == setup_b and rent_b + support_b + reserve_b == sub_b, "Opsi B tidak sama dengan budget"
+assert setup_b + sub_b == year1 and setup_b + sub_b * YEARS == total_b
 
 # ---------------------------------------------------------------- client workbook
 wb = Workbook()
@@ -207,29 +214,67 @@ tot_a, grand_a = totals(A, r, subs)
 
 # ---------------------------------------------------------------- Rincian Opsi B
 B = sheet("Rincian Opsi B", WIDTHS)
-put(B, "A1", "Rincian Opsi B: Langganan Layanan Tahunan", bold=True, size=14)
-put(B, "A2", f"Tahun pertama harganya sama dengan beli putus, dengan layanan {free_b} bulan (Opsi A: {warranty} bulan). "
-    "Mulai tahun kedua dibayar langganan layanan per tahun. Harga dalam Rupiah, belum termasuk PPN.", italic=True, color="595959")
+put(B, "A1", f"Rincian Opsi B: Sewa dan Langganan, Kontrak Minimum {term} Bulan", bold=True, size=14)
+put(B, "A2", "Perangkat disediakan, dipasang, dan dirawat penyedia. Biaya setup dibayar sekali, langganan dibayar di muka per 12 bulan. "
+    "Harga dalam Rupiah, belum termasuk PPN.", italic=True, color="595959")
 header(B, 4, COLS)
-band(B, 5, "TAHUN PERTAMA", 7)
-r, subs = full_breakdown(B, 6, f"Layanan support dan maintenance {free_b} bulan",
-                         f"Setelah serah terima, harga sama dengan garansi {warranty} bulan Opsi A", support_b1)
-tot_b1, grand_b1 = totals(B, r, subs, "Total tahun pertama (sebelum PPN)")
-r = grand_b1 + 2
-band(B, r, "LANGGANAN TAHUN BERIKUTNYA (per tahun)", 7)
-line(B, r + 1, 1, "Layanan support dan maintenance, 12 bulan", "Dibayar di awal tiap periode", SUPPORT_TEXT, 1, renew)
-tot_bn, grand_bn = totals(B, r + 3, [f"G{r + 1}"], "Langganan per tahun (sebelum PPN)")
+band(B, 5, "BIAYA SETUP (satu kali)", 7)
+r, n = service_lines(B, 6, 1)
+setup_cell = subtotal(B, r, "biaya setup", 6, r - 1)
+r += 2
+band(B, r, "LANGGANAN PER TAHUN (dibayar di muka per 12 bulan)", 7)
+first = r + 1
+line(B, r + 1, 1, "Sewa perangkat dan pemasangan", "Seluruh perangkat di daftar bawah",
+     "8 kamera, PC server AI, penyimpanan rekaman dan backup, UPS, rak dan jaringan, TV status loading dock; terpasang di 8 titik", 1, rent_b)
+line(B, r + 2, 2, "Layanan support dan maintenance", "12 bulan", SUPPORT_TEXT, 1, support_b)
+line(B, r + 3, 3, "Jaminan penggantian perangkat", "Kerusakan karena pemakaian normal",
+     "Perangkat rusak diganti unit setara oleh penyedia, termasuk setelah garansi pabrik habis", 1, reserve_b)
+sub_cell = subtotal(B, r + 4, "langganan per tahun", first, r + 3)
+r += 6
+band(B, r, f"TAGIHAN SELAMA KONTRAK MINIMUM ({term} bulan)", 7)
+r += 1
+year_rows = []
+for y in range(1, YEARS + 1):
+    put(B, f"B{r}", f"Tahun ke-{y}" + (" (biaya setup + langganan)" if y == 1 else " (langganan)"), wrap=True)
+    put(B, f"G{r}", f"={setup_cell}+{sub_cell}" if y == 1 else f"={sub_cell}", fmt=RP)
+    year_rows.append(f"G{r}")
+    r += 1
+tot_bk, grand_bk = totals(B, r + 1, year_rows, f"Total kontrak {term} bulan (sebelum PPN)")
+r = grand_bk + 2
+band(B, r, "BIAYA PEMUTUSAN bila kontrak dihentikan sebelum masa minimum", 7)
+r += 1
+for y in range(1, YEARS):
+    put(B, f"B{r}", f"Berhenti setelah tahun ke-{y}")
+    put(B, f"D{r}", f"Sisa sewa perangkat sampai bulan ke-{term} ({YEARS - y} tahun)", color="404040")
+    put(B, f"G{r}", f"=F{first}*{YEARS - y}", fmt=RP)
+    r += 1
+put(B, f"B{r}", "Biaya setup dan langganan yang sudah dibayar tidak dikembalikan. Sebagai ganti biaya pemutusan, perusahaan dapat "
+    "membeli perangkat dengan nilai yang sama.", wrap=True, color="404040", italic=True)
+B.merge_cells(f"B{r}:G{r}")
+B.row_dimensions[r].height = 28
+r += 2
+band(B, r, "Perangkat yang disediakan (tanpa harga, tetap milik penyedia)", 7)
+r += 1
+for cat, item, brand, spec, q, u in goods:
+    if cat == "Jasa pasang":
+        continue
+    put(B, f"B{r}", item, wrap=True)
+    put(B, f"C{r}", brand, wrap=True, color="404040")
+    put(B, f"D{r}", spec, wrap=True, color="404040")
+    put(B, f"E{r}", q, fmt="0")
+    B.row_dimensions[r].height = max(15, 13 * (int(max(len(str(brand)) / 28, len(str(spec)) / 52)) + 1))
+    r += 1
 
 # ---------------------------------------------------------------- Ringkasan Penawaran
 R = sheet("Ringkasan Penawaran", [52, 26, 26, 26])
 put(R, "A1", "Penawaran: Sistem Hitung Karton per Palet di Loading Dock (8 Kamera)", bold=True, size=14)
 put(R, "A2", "Kepada: PT [nama perusahaan], Gudang Minyakita  ·  Tanggal: [isi tanggal]  ·  Berlaku 14 hari sejak tanggal penawaran",
     italic=True, color="595959")
-header(R, 4, ["", "Opsi A: Beli putus", "Opsi B: Tahun pertama", "Opsi B: Langganan per tahun berikutnya"])
+header(R, 4, ["", "Opsi A: Beli putus", "Opsi B: Tahun ke-1", f"Opsi B: Tahun ke-2 s.d. {YEARS} (per tahun)"])
 rows = [
-    ("Total (sebelum PPN)", f"='Rincian Opsi A'!G{tot_a}", f"='Rincian Opsi B'!G{tot_b1}", f"='Rincian Opsi B'!G{tot_bn}"),
-    ("PPN", f"='Rincian Opsi A'!G{tot_a + 1}", f"='Rincian Opsi B'!G{tot_b1 + 1}", f"='Rincian Opsi B'!G{tot_bn + 1}"),
-    ("Total tagihan", f"='Rincian Opsi A'!G{grand_a}", f"='Rincian Opsi B'!G{grand_b1}", f"='Rincian Opsi B'!G{grand_bn}"),
+    ("Total (sebelum PPN)", f"='Rincian Opsi A'!G{tot_a}", f"='Rincian Opsi B'!{year_rows[0]}", f"='Rincian Opsi B'!{year_rows[1]}"),
+    ("PPN", f"='Rincian Opsi A'!G{tot_a + 1}", f"=C5*'Rincian Opsi B'!F{tot_bk + 1}", f"=D5*'Rincian Opsi B'!F{tot_bk + 1}"),
+    ("Total tagihan", f"='Rincian Opsi A'!G{grand_a}", "=C5+C6", "=D5+D6"),
 ]
 r = 5
 for lab, fa, fb, fc in rows:
@@ -240,24 +285,36 @@ for lab, fa, fb, fc in rows:
     r += 1
 put(R, f"A{r}", "Pemilik perangkat", bold=True)
 put(R, f"B{r}", "Perusahaan", right=True)
-put(R, f"C{r}", "Perusahaan", right=True)
-put(R, f"D{r}", "Perusahaan", right=True)
+put(R, f"C{r}", "Penyedia", right=True)
+put(R, f"D{r}", "Penyedia", right=True)
 r += 1
 put(R, f"A{r}", "Layanan support dan maintenance", bold=True)
 put(R, f"B{r}", f"{warranty} bulan termasuk", right=True)
-put(R, f"C{r}", f"{free_b} bulan termasuk", right=True)
+put(R, f"C{r}", "12 bulan termasuk", right=True)
 put(R, f"D{r}", "12 bulan termasuk", right=True)
+r += 1
+put(R, f"A{r}", "Penggantian perangkat rusak (pemakaian normal)", bold=True)
+put(R, f"B{r}", "Garansi pabrik", right=True)
+put(R, f"C{r}", "Ditanggung penyedia", right=True)
+put(R, f"D{r}", "Ditanggung penyedia", right=True)
 r += 1
 put(R, f"A{r}", "Maintenance setelah masa garansi (Opsi A, opsional, per tahun)", bold=True)
 put(R, f"B{r}", maint_a, fmt=RP, right=True)
-put(R, f"C{r}", "-", right=True)
-put(R, f"D{r}", "-", right=True)
+put(R, f"C{r}", "termasuk", right=True)
+put(R, f"D{r}", "termasuk", right=True)
+r += 1
+put(R, f"A{r}", f"Total selama {YEARS} tahun (sebelum PPN)", bold=True)
+put(R, f"B{r}", f"=B5+B{r - 1}*{YEARS - 1}", fmt=RP, right=True)
+put(R, f"C{r}", f"='Rincian Opsi B'!G{tot_bk}", fmt=RP, right=True)
+R.merge_cells(f"C{r}:D{r}")
+r += 1
+put(R, f"A{r}", "(Opsi A dihitung dengan maintenance opsional mulai tahun ke-2)", italic=True, color="595959")
 r += 2
 band(R, r, "Termin pembayaran", 4)
 r = bullets(R, r + 1, [
     "Opsi A: DP 50% saat PO, 30% setelah instalasi selesai, 20% setelah uji paralel dan serah terima.",
-    "Opsi B tahun pertama: sama dengan Opsi A (50% / 30% / 20%). Langganan tahun berikutnya dibayar di awal tiap periode 12 bulan.",
-    "Opsi B: komitmen langganan minimal 1 tahun setelah tahun pertama.",
+    "Opsi B: saat PO dibayar 50% biaya setup dan langganan tahun ke-1; 50% biaya setup saat sistem mulai dipakai (go-live). "
+    "Periode langganan dihitung sejak go-live; tahun berikutnya dibayar di muka di awal tiap periode 12 bulan.",
 ], 4)
 r += 1
 band(R, r, "Yang didapatkan", 4)
@@ -279,7 +336,7 @@ r += 1
 band(R, r, "Garansi dan layanan", 4)
 r = bullets(R, r + 1, [
     "Opsi A: perangkat bergaransi resmi pabrikan; layanan " + str(warranty) + " bulan setelah serah terima.",
-    f"Opsi B: perangkat bergaransi resmi pabrikan; layanan {free_b} bulan di tahun pertama, lalu berlanjut selama langganan aktif.",
+    "Opsi B: selama kontrak, layanan support, maintenance, dan penggantian perangkat rusak karena pemakaian normal ditanggung penyedia.",
 ], 4)
 r += 1
 band(R, r, "Yang disiapkan perusahaan", 4)
@@ -289,6 +346,23 @@ r = bullets(R, r + 1, [
     "Data DO (ekspor file atau akses API WMS/ERP) dan satu PIC gudang untuk koordinasi dan uji paralel.",
     "SOP: palet berhenti sejenak di zona cek, plastik wrap bening agar karton terlihat kamera.",
 ], 4)
+r += 1
+band(R, r, "Ketentuan dan pengamanan", 4)
+r = bullets(R, r + 1, [
+    f"Opsi B: kontrak minimum {term} bulan. Bila dihentikan lebih awal, perusahaan membayar biaya pemutusan sebesar sisa sewa perangkat "
+    "sampai akhir kontrak minimum (rincian di sheet Rincian Opsi B), atau membeli perangkat dengan nilai yang sama.",
+    "Opsi B: biaya setup dan langganan yang sudah dibayar tidak dapat dikembalikan.",
+    f"Opsi B: perangkat, aplikasi AI, dan web app tetap milik penyedia; perusahaan mendapat hak pakai selama langganan aktif. "
+    "Data operasional milik perusahaan dan dapat diekspor kapan saja.",
+    f"Opsi B: keterlambatan pembayaran lebih dari {late} hari, layanan support dan pembaruan dihentikan sementara sampai pembayaran diterima.",
+    "Opsi B: perangkat tidak boleh dipindahkan, dibongkar, atau diubah tanpa persetujuan tertulis penyedia. Setelah kontrak minimum, "
+    "langganan dapat diperpanjang dengan harga yang disepakati ulang, atau perangkat ditarik oleh penyedia.",
+    "Opsi A: hak milik perangkat dan hak pakai aplikasi AI serta web app (1 lokasi, 8 kamera) berpindah ke perusahaan setelah pembayaran lunas. "
+    "Kode sumber aplikasi tidak termasuk.",
+    "Kedua opsi: kerusakan karena kelalaian, salah pakai, benturan forklift atau alat angkut, bencana alam, banjir, kebakaran, petir, "
+    "tegangan listrik tidak stabil, atau perubahan instalasi oleh pihak lain ditanggung perusahaan sesuai harga perangkat dan jasa saat itu.",
+    "Kedua opsi: perusahaan memberikan akses lokasi untuk pemasangan dan kunjungan maintenance terjadwal.",
+], 4, 30)
 r += 1
 band(R, r, "Catatan", 4)
 bullets(R, r + 1, [

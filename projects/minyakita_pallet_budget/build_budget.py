@@ -3,7 +3,8 @@
 Layout follows the RAB slides of Factory_Vision_Presentation.pptx (Kategori, Komponen, Merek/Tipe, Spesifikasi kunci,
 Harga satuan, Link) with the deck's 10% price contingency. The AI server is an Agres Komputer build. Services are
 priced with INKINDO's 2026 minimum billing rates (Pedoman Standar Minimal 2026), converted to a day rate the way the
-guideline prescribes (SBOH = SBOB / 22 x 1.1). Two scenarios: A one-off purchase, B annual subscription (12 months).
+guideline prescribes (SBOH = SBOB / 22 x 1.1). Two scenarios: A one-off purchase; B a one-off setup fee plus a yearly
+subscription (device rental, support, replacement reserve) with a 36-month minimum contract and early-termination fee.
 
     python build_budget.py   # -> Budget_Minyakita_Pallet_Counting.xlsx (then recalc with LibreOffice)
 """
@@ -87,7 +88,10 @@ DEC = [
     ("mk_hw", "Markup perangkat", 0.15, PCT, "Atas harga beli + kontinjensi."),
     ("mk_inst", "Markup jasa pasang kamera", 0.20, PCT, "Atas tarif vendor pemasang."),
     ("warranty", "Garansi layanan termasuk harga Opsi A (bulan)", 3, "0", "Support setelah serah terima."),
-    ("free_b", "Layanan termasuk di tahun pertama Opsi B (bulan)", 12, "0", "Tahun pertama Opsi B harganya sama dengan beli putus; layanan diberikan 12 bulan, bukan 3 bulan."),
+    ("term", "Kontrak minimum Opsi B (bulan)", 36, "0", "Modal perangkat ditutup selama kontrak minimum; tagihan tetap per 12 bulan di muka."),
+    ("m_rent", "Margin sewa perangkat selama kontrak minimum (Opsi B)", 0.40, PCT, "Total sewa selama kontrak = uang keluar perangkat / (1 - margin)."),
+    ("spare", "Cadangan pengganti per jenis perangkat yang garansinya habis sebelum kontrak selesai (unit)", 1, "0", "Dipakai di sheet Cadangan Penggantian."),
+    ("late", "Batas telat bayar sebelum layanan dihentikan sementara (hari)", 30, "0", "Pengaman pembayaran Opsi B; ditulis di penawaran."),
     ("ppn", "PPN efektif (isi 0 bila belum PKP)", 0.11, PCT, "PMK 131/2024: 12% x DPP 11/12."),
 ]
 DK = {}
@@ -141,10 +145,12 @@ ITEMS = [
 ]
 r = 5
 first = r
+RAB_ROW = {}
 for cat, rows in ITEMS:
     section(RB, r, cat, 10)
     r += 1
     for comp, brand, spec, q, price, link in rows:
+        RAB_ROW[comp] = r
         put(RB, f"A{r}", cat, color=GREY)
         put(RB, f"B{r}", comp, wrap=True)
         put(RB, f"C{r}", brand, wrap=True)
@@ -306,38 +312,100 @@ line(SA, 30, "30% setelah instalasi selesai", "=B20*30%")
 line(SA, 31, "20% setelah uji paralel dan serah terima", "=B20*20%")
 line(SA, 32, "Maintenance opsional per tahun setelah garansi", f"=ROUNDUP({SUPPORT}*12,-5)")
 
+# ------------------------------------------------------------------ Cadangan penggantian (Opsi B)
+CP = sheet("Cadangan Penggantian", [30, 34, 15, 11, 50, 12, 9, 16])
+title(CP, "Cadangan Penggantian Perangkat (Opsi B)",
+      "Perangkat aktif yang garansi pabriknya habis sebelum kontrak minimum selesai dicadangkan 1 unit pengganti (harga beli + kontinjensi).")
+header(CP, 4, ["Perangkat", "Merek / Tipe", "Harga beli satuan (Rp)", "Garansi pabrik (bulan)", "Sumber garansi",
+               "Habis sebelum kontrak selesai?", "Qty cadangan", "Nilai cadangan (Rp)"])
+TP = "https://www.tokopedia.com/"
+RESERVE = [   # (device, brand, price formula or input, warranty months, source text, link)
+    ("Kamera IP CCTV", "Hikvision DS-2CD2143G2-IU", f"=RAB!F{RAB_ROW['Kamera IP CCTV']}", 24,
+     "Listing toko: garansi resmi Hikvision 2 tahun", TP + "zacharycctv/hikvision-ds-2cd2143g2-i-4mp-dome-ip-camera"),
+    ("PC server: prosesor", "Intel Core Ultra 5 (harga 245K dipakai sebagai batas atas)", 3960000, 12,
+     "Rincian garansi PC rakitan Agres: CPU 1 tahun", TP + "jayapc/processor-intel-core-ultra-5-245k-box-arrow-lake-socket-lga-1851"),
+    ("PC server: VGA, motherboard, SSD", "Bagian dari AGRES CRYO PC", 0, 36,
+     "Rincian garansi PC rakitan Agres: VGA, motherboard, SSD 3 tahun; PSU 5 tahun; RAM seumur hidup", AGRES),
+    ("HDD rekaman video", "WD Purple Pro 8TB", f"=RAB!F{RAB_ROW['HDD rekaman video']}", 60,
+     "WD: limited warranty 5 tahun", "https://www.ic.plus/products/purple-pro-8tb.html"),
+    ("HDD backup eksternal", "Seagate Expansion Desktop 12TB", f"=RAB!F{RAB_ROW['HDD backup eksternal']}", 12,
+     "Halaman Seagate berbeda per negara (1 sampai 3 tahun); dipakai yang terpendek", "https://www.seagate.com/support/external-hard-drives/desktop-hard-drives/expansion-desktop/"),
+    ("TV status loading dock", "Samsung Business TV BE55FX-H", f"=RAB!F{RAB_ROW['TV status loading dock']}", 36,
+     "Garansi 3 tahun (RAB pptx)", TOKO + "samsung-business-tv-55"),
+    ("Router", "MikroTik RB5009UG+S+IN", f"=RAB!F{RAB_ROW['Router']}", 12,
+     "Listing toko: garansi 12 bulan; sumber Indonesia belum ada", "https://www.getic.com/product/mikrotik-rb5009ug-s-in"),
+    ("Switch PoE CCTV", "TP-Link Omada TL-SG2218P", f"=RAB!F{RAB_ROW['Switch PoE CCTV']}", 24,
+     "Listing toko berbeda (2 sampai 5 tahun); dipakai yang terpendek", "https://ict.com.mm/products/tp-link-tl-sg2218p-jetstream-18-port-gigabit-smart-switch-with-16-port-poe"),
+    ("UPS server", "APC Easy UPS Online SRV2KI-E", f"=RAB!F{RAB_ROW['UPS server']}", 24,
+     "Listing toko: garansi 2 tahun, termasuk baterai", "https://www.comms-express.com/products/apc-srv2ki-e-easy-ups-on-line-2000va-1800w-tower-230v/"),
+    ("UPS rak jaringan", "APC Easy UPS BVX1200LI-MS", f"=RAB!F{RAB_ROW['UPS rak jaringan']}", 24,
+     "Manual: garansi produk 2 tahun", "https://manuals.plus/asin/B08G8WT2L9"),
+]
+r = 5
+for dev, brand, price, wmon, src, link in RESERVE:
+    put(CP, f"A{r}", dev, wrap=True)
+    put(CP, f"B{r}", brand, wrap=True, color=GREY)
+    put(CP, f"C{r}", price, fmt=RP, color=GREEN if isinstance(price, str) else BLUE)
+    put(CP, f"D{r}", wmon, fmt="0", color=BLUE)
+    put(CP, f"E{r}", src, wrap=True, color="0563C1")
+    CP[f"E{r}"].hyperlink = link
+    put(CP, f"F{r}", f'=IF(D{r}<{DK["term"]},"Ya","Tidak")')
+    put(CP, f"G{r}", f'=IF(D{r}<{DK["term"]},{DK["spare"]},0)', fmt="0")
+    put(CP, f"H{r}", f"=ROUNDUP(G{r}*C{r}*(1+{DK['cont']}),-3)", fmt=RP)
+    CP.row_dimensions[r].height = 28
+    r += 1
+put(CP, f"A{r}", "Total cadangan selama kontrak", bold=True, fill=TOTAL)
+put(CP, f"H{r}", f"=SUM(H5:H{r - 1})", bold=True, fmt=RP, fill=TOTAL)
+RESERVE_TOTAL = f"'Cadangan Penggantian'!$H${r}"
+note(CP, r + 2, "Tidak dicadangkan: perangkat pasif (rak, PDU, patch panel, kabel, conduit, bracket, junction box), dan casing serta cooler PC "
+     "(model belum diketahui, konfirmasi ke Agres). Kerusakan karena kelalaian, benturan forklift, bencana, petir, atau listrik tidak stabil "
+     "ditanggung klien sesuai kontrak, bukan dari cadangan ini.", 8, 42)
+
 # ------------------------------------------------------------------ Skenario B
 SB = sheet("Skenario B", [64, 18, 58])
-title(SB, "Skenario B: Langganan Layanan Tahunan",
-      "Tahun pertama bayar sama dengan beli putus, layanan 12 bulan termasuk. Mulai tahun kedua bayar langganan tahunan untuk layanan dan maintenance.")
-section(SB, 4, "1. Uang keluar ke vendor (tahun pertama)", 3)
+title(SB, "Skenario B: Sewa + Langganan, Kontrak Minimum",
+      "Perangkat milik kita. Klien bayar biaya setup sekali, lalu langganan per 12 bulan di muka selama kontrak minimum.")
+section(SB, 4, "1. Uang keluar ke vendor (di awal)", 3)
 line(SB, 5, "Perangkat", f"={HW_COST}", color=GREEN)
 line(SB, 6, "Kontinjensi perangkat", f"={HW_CONT}", color=GREEN)
 line(SB, 7, "Jasa pasang kamera (vendor)", f"={INST_COST}", color=GREEN)
 line(SB, 8, "Total uang keluar", "=SUM(B5:B7)", bold=True, fill=TOTAL)
-section(SB, 10, "2. Tahun pertama (harga sama dengan beli putus)", 3)
-line(SB, 11, "Perangkat (harga jual)", f"={HW_SELL}", color=GREEN)
-line(SB, 12, "Jasa pasang kamera", f"={INST_SELL}", color=GREEN)
-line(SB, 13, "Pembuatan AI", f"={GROUP_TOTAL['Pembuatan AI']}", color=GREEN)
-line(SB, 14, "Pembuatan Web App", f"={GROUP_TOTAL['Pembuatan Web App']}", color=GREEN)
-line(SB, 15, "Implementasi Lapangan", f"={GROUP_TOTAL['Implementasi Lapangan']}", color=GREEN)
-line(SB, 16, "Manajemen Proyek", f"={GROUP_TOTAL['Manajemen Proyek']}", color=GREEN)
-line(SB, 17, "Layanan support tahun pertama", "='Skenario A'!B17", color=GREEN,
-     nt="Ditagih seharga garansi Opsi A; bulan sisanya gratis.")
-line(SB, 18, "Total tahun pertama (sebelum PPN)", "=SUM(B11:B17)", bold=True, fill=TOTAL)
-line(SB, 19, "PPN", f"=B18*{DK['ppn']}")
-line(SB, 20, "Tagihan tahun pertama", "=B18+B19", bold=True)
-section(SB, 22, "3. Pendapatan tahun pertama", 3)
-line(SB, 23, "Pendapatan bersih (sebelum pajak penghasilan)", "=B18-B8", bold=True, fill=TOTAL)
-line(SB, 24, "Setara per bulan", "=B23/12", bold=True)
-line(SB, 25, "Nilai layanan gratis yang kita berikan", f"={SUPPORT}*({DK['free_b']}-{DK['warranty']})",
-     nt="Tenaga tim sendiri, bukan uang keluar. Imbalannya: klien terikat langganan tahun berikutnya.")
-section(SB, 27, "4. Langganan tahun berikutnya", 3)
-line(SB, 28, "Layanan support dan maintenance 12 bulan", f"=ROUNDUP({SUPPORT}*12,-5)",
+section(SB, 10, "2. Biaya setup (satu kali, kerja custom untuk klien)", 3)
+line(SB, 11, "Pembuatan AI", f"={GROUP_TOTAL['Pembuatan AI']}", color=GREEN)
+line(SB, 12, "Pembuatan Web App", f"={GROUP_TOTAL['Pembuatan Web App']}", color=GREEN)
+line(SB, 13, "Implementasi Lapangan", f"={GROUP_TOTAL['Implementasi Lapangan']}", color=GREEN)
+line(SB, 14, "Manajemen Proyek", f"={GROUP_TOTAL['Manajemen Proyek']}", color=GREEN)
+line(SB, 15, "Total biaya setup", "=SUM(B11:B14)", bold=True, fill=TOTAL)
+section(SB, 17, "3. Langganan per tahun (selama kontrak minimum)", 3)
+line(SB, 18, "Sewa perangkat dan pemasangan", f"=ROUNDUP(B8/(1-{DK['m_rent']})/({DK['term']}/12),-5)",
+     nt="Uang keluar perangkat + margin sewa, dibagi rata selama kontrak minimum.")
+line(SB, 19, "Layanan support dan maintenance 12 bulan", f"=ROUNDUP({SUPPORT}*12,-5)",
      nt="Kunjungan rutin, retraining model, update web app (sheet Jasa INKINDO).")
-line(SB, 29, "Langganan per tahun (sebelum PPN)", "=B28", bold=True, fill=TOTAL)
-line(SB, 30, "Pendapatan bersih per tahun", "=B29")
-line(SB, 31, "Setara per bulan", "=B30/12", bold=True)
+line(SB, 20, "Jaminan penggantian perangkat", f"=ROUNDUP({RESERVE_TOTAL}/({DK['term']}/12),-5)",
+     nt="Cadangan penggantian dibagi rata per tahun (sheet Cadangan Penggantian).")
+line(SB, 21, "Langganan per tahun (sebelum PPN)", "=SUM(B18:B20)", bold=True, fill=TOTAL)
+section(SB, 23, "4. Tagihan ke klien (sebelum PPN)", 3)
+line(SB, 24, "Tahun pertama (setup + langganan)", "=B15+B21", bold=True)
+line(SB, 25, "Per tahun berikutnya", "=B21")
+line(SB, 26, "Total selama kontrak minimum", f"=B15+B21*{DK['term']}/12", bold=True, fill=TOTAL)
+line(SB, 27, "PPN tahun pertama", f"=B24*{DK['ppn']}")
+line(SB, 28, "Tagihan tahun pertama termasuk PPN", "=B24+B27", bold=True)
+section(SB, 30, "5. Pendapatan selama kontrak minimum", 3)
+line(SB, 31, "Total pendapatan (sebelum PPN)", "=B26")
+line(SB, 32, "Uang keluar perangkat", "=-B8")
+line(SB, 33, "Cadangan penggantian bila terpakai semua", f"=-{RESERVE_TOTAL}", color=GREEN)
+line(SB, 34, "Pendapatan bersih (cadangan terpakai semua)", "=SUM(B31:B33)", bold=True, fill=TOTAL)
+line(SB, 35, "Pendapatan bersih (cadangan tidak terpakai)", "=B31+B32", bold=True)
+line(SB, 36, "Setara per bulan (cadangan terpakai semua)", f"=B34/{DK['term']}")
+line(SB, 37, "Modal perangkat kembali dari sewa pada bulan ke-", "=B8/(B18/12)", fmt="0.0")
+section(SB, 39, "6. Pengamanan", 3)
+line(SB, 40, "Pembayaran saat PO: 50% setup + langganan tahun pertama", "=B15*50%+B21",
+     nt="Lebih besar dari uang keluar perangkat, jadi kita tidak menalangi modal.")
+line(SB, 41, "Kas saat PO dikurangi uang keluar perangkat", "=B40-B8")
+line(SB, 42, "Biaya pemutusan bila berhenti setelah tahun ke-1", f"=B18*({DK['term']}/12-1)",
+     nt="Sisa sewa perangkat sampai akhir kontrak minimum.")
+line(SB, 43, "Biaya pemutusan bila berhenti setelah tahun ke-2", f"=B18*MAX({DK['term']}/12-2,0)")
+line(SB, 44, "Pendapatan bersih bila berhenti setelah tahun ke-1 (bayar biaya pemutusan)", "=B24+B42-B8")
 
 # ------------------------------------------------------------------ Sumber
 SS = sheet("Sumber Harga", [7, 95, 70])
@@ -354,6 +422,8 @@ for i, (c, d, u) in enumerate([
     ("S7", "Samsung BE55FX-H: spesifikasi toko mencantumkan Tizen dan web browser bawaan, jadi TV dock membuka dashboard tanpa mini PC. "
            "Stasiun operator (mini PC, monitor, keyboard) dihapus karena klien memantau dari laptop sendiri lewat VPN perusahaan. "
            "Cek browser di SKU LH55BEFHVGKXXD saat pembelian.", "https://www.dateks.lv/ru/cenas/televizori/1417992-samsung-be55fx-h-lh55befhlguxen-55-"),
+    ("S8", "Garansi pabrik per perangkat untuk cadangan penggantian Opsi B: tautan sumber ada di tiap baris sheet Cadangan Penggantian. "
+           "Bila sumber berbeda, dipakai masa garansi terpendek. Konfirmasi masa garansi resmi Indonesia saat pembelian.", "Sheet Cadangan Penggantian"),
 ], 5):
     put(SS, f"A{i}", c, bold=True)
     put(SS, f"B{i}", d, wrap=True)
@@ -362,22 +432,24 @@ for i, (c, d, u) in enumerate([
         SS[f"C{i}"].hyperlink = u
 
 # ------------------------------------------------------------------ Ringkasan
-R = sheet("Ringkasan", [52, 22, 22, 22])
+R = sheet("Ringkasan", [52, 20, 20, 20, 20])
 title(R, "Ringkasan: Hitung Karton per Palet di Loading Dock, 8 Kamera 20-30 fps, On-Premise",
       "Format RAB mengikuti pptx; PC server dari Agres; jasa dengan tarif INKINDO 2026. Hitungan per tahun (12 bulan).")
-header(R, 4, ["", "A. Beli putus", "B. Tahun pertama", "B. Langganan per tahun berikutnya"])
+header(R, 4, ["", "A. Beli putus", "B. Tahun pertama", "B. Per tahun berikutnya", "B. Total kontrak minimum"])
 SUM = [
-    ("Uang keluar ke vendor", "='Skenario A'!B8", "='Skenario B'!B8", "=0"),
-    ("Harga ke klien (sebelum PPN)", "='Skenario A'!B18", "='Skenario B'!B18", "='Skenario B'!B29"),
-    ("Tagihan termasuk PPN", "='Skenario A'!B20", "='Skenario B'!B20", f"='Skenario B'!B29*(1+{DK['ppn']})"),
-    ("Pendapatan bersih per tahun", "='Skenario A'!B25", "='Skenario B'!B23", "='Skenario B'!B30"),
-    ("Pendapatan bersih per bulan (dibagi 12)", "='Skenario A'!B26", "='Skenario B'!B24", "='Skenario B'!B31"),
+    ("Uang keluar ke vendor", "='Skenario A'!B8", "='Skenario B'!B8", "=0", "='Skenario B'!B8"),
+    ("Harga ke klien (sebelum PPN)", "='Skenario A'!B18", "='Skenario B'!B24", "='Skenario B'!B25", "='Skenario B'!B26"),
+    ("Tagihan termasuk PPN", "='Skenario A'!B20", "='Skenario B'!B28", f"='Skenario B'!B25*(1+{DK['ppn']})", f"='Skenario B'!B26*(1+{DK['ppn']})"),
+    ("Pendapatan bersih (B: cadangan terpakai semua)", "='Skenario A'!B25", None, None, "='Skenario B'!B34"),
+    ("Pendapatan bersih (B: cadangan tidak terpakai)", None, None, None, "='Skenario B'!B35"),
+    ("Modal perangkat kembali (bulan ke-)", None, None, None, "='Skenario B'!B37"),
 ]
 r = 5
-for lab, fa, fb, fc in SUM:
+for lab, *fs in SUM:
     put(R, f"A{r}", lab, bold=True)
-    for col, f in zip("BCD", (fa, fb, fc)):
-        put(R, f"{col}{r}", f, color=GREEN, fmt=RP, right=True)
+    for col, f in zip("BCDE", fs):
+        if f:
+            put(R, f"{col}{r}", f, color=GREEN, fmt="0.0" if "bulan ke" in lab else RP, right=True)
     r += 1
 r += 1
 put(R, f"A{r}", "Rincian jasa (sama di kedua opsi)", bold=True)
@@ -390,13 +462,14 @@ r += 1
 for t in [
     "PC server: GPU RTX 5070 Ti 16 GB mendekode 8 stream 4MP di GPU dan menjalankan model TensorRT; target 20-30 fps per kamera. Kapasitas final dibuktikan dengan benchmark saat uji paralel.",
     "Tarif jasa INKINDO adalah standar minimal nasional untuk badan usaha jasa konsultansi dan sudah termasuk overhead dan keuntungan.",
+    "Opsi B: pembayaran saat PO (50% setup + langganan tahun pertama) sudah menutup uang keluar perangkat; berhenti sebelum kontrak minimum selesai dikenai sisa sewa perangkat.",
 ]:
     put(R, f"A{r}", "• " + t, wrap=True, color=GREY)
-    R.merge_cells(f"A{r}:D{r}")
+    R.merge_cells(f"A{r}:E{r}")
     R.row_dimensions[r].height = 30
     r += 1
 
-order = ["Ringkasan", "RAB", "Jasa INKINDO", "Skenario A", "Skenario B", "Keputusan Bisnis", "Sumber Harga"]
+order = ["Ringkasan", "RAB", "Jasa INKINDO", "Skenario A", "Skenario B", "Cadangan Penggantian", "Keputusan Bisnis", "Sumber Harga"]
 wb._sheets = [wb[n] for n in order]
 wb.active = 0
 for ws in wb.worksheets:
