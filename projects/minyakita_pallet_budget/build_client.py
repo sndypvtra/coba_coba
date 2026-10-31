@@ -5,6 +5,7 @@ margin, day rates, exchange rate, CV income or purchase sources. Totals equal th
 
     python build_client.py   # -> Penawaran_Minyakita_Loading_Dock.xlsx (then recalc with LibreOffice)
 """
+import sys
 from pathlib import Path
 
 from openpyxl import Workbook, load_workbook
@@ -12,8 +13,11 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
 HERE = Path(__file__).resolve().parent
-SRC = HERE / "Budget_Minyakita_Pallet_Counting.xlsx"
-OUT = HERE / "Penawaran_Minyakita_Loading_Dock.xlsx"
+CAMS = int(sys.argv[1]) if len(sys.argv) > 1 else 8
+SUFFIX = "" if CAMS == 8 else f"_{CAMS}Kamera"
+SRC = HERE / f"Budget_Minyakita_Pallet_Counting{SUFFIX}.xlsx"
+OUT = HERE / f"Penawaran_Minyakita_Loading_Dock{SUFFIX}.xlsx"
+GPU = {8: "NVIDIA RTX 5070 Ti 16 GB", 4: "NVIDIA RTX 5060 Ti 16 GB"}[CAMS]
 F = "Arial"
 HEAD = PatternFill("solid", fgColor="1F3864")
 SUB = PatternFill("solid", fgColor="D9E1F2")
@@ -166,7 +170,7 @@ def totals(ws, r, cells, label="Total harga"):
 
 
 SERVICE_TEXT = {
-    "Pembuatan AI Computer Vision": "Model AI khusus kemasan Minyakita, berjalan realtime 8 kamera pada 20-30 fps",
+    "Pembuatan AI Computer Vision": f"Model AI khusus kemasan Minyakita, berjalan realtime {CAMS} kamera pada 20-30 fps",
     "Pembuatan Web App": "Web app video analytics on-premise: live view, dashboard, laporan, event trigger dan riwayat event",
     "Setup dan Implementasi AI dan Web App": "Setup dan kalibrasi model, uji akurasi, training web app, akses jarak jauh owner",
     "Implementasi Infrastruktur": "Survey, instalasi perangkat, uji paralel lapangan, dan serah terima",
@@ -253,7 +257,7 @@ r += 2
 band(B, r, "LANGGANAN PER TAHUN (dibayar di muka per 12 bulan)", 7)
 first = r + 1
 line(B, r + 1, 1, "Sewa perangkat dan pemasangan", "Seluruh perangkat di daftar bawah",
-     "8 kamera, PC server AI, penyimpanan rekaman dan backup, UPS, rak dan jaringan, TV status loading dock; terpasang di 8 titik", 1, rent_b)
+     f"{CAMS} kamera, PC server AI, penyimpanan rekaman dan backup, UPS, rak dan jaringan, TV status loading dock; terpasang di {CAMS} titik", 1, rent_b)
 line(B, r + 2, 2, "Support software AI dan web app", "12 bulan, menggantikan garansi", SUPPORT_SW_B_TEXT, 1, sup_sw_b)
 line(B, r + 3, 3, "Support infrastruktur", "12 bulan, menggantikan garansi", SUPPORT_INF_TEXT, 1, sup_inf_b)
 line(B, r + 4, 4, "Jaminan penggantian perangkat", "Kerusakan karena pemakaian normal",
@@ -296,7 +300,7 @@ for cat, item, brand, spec, q, u in goods:
 
 # ---------------------------------------------------------------- Ringkasan Penawaran
 R = sheet("Ringkasan Penawaran", [52, 26, 26, 26])
-put(R, "A1", "Penawaran: Sistem Hitung Karton per Palet di Loading Dock (8 Kamera)", bold=True, size=14)
+put(R, "A1", f"Penawaran: Sistem Hitung Karton per Palet di Loading Dock ({CAMS} Kamera)", bold=True, size=14)
 put(R, "A2", "Kepada: PT [nama perusahaan], Gudang Minyakita  ·  Tanggal: [isi tanggal]  ·  Berlaku 14 hari sejak tanggal penawaran",
     italic=True, color="595959")
 header(R, 4, ["", "Opsi A: Beli putus", "Opsi B: Tahun ke-1", f"Opsi B: Tahun ke-2 s.d. {YEARS} (per tahun)"])
@@ -341,12 +345,12 @@ r += 1
 band(R, r, "Yang didapatkan", 4)
 r = bullets(R, r + 1, [
     "Hitung karton setiap palet (standar 60 karton) di zona cek depan dock, dan peringatan langsung bila palet kurang.",
-    "Video analytics realtime 8 kamera pada 20-30 fps, diproses di PC server AI dengan GPU NVIDIA RTX 5070 Ti 16 GB di lokasi.",
+    f"Video analytics realtime {CAMS} kamera pada 20-30 fps, diproses di PC server AI dengan GPU {GPU} di lokasi.",
     "Rekonsiliasi jumlah karton per DO, per truk, dan per palet sebelum barang naik ke armada ekspedisi.",
     "Web app on-premise, dibuka dari laptop tim gudang lewat jaringan/VPN perusahaan (tanpa install aplikasi), plus TV status di loading dock; laporan per DO, truk, dan palet.",
     "Event trigger otomatis (palet kurang, selisih DO, kamera mati) tercatat di web app beserta foto dan klip bukti yang disimpan di PC server.",
-    "Owner dapat live monitoring 8 kamera serta melihat riwayat event dan laporan dari luar gudang melalui Tailscale (koneksi terenkripsi langsung ke server).",
-    "Rekaman 8 kamera sebagai bukti audit dan penyelesaian selisih.",
+    f"Owner dapat live monitoring {CAMS} kamera serta melihat riwayat event dan laporan dari luar gudang melalui Tailscale (koneksi terenkripsi langsung ke server).",
+    f"Rekaman {CAMS} kamera sebagai bukti audit dan penyelesaian selisih.",
     "Seluruh sistem berjalan di lokasi (on-premise): rekaman video, event, dan data tersimpan di PC server gudang, tanpa penyimpanan cloud.",
 ], 4)
 r += 1
@@ -356,8 +360,8 @@ r = bullets(R, r + 1, [
     "Minggu 1-2: survey dock, desain posisi kamera dan zona cek palet, pengadaan perangkat.",
     "Minggu 3-4: instalasi kamera, jaringan, dan server; pengambilan data dari CCTV dock dimulai.",
     "Minggu 5-10: pelabelan data, training dan tuning model, logika hitung karton dan rekonsiliasi DO; pembuatan web app berjalan paralel.",
-    "Minggu 11-13: optimasi realtime 8 kamera, integrasi data DO, kalibrasi zona cek.",
-    "Minggu 14-15: uji paralel 2 minggu dibanding hitung manual, termasuk uji performa 8 kamera 20-30 fps.",
+    f"Minggu 11-13: optimasi realtime {CAMS} kamera, integrasi data DO, kalibrasi zona cek.",
+    f"Minggu 14-15: uji paralel 2 minggu dibanding hitung manual, termasuk uji performa {CAMS} kamera 20-30 fps.",
     "Minggu 16: training pengguna, SOP, dan serah terima (go-live).",
 ], 4)
 r += 1
@@ -386,7 +390,7 @@ r = bullets(R, r + 1, [
     f"Opsi B: keterlambatan pembayaran lebih dari {late} hari, layanan support dan pembaruan dihentikan sementara sampai pembayaran diterima.",
     "Opsi B: perangkat tidak boleh dipindahkan, dibongkar, atau diubah tanpa persetujuan tertulis penyedia. Setelah kontrak minimum, "
     "langganan dapat diperpanjang dengan harga yang disepakati ulang, atau perangkat ditarik oleh penyedia.",
-    "Opsi A: hak milik perangkat dan hak pakai aplikasi AI serta web app (1 lokasi, 8 kamera) berpindah ke perusahaan setelah pembayaran lunas. "
+    f"Opsi A: hak milik perangkat dan hak pakai aplikasi AI serta web app (1 lokasi, {CAMS} kamera) berpindah ke perusahaan setelah pembayaran lunas. "
     "Kode sumber aplikasi tidak termasuk.",
     "Kedua opsi: kerusakan karena kelalaian, salah pakai, benturan forklift atau alat angkut, bencana alam, banjir, kebakaran, petir, "
     "tegangan listrik tidak stabil, atau perubahan instalasi oleh pihak lain ditanggung perusahaan sesuai harga perangkat dan jasa saat itu.",

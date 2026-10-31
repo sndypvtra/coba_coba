@@ -6,15 +6,50 @@ priced with INKINDO's 2026 minimum billing rates (Pedoman Standar Minimal 2026),
 guideline prescribes (SBOH = SBOB / 22 x 1.1). Two scenarios: A one-off purchase; B a one-off setup fee plus a yearly
 subscription (device rental, support, replacement reserve) with a 36-month minimum contract and early-termination fee.
 
-    python build_budget.py   # -> Budget_Minyakita_Pallet_Counting.xlsx (then recalc with LibreOffice)
+    python build_budget.py     # 8 cameras -> Budget_Minyakita_Pallet_Counting.xlsx (then recalc with LibreOffice)
+    python build_budget.py 4   # 4 cameras -> Budget_Minyakita_Pallet_Counting_4Kamera.xlsx
 """
+import sys
 from pathlib import Path
 
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-OUT = Path(__file__).resolve().parent / "Budget_Minyakita_Pallet_Counting.xlsx"
+CAMS = int(sys.argv[1]) if len(sys.argv) > 1 else 8
+assert CAMS in (4, 8)
+OUT = Path(__file__).resolve().parent / f"Budget_Minyakita_Pallet_Counting{'' if CAMS == 8 else f'_{CAMS}Kamera'}.xlsx"
+TP = "https://www.tokopedia.com/"
+# hardware and effort that change with the camera count; everything else is shared
+V = {
+    8: dict(
+        pc=("AGRES CRYO PC ULTRA 5 245KF RTX 5070 TI 16G / 32GB 1TB",
+            "Intel Core Ultra 5 245KF 14 core, NVIDIA GeForce RTX 5070 Ti 16 GB GDDR7 (decode video di GPU + inferensi TensorRT), RAM 32 GB DDR5, SSD NVMe 1 TB. Untuk 8 kamera 4MP pada 20-30 fps.",
+            35000000, TP + "agreskomputerofficial/agres-cryo-pc-ultra-5-245kf-rtx-5070-ti-16g-32gb-1tb-rakitan-pc-gaming-1731083491745892256"),
+        gpu="RTX 5070 Ti 16 GB", weeks="2 minggu",
+        switch=("TP-Link Omada TL-SG2218P", "16x Gigabit PoE+ (budget 150W) + 2x SFP, managed", 4944000, TP + "find/tl-sg2218p",
+                "Listing toko berbeda (2 sampai 5 tahun); dipakai yang terpendek", "https://ict.com.mm/products/tp-link-tl-sg2218p-jetstream-18-port-gigabit-smart-switch-with-16-port-poe"),
+        ups=("APC Easy UPS Online SRV2KI-E", "2000VA / 1800W, online double-conversion", 9065000, TP + "find/apc-srv2ki",
+             "Listing toko: garansi 2 tahun, termasuk baterai", "https://www.comms-express.com/products/apc-srv2ki-e-easy-ups-on-line-2000va-1800w-tower-230v/"),
+        cpu=("Intel Core Ultra 5 (harga 245K dipakai sebagai batas atas)", 3960000, TP + "jayapc/processor-intel-core-ultra-5-245k-box-arrow-lake-socket-lga-1851"),
+        patch=12, cable=(2, "2 box untuk 8 titik"), conduit=(140, "sekitar 400 m jalur kabel"), clamp=400,
+        days=dict(opt=6, live=4, calib=3, install=4, phys=2),
+    ),
+    4: dict(
+        pc=("AGRES PYROLITE PC RYZEN 5 7500F RTX 5060 TI 16GB / 32GB 1TB",
+            "AMD Ryzen 5 7500F 6 core, NVIDIA GeForce RTX 5060 Ti 16 GB GDDR7 (decode video di GPU + inferensi TensorRT), RAM 32 GB DDR5, SSD NVMe 1 TB. Untuk 4 kamera 4MP pada 20-30 fps.",
+            29149000, TP + "find/7500f-5060-ti-16gb"),
+        gpu="RTX 5060 Ti 16 GB", weeks="4 minggu",
+        switch=("TP-Link Omada TL-SG2210P", "8x Gigabit PoE+ (budget 61W) + 2x SFP, managed", 1850000, TP + "gudangwifii/tp-link-tl-sg2210p-8-port-gigabit-desktop-poe-smart-switch",
+                "Seri Omada yang sama; dipakai garansi terpendek seri ini (2 tahun)", "https://ict.com.mm/products/tp-link-tl-sg2218p-jetstream-18-port-gigabit-smart-switch-with-16-port-poe"),
+        ups=("APC Easy UPS Online SRV1KI-E", "1000VA / 900W, online double-conversion", 5999000, TP + "apc-official/ups-apc-srv1ki-e-easy-ups-on-line-1000va-900w-230v-tower",
+             "Seri Easy UPS On-Line: garansi 2 tahun, termasuk baterai", "https://www.comms-express.com/products/apc-srv1ki-e-easy-ups-on-line-1000va-900w-tower-230v/"),
+        cpu=("AMD Ryzen 5 7500F (tray)", 2999000, TP + "distributorpcofficial/amd-processor-ryzen-5-7500f-am5-tray-1730793858749203788"),
+        patch=8, cable=(1, "1 box untuk 4 titik"), conduit=(70, "sekitar 200 m jalur kabel"), clamp=200,
+        days=dict(opt=4, live=3, calib=2, install=2, phys=1),
+    ),
+}[CAMS]
+D = V["days"]
 F = "Arial"
 BLUE, GREEN, BLACK, GREY = "0000FF", "008000", "000000", "404040"
 YELLOW = PatternFill("solid", fgColor="FFFF00")
@@ -92,11 +127,18 @@ DEC = [
     ("m_rent", "Margin sewa perangkat selama kontrak minimum (Opsi B)", 0.40, PCT, "Total sewa selama kontrak = uang keluar perangkat / (1 - margin)."),
     ("spare", "Cadangan pengganti per jenis perangkat yang garansinya habis sebelum kontrak selesai (unit)", 1, "0", "Dipakai di sheet Cadangan Penggantian."),
     ("late", "Batas telat bayar sebelum layanan dihentikan sementara (hari)", 30, "0", "Pengaman pembayaran Opsi B; ditulis di penawaran."),
+] + ([
     ("sw_target", "Total diterima developer di Opsi A (jasa aplikasi + garansi software + bagian margin)", 125000000, RP,
      "Nilai jual jasa aplikasi AI dan web app dihitung mundur dari angka ini (sheet Jasa INKINDO); nilai jasa yang sama dipakai di Opsi B."),
     ("sup_sw_year", "Support software AI dan web app per tahun (Opsi B, juga maintenance opsional Opsi A)", 33600000, RP,
      "Sekitar 31% dari nilai jasa aplikasi per tahun. Acuan pasar: 15-25% dari biaya pembuatan, sampai 30-35% bila mencakup seluruh "
      "dukungan berkelanjutan; sistem AI perlu retraining berkala (sheet Sumber Harga S8)."),
+] if CAMS == 8 else [
+    ("sw_factor", "Faktor nilai jual jasa aplikasi di atas tarif minimum INKINDO", 1.096, "0.000",
+     "Sama dengan versi 8 kamera (Rp 107.278.000 / Rp 97.885.000): harga per hari kerja developer tetap sama."),
+    ("sup_pct", "Support software AI dan web app per tahun (% dari nilai jasa aplikasi)", 0.313, PCT,
+     "Sama dengan versi 8 kamera (Rp 33.600.000 / Rp 107.278.000). Acuan pasar 15-25%, sampai 30-35% untuk dukungan menyeluruh (sheet Sumber Harga S8)."),
+]) + [
     ("cr_sw", "Tarif change request software (AI computer vision dan web app) per hari kerja", 1800000, RP,
      "Tarif harian Tenaga Ahli INKINDO Rp 1.615.000 x faktor nilai jual software, dibulatkan ke atas."),
     ("cr_inf", "Tarif change request infrastruktur per hari kerja", 900000, RP,
@@ -112,17 +154,15 @@ for i, (key, lab, v, fmt, nt) in enumerate(DEC, 5):
 
 # ------------------------------------------------------------------ RAB (format pptx)
 RB = sheet("RAB", [15, 22, 36, 50, 6, 15, 15, 15, 16, 36])
-title(RB, "RAB Infrastruktur On-Premise, Loading Dock 8 Kamera (20-30 fps realtime)",
+title(RB, f"RAB Infrastruktur On-Premise, Loading Dock {CAMS} Kamera (20-30 fps realtime)",
       "Format mengikuti slide RAB Factory_Vision_Presentation.pptx. Harga satuan = harga beli; harga jual = harga beli x (1 + kontinjensi) x (1 + markup).")
 header(RB, 4, ["Kategori", "Komponen", "Merek / Tipe", "Spesifikasi kunci", "Qty", "Harga satuan (Rp)", "Total (Rp)", "Harga jual satuan (Rp)", "Total jual (Rp)", "Link / sumber"])
 TOKO = "https://www.tokopedia.com/find/"
-AGRES = "https://www.tokopedia.com/agreskomputerofficial/agres-cryo-pc-ultra-5-245kf-rtx-5070-ti-16g-32gb-1tb-rakitan-pc-gaming-1731083491745892256"
+AGRES = V["pc"][3]
 ITEMS = [
     ("Server AI on-prem", [
-        ("PC server AI (rakitan Agres)", "AGRES CRYO PC ULTRA 5 245KF RTX 5070 TI 16G / 32GB 1TB",
-         "Intel Core Ultra 5 245KF 14 core, NVIDIA GeForce RTX 5070 Ti 16 GB GDDR7 (decode video di GPU + inferensi TensorRT), RAM 32 GB DDR5, SSD NVMe 1 TB. Untuk 8 kamera 4MP pada 20-30 fps.",
-         1, 35000000, AGRES),
-        ("HDD rekaman video", "WD Purple Pro 8TB", "3,5\" SATA, 7.200 rpm, kelas surveillance/AI 24/7, sekitar 2 minggu rekaman 8 kamera 25 fps", 1, 8006000, TOKO + "wd-purple-pro-8tb"),
+        ("PC server AI (rakitan Agres)", V["pc"][0], V["pc"][1], 1, V["pc"][2], AGRES),
+        ("HDD rekaman video", "WD Purple Pro 8TB", f"3,5\" SATA, 7.200 rpm, kelas surveillance/AI 24/7, sekitar {V['weeks']} rekaman {CAMS} kamera 25 fps; foto dan klip event disimpan lebih lama", 1, 8006000, TOKO + "wd-purple-pro-8tb"),
         ("HDD backup eksternal", "Seagate Expansion Desktop 12TB (STKP12000400)", "USB 3.0, backup database dan klip bukti", 1, 9980000, TOKO + "seagate-expansion-12tb"),
         ("Sistem operasi & software", "Ubuntu Server 24.04 LTS, driver NVIDIA, TensorRT, MediaMTX, PostgreSQL", "Open source / gratis", 1, 0, "https://docs.nvidia.com/metropolis/deepstream/8.0/text/DS_Installation.html"),
     ]),
@@ -132,23 +172,23 @@ ITEMS = [
     ]),
     ("Jaringan", [
         ("Router", "MikroTik RB5009UG+S+IN", "7x GbE, 1x 2.5GbE, 1x SFP+, VLAN kamera terpisah", 1, 4175000, TOKO + "rb5009ug-s-in"),
-        ("Switch PoE CCTV", "TP-Link Omada TL-SG2218P", "16x Gigabit PoE+ (budget 150W) + 2x SFP, managed", 1, 4944000, TOKO + "tl-sg2218p"),
+        ("Switch PoE CCTV", V["switch"][0], V["switch"][1], 1, V["switch"][2], V["switch"][3]),
         ("Rak jaringan", "Indorack WR5012S", "Wall mount 12U, kedalaman 500mm, pintu kaca", 1, 2280000, TOKO + "indorack-wallmount-12u"),
         ("PDU rak", "Indorack PDU6G", "6 outlet, rack mount 19\"", 1, 395000, TOKO + "pdu-indorack"),
         ("Patch panel", "CommScope/AMP 24-port Cat6 (1933796-2)", "24 port, Cat6, 1U", 1, 1565000, TOKO + "patch-panel-24-port-cat6-commscope"),
-        ("Patch cord", "CommScope Cat6 1m (NPC06UVDB)", "Cat6 UTP 1 m", 12, 66000, TOKO + "patch-cord-cat6-commscope-1m"),
+        ("Patch cord", "CommScope Cat6 1m (NPC06UVDB)", "Cat6 UTP 1 m", V["patch"], 66000, TOKO + "patch-cord-cat6-commscope-1m"),
     ]),
     ("CCTV & kabel", [
-        ("Kamera IP CCTV", "Hikvision DS-2CD2143G2-IU (AcuSense)", "4MP dome, 2,8 mm, H.265+, IR 30 m, WDR 120dB, PoE, RTSP/ONVIF, sampai 25-30 fps", 8, 1687000, TOKO + "ds-2cd2143g2-iu"),
-        ("Junction box kamera", "Hikvision DS-1280ZJ-XS", "Back box seri dome 2xx3G2", 8, 910000, TOKO + "junction-box-hikvision"),
-        ("Kabel LAN (box 305 m)", "Belden Cat6 UTP 7814A", "Cat6 UTP 23AWG solid; 2 box untuk 8 titik (perkiraan, final setelah survey)", 2, 3365000, TOKO + "belden-cat-6-roll"),
+        ("Kamera IP CCTV", "Hikvision DS-2CD2143G2-IU (AcuSense)", "4MP dome, 2,8 mm, H.265+, IR 30 m, WDR 120dB, PoE, RTSP/ONVIF, sampai 25-30 fps", CAMS, 1687000, TOKO + "ds-2cd2143g2-iu"),
+        ("Junction box kamera", "Hikvision DS-1280ZJ-XS", "Back box seri dome 2xx3G2", CAMS, 910000, TOKO + "junction-box-hikvision"),
+        ("Kabel LAN (box 305 m)", "Belden Cat6 UTP 7814A", f"Cat6 UTP 23AWG solid; {V['cable'][1]} (perkiraan, final setelah survey)", V["cable"][0], 3365000, TOKO + "belden-cat-6-roll"),
         ("Konektor RJ45", "CommScope/AMP RJ45 Cat6", "Isi 100 pcs", 1, 1210000, TOKO + "connector-rj45-cat6-commscope"),
         ("Boot RJ45", "Belden AP700022 boot Cat6", "1 pack", 1, 190000, TOKO + "boot-rj45-cat6"),
-        ("Pipa conduit", "Clipsal pipa PVC 20mm", "2,9 m per batang; sekitar 400 m jalur kabel (perkiraan)", 140, 15534, TOKO + "pipa-conduit-clipsal-20mm"),
-        ("Klem pipa", "Clamp/saddle conduit 20mm", "Per pcs, jarak 1 m", 400, 2000, TOKO + "pipa-conduit-clipsal-20mm"),
+        ("Pipa conduit", "Clipsal pipa PVC 20mm", f"2,9 m per batang; {V['conduit'][1]} (perkiraan)", V["conduit"][0], 15534, TOKO + "pipa-conduit-clipsal-20mm"),
+        ("Klem pipa", "Clamp/saddle conduit 20mm", "Per pcs, jarak 1 m", V["clamp"], 2000, TOKO + "pipa-conduit-clipsal-20mm"),
     ]),
     ("Kelistrikan", [
-        ("UPS server", "APC Easy UPS Online SRV2KI-E", "2000VA / 1800W, online double-conversion", 1, 9065000, TOKO + "apc-srv2ki"),
+        ("UPS server", V["ups"][0], V["ups"][1], 1, V["ups"][2], V["ups"][3]),
         ("UPS rak jaringan", "APC Easy UPS BVX1200LI-MS", "1200VA / 650W, AVR", 1, 1975000, TOKO + "apc-bvx1200li-ms"),
     ]),
 ]
@@ -191,7 +231,7 @@ put(RB, f"A{r}", "Jasa pasang", color=GREY)
 put(RB, f"B{r}", "Jasa pasang IP camera (jasa saja)", wrap=True)
 put(RB, f"C{r}", "Per titik kamera")
 put(RB, f"D{r}", "Tarik kabel dan pasang conduit, pasang kamera, setting sudut; material sudah dihitung di atas", wrap=True, color=GREY)
-put(RB, f"E{r}", 8, color=BLUE, fmt="0")
+put(RB, f"E{r}", CAMS, color=BLUE, fmt="0")
 put(RB, f"F{r}", 350000, color=BLUE, fmt=RP)
 put(RB, f"G{r}", f"=E{r}*F{r}", fmt=RP)
 put(RB, f"H{r}", f"=ROUNDUP(F{r}*(1+{DK['mk_inst']}),-3)", fmt=RP)
@@ -237,25 +277,25 @@ GROUPS = [
         ("Pengambilan data dan pelabelan sekitar 3.000 gambar karton dan palet dari CCTV dock (auto-labeling model pra-latih dan SAM, lalu dikoreksi)", 0, 2, 0, 8, 0, "Dataset kemasan Minyakita"),
         ("Training dan tuning model (karton, palet, lapisan)", 0, 10, 0, 0, 0, "Model deteksi khusus kemasan"),
         ("Logika hitung 60 karton per palet dan rekonsiliasi per DO", 0, 8, 0, 0, 0, "Status palet lengkap atau kurang, selisih per DO"),
-        ("Optimasi pipeline realtime 8 kamera 20-30 fps (decode GPU, TensorRT)", 0, 6, 0, 0, 0, "Sistem realtime stabil"),
+        (f"Optimasi pipeline realtime {CAMS} kamera 20-30 fps (decode GPU, TensorRT)", 0, D["opt"], 0, 0, 0, "Sistem realtime stabil"),
     ]),
     ("Pembuatan Web App", [
         ("Dashboard dock dan manajemen, input DO, laporan per DO/truk/palet, alert, user", 0, 0, 20, 0, 0, "Web app on-premise"),
-        ("Live view 8 kamera di web app dengan overlay hasil deteksi dan hitungan", 0, 0, 4, 0, 0, "Pantau dock secara realtime"),
+        (f"Live view {CAMS} kamera di web app dengan overlay hasil deteksi dan hitungan", 0, 0, D["live"], 0, 0, "Pantau dock secara realtime"),
         ("Event trigger di web app: aturan event (palet kurang, selisih DO, kamera mati), foto dan klip bukti disimpan di server, riwayat dan pencarian event", 0, 0, 5, 0, 0, "Riwayat event dengan bukti di server"),
         ("Integrasi data DO dari WMS/ERP (file CSV atau API)", 0, 0, 5, 0, 0, "DO otomatis di sistem"),
     ]),
     ("Setup dan Implementasi AI dan Web App", [
         ("Desain zona cek palet dan sudut pandang kamera untuk model (saat survey)", 0, 1, 0, 0, 0, "Zona cek per kamera"),
-        ("Kalibrasi model dan zona cek di 8 kamera (ambang deteksi, hitung karton)", 0, 3, 0, 0, 0, "Model terkalibrasi per kamera"),
+        (f"Kalibrasi model dan zona cek di {CAMS} kamera (ambang deteksi, hitung karton)", 0, D["calib"], 0, 0, 0, "Model terkalibrasi per kamera"),
         ("Uji paralel 2 minggu: analisis akurasi, perbaikan model dan web app", 0, 5, 3, 0, 0, "Laporan akurasi"),
         ("Training penggunaan web app dan dashboard", 0, 0, 1, 0, 0, "Pengguna mahir memakai web app"),
         ("Setup akses jarak jauh owner lewat Tailscale (instal di server, akun dan hak akses owner)", 0, 0, 1, 0, 0, "Owner bisa live monitoring dari luar gudang"),
     ]),
     ("Implementasi Infrastruktur", [
         ("Survey dock, desain posisi kamera, jalur kabel, dan ruang server", 1, 0, 0, 0, 1, "Gambar posisi kamera dan jalur kabel"),
-        ("Instalasi rak, jaringan, server, dan setting 8 kamera", 0, 0, 0, 0, 4, "Infrastruktur siap"),
-        ("Kalibrasi fisik 8 kamera (posisi, fokus, sudut)", 0, 0, 0, 0, 2, "Kamera terpasang sesuai desain"),
+        (f"Instalasi rak, jaringan, server, dan setting {CAMS} kamera", 0, 0, 0, 0, D["install"], "Infrastruktur siap"),
+        (f"Kalibrasi fisik {CAMS} kamera (posisi, fokus, sudut)", 0, 0, 0, 0, D["phys"], "Kamera terpasang sesuai desain"),
         ("Uji paralel 2 minggu: pendampingan lapangan dan sign-off", 2, 0, 0, 0, 4, "Berita acara uji paralel"),
         ("Training SOP checker dan supervisor, serah terima", 2, 0, 0, 0, 0, "SOP dan berita acara serah terima"),
     ]),
@@ -327,17 +367,21 @@ put(J, f"B{r}", "Nilai minimum INKINDO (hari kerja x tarif)")
 put(J, f"H{r}", "=" + "+".join(GROUP_TOTAL[g].split("!")[1] for g in SOFTWARE), fmt=RP)
 floor = r
 r += 1
-put(J, f"B{r}", "Total diterima developer di Opsi A (Keputusan Bisnis)")
-put(J, f"H{r}", f"={DK['sw_target']}", fmt=RP, color=GREEN)
-r += 1
-put(J, f"B{r}", "Dikurangi garansi software Opsi A")
-put(J, f"H{r}", f"=-{SUPPORT_SW}*{DK['warranty']}", fmt=RP)
-r += 1
-put(J, f"B{r}", "Dikurangi bagian margin perangkat developer di Opsi A")
-put(J, f"H{r}", f"=-ROUND(({HW_SELL}+{INST_SELL}-{HW_COST}-{HW_CONT}-{INST_COST})*{DK['split_dev']},-3)", fmt=RP)
-r += 1
-put(J, f"B{r}", "Nilai jual jasa aplikasi AI computer vision dan web app", bold=True)
-put(J, f"H{r}", f"=SUM(H{r - 3}:H{r - 1})", fmt=RP, bold=True)
+if CAMS == 8:
+    put(J, f"B{r}", "Total diterima developer di Opsi A (Keputusan Bisnis)")
+    put(J, f"H{r}", f"={DK['sw_target']}", fmt=RP, color=GREEN)
+    r += 1
+    put(J, f"B{r}", "Dikurangi garansi software Opsi A")
+    put(J, f"H{r}", f"=-{SUPPORT_SW}*{DK['warranty']}", fmt=RP)
+    r += 1
+    put(J, f"B{r}", "Dikurangi bagian margin perangkat developer di Opsi A")
+    put(J, f"H{r}", f"=-ROUND(({HW_SELL}+{INST_SELL}-{HW_COST}-{HW_CONT}-{INST_COST})*{DK['split_dev']},-3)", fmt=RP)
+    r += 1
+    put(J, f"B{r}", "Nilai jual jasa aplikasi AI computer vision dan web app", bold=True)
+    put(J, f"H{r}", f"=SUM(H{r - 3}:H{r - 1})", fmt=RP, bold=True)
+else:
+    put(J, f"B{r}", "Nilai jual jasa aplikasi AI computer vision dan web app (minimum x faktor Keputusan Bisnis)", bold=True)
+    put(J, f"H{r}", f"=ROUND(H{floor}*{DK['sw_factor']},-3)", fmt=RP, bold=True)
 target = r
 r += 1
 put(J, f"B{r}", "Faktor di atas tarif minimum")
@@ -360,6 +404,9 @@ r += 2
 put(J, f"B{r}", "Total jasa (nilai jual)", bold=True, fill=TOTAL)
 put(J, f"H{r}", "=" + "+".join(v.split("!")[1] for v in GROUP_TOTAL.values()), bold=True, fmt=RP, fill=TOTAL)
 JASA = f"'Jasa INKINDO'!$H${r}"
+
+SUP_SW_YEAR = (DK["sup_sw_year"] if CAMS == 8 else
+               f"ROUNDUP(({'+'.join(GROUP_TOTAL[g] for g in SOFTWARE)})*{DK['sup_pct']},-5)")
 
 # ------------------------------------------------------------------ Skenario A
 SA = sheet("Skenario A", [64, 18, 58])
@@ -401,7 +448,7 @@ section(SA, r, "4. Termin dan opsi", 3)
 line(SA, r + 1, "DP 50% saat PO", f"=B{bill_row}*50%")
 line(SA, r + 2, "30% setelah instalasi selesai", f"=B{bill_row}*30%")
 line(SA, r + 3, "20% setelah uji paralel dan serah terima", f"=B{bill_row}*20%")
-line(SA, r + 4, "Maintenance opsional per tahun setelah garansi", f"={DK['sup_sw_year']}+{SUPPORT_INF}*12",
+line(SA, r + 4, "Maintenance opsional per tahun setelah garansi", f"={SUP_SW_YEAR}+{SUPPORT_INF}*12",
      nt="Support software (sama dengan Opsi B) ditambah support infrastruktur, 12 bulan.")
 
 # ------------------------------------------------------------------ Cadangan penggantian (Opsi B)
@@ -414,9 +461,9 @@ TP = "https://www.tokopedia.com/"
 RESERVE = [   # (device, brand, price formula or input, warranty months, source text, link)
     ("Kamera IP CCTV", "Hikvision DS-2CD2143G2-IU", f"=RAB!F{RAB_ROW['Kamera IP CCTV']}", 24,
      "Listing toko: garansi resmi Hikvision 2 tahun", TP + "zacharycctv/hikvision-ds-2cd2143g2-i-4mp-dome-ip-camera"),
-    ("PC server: prosesor", "Intel Core Ultra 5 (harga 245K dipakai sebagai batas atas)", 3960000, 12,
-     "Rincian garansi PC rakitan Agres: CPU 1 tahun", TP + "jayapc/processor-intel-core-ultra-5-245k-box-arrow-lake-socket-lga-1851"),
-    ("PC server: VGA, motherboard, SSD", "Bagian dari AGRES CRYO PC", 0, 36,
+    ("PC server: prosesor", V["cpu"][0], V["cpu"][1], 12,
+     "Rincian garansi PC rakitan Agres: CPU 1 tahun", V["cpu"][2]),
+    ("PC server: VGA, motherboard, SSD", "Bagian dari PC server rakitan Agres", 0, 36,
      "Rincian garansi PC rakitan Agres: VGA, motherboard, SSD 3 tahun; PSU 5 tahun; RAM seumur hidup", AGRES),
     ("HDD rekaman video", "WD Purple Pro 8TB", f"=RAB!F{RAB_ROW['HDD rekaman video']}", 60,
      "WD: limited warranty 5 tahun", "https://www.ic.plus/products/purple-pro-8tb.html"),
@@ -426,10 +473,8 @@ RESERVE = [   # (device, brand, price formula or input, warranty months, source 
      "Garansi 3 tahun (RAB pptx)", TOKO + "samsung-business-tv-55"),
     ("Router", "MikroTik RB5009UG+S+IN", f"=RAB!F{RAB_ROW['Router']}", 12,
      "Listing toko: garansi 12 bulan; sumber Indonesia belum ada", "https://www.getic.com/product/mikrotik-rb5009ug-s-in"),
-    ("Switch PoE CCTV", "TP-Link Omada TL-SG2218P", f"=RAB!F{RAB_ROW['Switch PoE CCTV']}", 24,
-     "Listing toko berbeda (2 sampai 5 tahun); dipakai yang terpendek", "https://ict.com.mm/products/tp-link-tl-sg2218p-jetstream-18-port-gigabit-smart-switch-with-16-port-poe"),
-    ("UPS server", "APC Easy UPS Online SRV2KI-E", f"=RAB!F{RAB_ROW['UPS server']}", 24,
-     "Listing toko: garansi 2 tahun, termasuk baterai", "https://www.comms-express.com/products/apc-srv2ki-e-easy-ups-on-line-2000va-1800w-tower-230v/"),
+    ("Switch PoE CCTV", V["switch"][0], f"=RAB!F{RAB_ROW['Switch PoE CCTV']}", 24, V["switch"][4], V["switch"][5]),
+    ("UPS server", V["ups"][0], f"=RAB!F{RAB_ROW['UPS server']}", 24, V["ups"][4], V["ups"][5]),
     ("UPS rak jaringan", "APC Easy UPS BVX1200LI-MS", f"=RAB!F{RAB_ROW['UPS rak jaringan']}", 24,
      "Manual: garansi produk 2 tahun", "https://manuals.plus/asin/B08G8WT2L9"),
 ]
@@ -476,7 +521,7 @@ section(SB, r, "3. Langganan per tahun (selama kontrak minimum)", 3)
 sub0 = r + 1
 line(SB, r + 1, "Sewa perangkat dan pemasangan", f"=ROUNDUP(B8/(1-{DK['m_rent']})/({DK['term']}/12),-5)",
      nt="Uang keluar perangkat + margin sewa, dibagi rata selama kontrak minimum.")
-line(SB, r + 2, "Support software AI dan web app 12 bulan", f"={DK['sup_sw_year']}",
+line(SB, r + 2, "Support software AI dan web app 12 bulan", f"={SUP_SW_YEAR}",
      nt="Keputusan Bisnis, sekitar 31% dari nilai jasa aplikasi: pemantauan jarak jauh, retraining per kuartal, perbaikan bug, update keamanan, SLA.")
 ref(B_REF, "sup_sw", SB, r + 2)
 line(SB, r + 3, "Support infrastruktur 12 bulan", f"={SUPPORT_INF}*12", nt="Kunjungan rutin perangkat (sheet Jasa INKINDO).")
@@ -575,9 +620,16 @@ title(SS, "Sumber Harga", "Harga toko dapat berubah; minta penawaran tertulis se
 header(SS, 4, ["Kode", "Sumber", "Tautan"])
 for i, (c, d, u) in enumerate([
     ("S1", "RAB Factory_Vision_Presentation.pptx (slide RAB 1/3 sampai 3/3): harga Tokopedia dicek 12 Okt 2026. Tautan per item ada di sheet RAB.", "Factory_Vision_Presentation.pptx"),
+] + ([
     ("S2", "Agres Komputer Official (Tokopedia): AGRES CRYO PC ULTRA 5 245KF RTX 5070 TI 16G / 32GB 1TB, Rp 35.000.000 (dicek 31 Okt 2026 lewat hasil pencarian). Konfirmasi varian, PSU, dan casing ke penjual.", AGRES),
     ("S3", "Pembanding: e-katalog INAPROC/LKPP, AGRES CRYO PC ULTRA 5 245KF RTX 5070 12G 32GB/1TB + Win 11 Pro: total Rp 38.000.000. Situs Agres (agres.id, agreskomputer.com) saat ini tidak menampilkan stok PC Ready/workstation.",
      "https://katalog.inaproc.id/pt-bangun-jaya-pedia/agres-cryo-pc-ultra-5-245kf-rtx-5070-12g-32gb-1tb-win-11-pro-rakitan-pc-gaming"),
+] if CAMS == 8 else [
+    ("S2", "Agres Komputer Official (Tokopedia): AGRES PYROLITE PC RYZEN 5 7500F RTX 5060 TI 16GB / 32GB 1TB. Dua harga terlihat di pencarian 31 Okt 2026: "
+           "Rp 25.199.000 (32GB/1TB) dan Rp 29.149.000 (judul listing mencakup 512GB/1TB); dipakai yang lebih tinggi. Konfirmasi varian ke penjual.", AGRES),
+    ("S3", "Switch TP-Link TL-SG2210P Rp 1.850.000 (Tokopedia gudangwifii); UPS APC SRV1KI-E Rp 5.999.000 (APC Official Tokopedia); "
+           "prosesor pengganti AMD Ryzen 5 7500F tray Rp 2.999.000 (harga sebelum diskon).", V["switch"][3]),
+]) + [
     ("S4", "INKINDO, Pedoman Standar Minimal Tahun 2026 Remunerasi (Billing Rate): Tabel 3-26 (Tenaga Ahli tanpa SKK) dan Tabel 4-26 (Teknisi/Analis); SBOH = SBOB / 22 x 1,1.", "https://www.inkindo.org/documents/ikdweb-billing-rate-2026.pdf"),
     ("S5", "GSI Indonesia, Harga Pasang CCTV Per Titik 2026: IP camera jasa saja Rp 200.000 sampai Rp 350.000 per titik. Dipakai batas atas.", "https://gsi-indo.com/2026/04/17/harga-pasang-cctv-per-titik/"),
     ("S6", "Samsung BE55FX-H: spesifikasi toko mencantumkan Tizen dan web browser bawaan, jadi TV dock membuka dashboard tanpa mini PC. "
@@ -598,7 +650,7 @@ for i, (c, d, u) in enumerate([
 
 # ------------------------------------------------------------------ Ringkasan
 R = sheet("Ringkasan", [52, 20, 20, 20, 20])
-title(R, "Ringkasan: Hitung Karton per Palet di Loading Dock, 8 Kamera 20-30 fps, On-Premise",
+title(R, f"Ringkasan: Hitung Karton per Palet di Loading Dock, {CAMS} Kamera 20-30 fps, On-Premise",
       "Format RAB mengikuti pptx; PC server dari Agres; jasa dengan tarif INKINDO 2026. Hitungan per tahun (12 bulan).")
 header(R, 4, ["", "A. Beli putus", "B. Tahun pertama", "B. Per tahun berikutnya", "B. Total kontrak minimum"])
 SUM = [
@@ -624,7 +676,7 @@ for g, ref in GROUP_TOTAL.items():
     r += 1
 r += 1
 for t in [
-    "PC server: GPU RTX 5070 Ti 16 GB mendekode 8 stream 4MP di GPU dan menjalankan model TensorRT; target 20-30 fps per kamera. Kapasitas final dibuktikan dengan benchmark saat uji paralel.",
+    f"PC server: GPU {V['gpu']} mendekode {CAMS} stream 4MP di GPU dan menjalankan model TensorRT; target 20-30 fps per kamera. Kapasitas final dibuktikan dengan benchmark saat uji paralel.",
     "Tarif jasa INKINDO adalah standar minimal nasional untuk badan usaha jasa konsultansi dan sudah termasuk overhead dan keuntungan.",
     "Opsi B: pembayaran saat PO (50% setup + langganan tahun pertama) sudah menutup uang keluar perangkat; berhenti sebelum kontrak minimum selesai dikenai sisa sewa perangkat.",
     "Tim 2 orang tanpa kas CV: developer (AI, web app, pelabelan) dan infrastruktur (team leader/PM dan teknisi). Seluruh pendapatan bersih dibagi langsung ke 2 orang (sheet Porsi Tim). Jadwal sekitar 16 minggu.",
