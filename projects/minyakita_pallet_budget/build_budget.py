@@ -87,7 +87,7 @@ DEC = [
     ("mk_hw", "Markup perangkat", 0.15, PCT, "Atas harga beli + kontinjensi."),
     ("mk_inst", "Markup jasa pasang kamera", 0.20, PCT, "Atas tarif vendor pemasang."),
     ("warranty", "Garansi layanan termasuk harga Opsi A (bulan)", 3, "0", "Support setelah serah terima."),
-    ("m_rent", "Margin sewa perangkat (Opsi B)", 0.40, PCT, "Sewa perangkat per tahun = biaya perangkat dan pemasangan / (1 - margin)."),
+    ("free_b", "Layanan termasuk di tahun pertama Opsi B (bulan)", 12, "0", "Tahun pertama Opsi B harganya sama dengan beli putus; layanan diberikan 12 bulan, bukan 3 bulan."),
     ("ppn", "PPN efektif (isi 0 bila belum PKP)", 0.11, PCT, "PMK 131/2024: 12% x DPP 11/12."),
 ]
 DK = {}
@@ -308,31 +308,36 @@ line(SA, 32, "Maintenance opsional per tahun setelah garansi", f"=ROUNDUP({SUPPO
 
 # ------------------------------------------------------------------ Skenario B
 SB = sheet("Skenario B", [64, 18, 58])
-title(SB, "Skenario B: Langganan per Tahun (12 bulan)", "Perangkat milik kita, disewa perusahaan beserta web app, AI, dan layanan. Ditagih per tahun.")
+title(SB, "Skenario B: Langganan Layanan Tahunan",
+      "Tahun pertama bayar sama dengan beli putus, layanan 12 bulan termasuk. Mulai tahun kedua bayar langganan tahunan untuk layanan dan maintenance.")
 section(SB, 4, "1. Uang keluar ke vendor (tahun pertama)", 3)
 line(SB, 5, "Perangkat", f"={HW_COST}", color=GREEN)
 line(SB, 6, "Kontinjensi perangkat", f"={HW_CONT}", color=GREEN)
 line(SB, 7, "Jasa pasang kamera (vendor)", f"={INST_COST}", color=GREEN)
 line(SB, 8, "Total uang keluar", "=SUM(B5:B7)", bold=True, fill=TOTAL)
-section(SB, 10, "2. Langganan tahun pertama", 3)
-line(SB, 11, "Sewa perangkat dan pemasangan, 12 bulan", f"=ROUNDUP(B8/(1-{DK['m_rent']}),-5)", nt="Biaya perangkat kembali dalam 12 bulan.")
-line(SB, 12, "Pembuatan AI", f"={GROUP_TOTAL['Pembuatan AI']}", color=GREEN)
-line(SB, 13, "Pembuatan Web App", f"={GROUP_TOTAL['Pembuatan Web App']}", color=GREEN)
-line(SB, 14, "Implementasi Lapangan", f"={GROUP_TOTAL['Implementasi Lapangan']}", color=GREEN)
-line(SB, 15, "Manajemen Proyek", f"={GROUP_TOTAL['Manajemen Proyek']}", color=GREEN)
-line(SB, 16, "Layanan support 12 bulan", f"={SUPPORT}*12")
-line(SB, 17, "Langganan tahun pertama (sebelum PPN)", "=SUM(B11:B16)", bold=True, fill=TOTAL)
-line(SB, 18, "PPN", f"=B17*{DK['ppn']}")
-line(SB, 19, "Tagihan tahun pertama", "=B17+B18", bold=True)
-section(SB, 21, "3. Pendapatan tahun pertama", 3)
-line(SB, 22, "Pendapatan bersih (sebelum pajak penghasilan)", "=B17-B8", bold=True, fill=TOTAL)
-line(SB, 23, "Setara per bulan", "=B22/12", bold=True)
-section(SB, 25, "4. Perpanjangan tahun berikutnya", 3)
-line(SB, 26, "Sewa perangkat 12 bulan (perangkat sudah lunas)", "=ROUNDUP(B11-B8,-5)")
-line(SB, 27, "Layanan support 12 bulan", "=B16")
-line(SB, 28, "Langganan perpanjangan (sebelum PPN)", "=B26+B27", bold=True, fill=TOTAL)
-line(SB, 29, "Pendapatan bersih per tahun", "=B28")
-line(SB, 30, "Setara per bulan", "=B29/12", bold=True)
+section(SB, 10, "2. Tahun pertama (harga sama dengan beli putus)", 3)
+line(SB, 11, "Perangkat (harga jual)", f"={HW_SELL}", color=GREEN)
+line(SB, 12, "Jasa pasang kamera", f"={INST_SELL}", color=GREEN)
+line(SB, 13, "Pembuatan AI", f"={GROUP_TOTAL['Pembuatan AI']}", color=GREEN)
+line(SB, 14, "Pembuatan Web App", f"={GROUP_TOTAL['Pembuatan Web App']}", color=GREEN)
+line(SB, 15, "Implementasi Lapangan", f"={GROUP_TOTAL['Implementasi Lapangan']}", color=GREEN)
+line(SB, 16, "Manajemen Proyek", f"={GROUP_TOTAL['Manajemen Proyek']}", color=GREEN)
+line(SB, 17, "Layanan support tahun pertama", "='Skenario A'!B17", color=GREEN,
+     nt="Ditagih seharga garansi Opsi A; bulan sisanya gratis.")
+line(SB, 18, "Total tahun pertama (sebelum PPN)", "=SUM(B11:B17)", bold=True, fill=TOTAL)
+line(SB, 19, "PPN", f"=B18*{DK['ppn']}")
+line(SB, 20, "Tagihan tahun pertama", "=B18+B19", bold=True)
+section(SB, 22, "3. Pendapatan tahun pertama", 3)
+line(SB, 23, "Pendapatan bersih (sebelum pajak penghasilan)", "=B18-B8", bold=True, fill=TOTAL)
+line(SB, 24, "Setara per bulan", "=B23/12", bold=True)
+line(SB, 25, "Nilai layanan gratis yang kita berikan", f"={SUPPORT}*({DK['free_b']}-{DK['warranty']})",
+     nt="Tenaga tim sendiri, bukan uang keluar. Imbalannya: klien terikat langganan tahun berikutnya.")
+section(SB, 27, "4. Langganan tahun berikutnya", 3)
+line(SB, 28, "Layanan support dan maintenance 12 bulan", f"=ROUNDUP({SUPPORT}*12,-5)",
+     nt="Kunjungan rutin, retraining model, update web app (sheet Jasa INKINDO).")
+line(SB, 29, "Langganan per tahun (sebelum PPN)", "=B28", bold=True, fill=TOTAL)
+line(SB, 30, "Pendapatan bersih per tahun", "=B29")
+line(SB, 31, "Setara per bulan", "=B30/12", bold=True)
 
 # ------------------------------------------------------------------ Sumber
 SS = sheet("Sumber Harga", [7, 95, 70])
@@ -360,13 +365,13 @@ for i, (c, d, u) in enumerate([
 R = sheet("Ringkasan", [52, 22, 22, 22])
 title(R, "Ringkasan: Hitung Karton per Palet di Loading Dock, 8 Kamera 20-30 fps, On-Premise",
       "Format RAB mengikuti pptx; PC server dari Agres; jasa dengan tarif INKINDO 2026. Hitungan per tahun (12 bulan).")
-header(R, 4, ["", "A. Beli putus", "B. Langganan tahun pertama", "B. Perpanjangan per tahun"])
+header(R, 4, ["", "A. Beli putus", "B. Tahun pertama", "B. Langganan per tahun berikutnya"])
 SUM = [
     ("Uang keluar ke vendor", "='Skenario A'!B8", "='Skenario B'!B8", "=0"),
-    ("Harga ke klien (sebelum PPN)", "='Skenario A'!B18", "='Skenario B'!B17", "='Skenario B'!B28"),
-    ("Tagihan termasuk PPN", "='Skenario A'!B20", "='Skenario B'!B19", f"='Skenario B'!B28*(1+{DK['ppn']})"),
-    ("Pendapatan bersih per tahun", "='Skenario A'!B25", "='Skenario B'!B22", "='Skenario B'!B29"),
-    ("Pendapatan bersih per bulan (dibagi 12)", "='Skenario A'!B26", "='Skenario B'!B23", "='Skenario B'!B30"),
+    ("Harga ke klien (sebelum PPN)", "='Skenario A'!B18", "='Skenario B'!B18", "='Skenario B'!B29"),
+    ("Tagihan termasuk PPN", "='Skenario A'!B20", "='Skenario B'!B20", f"='Skenario B'!B29*(1+{DK['ppn']})"),
+    ("Pendapatan bersih per tahun", "='Skenario A'!B25", "='Skenario B'!B23", "='Skenario B'!B30"),
+    ("Pendapatan bersih per bulan (dibagi 12)", "='Skenario A'!B26", "='Skenario B'!B24", "='Skenario B'!B31"),
 ]
 r = 5
 for lab, fa, fb, fc in SUM:
