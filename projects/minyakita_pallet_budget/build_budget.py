@@ -235,12 +235,18 @@ GROUPS = [
         ("Dashboard dock dan manajemen, input DO, laporan per DO/truk/palet, alert, user", 0, 0, 20, 0, 0, "Web app on-premise"),
         ("Integrasi data DO dari WMS/ERP (file CSV atau API)", 0, 0, 5, 0, 0, "DO otomatis di sistem"),
     ]),
-    ("Implementasi Lapangan", [
-        ("Survey dock dan desain posisi kamera serta zona cek palet", 1, 1, 0, 0, 1, "Gambar posisi kamera"),
+    ("Implementasi AI dan Web App", [
+        ("Desain zona cek palet dan sudut pandang kamera untuk model (saat survey)", 0, 1, 0, 0, 0, "Zona cek per kamera"),
+        ("Kalibrasi model dan zona cek di 8 kamera (ambang deteksi, hitung karton)", 0, 3, 0, 0, 0, "Model terkalibrasi per kamera"),
+        ("Uji paralel 2 minggu: analisis akurasi, perbaikan model dan web app", 0, 5, 3, 0, 0, "Laporan akurasi"),
+        ("Training penggunaan web app dan dashboard", 0, 0, 1, 0, 0, "Pengguna mahir memakai web app"),
+    ]),
+    ("Implementasi Infrastruktur", [
+        ("Survey dock, desain posisi kamera, jalur kabel, dan ruang server", 1, 0, 0, 0, 1, "Gambar posisi kamera dan jalur kabel"),
         ("Instalasi rak, jaringan, server, dan setting 8 kamera", 0, 0, 0, 0, 4, "Infrastruktur siap"),
-        ("Kalibrasi 8 kamera dan zona cek palet", 0, 3, 0, 0, 2, "Kamera terkalibrasi"),
-        ("Uji paralel 2 minggu dibanding hitung manual", 2, 5, 3, 0, 4, "Laporan akurasi, sign-off"),
-        ("Training pengguna, SOP, serah terima", 2, 0, 1, 0, 0, "SOP checker dan supervisor"),
+        ("Kalibrasi fisik 8 kamera (posisi, fokus, sudut)", 0, 0, 0, 0, 2, "Kamera terpasang sesuai desain"),
+        ("Uji paralel 2 minggu: pendampingan lapangan dan sign-off", 2, 0, 0, 0, 4, "Berita acara uji paralel"),
+        ("Training SOP checker dan supervisor, serah terima", 2, 0, 0, 0, 0, "SOP dan berita acara serah terima"),
     ]),
     ("Manajemen Proyek", [
         ("Koordinasi, rapat mingguan, laporan progres selama sekitar 16 minggu", 10, 0, 0, 0, 0, "Laporan progres"),
@@ -282,52 +288,73 @@ put(J, f"B{r}", "Pelabelan memakai auto-labeling lalu dikoreksi, jadi waktu kerj
 r += 2
 section(J, r, "Layanan support per bulan (garansi dan langganan)", 9)
 r += 1
-s0 = r
 sup0 = r
-for act, pm, ai, dev, asst, tech in [
-    ("Kunjungan rutin: cek kamera, bersihkan lensa, cek server dan rekaman", 0, 0, 0, 0, 1),
-    ("Pemantauan akurasi dan retraining model", 0, 1, 0, 0, 0),
-    ("Perbaikan dan update web app", 0, 0, 1, 0, 0),
+SUP_PART = {}
+for part, rows in [
+    ("software", [("Pemantauan akurasi dan retraining model", 0, 1, 0, 0, 0),
+                  ("Perbaikan dan update web app", 0, 0, 1, 0, 0)]),
+    ("infra", [("Kunjungan rutin: cek kamera, bersihkan lensa, cek server, jaringan, dan rekaman", 0, 0, 0, 0, 1)]),
 ]:
-    put(J, f"B{r}", act, wrap=True)
-    for col, v in zip("CDEFG", (pm, ai, dev, asst, tech)):
-        put(J, f"{col}{r}", v, color=BLUE, fmt="0")
-    put(J, f"H{r}", f"=C{r}*{RATE['pm']}+D{r}*{RATE['ai']}+E{r}*{RATE['dev']}+F{r}*{RATE['asst']}+G{r}*{RATE['tech']}", fmt=RP)
+    p0 = r
+    for act, pm, ai, dev, asst, tech in rows:
+        put(J, f"B{r}", act, wrap=True)
+        for col, v in zip("CDEFG", (pm, ai, dev, asst, tech)):
+            put(J, f"{col}{r}", v, color=BLUE, fmt="0")
+        put(J, f"H{r}", f"=C{r}*{RATE['pm']}+D{r}*{RATE['ai']}+E{r}*{RATE['dev']}+F{r}*{RATE['asst']}+G{r}*{RATE['tech']}", fmt=RP)
+        r += 1
+    put(J, f"B{r}", "Subtotal support software AI dan web app" if part == "software" else "Subtotal support infrastruktur", bold=True, fill=TOTAL)
+    put(J, f"H{r}", f"=SUM(H{p0}:H{r - 1})", bold=True, fmt=RP, fill=TOTAL)
+    SUP_PART[part] = f"'Jasa INKINDO'!$H${r}"
     r += 1
 put(J, f"B{r}", "Total layanan per bulan", bold=True, fill=TOTAL)
-put(J, f"H{r}", f"=SUM(H{s0}:H{r - 1})", bold=True, fmt=RP, fill=TOTAL)
-SUPPORT = f"'Jasa INKINDO'!$H${r}"
+put(J, f"H{r}", f"={SUP_PART['software'].split('!')[1]}+{SUP_PART['infra'].split('!')[1]}", bold=True, fmt=RP, fill=TOTAL)
+SUPPORT, SUPPORT_SW, SUPPORT_INF = f"'Jasa INKINDO'!$H${r}", SUP_PART["software"], SUP_PART["infra"]
 SUP_DAYS = {k: f"SUM('Jasa INKINDO'!${c}${sup0}:${c}${r - 1})" for k, c in zip(("pm", "ai", "dev", "asst", "tech"), "CDEFG")}
 
 # ------------------------------------------------------------------ Skenario A
 SA = sheet("Skenario A", [64, 18, 58])
 title(SA, "Skenario A: Beli Putus", "Semua perangkat, jasa pasang, web app dan AI menjadi milik perusahaan. Sekali bayar.")
+A_REF = {}
+
+
+def ref(refs, key, ws, row):
+    refs[key] = f"'{ws.title}'!$B${row}"
+
+
 section(SA, 4, "1. Uang keluar ke vendor", 3)
 line(SA, 5, "Perangkat", f"={HW_COST}", color=GREEN)
 line(SA, 6, "Kontinjensi perangkat", f"={HW_CONT}", color=GREEN)
 line(SA, 7, "Jasa pasang kamera (vendor)", f"={INST_COST}", color=GREEN)
 line(SA, 8, "Total uang keluar", "=SUM(B5:B7)", bold=True, fill=TOTAL)
+ref(A_REF, "out", SA, 8)
 section(SA, 10, "2. Harga ke klien", 3)
 line(SA, 11, "Perangkat (harga jual)", f"={HW_SELL}", color=GREEN)
 line(SA, 12, "Jasa pasang kamera", f"={INST_SELL}", color=GREEN)
-line(SA, 13, "Pembuatan AI", f"={GROUP_TOTAL['Pembuatan AI']}", color=GREEN)
-line(SA, 14, "Pembuatan Web App", f"={GROUP_TOTAL['Pembuatan Web App']}", color=GREEN)
-line(SA, 15, "Implementasi Lapangan", f"={GROUP_TOTAL['Implementasi Lapangan']}", color=GREEN)
-line(SA, 16, "Manajemen Proyek", f"={GROUP_TOTAL['Manajemen Proyek']}", color=GREEN)
-line(SA, 17, "Garansi layanan", f"={SUPPORT}*{DK['warranty']}")
-line(SA, 18, "Total harga (sebelum PPN)", "=SUM(B11:B17)", bold=True, fill=TOTAL)
-line(SA, 19, "PPN", f"=B18*{DK['ppn']}")
-line(SA, 20, "Total tagihan", "=B18+B19", bold=True)
-section(SA, 22, "3. Pendapatan", 3)
-line(SA, 23, "Jasa tim (AI, web app, implementasi, manajemen, garansi)", "=SUM(B13:B17)")
-line(SA, 24, "Margin perangkat dan jasa pasang", "=B11+B12-B8")
-line(SA, 25, "Pendapatan bersih (sebelum pajak penghasilan)", "=B18-B8", bold=True, fill=TOTAL)
-line(SA, 26, "Setara per bulan dalam 1 tahun", "=B25/12", bold=True)
-section(SA, 28, "4. Termin dan opsi", 3)
-line(SA, 29, "DP 50% saat PO", "=B20*50%")
-line(SA, 30, "30% setelah instalasi selesai", "=B20*30%")
-line(SA, 31, "20% setelah uji paralel dan serah terima", "=B20*20%")
-line(SA, 32, "Maintenance opsional per tahun setelah garansi", f"=ROUNDUP({SUPPORT}*12,-5)")
+r = 13
+for g, cell in GROUP_TOTAL.items():
+    line(SA, r, g, f"={cell}", color=GREEN)
+    r += 1
+line(SA, r, "Garansi software AI dan web app", f"={SUPPORT_SW}*{DK['warranty']}", nt="Retraining model dan update web app selama masa garansi.")
+line(SA, r + 1, "Garansi infrastruktur", f"={SUPPORT_INF}*{DK['warranty']}", nt="Kunjungan rutin perangkat selama masa garansi.")
+line(SA, r + 2, "Total harga (sebelum PPN)", f"=SUM(B11:B{r + 1})", bold=True, fill=TOTAL)
+line(SA, r + 3, "PPN", f"=B{r + 2}*{DK['ppn']}")
+line(SA, r + 4, "Total tagihan", f"=B{r + 2}+B{r + 3}", bold=True)
+ref(A_REF, "total", SA, r + 2)
+ref(A_REF, "bill", SA, r + 4)
+jasa_end, total_row, bill_row = r + 1, r + 2, r + 4
+r += 6
+section(SA, r, "3. Pendapatan", 3)
+line(SA, r + 1, "Jasa tim (AI, web app, implementasi, manajemen, garansi)", f"=SUM(B13:B{jasa_end})")
+line(SA, r + 2, "Margin perangkat dan jasa pasang", "=B11+B12-B8")
+line(SA, r + 3, "Pendapatan bersih (sebelum pajak penghasilan)", f"=B{total_row}-B8", bold=True, fill=TOTAL)
+line(SA, r + 4, "Setara per bulan dalam 1 tahun", f"=B{r + 3}/12", bold=True)
+ref(A_REF, "net", SA, r + 3)
+r += 6
+section(SA, r, "4. Termin dan opsi", 3)
+line(SA, r + 1, "DP 50% saat PO", f"=B{bill_row}*50%")
+line(SA, r + 2, "30% setelah instalasi selesai", f"=B{bill_row}*30%")
+line(SA, r + 3, "20% setelah uji paralel dan serah terima", f"=B{bill_row}*20%")
+line(SA, r + 4, "Maintenance opsional per tahun setelah garansi", f"={SUPPORT}*12", nt="Software AI dan web app ditambah infrastruktur, 12 bulan.")
 
 # ------------------------------------------------------------------ Cadangan penggantian (Opsi B)
 CP = sheet("Cadangan Penggantian", [30, 34, 15, 11, 50, 12, 9, 16])
@@ -381,48 +408,62 @@ note(CP, r + 2, "Tidak dicadangkan: perangkat pasif (rak, PDU, patch panel, kabe
 # ------------------------------------------------------------------ Skenario B
 SB = sheet("Skenario B", [64, 18, 58])
 title(SB, "Skenario B: Sewa + Langganan, Kontrak Minimum",
-      "Perangkat milik kita. Klien bayar biaya setup sekali, lalu langganan per 12 bulan di muka selama kontrak minimum.")
+      "Perangkat milik kita. Klien bayar aplikasi AI, web app, dan implementasi sekali, lalu langganan per 12 bulan di muka selama kontrak minimum.")
+B_REF = {}
 section(SB, 4, "1. Uang keluar ke vendor (di awal)", 3)
 line(SB, 5, "Perangkat", f"={HW_COST}", color=GREEN)
 line(SB, 6, "Kontinjensi perangkat", f"={HW_CONT}", color=GREEN)
 line(SB, 7, "Jasa pasang kamera (vendor)", f"={INST_COST}", color=GREEN)
 line(SB, 8, "Total uang keluar", "=SUM(B5:B7)", bold=True, fill=TOTAL)
-section(SB, 10, "2. Biaya setup (satu kali, kerja custom untuk klien)", 3)
-line(SB, 11, "Pembuatan AI", f"={GROUP_TOTAL['Pembuatan AI']}", color=GREEN)
-line(SB, 12, "Pembuatan Web App", f"={GROUP_TOTAL['Pembuatan Web App']}", color=GREEN)
-line(SB, 13, "Implementasi Lapangan", f"={GROUP_TOTAL['Implementasi Lapangan']}", color=GREEN)
-line(SB, 14, "Manajemen Proyek", f"={GROUP_TOTAL['Manajemen Proyek']}", color=GREEN)
-line(SB, 15, "Total biaya setup", "=SUM(B11:B14)", bold=True, fill=TOTAL)
-section(SB, 17, "3. Langganan per tahun (selama kontrak minimum)", 3)
-line(SB, 18, "Sewa perangkat dan pemasangan", f"=ROUNDUP(B8/(1-{DK['m_rent']})/({DK['term']}/12),-5)",
+ref(B_REF, "out", SB, 8)
+section(SB, 10, "2. Aplikasi AI, web app, dan implementasi (sekali bayar, kerja custom)", 3)
+r = 11
+for g, cell in GROUP_TOTAL.items():
+    line(SB, r, g, f"={cell}", color=GREEN)
+    r += 1
+line(SB, r, "Total aplikasi AI, web app, dan implementasi", f"=SUM(B11:B{r - 1})", bold=True, fill=TOTAL)
+setup = r
+r += 2
+section(SB, r, "3. Langganan per tahun (selama kontrak minimum)", 3)
+sub0 = r + 1
+line(SB, r + 1, "Sewa perangkat dan pemasangan", f"=ROUNDUP(B8/(1-{DK['m_rent']})/({DK['term']}/12),-5)",
      nt="Uang keluar perangkat + margin sewa, dibagi rata selama kontrak minimum.")
-line(SB, 19, "Layanan support dan maintenance 12 bulan", f"=ROUNDUP({SUPPORT}*12,-5)",
-     nt="Kunjungan rutin, retraining model, update web app (sheet Jasa INKINDO).")
-line(SB, 20, "Jaminan penggantian perangkat", f"=ROUNDUP({RESERVE_TOTAL}/({DK['term']}/12),-5)",
+line(SB, r + 2, "Support software AI dan web app 12 bulan", f"={SUPPORT_SW}*12", nt="Retraining model, update web app (sheet Jasa INKINDO).")
+line(SB, r + 3, "Support infrastruktur 12 bulan", f"={SUPPORT_INF}*12", nt="Kunjungan rutin perangkat (sheet Jasa INKINDO).")
+line(SB, r + 4, "Jaminan penggantian perangkat", f"=ROUNDUP({RESERVE_TOTAL}/({DK['term']}/12),-5)",
      nt="Cadangan penggantian dibagi rata per tahun (sheet Cadangan Penggantian).")
-line(SB, 21, "Langganan per tahun (sebelum PPN)", "=SUM(B18:B20)", bold=True, fill=TOTAL)
-section(SB, 23, "4. Tagihan ke klien (sebelum PPN)", 3)
-line(SB, 24, "Tahun pertama (setup + langganan)", "=B15+B21", bold=True)
-line(SB, 25, "Per tahun berikutnya", "=B21")
-line(SB, 26, "Total selama kontrak minimum", f"=B15+B21*{DK['term']}/12", bold=True, fill=TOTAL)
-line(SB, 27, "PPN tahun pertama", f"=B24*{DK['ppn']}")
-line(SB, 28, "Tagihan tahun pertama termasuk PPN", "=B24+B27", bold=True)
-section(SB, 30, "5. Pendapatan selama kontrak minimum", 3)
-line(SB, 31, "Total pendapatan (sebelum PPN)", "=B26")
-line(SB, 32, "Uang keluar perangkat", "=-B8")
-line(SB, 33, "Cadangan penggantian bila terpakai semua", f"=-{RESERVE_TOTAL}", color=GREEN)
-line(SB, 34, "Pendapatan bersih (cadangan terpakai semua)", "=SUM(B31:B33)", bold=True, fill=TOTAL)
-line(SB, 35, "Pendapatan bersih (cadangan tidak terpakai)", "=B31+B32", bold=True)
-line(SB, 36, "Setara per bulan (cadangan terpakai semua)", f"=B34/{DK['term']}")
-line(SB, 37, "Modal perangkat kembali dari sewa pada bulan ke-", "=B8/(B18/12)", fmt="0.0")
-section(SB, 39, "6. Pengamanan", 3)
-line(SB, 40, "Pembayaran saat PO: 50% setup + langganan tahun pertama", "=B15*50%+B21",
+line(SB, r + 5, "Langganan per tahun (sebelum PPN)", f"=SUM(B{r + 1}:B{r + 4})", bold=True, fill=TOTAL)
+rent, sub = r + 1, r + 5
+r += 7
+section(SB, r, "4. Tagihan ke klien (sebelum PPN)", 3)
+line(SB, r + 1, "Tahun pertama (aplikasi dan implementasi + langganan)", f"=B{setup}+B{sub}", bold=True)
+line(SB, r + 2, "Per tahun berikutnya", f"=B{sub}")
+line(SB, r + 3, "Total selama kontrak minimum", f"=B{setup}+B{sub}*{DK['term']}/12", bold=True, fill=TOTAL)
+line(SB, r + 4, "PPN tahun pertama", f"=B{r + 1}*{DK['ppn']}")
+line(SB, r + 5, "Tagihan tahun pertama termasuk PPN", f"=B{r + 1}+B{r + 4}", bold=True)
+for k, off in (("year1", 1), ("next", 2), ("total", 3), ("bill1", 5)):
+    ref(B_REF, k, SB, r + off)
+year1_row, total_row = r + 1, r + 3
+r += 7
+section(SB, r, "5. Pendapatan selama kontrak minimum", 3)
+line(SB, r + 1, "Total pendapatan (sebelum PPN)", f"=B{total_row}")
+line(SB, r + 2, "Uang keluar perangkat", "=-B8")
+line(SB, r + 3, "Cadangan penggantian bila terpakai semua", f"=-{RESERVE_TOTAL}", color=GREEN)
+line(SB, r + 4, "Pendapatan bersih (cadangan terpakai semua)", f"=SUM(B{r + 1}:B{r + 3})", bold=True, fill=TOTAL)
+line(SB, r + 5, "Pendapatan bersih (cadangan tidak terpakai)", f"=B{r + 1}+B{r + 2}", bold=True)
+line(SB, r + 6, "Setara per bulan (cadangan terpakai semua)", f"=B{r + 4}/{DK['term']}")
+line(SB, r + 7, "Modal perangkat kembali dari sewa pada bulan ke-", f"=B8/(B{rent}/12)", fmt="0.0")
+for k, off in (("net", 4), ("net_unused", 5), ("payback", 7)):
+    ref(B_REF, k, SB, r + off)
+r += 9
+section(SB, r, "6. Pengamanan", 3)
+line(SB, r + 1, "Pembayaran saat PO: 50% aplikasi dan implementasi + langganan tahun pertama", f"=B{setup}*50%+B{sub}",
      nt="Lebih besar dari uang keluar perangkat, jadi kita tidak menalangi modal.")
-line(SB, 41, "Kas saat PO dikurangi uang keluar perangkat", "=B40-B8")
-line(SB, 42, "Biaya pemutusan bila berhenti setelah tahun ke-1", f"=B18*({DK['term']}/12-1)",
+line(SB, r + 2, "Kas saat PO dikurangi uang keluar perangkat", f"=B{r + 1}-B8")
+line(SB, r + 3, "Biaya pemutusan bila berhenti setelah tahun ke-1", f"=B{rent}*({DK['term']}/12-1)",
      nt="Sisa sewa perangkat sampai akhir kontrak minimum.")
-line(SB, 43, "Biaya pemutusan bila berhenti setelah tahun ke-2", f"=B18*MAX({DK['term']}/12-2,0)")
-line(SB, 44, "Pendapatan bersih bila berhenti setelah tahun ke-1 (bayar biaya pemutusan)", "=B24+B42-B8")
+line(SB, r + 4, "Biaya pemutusan bila berhenti setelah tahun ke-2", f"=B{rent}*MAX({DK['term']}/12-2,0)")
+line(SB, r + 5, "Pendapatan bersih bila berhenti setelah tahun ke-1 (bayar biaya pemutusan)", f"=B{year1_row}+B{r + 3}-B8")
 
 # ------------------------------------------------------------------ Porsi tim (internal)
 def value(who, days):
@@ -446,7 +487,7 @@ def both(row, label, fa, fb, bold=False, fill=None, color=BLACK, fmt=RP, nt=None
 dev_work, dev_sup = f"={value(DEV, DAYS)}", value(DEV, SUP_DAYS)
 inf_work, inf_sup = f"={value(INFRA, DAYS)}", value(INFRA, SUP_DAYS)
 section(PT, 5, "1. Margin yang dibagi berdua", 4)
-both(6, "Pendapatan bersih", "='Skenario A'!B25", "='Skenario B'!B34", color=GREEN,
+both(6, "Pendapatan bersih", f"={A_REF['net']}", f"={B_REF['net']}", color=GREEN,
      nt="Opsi B dengan asumsi cadangan penggantian terpakai semua.")
 both(7, "Dikurangi nilai jasa kedua orang", "=-(B12+B13+B18+B19)", "=-(C12+C13+C18+C19)")
 both(8, "Margin perangkat / sewa untuk dibagi", "=B6+B7", "=C6+C7", bold=True, fill=TOTAL,
@@ -454,14 +495,14 @@ both(8, "Margin perangkat / sewa untuk dibagi", "=B6+B7", "=C6+C7", bold=True, f
 section(PT, 10, "2. Developer: AI/CV, web app, pelabelan", 4)
 put(PT, "A11", "Bagian margin", color=GREY)
 put(PT, "B11", f"={DK['split_dev']}", fmt=PCT, color=GREEN)
-both(12, "Pembuatan AI, web app, bagian AI dan web di implementasi", dev_work, "=B12",
+both(12, "Pembuatan AI, Pembuatan Web App, Implementasi AI dan Web App", dev_work, "=B12",
      nt="Sama di kedua opsi, dibayar di depan.")
 both(13, "Support AI dan web app (retraining, update)", f"=({dev_sup})*{DK['warranty']}", f"=({dev_sup})*{DK['term']}",
      nt="Opsi A: garansi 3 bulan. Opsi B: selama kontrak minimum (1 hari AI + 1 hari web app per bulan).")
 both(14, "Bagian margin", "=B8*$B$11", "=C8*$B$11")
 both(15, "Total developer", "=SUM(B12:B14)", "=SUM(C12:C14)", bold=True, fill=TOTAL)
 section(PT, 17, "3. Infrastruktur: team leader/PM dan teknisi", 4)
-both(18, "Manajemen proyek, survey, instalasi, kalibrasi, uji paralel, training", inf_work, "=B18",
+both(18, "Implementasi Infrastruktur, Manajemen Proyek", inf_work, "=B18",
      nt="Jasa pasang kamera dari vendor luar; bila dipasang sendiri, biaya vendor ikut masuk ke porsi ini.")
 both(19, "Kunjungan rutin", f"=({inf_sup})*{DK['warranty']}", f"=({inf_sup})*{DK['term']}")
 both(20, "Bagian margin", "=B8*(1-$B$11)", "=C8*(1-$B$11)")
@@ -510,12 +551,12 @@ title(R, "Ringkasan: Hitung Karton per Palet di Loading Dock, 8 Kamera 20-30 fps
       "Format RAB mengikuti pptx; PC server dari Agres; jasa dengan tarif INKINDO 2026. Hitungan per tahun (12 bulan).")
 header(R, 4, ["", "A. Beli putus", "B. Tahun pertama", "B. Per tahun berikutnya", "B. Total kontrak minimum"])
 SUM = [
-    ("Uang keluar ke vendor", "='Skenario A'!B8", "='Skenario B'!B8", "=0", "='Skenario B'!B8"),
-    ("Harga ke klien (sebelum PPN)", "='Skenario A'!B18", "='Skenario B'!B24", "='Skenario B'!B25", "='Skenario B'!B26"),
-    ("Tagihan termasuk PPN", "='Skenario A'!B20", "='Skenario B'!B28", f"='Skenario B'!B25*(1+{DK['ppn']})", f"='Skenario B'!B26*(1+{DK['ppn']})"),
-    ("Pendapatan bersih (B: cadangan terpakai semua)", "='Skenario A'!B25", None, None, "='Skenario B'!B34"),
-    ("Pendapatan bersih (B: cadangan tidak terpakai)", None, None, None, "='Skenario B'!B35"),
-    ("Modal perangkat kembali (bulan ke-)", None, None, None, "='Skenario B'!B37"),
+    ("Uang keluar ke vendor", f"={A_REF['out']}", f"={B_REF['out']}", "=0", f"={B_REF['out']}"),
+    ("Harga ke klien (sebelum PPN)", f"={A_REF['total']}", f"={B_REF['year1']}", f"={B_REF['next']}", f"={B_REF['total']}"),
+    ("Tagihan termasuk PPN", f"={A_REF['bill']}", f"={B_REF['bill1']}", f"={B_REF['next']}*(1+{DK['ppn']})", f"={B_REF['total']}*(1+{DK['ppn']})"),
+    ("Pendapatan bersih (B: cadangan terpakai semua)", f"={A_REF['net']}", None, None, f"={B_REF['net']}"),
+    ("Pendapatan bersih (B: cadangan tidak terpakai)", None, None, None, f"={B_REF['net_unused']}"),
+    ("Modal perangkat kembali (bulan ke-)", None, None, None, f"={B_REF['payback']}"),
 ]
 r = 5
 for lab, *fs in SUM:

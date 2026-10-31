@@ -39,16 +39,18 @@ warranty = by_label(kb, "Garansi layanan termasuk harga Opsi A (bulan)")
 ppn = by_label(kb, "PPN efektif (isi 0 bila belum PKP)")
 sa, sb = src["Skenario A"], src["Skenario B"]
 total_a = by_label(sa, "Total harga (sebelum PPN)")
-garansi_a = by_label(sa, "Garansi layanan")
+gar_sw_a = by_label(sa, "Garansi software AI dan web app")
+gar_inf_a = by_label(sa, "Garansi infrastruktur")
 maint_a = by_label(sa, "Maintenance opsional per tahun setelah garansi")
 term = by_label(kb, "Kontrak minimum Opsi B (bulan)")
 late = by_label(kb, "Batas telat bayar sebelum layanan dihentikan sementara (hari)")
-setup_b = by_label(sb, "Total biaya setup")
+setup_b = by_label(sb, "Total aplikasi AI, web app, dan implementasi")
 rent_b = by_label(sb, "Sewa perangkat dan pemasangan")
-support_b = by_label(sb, "Layanan support dan maintenance 12 bulan")
+sup_sw_b = by_label(sb, "Support software AI dan web app 12 bulan")
+sup_inf_b = by_label(sb, "Support infrastruktur 12 bulan")
 reserve_b = by_label(sb, "Jaminan penggantian perangkat")
 sub_b = by_label(sb, "Langganan per tahun (sebelum PPN)")
-year1 = by_label(sb, "Tahun pertama (setup + langganan)")
+year1 = by_label(sb, "Tahun pertama (aplikasi dan implementasi + langganan)")
 total_b = by_label(sb, "Total selama kontrak minimum")
 YEARS = int(term // 12)
 
@@ -72,7 +74,7 @@ js = src["Jasa INKINDO"]
 services, grp = {}, None
 for r in range(1, js.max_row + 1):
     a, b, h = js[f"A{r}"].value, js[f"B{r}"].value, js[f"H{r}"].value
-    if a in ("Pembuatan AI", "Pembuatan Web App", "Implementasi Lapangan", "Manajemen Proyek"):
+    if a in ("Pembuatan AI", "Pembuatan Web App", "Implementasi AI dan Web App", "Implementasi Infrastruktur", "Manajemen Proyek"):
         grp = a
         services[grp] = [0, []]
     elif grp and isinstance(a, int):
@@ -80,8 +82,9 @@ for r in range(1, js.max_row + 1):
     elif grp and b == f"Subtotal {grp}":
         services[grp][0] = h
         grp = None
-assert goods_total + sum(v for v, _ in services.values()) + garansi_a == total_a, "Opsi A tidak sama dengan budget"
-assert sum(v for v, _ in services.values()) == setup_b and rent_b + support_b + reserve_b == sub_b, "Opsi B tidak sama dengan budget"
+assert len(services) == 5
+assert goods_total + sum(v for v, _ in services.values()) + gar_sw_a + gar_inf_a == total_a, "Opsi A tidak sama dengan budget"
+assert sum(v for v, _ in services.values()) == setup_b and rent_b + sup_sw_b + sup_inf_b + reserve_b == sub_b, "Opsi B tidak sama dengan budget"
 assert setup_b + sub_b == year1 and setup_b + sub_b * YEARS == total_b
 
 # ---------------------------------------------------------------- client workbook
@@ -165,11 +168,12 @@ def totals(ws, r, cells, label="Total (sebelum PPN)"):
 SERVICE_TEXT = {
     "Pembuatan AI": "Model AI khusus kemasan Minyakita, berjalan realtime 8 kamera pada 20-30 fps",
     "Pembuatan Web App": "Web app on-premise untuk dock dan manajemen",
-    "Implementasi Lapangan": "Pemasangan, kalibrasi, uji paralel, dan serah terima di lokasi",
+    "Implementasi AI dan Web App": "Kalibrasi model, uji akurasi, dan training web app di lokasi",
+    "Implementasi Infrastruktur": "Survey, instalasi perangkat, uji paralel lapangan, dan serah terima",
     "Manajemen Proyek": "Pengelolaan proyek selama sekitar 16 minggu",
 }
-SUPPORT_TEXT = ("Kunjungan rutin bulanan (cek kamera, lensa, server, rekaman), pemantauan akurasi dan retraining model, "
-                "perbaikan dan update web app")
+SUPPORT_SW_TEXT = "Pemantauan akurasi dan retraining model, perbaikan dan update web app"
+SUPPORT_INF_TEXT = "Kunjungan rutin bulanan: cek kamera, bersihkan lensa, cek server, jaringan, dan rekaman"
 WIDTHS = [5, 30, 28, 52, 6, 17, 18]
 COLS = ["No", "Item", "Merek / Tipe", "Spesifikasi / lingkup", "Qty", "Harga satuan (Rp)", "Jumlah (Rp)"]
 
@@ -184,7 +188,7 @@ def service_lines(ws, r, n):
 SERVICES_BAND = "Aplikasi AI, web app, dan implementasi"
 
 
-def full_breakdown(ws, r, support_label, support_brand, support_value):
+def full_breakdown(ws, r):
     """Every device, installation and service line with a subtotal per category; returns (next row, subtotal cells)."""
     n, subs = 1, []
     for cat in dict.fromkeys(g[0] for g in goods):
@@ -198,9 +202,14 @@ def full_breakdown(ws, r, support_label, support_brand, support_value):
     band(ws, r, SERVICES_BAND, 7)
     first = r + 1
     r, n = service_lines(ws, first, n)
-    line(ws, r, n, support_label, support_brand, SUPPORT_TEXT, 1, support_value)
-    subs.append(subtotal(ws, r + 1, SERVICES_BAND, first, r))
-    return r + 3, subs
+    subs.append(subtotal(ws, r, SERVICES_BAND, first, r - 1))
+    r += 1
+    band(ws, r, f"Garansi {warranty} bulan setelah serah terima", 7)
+    first = r + 1
+    line(ws, r + 1, n, "Garansi software AI dan web app", f"{warranty} bulan", SUPPORT_SW_TEXT, 1, gar_sw_a)
+    line(ws, r + 2, n + 1, "Garansi infrastruktur", f"{warranty} bulan", SUPPORT_INF_TEXT, 1, gar_inf_a)
+    subs.append(subtotal(ws, r + 3, "garansi", first, r + 2))
+    return r + 5, subs
 
 
 # ---------------------------------------------------------------- Rincian Opsi A
@@ -209,33 +218,35 @@ put(A, "A1", "Rincian Opsi A: Beli Putus", bold=True, size=14)
 put(A, "A2", "Semua perangkat, instalasi, aplikasi AI, dan web app menjadi milik perusahaan. Harga dalam Rupiah, belum termasuk PPN.",
     italic=True, color="595959")
 header(A, 4, COLS)
-r, subs = full_breakdown(A, 5, f"Garansi layanan {warranty} bulan", "Setelah serah terima", garansi_a)
+r, subs = full_breakdown(A, 5)
 tot_a, grand_a = totals(A, r, subs)
 
 # ---------------------------------------------------------------- Rincian Opsi B
 B = sheet("Rincian Opsi B", WIDTHS)
 put(B, "A1", f"Rincian Opsi B: Sewa dan Langganan, Kontrak Minimum {term} Bulan", bold=True, size=14)
-put(B, "A2", "Perangkat disediakan, dipasang, dan dirawat penyedia. Biaya setup dibayar sekali, langganan dibayar di muka per 12 bulan. "
+put(B, "A2", "Perangkat disediakan, dipasang, dan dirawat penyedia. Aplikasi AI, web app, dan implementasi dibayar sekali; "
+    "langganan dibayar di muka per 12 bulan. "
     "Harga dalam Rupiah, belum termasuk PPN.", italic=True, color="595959")
 header(B, 4, COLS)
-band(B, 5, "BIAYA SETUP (satu kali)", 7)
+band(B, 5, SERVICES_BAND + " (dibayar sekali)", 7)
 r, n = service_lines(B, 6, 1)
-setup_cell = subtotal(B, r, "biaya setup", 6, r - 1)
+setup_cell = subtotal(B, r, SERVICES_BAND, 6, r - 1)
 r += 2
 band(B, r, "LANGGANAN PER TAHUN (dibayar di muka per 12 bulan)", 7)
 first = r + 1
 line(B, r + 1, 1, "Sewa perangkat dan pemasangan", "Seluruh perangkat di daftar bawah",
      "8 kamera, PC server AI, penyimpanan rekaman dan backup, UPS, rak dan jaringan, TV status loading dock; terpasang di 8 titik", 1, rent_b)
-line(B, r + 2, 2, "Layanan support dan maintenance", "12 bulan", SUPPORT_TEXT, 1, support_b)
-line(B, r + 3, 3, "Jaminan penggantian perangkat", "Kerusakan karena pemakaian normal",
+line(B, r + 2, 2, "Support software AI dan web app", "12 bulan, menggantikan garansi", SUPPORT_SW_TEXT, 1, sup_sw_b)
+line(B, r + 3, 3, "Support infrastruktur", "12 bulan, menggantikan garansi", SUPPORT_INF_TEXT, 1, sup_inf_b)
+line(B, r + 4, 4, "Jaminan penggantian perangkat", "Kerusakan karena pemakaian normal",
      "Perangkat rusak diganti unit setara oleh penyedia, termasuk setelah garansi pabrik habis", 1, reserve_b)
-sub_cell = subtotal(B, r + 4, "langganan per tahun", first, r + 3)
-r += 6
+sub_cell = subtotal(B, r + 5, "langganan per tahun", first, r + 4)
+r += 7
 band(B, r, f"TAGIHAN SELAMA KONTRAK MINIMUM ({term} bulan)", 7)
 r += 1
 year_rows = []
 for y in range(1, YEARS + 1):
-    put(B, f"B{r}", f"Tahun ke-{y}" + (" (biaya setup + langganan)" if y == 1 else " (langganan)"), wrap=True)
+    put(B, f"B{r}", f"Tahun ke-{y}" + (" (aplikasi dan implementasi + langganan)" if y == 1 else " (langganan)"), wrap=True)
     put(B, f"G{r}", f"={setup_cell}+{sub_cell}" if y == 1 else f"={sub_cell}", fmt=RP)
     year_rows.append(f"G{r}")
     r += 1
@@ -248,7 +259,7 @@ for y in range(1, YEARS):
     put(B, f"D{r}", f"Sisa sewa perangkat sampai bulan ke-{term} ({YEARS - y} tahun)", color="404040")
     put(B, f"G{r}", f"=F{first}*{YEARS - y}", fmt=RP)
     r += 1
-put(B, f"B{r}", "Biaya setup dan langganan yang sudah dibayar tidak dikembalikan. Sebagai ganti biaya pemutusan, perusahaan dapat "
+put(B, f"B{r}", "Biaya aplikasi AI, web app, dan implementasi serta langganan yang sudah dibayar tidak dikembalikan. Sebagai ganti biaya pemutusan, perusahaan dapat "
     "membeli perangkat dengan nilai yang sama.", wrap=True, color="404040", italic=True)
 B.merge_cells(f"B{r}:G{r}")
 B.row_dimensions[r].height = 28
@@ -313,7 +324,7 @@ r += 2
 band(R, r, "Termin pembayaran", 4)
 r = bullets(R, r + 1, [
     "Opsi A: DP 50% saat PO, 30% setelah instalasi selesai, 20% setelah uji paralel dan serah terima.",
-    "Opsi B: saat PO dibayar 50% biaya setup dan langganan tahun ke-1; 50% biaya setup saat sistem mulai dipakai (go-live). "
+    "Opsi B: saat PO dibayar 50% biaya aplikasi AI, web app, dan implementasi serta langganan tahun ke-1; sisa 50% saat sistem mulai dipakai (go-live). "
     "Periode langganan dihitung sejak go-live; tahun berikutnya dibayar di muka di awal tiap periode 12 bulan.",
 ], 4)
 r += 1
@@ -356,7 +367,7 @@ band(R, r, "Ketentuan dan pengamanan", 4)
 r = bullets(R, r + 1, [
     f"Opsi B: kontrak minimum {term} bulan. Bila dihentikan lebih awal, perusahaan membayar biaya pemutusan sebesar sisa sewa perangkat "
     "sampai akhir kontrak minimum (rincian di sheet Rincian Opsi B), atau membeli perangkat dengan nilai yang sama.",
-    "Opsi B: biaya setup dan langganan yang sudah dibayar tidak dapat dikembalikan.",
+    "Opsi B: biaya aplikasi AI, web app, dan implementasi serta langganan yang sudah dibayar tidak dapat dikembalikan.",
     f"Opsi B: perangkat, aplikasi AI, dan web app tetap milik penyedia; perusahaan mendapat hak pakai selama langganan aktif. "
     "Data operasional milik perusahaan dan dapat diekspor kapan saja.",
     f"Opsi B: keterlambatan pembayaran lebih dari {late} hari, layanan support dan pembaruan dihentikan sementara sampai pembayaran diterima.",
