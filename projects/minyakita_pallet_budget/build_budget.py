@@ -93,7 +93,7 @@ DEC = [
     ("spare", "Cadangan pengganti per jenis perangkat yang garansinya habis sebelum kontrak selesai (unit)", 1, "0", "Dipakai di sheet Cadangan Penggantian."),
     ("late", "Batas telat bayar sebelum layanan dihentikan sementara (hari)", 30, "0", "Pengaman pembayaran Opsi B; ditulis di penawaran."),
     ("sw_target", "Nilai jual jasa aplikasi AI computer vision dan web app (Opsi A dan B)", 125000000, RP,
-     "Di atas tarif minimum INKINDO: sistem video analytics realtime 8 kamera dengan event trigger Telegram. Seluruhnya porsi developer."),
+     "Di atas tarif minimum INKINDO: sistem video analytics realtime 8 kamera dengan event trigger dan akses jarak jauh owner. Seluruhnya porsi developer."),
     ("split_dev", "Bagian developer dari margin perangkat/sewa", 0.50, PCT, "Tanpa kas CV: margin dibagi langsung ke 2 orang, sisanya untuk infrastruktur."),
     ("ppn", "PPN efektif (isi 0 bila belum PKP)", 0.11, PCT, "PMK 131/2024: 12% x DPP 11/12."),
 ]
@@ -236,7 +236,7 @@ GROUPS = [
     ("Pembuatan Web App", [
         ("Dashboard dock dan manajemen, input DO, laporan per DO/truk/palet, alert, user", 0, 0, 20, 0, 0, "Web app on-premise"),
         ("Live view 8 kamera di web app dengan overlay hasil deteksi dan hitungan", 0, 0, 4, 0, 0, "Pantau dock secara realtime"),
-        ("Event trigger ke Telegram: aturan event (palet kurang, selisih DO, kamera mati), foto bukti, riwayat notifikasi", 0, 0, 5, 0, 0, "Notifikasi otomatis ke grup Telegram"),
+        ("Event trigger di web app: aturan event (palet kurang, selisih DO, kamera mati), foto dan klip bukti disimpan di server, riwayat dan pencarian event", 0, 0, 5, 0, 0, "Riwayat event dengan bukti di server"),
         ("Integrasi data DO dari WMS/ERP (file CSV atau API)", 0, 0, 5, 0, 0, "DO otomatis di sistem"),
     ]),
     ("Setup dan Implementasi AI dan Web App", [
@@ -244,6 +244,7 @@ GROUPS = [
         ("Kalibrasi model dan zona cek di 8 kamera (ambang deteksi, hitung karton)", 0, 3, 0, 0, 0, "Model terkalibrasi per kamera"),
         ("Uji paralel 2 minggu: analisis akurasi, perbaikan model dan web app", 0, 5, 3, 0, 0, "Laporan akurasi"),
         ("Training penggunaan web app dan dashboard", 0, 0, 1, 0, 0, "Pengguna mahir memakai web app"),
+        ("Setup akses jarak jauh owner lewat Tailscale (instal di server, akun dan hak akses owner)", 0, 0, 1, 0, 0, "Owner bisa live monitoring dari luar gudang"),
     ]),
     ("Implementasi Infrastruktur", [
         ("Survey dock, desain posisi kamera, jalur kabel, dan ruang server", 1, 0, 0, 0, 1, "Gambar posisi kamera dan jalur kabel"),

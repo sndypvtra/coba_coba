@@ -169,8 +169,8 @@ def totals(ws, r, cells, label="Total (sebelum PPN)"):
 
 SERVICE_TEXT = {
     "Pembuatan AI Computer Vision": "Model AI khusus kemasan Minyakita, berjalan realtime 8 kamera pada 20-30 fps",
-    "Pembuatan Web App": "Web app video analytics on-premise: live view, dashboard, laporan, event trigger Telegram",
-    "Setup dan Implementasi AI dan Web App": "Setup dan kalibrasi model, uji akurasi, dan training web app di lokasi",
+    "Pembuatan Web App": "Web app video analytics on-premise: live view, dashboard, laporan, event trigger dan riwayat event",
+    "Setup dan Implementasi AI dan Web App": "Setup dan kalibrasi model, uji akurasi, training web app, akses jarak jauh owner",
     "Implementasi Infrastruktur": "Survey, instalasi perangkat, uji paralel lapangan, dan serah terima",
     "Manajemen Proyek": "Pengelolaan proyek selama sekitar 16 minggu",
 }
@@ -351,9 +351,10 @@ r = bullets(R, r + 1, [
     "Video analytics realtime 8 kamera pada 20-30 fps, diproses di PC server AI dengan GPU NVIDIA RTX 5070 Ti 16 GB di lokasi.",
     "Rekonsiliasi jumlah karton per DO, per truk, dan per palet sebelum barang naik ke armada ekspedisi.",
     "Web app on-premise, dibuka dari laptop tim gudang lewat jaringan/VPN perusahaan (tanpa install aplikasi), plus TV status di loading dock; laporan per DO, truk, dan palet.",
-    "Event trigger otomatis ke grup Telegram (palet kurang, selisih DO, kamera mati) lengkap dengan foto bukti; live view 8 kamera di web app.",
+    "Event trigger otomatis (palet kurang, selisih DO, kamera mati) tercatat di web app beserta foto dan klip bukti yang disimpan di PC server.",
+    "Owner dapat live monitoring 8 kamera serta melihat riwayat event dan laporan dari luar gudang melalui Tailscale (koneksi terenkripsi langsung ke server).",
     "Rekaman 8 kamera sebagai bukti audit dan penyelesaian selisih.",
-    "Seluruh sistem berjalan di lokasi (on-premise); rekaman video dan data tetap di server gudang. Hanya notifikasi Telegram yang memakai internet.",
+    "Seluruh sistem berjalan di lokasi (on-premise): rekaman video, event, dan data tersimpan di PC server gudang, tanpa penyimpanan cloud.",
 ], 4)
 r += 1
 band(R, r, "Jadwal", 4)
@@ -377,7 +378,7 @@ band(R, r, "Yang disiapkan perusahaan", 4)
 r = bullets(R, r + 1, [
     "Listrik di titik kamera dan ruang server, alat kerja ketinggian (forklift dengan man basket atau sejenisnya) saat pemasangan.",
     "Laptop untuk memantau dashboard, serta 1 alamat IP dan port LAN di jaringan perusahaan untuk server dan TV dock (akses dari luar gudang lewat VPN perusahaan yang sudah ada).",
-    "Koneksi internet keluar dari server untuk notifikasi Telegram, dan grup Telegram tujuan notifikasi.",
+    "Koneksi internet di server untuk akses jarak jauh owner, serta akun Tailscale atas nama owner (biaya langganan Tailscale, bila ada, ditanggung perusahaan).",
     "Data DO (ekspor file atau akses API WMS/ERP) dan satu PIC gudang untuk koordinasi dan uji paralel.",
     "SOP: palet berhenti sejenak di zona cek, plastik wrap bening agar karton terlihat kamera.",
 ], 4)
