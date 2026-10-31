@@ -134,8 +134,8 @@ DEC = [
      "Sekitar 31% dari nilai jasa aplikasi per tahun. Acuan pasar: 15-25% dari biaya pembuatan, sampai 30-35% bila mencakup seluruh "
      "dukungan berkelanjutan; sistem AI perlu retraining berkala (sheet Sumber Harga S8)."),
 ] if CAMS == 8 else [
-    ("sw_factor", "Faktor nilai jual jasa aplikasi di atas tarif minimum INKINDO", 1.096, "0.000",
-     "Sama dengan versi 8 kamera (Rp 107.278.000 / Rp 97.885.000): harga per hari kerja developer tetap sama."),
+    ("sw_target", "Total diterima developer di Opsi A (jasa aplikasi + garansi software + bagian margin)", 107000000, RP,
+     "Nilai jual jasa aplikasi AI dan web app dihitung mundur dari angka ini (sheet Jasa INKINDO), kira-kira setara tarif minimum INKINDO; dipakai juga di Opsi B."),
     ("sup_pct", "Support software AI dan web app per tahun (% dari nilai jasa aplikasi)", 0.313, PCT,
      "Sama dengan versi 8 kamera (Rp 33.600.000 / Rp 107.278.000). Acuan pasar 15-25%, sampai 30-35% untuk dukungan menyeluruh (sheet Sumber Harga S8)."),
 ]) + [
@@ -367,7 +367,7 @@ put(J, f"B{r}", "Nilai minimum INKINDO (hari kerja x tarif)")
 put(J, f"H{r}", "=" + "+".join(GROUP_TOTAL[g].split("!")[1] for g in SOFTWARE), fmt=RP)
 floor = r
 r += 1
-if CAMS == 8:
+if "sw_target" in DK:
     put(J, f"B{r}", "Total diterima developer di Opsi A (Keputusan Bisnis)")
     put(J, f"H{r}", f"={DK['sw_target']}", fmt=RP, color=GREEN)
     r += 1
