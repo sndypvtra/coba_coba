@@ -202,7 +202,7 @@ title(J, "Jasa Pembuatan AI, Web App, dan Implementasi (tarif INKINDO 2026)",
 header(J, 4, ["", "Peran", "Dikerjakan oleh", "", "", "", "Tarif per bulan (Rp)", "Tarif per hari (Rp)", "Acuan INKINDO 2026"])
 DEV, INFRA = "Developer", "Infrastruktur"
 ROLES = [
-    ("pm", "Team Leader / Project Manager", DEV, 37400000, "Tabel 3-26: Tenaga Ahli S1, pengalaman 8 tahun"),
+    ("pm", "Team Leader / Project Manager", INFRA, 37400000, "Tabel 3-26: Tenaga Ahli S1, pengalaman 8 tahun"),
     ("ai", "AI / Computer Vision Engineer", DEV, 32300000, "Tabel 3-26: Tenaga Ahli S1, pengalaman 5 tahun"),
     ("dev", "Pemrogram perangkat lunak (web app)", DEV, 17600000, "Tabel 4-26: Pemrogram Perangkat Lunak"),
     ("asst", "Asisten tenaga ahli (pelabelan data)", DEV, 17600000, "Tabel 4-26: Asisten Tenaga Ahli/Teknisi/Analis"),
@@ -430,17 +430,17 @@ def value(who, days):
 
 PT = sheet("Porsi Tim", [64, 18, 18, 52])
 title(PT, "Porsi Tim: Developer dan Infrastruktur",
-      "Nilai jasa per orang dari hari kerja x tarif INKINDO. Developer memegang AI, web app, manajemen proyek, dan pelabelan.")
+      "Nilai jasa per orang dari hari kerja x tarif INKINDO. Developer: AI, web app, pelabelan. Infrastruktur: team leader/PM dan teknisi.")
 header(PT, 4, ["", "Opsi A", "Opsi B (kontrak minimum)", "Keterangan"])
-section(PT, 5, "Developer: AI/CV, web app, manajemen proyek, pelabelan", 4)
-line(PT, 6, "Pembuatan AI, web app, implementasi, manajemen proyek", f"={value(DEV, DAYS)}")
+section(PT, 5, "Developer: AI/CV, web app, pelabelan", 4)
+line(PT, 6, "Pembuatan AI, web app, bagian AI dan web di implementasi", f"={value(DEV, DAYS)}")
 PT["C6"] = "=B6"
 line(PT, 7, "Support AI dan web app (retraining, update)", f"=({value(DEV, SUP_DAYS)})*{DK['warranty']}")
 PT["C7"] = f"=({value(DEV, SUP_DAYS)})*{DK['term']}"
 line(PT, 8, "Total developer", "=B6+B7", bold=True, fill=TOTAL)
 PT["C8"] = "=C6+C7"
-section(PT, 10, "Infrastruktur", 4)
-line(PT, 11, "Survey, instalasi, kalibrasi, uji paralel", f"={value(INFRA, DAYS)}")
+section(PT, 10, "Infrastruktur: team leader/PM dan teknisi", 4)
+line(PT, 11, "Manajemen proyek, survey, instalasi, kalibrasi, uji paralel, training", f"={value(INFRA, DAYS)}")
 PT["C11"] = "=B11"
 line(PT, 12, "Kunjungan rutin", f"=({value(INFRA, SUP_DAYS)})*{DK['warranty']}")
 PT["C12"] = f"=({value(INFRA, SUP_DAYS)})*{DK['term']}"
@@ -530,7 +530,7 @@ for t in [
     "PC server: GPU RTX 5070 Ti 16 GB mendekode 8 stream 4MP di GPU dan menjalankan model TensorRT; target 20-30 fps per kamera. Kapasitas final dibuktikan dengan benchmark saat uji paralel.",
     "Tarif jasa INKINDO adalah standar minimal nasional untuk badan usaha jasa konsultansi dan sudah termasuk overhead dan keuntungan.",
     "Opsi B: pembayaran saat PO (50% setup + langganan tahun pertama) sudah menutup uang keluar perangkat; berhenti sebelum kontrak minimum selesai dikenai sisa sewa perangkat.",
-    "Tim 2 orang: developer (AI, web app, manajemen proyek, pelabelan) dan infrastruktur. Jadwal sekitar 16 minggu (4 bulan); pembagian per orang di sheet Porsi Tim.",
+    "Tim 2 orang: developer (AI, web app, pelabelan) dan infrastruktur (team leader/PM dan teknisi). Jadwal sekitar 16 minggu (4 bulan); pembagian per orang di sheet Porsi Tim.",
 ]:
     put(R, f"A{r}", "• " + t, wrap=True, color=GREY)
     R.merge_cells(f"A{r}:E{r}")
