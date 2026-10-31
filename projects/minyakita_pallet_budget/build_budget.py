@@ -225,7 +225,7 @@ r += 2
 header(J, r, ["No", "Pekerjaan", "PM", "AI/CV", "Pemrogram", "Asisten", "Teknisi", "Nilai jasa (Rp)", "Hasil"])
 r += 1
 GROUPS = [
-    ("Pembuatan AI", [
+    ("Pembuatan AI Computer Vision", [
         ("Pengambilan data dan pelabelan sekitar 3.000 gambar karton dan palet dari CCTV dock (auto-labeling model pra-latih dan SAM, lalu dikoreksi)", 0, 2, 0, 8, 0, "Dataset kemasan Minyakita"),
         ("Training dan tuning model (karton, palet, lapisan)", 0, 10, 0, 0, 0, "Model deteksi khusus kemasan"),
         ("Logika hitung 60 karton per palet dan rekonsiliasi per DO", 0, 8, 0, 0, 0, "Status palet lengkap atau kurang, selisih per DO"),
@@ -235,7 +235,7 @@ GROUPS = [
         ("Dashboard dock dan manajemen, input DO, laporan per DO/truk/palet, alert, user", 0, 0, 20, 0, 0, "Web app on-premise"),
         ("Integrasi data DO dari WMS/ERP (file CSV atau API)", 0, 0, 5, 0, 0, "DO otomatis di sistem"),
     ]),
-    ("Implementasi AI dan Web App", [
+    ("Setup dan Implementasi AI dan Web App", [
         ("Desain zona cek palet dan sudut pandang kamera untuk model (saat survey)", 0, 1, 0, 0, 0, "Zona cek per kamera"),
         ("Kalibrasi model dan zona cek di 8 kamera (ambang deteksi, hitung karton)", 0, 3, 0, 0, 0, "Model terkalibrasi per kamera"),
         ("Uji paralel 2 minggu: analisis akurasi, perbaikan model dan web app", 0, 5, 3, 0, 0, "Laporan akurasi"),
@@ -408,7 +408,7 @@ note(CP, r + 2, "Tidak dicadangkan: perangkat pasif (rak, PDU, patch panel, kabe
 # ------------------------------------------------------------------ Skenario B
 SB = sheet("Skenario B", [64, 18, 58])
 title(SB, "Skenario B: Sewa + Langganan, Kontrak Minimum",
-      "Perangkat milik kita. Klien bayar aplikasi AI, web app, dan implementasi sekali, lalu langganan per 12 bulan di muka selama kontrak minimum.")
+      "Perangkat milik kita. Klien bayar jasa aplikasi dan jasa infrastruktur sekali, lalu langganan per 12 bulan di muka selama kontrak minimum.")
 B_REF = {}
 section(SB, 4, "1. Uang keluar ke vendor (di awal)", 3)
 line(SB, 5, "Perangkat", f"={HW_COST}", color=GREEN)
@@ -416,12 +416,12 @@ line(SB, 6, "Kontinjensi perangkat", f"={HW_CONT}", color=GREEN)
 line(SB, 7, "Jasa pasang kamera (vendor)", f"={INST_COST}", color=GREEN)
 line(SB, 8, "Total uang keluar", "=SUM(B5:B7)", bold=True, fill=TOTAL)
 ref(B_REF, "out", SB, 8)
-section(SB, 10, "2. Aplikasi AI, web app, dan implementasi (sekali bayar, kerja custom)", 3)
+section(SB, 10, "2. Jasa sekali bayar: aplikasi AI dan web app, infrastruktur, manajemen proyek", 3)
 r = 11
 for g, cell in GROUP_TOTAL.items():
     line(SB, r, g, f"={cell}", color=GREEN)
     r += 1
-line(SB, r, "Total aplikasi AI, web app, dan implementasi", f"=SUM(B11:B{r - 1})", bold=True, fill=TOTAL)
+line(SB, r, "Total jasa sekali bayar", f"=SUM(B11:B{r - 1})", bold=True, fill=TOTAL)
 setup = r
 r += 2
 section(SB, r, "3. Langganan per tahun (selama kontrak minimum)", 3)
@@ -436,7 +436,7 @@ line(SB, r + 5, "Langganan per tahun (sebelum PPN)", f"=SUM(B{r + 1}:B{r + 4})",
 rent, sub = r + 1, r + 5
 r += 7
 section(SB, r, "4. Tagihan ke klien (sebelum PPN)", 3)
-line(SB, r + 1, "Tahun pertama (aplikasi dan implementasi + langganan)", f"=B{setup}+B{sub}", bold=True)
+line(SB, r + 1, "Tahun pertama (jasa sekali bayar + langganan)", f"=B{setup}+B{sub}", bold=True)
 line(SB, r + 2, "Per tahun berikutnya", f"=B{sub}")
 line(SB, r + 3, "Total selama kontrak minimum", f"=B{setup}+B{sub}*{DK['term']}/12", bold=True, fill=TOTAL)
 line(SB, r + 4, "PPN tahun pertama", f"=B{r + 1}*{DK['ppn']}")
@@ -457,7 +457,7 @@ for k, off in (("net", 4), ("net_unused", 5), ("payback", 7)):
     ref(B_REF, k, SB, r + off)
 r += 9
 section(SB, r, "6. Pengamanan", 3)
-line(SB, r + 1, "Pembayaran saat PO: 50% aplikasi dan implementasi + langganan tahun pertama", f"=B{setup}*50%+B{sub}",
+line(SB, r + 1, "Pembayaran saat PO: 50% jasa sekali bayar + langganan tahun pertama", f"=B{setup}*50%+B{sub}",
      nt="Lebih besar dari uang keluar perangkat, jadi kita tidak menalangi modal.")
 line(SB, r + 2, "Kas saat PO dikurangi uang keluar perangkat", f"=B{r + 1}-B8")
 line(SB, r + 3, "Biaya pemutusan bila berhenti setelah tahun ke-1", f"=B{rent}*({DK['term']}/12-1)",
@@ -495,7 +495,7 @@ both(8, "Margin perangkat / sewa untuk dibagi", "=B6+B7", "=C6+C7", bold=True, f
 section(PT, 10, "2. Developer: AI/CV, web app, pelabelan", 4)
 put(PT, "A11", "Bagian margin", color=GREY)
 put(PT, "B11", f"={DK['split_dev']}", fmt=PCT, color=GREEN)
-both(12, "Pembuatan AI, Pembuatan Web App, Implementasi AI dan Web App", dev_work, "=B12",
+both(12, "Pembuatan AI Computer Vision, Pembuatan Web App, Setup dan Implementasi AI dan Web App", dev_work, "=B12",
      nt="Sama di kedua opsi, dibayar di depan.")
 both(13, "Support AI dan web app (retraining, update)", f"=({dev_sup})*{DK['warranty']}", f"=({dev_sup})*{DK['term']}",
      nt="Opsi A: garansi 3 bulan. Opsi B: selama kontrak minimum (1 hari AI + 1 hari web app per bulan).")
