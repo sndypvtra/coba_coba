@@ -92,6 +92,7 @@ DEC = [
     ("m_rent", "Margin sewa perangkat selama kontrak minimum (Opsi B)", 0.40, PCT, "Total sewa selama kontrak = uang keluar perangkat / (1 - margin)."),
     ("spare", "Cadangan pengganti per jenis perangkat yang garansinya habis sebelum kontrak selesai (unit)", 1, "0", "Dipakai di sheet Cadangan Penggantian."),
     ("late", "Batas telat bayar sebelum layanan dihentikan sementara (hari)", 30, "0", "Pengaman pembayaran Opsi B; ditulis di penawaran."),
+    ("split_dev", "Bagian developer dari margin perangkat/sewa", 0.50, PCT, "Tanpa kas CV: margin dibagi langsung ke 2 orang, sisanya untuk infrastruktur."),
     ("ppn", "PPN efektif (isi 0 bila belum PKP)", 0.11, PCT, "PMK 131/2024: 12% x DPP 11/12."),
 ]
 DK = {}
@@ -429,50 +430,55 @@ def value(who, days):
 
 
 PT = sheet("Porsi Tim", [64, 18, 18, 52])
-title(PT, "Porsi Tim: Developer dan Infrastruktur",
-      "Nilai jasa per orang dari hari kerja x tarif INKINDO. Developer: AI, web app, pelabelan. Infrastruktur: team leader/PM dan teknisi.")
+title(PT, "Porsi Tim: Developer dan Infrastruktur (tanpa kas CV)",
+      "Seluruh pendapatan bersih dibagi langsung ke 2 orang: nilai jasa masing-masing (hari kerja x tarif INKINDO) ditambah bagian margin.")
 header(PT, 4, ["", "Opsi A", "Opsi B (kontrak minimum)", "Keterangan"])
-section(PT, 5, "Developer: AI/CV, web app, pelabelan", 4)
-line(PT, 6, "Pembuatan AI, web app, bagian AI dan web di implementasi", f"={value(DEV, DAYS)}")
-PT["C6"] = "=B6"
-line(PT, 7, "Support AI dan web app (retraining, update)", f"=({value(DEV, SUP_DAYS)})*{DK['warranty']}")
-PT["C7"] = f"=({value(DEV, SUP_DAYS)})*{DK['term']}"
-line(PT, 8, "Total developer", "=B6+B7", bold=True, fill=TOTAL)
-PT["C8"] = "=C6+C7"
-section(PT, 10, "Infrastruktur: team leader/PM dan teknisi", 4)
-line(PT, 11, "Manajemen proyek, survey, instalasi, kalibrasi, uji paralel, training", f"={value(INFRA, DAYS)}")
-PT["C11"] = "=B11"
-line(PT, 12, "Kunjungan rutin", f"=({value(INFRA, SUP_DAYS)})*{DK['warranty']}")
-PT["C12"] = f"=({value(INFRA, SUP_DAYS)})*{DK['term']}"
-line(PT, 13, "Total infrastruktur", "=B11+B12", bold=True, fill=TOTAL)
-PT["C13"] = "=C11+C12"
-section(PT, 15, "Kas CV", 4)
-line(PT, 16, "Pendapatan bersih", "='Skenario A'!B25", color=GREEN)
-PT["C16"] = "='Skenario B'!B34"
-line(PT, 17, "Dikurangi porsi developer dan infrastruktur", "=-(B8+B13)")
-PT["C17"] = "=-(C8+C13)"
-line(PT, 18, "Sisa kas CV", "=B16+B17", bold=True, fill=TOTAL)
-PT["C18"] = "=C16+C17"
-line(PT, 19, "Tambahan bila cadangan penggantian tidak terpakai (Opsi B)", "=0")
-PT["C19"] = f"={RESERVE_TOTAL}"
-for ref in ("C6", "C7", "C8", "C11", "C12", "C13", "C16", "C17", "C18", "C19"):
-    c = PT[ref]
-    c.font = Font(name=F, size=10, bold=PT[f"A{ref[1:]}"].font.b, color=GREEN if ref == "C16" else BLACK)
-    c.number_format = RP
-    c.alignment = Alignment(vertical="top")
-for row, nt in [
-    (6, "Opsi A dan B sama: kerja custom dibayar penuh di depan."),
-    (7, "Opsi A: garansi 3 bulan. Opsi B: support selama kontrak minimum (1 hari AI + 1 hari web app per bulan)."),
-    (11, "Jasa pasang kamera dari vendor luar; bila dipasang sendiri oleh infrastruktur, biaya vendor ikut masuk ke porsi ini."),
-    (18, "Sisa: margin perangkat (Opsi A) atau margin sewa (Opsi B), dibagi sesuai kesepakatan internal."),
-]:
-    put(PT, f"D{row}", nt, wrap=True, color=GREY)
-    PT.row_dimensions[row].height = 28
-section(PT, 21, "Beban kerja dan jadwal", 4)
-line(PT, 22, "Hari kerja developer (ditagih)", "=" + "+".join(DAYS[k] for k in RATE if OWNER[k] == DEV), fmt="0")
-line(PT, 23, "Hari kerja infrastruktur (ditagih)", "=" + "+".join(DAYS[k] for k in RATE if OWNER[k] == INFRA), fmt="0")
-put(PT, "D22", "Sekitar 16 minggu (80 hari kerja); pelabelan dipercepat dengan auto-labeling.", wrap=True, color=GREY)
-put(PT, "D23", "Berjalan paralel dengan pekerjaan developer.", wrap=True, color=GREY)
+
+
+def both(row, label, fa, fb, bold=False, fill=None, color=BLACK, fmt=RP, nt=None):
+    line(PT, row, label, fa, bold=bold, fill=fill, color=color, fmt=fmt)
+    put(PT, f"C{row}", fb, bold=bold, fill=fill, color=color, fmt=fmt)
+    if nt:
+        put(PT, f"D{row}", nt, wrap=True, color=GREY)
+        PT.row_dimensions[row].height = 28
+
+
+dev_work, dev_sup = f"={value(DEV, DAYS)}", value(DEV, SUP_DAYS)
+inf_work, inf_sup = f"={value(INFRA, DAYS)}", value(INFRA, SUP_DAYS)
+section(PT, 5, "1. Margin yang dibagi berdua", 4)
+both(6, "Pendapatan bersih", "='Skenario A'!B25", "='Skenario B'!B34", color=GREEN,
+     nt="Opsi B dengan asumsi cadangan penggantian terpakai semua.")
+both(7, "Dikurangi nilai jasa kedua orang", "=-(B12+B13+B18+B19)", "=-(C12+C13+C18+C19)")
+both(8, "Margin perangkat / sewa untuk dibagi", "=B6+B7", "=C6+C7", bold=True, fill=TOTAL,
+     nt="Opsi A: margin perangkat dan jasa pasang. Opsi B: margin sewa perangkat.")
+section(PT, 10, "2. Developer: AI/CV, web app, pelabelan", 4)
+put(PT, "A11", "Bagian margin", color=GREY)
+put(PT, "B11", f"={DK['split_dev']}", fmt=PCT, color=GREEN)
+both(12, "Pembuatan AI, web app, bagian AI dan web di implementasi", dev_work, "=B12",
+     nt="Sama di kedua opsi, dibayar di depan.")
+both(13, "Support AI dan web app (retraining, update)", f"=({dev_sup})*{DK['warranty']}", f"=({dev_sup})*{DK['term']}",
+     nt="Opsi A: garansi 3 bulan. Opsi B: selama kontrak minimum (1 hari AI + 1 hari web app per bulan).")
+both(14, "Bagian margin", "=B8*$B$11", "=C8*$B$11")
+both(15, "Total developer", "=SUM(B12:B14)", "=SUM(C12:C14)", bold=True, fill=TOTAL)
+section(PT, 17, "3. Infrastruktur: team leader/PM dan teknisi", 4)
+both(18, "Manajemen proyek, survey, instalasi, kalibrasi, uji paralel, training", inf_work, "=B18",
+     nt="Jasa pasang kamera dari vendor luar; bila dipasang sendiri, biaya vendor ikut masuk ke porsi ini.")
+both(19, "Kunjungan rutin", f"=({inf_sup})*{DK['warranty']}", f"=({inf_sup})*{DK['term']}")
+both(20, "Bagian margin", "=B8*(1-$B$11)", "=C8*(1-$B$11)")
+both(21, "Total infrastruktur", "=SUM(B18:B20)", "=SUM(C18:C20)", bold=True, fill=TOTAL)
+section(PT, 23, "4. Kontrol", 4)
+both(24, "Total dibayarkan ke 2 orang", "=B15+B21", "=C15+C21", bold=True)
+both(25, "Selisih dengan pendapatan bersih (harus 0)", "=ROUND(B24-B6,0)", "=ROUND(C24-C6,0)")
+section(PT, 27, "5. Cadangan penggantian (Opsi B)", 4)
+both(28, "Dipegang untuk membeli perangkat pengganti", "=0", f"={RESERVE_TOTAL}",
+     nt="Sisa yang tidak terpakai di akhir kontrak dibagi dengan persentase yang sama.")
+both(29, "Tambahan developer bila tidak terpakai", "=0", "=C28*$B$11")
+both(30, "Tambahan infrastruktur bila tidak terpakai", "=0", "=C28*(1-$B$11)")
+section(PT, 32, "6. Beban kerja dan jadwal", 4)
+line(PT, 33, "Hari kerja developer (ditagih)", "=" + "+".join(DAYS[k] for k in RATE if OWNER[k] == DEV), fmt="0")
+line(PT, 34, "Hari kerja infrastruktur (ditagih)", "=" + "+".join(DAYS[k] for k in RATE if OWNER[k] == INFRA), fmt="0")
+put(PT, "D33", "Sekitar 16 minggu (80 hari kerja); pelabelan dipercepat dengan auto-labeling.", wrap=True, color=GREY)
+put(PT, "D34", "Berjalan paralel dengan pekerjaan developer.", wrap=True, color=GREY)
 
 # ------------------------------------------------------------------ Sumber
 SS = sheet("Sumber Harga", [7, 95, 70])
@@ -530,7 +536,7 @@ for t in [
     "PC server: GPU RTX 5070 Ti 16 GB mendekode 8 stream 4MP di GPU dan menjalankan model TensorRT; target 20-30 fps per kamera. Kapasitas final dibuktikan dengan benchmark saat uji paralel.",
     "Tarif jasa INKINDO adalah standar minimal nasional untuk badan usaha jasa konsultansi dan sudah termasuk overhead dan keuntungan.",
     "Opsi B: pembayaran saat PO (50% setup + langganan tahun pertama) sudah menutup uang keluar perangkat; berhenti sebelum kontrak minimum selesai dikenai sisa sewa perangkat.",
-    "Tim 2 orang: developer (AI, web app, pelabelan) dan infrastruktur (team leader/PM dan teknisi). Jadwal sekitar 16 minggu (4 bulan); pembagian per orang di sheet Porsi Tim.",
+    "Tim 2 orang tanpa kas CV: developer (AI, web app, pelabelan) dan infrastruktur (team leader/PM dan teknisi). Seluruh pendapatan bersih dibagi langsung ke 2 orang (sheet Porsi Tim). Jadwal sekitar 16 minggu.",
 ]:
     put(R, f"A{r}", "• " + t, wrap=True, color=GREY)
     R.merge_cells(f"A{r}:E{r}")
