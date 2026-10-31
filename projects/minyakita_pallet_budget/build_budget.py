@@ -2,7 +2,9 @@
 
 Two scenarios: A = one-off purchase (hardware, installation, web app and AI become the client's inventory);
 B = annual subscription (all infrastructure stays ours, the client rents it with the software and service).
-Every price comes from a public web source listed on the 'Sumber Harga' sheet.
+Every price comes from a public web source listed on the 'Sumber Harga' sheet. The team is the CV itself: its work is
+priced at market service rates (USD outsourcing rate cards converted at Bank Indonesia's JISDOR rate), and all of it is
+the CV's income. Everything is counted per year (12 months).
 
     python build_budget.py   # -> Budget_Minyakita_Pallet_Counting.xlsx (then recalc with LibreOffice)
 """
@@ -84,15 +86,13 @@ SRC = [
      "https://hikvision-indonesia.com/daftar-harga-cctv-hikvision-terbaru-2026-seri-2mp-hingga-5mp/"),
     ("S14", "GSI Indonesia, Harga Pasang CCTV Per Titik 2026 (terbit 17 Apr 2026): IP camera jasa + material Rp 900.000 sampai Rp 1.500.000 per titik. Dipakai batas atas.",
      "https://gsi-indo.com/2026/04/17/harga-pasang-cctv-per-titik/"),
-    ("S15", "Acuan tarif tim. Okezone Economy, Berapa Gaji Engineering AI (28 Mei 2026): level menengah Rp 16 juta sampai Rp 25 juta per bulan. Dipakai nilai tengah.",
-     "https://economy.okezone.com/read/2026/05/28/320/3221176/berapa-gaji-engineering-ai-segini-kisarannya?page=all"),
-    ("S16", "Acuan tarif tim. Indeed Indonesia, gaji Full Stack Developer di Jakarta: rata-rata Rp 10.203.433 per bulan (49 laporan, diperbarui 15 Agu 2026)",
-     "https://id.indeed.com/career/full-stack-developer/salaries/Jakarta"),
-    ("S17", "Acuan tarif tim. LokerID, gaji Manajemen dan Strategi IT di DKI Jakarta: rata-rata Rp 13,3 juta per bulan",
-     "https://www.loker.id/gaji/information-technology/manajemen-it/jakarta"),
-    ("S18", "Acuan tarif tim. Indeed Indonesia, gaji Staf Teknisi di Jakarta: Rp 4.912.597 per bulan (107 laporan)",
-     "https://id.indeed.com/salaries/staf-teknisi-Salaries"),
-    ("S19", "PMK No. 131 Tahun 2024: PPN 12% dengan DPP 11/12, tarif efektif 11% untuk barang dan jasa non mewah", "Peraturan Menteri Keuangan No. 131 Tahun 2024"),
+    ("S15", "Second Talent, Cost to Hire a Software Developer in Indonesia (diperbarui 25 Sep 2026, tabel Okt 2026): tarif per jam USD. Machine Learning Engineer mid-level USD 33 sampai 86; Full-Stack mid-level USD 24 sampai 62; Full-Stack senior USD 34 sampai 86; 160 jam per bulan.",
+     "https://www.secondtalent.com/resources/cost-to-hire-a-software-developer-in-indonesia/"),
+    ("S16", "Bank Indonesia, kurs JISDOR USD/IDR 30 Oktober 2026: Rp 18.138",
+     "https://www.bi.go.id/id/statistik/informasi-kurs/jisdor/default.aspx"),
+    ("S17", "servicecctv.id, Biaya Layanan CCTV 2026: kunjungan teknisi dan pengecekan CCTV Rp 150.000 (termasuk transport Jabodetabek)",
+     "https://servicecctv.id/biaya-layanan-cctv/"),
+    ("S18", "PMK No. 131 Tahun 2024: PPN 12% dengan DPP 11/12, tarif efektif 11% untuk barang dan jasa non mewah", "Peraturan Menteri Keuangan No. 131 Tahun 2024"),
 ]
 SS = sheet("Sumber Harga", [7, 90, 70])
 title(SS, "Sumber Harga", f"Semua harga diambil dari sumber publik di bawah, diakses {ACCESSED}. Harga toko dapat berubah; minta penawaran tertulis sebelum pembelian.")
@@ -182,84 +182,91 @@ I.merge_cells(f"B{r}:G{r}")
 I.row_dimensions[r].height = 28
 
 # ------------------------------------------------------------------ Implementasi
-M = sheet("Implementasi", [5, 56, 8, 8, 9, 9, 16, 42])
-title(M, "Pembangunan Web App dan AI + Implementasi oleh Tim CV", "Biaya jasa tim CV = hari kerja x tarif harian. Tarif harian mengacu gaji pasar Jakarta per peran dibagi hari kerja.")
-section(M, 4, "1. Tarif jasa tim CV per hari kerja", 8)
-header(M, 5, ["", "Peran", "", "", "", "Acuan per bulan (Rp)", "Tarif per hari (Rp)", "Sumber acuan"])
-put(M, "B6", "Hari kerja per bulan")
-put(M, "G6", 21, color=BLUE, fmt="0")
-put(M, "H6", "5 hari kerja x 52 minggu / 12 bulan, dibulatkan", color=GREY)
-DAYS = "Implementasi!$G$6"
+M = sheet("Implementasi", [5, 56, 8, 10, 10, 16, 16, 42])
+title(M, "Jasa Tim CV: Pembangunan Web App, AI, dan Implementasi", "Tarif jual jasa pasar (USD per jam, rate card outsourcing Indonesia) x kurs JISDOR x 8 jam per hari. Sudah termasuk keuntungan.")
+section(M, 4, "1. Tarif jual jasa tim CV per hari kerja", 8)
+header(M, 5, ["", "Peran", "", "USD/jam bawah", "USD/jam atas", "USD/jam dipakai", "Tarif per hari (Rp)", "Sumber dan catatan"])
+put(M, "B6", "Kurs USD/IDR (JISDOR)")
+put(M, "G6", 18138, color=BLUE, fmt=RP)
+put(M, "H6", "S16, 30 Okt 2026")
+put(M, "B7", "Jam kerja per hari")
+put(M, "G7", 8, color=BLUE, fmt="0")
+put(M, "H7", "S15: 160 jam per bulan = 20 hari x 8 jam")
+FX, HOURS = "Implementasi!$G$6", "Implementasi!$G$7"
+RATEPOS = "'Keputusan Bisnis'!$B$5"
 RATE = {}
-r = 7
-for key, lab, sal, src in [
-    ("pm", "Project Manager IT", 13300000, "S17"),
-    ("ai", "AI / Computer Vision Engineer (level menengah)", 20500000, "S15"),
-    ("fs", "Fullstack Developer (web app)", 10203433, "S16"),
-    ("fe", "Teknisi lapangan", 4912597, "S18"),
+r = 8
+for key, lab, lo, hi, note in [
+    ("pm", "Project Manager / Lead", 34, 86, "S15, Full-Stack senior (sumber tidak punya tarif PM terpisah)"),
+    ("ai", "AI / Computer Vision Engineer", 33, 86, "S15, Machine Learning Engineer mid-level"),
+    ("fs", "Fullstack Developer (web app)", 24, 62, "S15, Full-Stack Developer mid-level"),
 ]:
     put(M, f"B{r}", lab)
-    put(M, f"F{r}", sal, color=BLUE, fmt=RP)
-    put(M, f"G{r}", f"=F{r}/{DAYS}", fmt=RP, bold=True)
-    put(M, f"H{r}", src)
+    put(M, f"D{r}", lo, color=BLUE, fmt="0")
+    put(M, f"E{r}", hi, color=BLUE, fmt="0")
+    put(M, f"F{r}", f"=D{r}+(E{r}-D{r})*" + RATEPOS, fmt="0.0")
+    put(M, f"G{r}", f"=F{r}*{HOURS}*{FX}", fmt=RP, bold=True)
+    put(M, f"H{r}", note, wrap=True, color=GREY)
     RATE[key] = f"Implementasi!$G${r}"
     r += 1
-section(M, r + 1, "2. Pekerjaan dan biaya jasa tim", 8)
-ACT0 = r + 3
-header(M, ACT0 - 1, ["No", "Pekerjaan", "PM", "AI/CV", "Fullstack", "Teknisi", "Biaya jasa tim (Rp)", "Hasil"])
+put(M, f"B{r}", "Posisi tarif dalam rentang diatur di sheet Keputusan Bisnis (0 = batas bawah, 1 = batas atas).", italic=True, color="595959")
+section(M, r + 2, "2. Pekerjaan dan nilai jasa tim", 8)
+ACT0 = r + 4
+header(M, ACT0 - 1, ["No", "Pekerjaan", "PM", "AI/CV", "Fullstack", "", "Nilai jasa (Rp)", "Hasil"])
 ACTS = [
-    ("Survey lokasi, layout dock, desain posisi kamera dan zona cek palet", 1, 1, 0, 1, "Gambar posisi kamera per dock"),
-    ("Pengambilan dan pelabelan gambar karton dan palet dari CCTV lokasi", 0, 2, 0, 4, "Dataset karton dan palet Minyakita"),
-    ("Training dan tuning model AI (karton, palet, lapisan)", 0, 10, 0, 0, "Model deteksi khusus kemasan Minyakita"),
-    ("Logika hitung karton per palet (60 karton) dan rekonsiliasi per DO", 0, 8, 3, 0, "Status palet lengkap atau kurang, selisih per DO"),
-    ("Web app on-premise: dashboard, input DO, laporan per DO, truk, palet, alert, user", 0, 0, 20, 0, "Web app berjalan di server lokal"),
-    ("Pipeline video 8 kamera dan deploy di PC server", 0, 5, 3, 0, "Sistem realtime di lokasi"),
-    ("Rakit dan setting PC server, kalibrasi 8 kamera", 0, 3, 0, 3, "Server dan kamera siap"),
-    ("UAT: uji paralel 2 minggu dibanding hitung manual", 2, 5, 0, 5, "Laporan akurasi, sign-off klien"),
-    ("Training pengguna, SOP, serah terima", 2, 0, 0, 1, "SOP checker dan supervisor"),
-    ("Manajemen proyek", 8, 0, 0, 0, "Rapat mingguan, laporan progres"),
+    ("Survey lokasi, layout dock, desain posisi kamera dan zona cek palet", 1, 1, 0, "Gambar posisi kamera per dock"),
+    ("Pengambilan dan pelabelan gambar karton dan palet dari CCTV lokasi", 0, 6, 0, "Dataset karton dan palet Minyakita"),
+    ("Training dan tuning model AI (karton, palet, lapisan)", 0, 10, 0, "Model deteksi khusus kemasan Minyakita"),
+    ("Logika hitung karton per palet (60 karton) dan rekonsiliasi per DO", 0, 8, 3, "Status palet lengkap atau kurang, selisih per DO"),
+    ("Web app on-premise: dashboard, input DO, laporan per DO, truk, palet, alert, user", 0, 0, 20, "Web app berjalan di server lokal"),
+    ("Pipeline video 8 kamera dan deploy di PC server", 0, 5, 3, "Sistem realtime di lokasi"),
+    ("Rakit dan setting PC server, kalibrasi 8 kamera", 0, 3, 0, "Server dan kamera siap"),
+    ("UAT: uji paralel 2 minggu dibanding hitung manual", 2, 5, 5, "Laporan akurasi, sign-off klien"),
+    ("Training pengguna, SOP, serah terima", 2, 0, 1, "SOP checker dan supervisor"),
+    ("Manajemen proyek", 8, 0, 0, "Rapat mingguan, laporan progres"),
 ]
 r = ACT0
-for i, (act, pm, ai, fs, fe, out) in enumerate(ACTS, 1):
+for i, (act, pm, ai, fs, out) in enumerate(ACTS, 1):
     put(M, f"A{r}", i)
     put(M, f"B{r}", act, wrap=True)
-    for col, v in zip("CDEF", (pm, ai, fs, fe)):
+    for col, v in zip("CDE", (pm, ai, fs)):
         put(M, f"{col}{r}", v, color=BLUE, fmt="0")
-    put(M, f"G{r}", f"=C{r}*{RATE['pm']}+D{r}*{RATE['ai']}+E{r}*{RATE['fs']}+F{r}*{RATE['fe']}", fmt=RP)
+    put(M, f"G{r}", f"=C{r}*{RATE['pm']}+D{r}*{RATE['ai']}+E{r}*{RATE['fs']}", fmt=RP)
     put(M, f"H{r}", out, wrap=True, color=GREY)
     r += 1
-put(M, f"B{r}", "Total biaya jasa tim CV", bold=True, fill=TOTAL)
-for col in "CDEFG":
+put(M, f"B{r}", "Total nilai jasa tim CV", bold=True, fill=TOTAL)
+for col in "CDEG":
     put(M, f"{col}{r}", f"=SUM({col}{ACT0}:{col}{r - 1})", bold=True, fmt=RP if col == "G" else "0", fill=TOTAL)
 IMPL_TOTAL = f"Implementasi!$G${r}"
 r += 2
-put(M, f"B{r}", "Durasi proyek dari survey sampai serah terima (bulan), sekitar 8 sampai 10 minggu", italic=True, color="595959")
-put(M, f"G{r}", 2.5, color=BLUE, fmt="0.0")
-DURATION = f"Implementasi!$G${r}"
+put(M, f"B{r}", "Durasi proyek dari survey sampai serah terima: sekitar 8 sampai 10 minggu.", italic=True, color="595959")
 
 # ------------------------------------------------------------------ Layanan (support)
-L = sheet("Layanan", [52, 9, 9, 9, 9, 16, 40])
-title(L, "Layanan Support oleh Tim CV (on-site, tanpa cloud)", "Hari kerja per bulan x tarif harian di sheet Implementasi. Skenario A: garansi software 3 bulan. Skenario B: selama masa langganan.")
-header(L, 4, ["Kegiatan per bulan", "PM", "AI/CV", "Fullstack", "Teknisi", "Biaya per bulan (Rp)", "Keterangan"])
+L = sheet("Layanan", [52, 9, 9, 9, 12, 16, 40])
+title(L, "Layanan Support Tim CV (on-site, tanpa cloud)", "Nilai jasa per bulan. Skenario A: garansi 3 bulan termasuk harga. Skenario B: 12 bulan termasuk langganan.")
+header(L, 4, ["Kegiatan per bulan", "PM", "AI/CV", "Fullstack", "Kunjungan teknisi", "Nilai per bulan (Rp)", "Keterangan"])
+put(L, "A5", "Tarif kunjungan teknisi (S17)")
+put(L, "F5", 150000, color=BLUE, fmt=RP)
+VISIT = "Layanan!$F$5"
 SUPPORT = [
     ("Kunjungan rutin: cek kamera, bersihkan lensa, cek server dan rekaman", 0, 0.5, 0, 1, "1 kali per bulan"),
     ("Pemantauan akurasi dan retraining model", 0, 1, 0, 0, "Rata-rata per bulan"),
     ("Perbaikan dan update web app", 0, 0, 0.5, 0, "Rata-rata per bulan"),
     ("Laporan bulanan dan koordinasi dengan klien", 0.25, 0, 0, 0, ""),
 ]
-r = 5
-for act, pm, ai, fs, fe, note in SUPPORT:
+r = 6
+for act, pm, ai, fs, vis, note in SUPPORT:
     put(L, f"A{r}", act, wrap=True)
-    for col, v in zip("BCDE", (pm, ai, fs, fe)):
+    for col, v in zip("BCDE", (pm, ai, fs, vis)):
         put(L, f"{col}{r}", v, color=BLUE, fmt="0.00")
-    put(L, f"F{r}", f"=B{r}*{RATE['pm']}+C{r}*{RATE['ai']}+D{r}*{RATE['fs']}+E{r}*{RATE['fe']}", fmt=RP)
+    put(L, f"F{r}", f"=B{r}*{RATE['pm']}+C{r}*{RATE['ai']}+D{r}*{RATE['fs']}+E{r}*{VISIT}", fmt=RP)
     put(L, f"G{r}", note, color=GREY)
     r += 1
-put(L, f"A{r}", "Total biaya layanan per bulan", bold=True, fill=TOTAL)
-put(L, f"F{r}", f"=SUM(F5:F{r - 1})", bold=True, fmt=RP, fill=TOTAL)
+put(L, f"A{r}", "Total nilai layanan per bulan", bold=True, fill=TOTAL)
+put(L, f"F{r}", f"=SUM(F6:F{r - 1})", bold=True, fmt=RP, fill=TOTAL)
 SUPPORT_M = f"Layanan!$F${r}"
 r += 2
-put(L, f"A{r}", "Penggantian perangkat rusak ditanggung garansi pabrikan selama masa garansi masing-masing (lihat spesifikasi produk). Transport kunjungan di luar Jabodetabek ditagihkan sesuai biaya aktual.", wrap=True, italic=True, color="595959")
+put(L, f"A{r}", "Penggantian perangkat rusak ditanggung garansi pabrikan selama masa garansi masing-masing. Kunjungan di luar Jabodetabek ditagihkan sesuai biaya aktual.", wrap=True, italic=True, color="595959")
 L.merge_cells(f"A{r}:G{r}")
 L.row_dimensions[r].height = 28
 
@@ -268,12 +275,11 @@ K = sheet("Keputusan Bisnis", [58, 14, 70])
 title(K, "Keputusan Bisnis (bukan harga)", "Margin, markup, dan masa kontrak adalah kebijakan perusahaan. Ubah di sini, semua angka ikut berubah.")
 header(K, 4, ["Parameter", "Nilai", "Keterangan"])
 DEC = [
+    ("ratepos", "Posisi tarif jasa dalam rentang sumber (0 = bawah, 1 = atas)", 0, "0.00", "0 = batas bawah (paling realistis untuk klien lokal). 0,5 = nilai tengah."),
     ("mk_hw", "Markup hardware (skenario A)", 0.15, PCT, "Selisih harga jual perangkat terhadap harga beli."),
     ("mk_inst", "Markup instalasi (skenario A)", 0.20, PCT, "Selisih harga jual instalasi terhadap biaya vendor."),
-    ("m_sw", "Margin web app dan AI (skenario A)", 0.40, PCT, "Harga jual = biaya pembangunan / (1 - margin)."),
-    ("warranty", "Garansi software termasuk harga (bulan, skenario A)", 3, "0", "Layanan support selama masa garansi, biayanya masuk ke harga."),
-    ("n", "Masa kontrak minimum skenario B (bulan)", 36, "0", "Investasi perangkat dan pembangunan dipulihkan merata selama masa ini."),
-    ("m_b", "Margin langganan (skenario B)", 0.40, PCT, "Harga langganan = biaya per bulan / (1 - margin)."),
+    ("warranty", "Garansi layanan termasuk harga (bulan, skenario A)", 3, "0", "Layanan support selama masa garansi, nilainya masuk ke harga."),
+    ("m_rent", "Margin sewa perangkat (skenario B)", 0.40, PCT, "Harga sewa perangkat dan instalasi per tahun = biaya / (1 - margin)."),
 ]
 DK = {}
 r = 5
@@ -283,7 +289,7 @@ for key, lab, v, fmt, note in DEC:
     put(K, f"C{r}", note, wrap=True, color=GREY)
     DK[key] = f"'Keputusan Bisnis'!$B${r}"
     r += 1
-put(K, f"A{r + 1}", "PPN efektif (S19)")
+put(K, f"A{r + 1}", "PPN efektif (S18)")
 put(K, f"B{r + 1}", 0.11, color=BLUE, fmt=PCT)
 put(K, f"C{r + 1}", "Ditambahkan di invoice. Untuk jasa dan sewa (skenario B), klien memotong PPh 23 sebesar 2%.", wrap=True, color=GREY)
 DK["ppn"] = f"'Keputusan Bisnis'!$B${r + 1}"
@@ -297,92 +303,77 @@ def line(ws, row, label, formula, fmt=RP, bold=False, fill=None, note=None, colo
 
 
 # ------------------------------------------------------------------ Skenario A
-SA = sheet("Skenario A", [60, 18, 62])
+SA = sheet("Skenario A", [62, 18, 60])
 title(SA, "Skenario A: Beli Putus", "Klien membeli semua: kamera, NVR, PC server, instalasi, web app dan AI. Semua menjadi inventaris Minyakita. Sekali bayar.")
-section(SA, 4, "1. Biaya kita", 3)
+section(SA, 4, "1. Uang keluar ke vendor", 3)
 line(SA, 5, "Hardware", f"={HW_TOTAL}", color=GREEN)
 line(SA, 6, "Instalasi", f"={INST_TOTAL}", color=GREEN)
-line(SA, 7, "Jasa tim CV: pembangunan web app, AI, dan implementasi", f"={IMPL_TOTAL}", color=GREEN)
-line(SA, 8, "Jasa tim CV: support selama garansi software", f"={SUPPORT_M}*{DK['warranty']}", color=GREEN)
-line(SA, 9, "Total biaya kita", "=SUM(B5:B8)", bold=True, fill=TOTAL)
-section(SA, 11, "2. Harga ke klien", 3)
-line(SA, 12, "Hardware", f"=B5*(1+{DK['mk_hw']})")
-line(SA, 13, "Instalasi", f"=B6*(1+{DK['mk_inst']})")
-line(SA, 14, "Lisensi web app dan AI (selamanya, 1 lokasi, 8 kamera) + implementasi + garansi", f"=ROUNDUP((B7+B8)/(1-{DK['m_sw']}),-6)")
-line(SA, 15, "Total harga (sebelum PPN)", "=SUM(B12:B14)", bold=True, fill=TOTAL)
-line(SA, 16, "PPN", f"=B15*{DK['ppn']}")
-line(SA, 17, "Total tagihan (termasuk PPN)", "=B15+B16", bold=True)
-section(SA, 19, "3. Keuntungan", 3)
-line(SA, 20, "Laba kotor proyek", "=B15-B9", bold=True, fill=TOTAL)
-line(SA, 21, "Margin", "=IF(B15=0,0,B20/B15)", fmt=PCT)
-line(SA, 22, "Laba per bulan selama pengerjaan proyek", f"=B20/{DURATION}", note="Laba proyek dibagi durasi pengerjaan di sheet Implementasi.")
+line(SA, 7, "Total uang keluar", "=B5+B6", bold=True, fill=TOTAL)
+section(SA, 9, "2. Harga ke klien", 3)
+line(SA, 10, "Hardware", f"=B5*(1+{DK['mk_hw']})")
+line(SA, 11, "Instalasi", f"=B6*(1+{DK['mk_inst']})")
+line(SA, 12, "Jasa tim CV: web app, AI, implementasi (lisensi selamanya, 1 lokasi, 8 kamera)", f"={IMPL_TOTAL}", color=GREEN)
+line(SA, 13, "Jasa tim CV: garansi layanan", f"={SUPPORT_M}*{DK['warranty']}", color=GREEN)
+line(SA, 14, "Total harga (sebelum PPN)", "=ROUNDUP(SUM(B10:B13),-6)", bold=True, fill=TOTAL, note="Dibulatkan ke atas ke juta terdekat.")
+line(SA, 15, "PPN", f"=B14*{DK['ppn']}")
+line(SA, 16, "Total tagihan (termasuk PPN)", "=B14+B15", bold=True)
+section(SA, 18, "3. Pendapatan CV", 3)
+line(SA, 19, "Jasa tim CV", "=B12+B13")
+line(SA, 20, "Margin hardware dan instalasi", "=B14-B7-B19")
+line(SA, 21, "Pendapatan bersih CV (sebelum pajak penghasilan)", "=B14-B7", bold=True, fill=TOTAL)
+line(SA, 22, "Setara per bulan dalam 1 tahun", "=B21/12", bold=True)
 section(SA, 24, "4. Termin pembayaran yang diusulkan", 3)
-line(SA, 25, "DP 50% saat PO (membiayai pembelian hardware)", "=B17*50%")
-line(SA, 26, "30% saat instalasi selesai", "=B17*30%")
-line(SA, 27, "20% setelah UAT dan serah terima", "=B17*20%")
-line(SA, 28, "Setelah masa garansi: kontrak maintenance opsional", f"=ROUNDUP({SUPPORT_M}*12/(1-{DK['m_sw']}),-6)",
-     note="Per tahun, jika klien ingin support berlanjut. Tidak termasuk dalam harga beli putus.")
+line(SA, 25, "DP 50% saat PO (membiayai pembelian hardware)", "=B16*50%")
+line(SA, 26, "30% saat instalasi selesai", "=B16*30%")
+line(SA, 27, "20% setelah UAT dan serah terima", "=B16*20%")
+line(SA, 28, "Setelah garansi: kontrak maintenance opsional per tahun", f"=ROUNDUP({SUPPORT_M}*12,-6)", note="Tidak termasuk dalam harga beli putus.")
 
 # ------------------------------------------------------------------ Skenario B
-SB = sheet("Skenario B", [60, 18, 62])
-title(SB, "Skenario B: Langganan per Tahun", "Semua infrastruktur milik kita (kamera, NVR, PC server). Klien menyewa beserta web app, AI, dan layanan support. Ditagih per tahun di muka.")
-section(SB, 4, "1. Investasi kita di depan", 3)
+SB = sheet("Skenario B", [62, 18, 60])
+title(SB, "Skenario B: Langganan per Tahun (12 bulan)", "Semua infrastruktur milik kita. Klien menyewa perangkat beserta web app, AI, dan layanan support. Ditagih per tahun di muka.")
+section(SB, 4, "1. Uang keluar ke vendor (di depan, tahun pertama)", 3)
 line(SB, 5, "Hardware", f"={HW_TOTAL}", color=GREEN)
 line(SB, 6, "Instalasi", f"={INST_TOTAL}", color=GREEN)
-line(SB, 7, "Jasa tim CV: pembangunan web app, AI, dan implementasi", f"={IMPL_TOTAL}", color=GREEN)
-line(SB, 8, "Total investasi", "=SUM(B5:B7)", bold=True, fill=TOTAL)
-section(SB, 10, "2. Biaya per bulan", 3)
-line(SB, 11, "Pemulihan investasi per bulan", f"=B8/{DK['n']}", note="Dibagi rata selama masa kontrak minimum.")
-line(SB, 12, "Jasa tim CV: layanan support", f"={SUPPORT_M}", color=GREEN)
-line(SB, 13, "Total biaya per bulan", "=B11+B12", bold=True, fill=TOTAL)
-section(SB, 15, "3. Harga ke klien", 3)
-line(SB, 16, "Langganan per tahun (sebelum PPN)", f"=ROUNDUP(B13*12/(1-{DK['m_b']}),-6)", bold=True, fill=TOTAL)
-line(SB, 17, "Setara per bulan", "=B16/12")
-line(SB, 18, "PPN", f"=B16*{DK['ppn']}")
-line(SB, 19, "Tagihan per tahun (termasuk PPN)", "=B16+B18", bold=True)
-section(SB, 21, "4. Keuntungan", 3)
-line(SB, 22, "Laba per bulan", "=B17-B13", bold=True, fill=TOTAL)
-line(SB, 23, "Margin", "=IF(B17=0,0,B22/B17)", fmt=PCT)
-line(SB, 24, "Laba per tahun", "=B22*12")
-line(SB, 25, "Total laba selama masa kontrak", f"=B22*{DK['n']}")
-line(SB, 26, "Balik modal (bulan)", "=IF(B17-B12<=0,0,B8/(B17-B12))", fmt=NUM, note="Investasi / (langganan per bulan - biaya layanan).")
-line(SB, 27, "Laba per bulan jika diperpanjang setelah kontrak (perangkat sudah lunas)", "=B17-B12")
-section(SB, 29, "5. Arus kas per tahun (langganan dibayar di muka)", 3)
-put(SB, "A30", "Tahun", bold=True, color="FFFFFF", fill=HEAD)
-put(SB, "B30", "Kas bersih tahun itu (Rp)", bold=True, color="FFFFFF", fill=HEAD)
-put(SB, "C30", "Kas kumulatif (Rp)", bold=True, color="FFFFFF", fill=HEAD)
-for i in range(3):
-    rr = 31 + i
-    put(SB, f"A{rr}", f"Tahun {i + 1}")
-    first_year = "-B8" if i == 0 else "0"
-    put(SB, f"B{rr}", f"={first_year}+B16-B12*12", fmt=RP)
-    put(SB, f"C{rr}", f"=B{rr}" if i == 0 else f"=C{rr - 1}+B{rr}", fmt=RP)
+line(SB, 7, "Total uang keluar", "=B5+B6", bold=True, fill=TOTAL)
+section(SB, 9, "2. Langganan tahun pertama", 3)
+line(SB, 10, "Sewa perangkat dan instalasi (12 bulan)", f"=B7/(1-{DK['m_rent']})", note="Biaya perangkat dipulihkan dalam 12 bulan.")
+line(SB, 11, "Jasa tim CV: web app, AI, implementasi", f"={IMPL_TOTAL}", color=GREEN)
+line(SB, 12, "Jasa tim CV: layanan support 12 bulan", f"={SUPPORT_M}*12", color=GREEN)
+line(SB, 13, "Langganan tahun pertama (sebelum PPN)", "=ROUNDUP(SUM(B10:B12),-6)", bold=True, fill=TOTAL)
+line(SB, 14, "Setara per bulan", "=B13/12")
+line(SB, 15, "PPN", f"=B13*{DK['ppn']}")
+line(SB, 16, "Tagihan tahun pertama (termasuk PPN)", "=B13+B15", bold=True)
+section(SB, 18, "3. Pendapatan CV tahun pertama", 3)
+line(SB, 19, "Jasa tim CV", "=B11+B12")
+line(SB, 20, "Margin sewa perangkat", "=B13-B7-B19")
+line(SB, 21, "Pendapatan bersih CV per tahun (sebelum pajak penghasilan)", "=B13-B7", bold=True, fill=TOTAL)
+line(SB, 22, "Setara per bulan", "=B21/12", bold=True)
+line(SB, 23, "Balik modal", '="langsung, langganan dibayar di muka"')
+section(SB, 25, "4. Perpanjangan tahun berikutnya (perangkat sudah lunas)", 3)
+line(SB, 26, "Sewa perangkat (margin saja, perangkat sudah lunas)", "=B10-B7")
+line(SB, 27, "Jasa tim CV: layanan support 12 bulan", "=B12")
+line(SB, 28, "Langganan perpanjangan per tahun (sebelum PPN)", "=ROUNDUP(B26+B27,-6)", bold=True, fill=TOTAL)
+line(SB, 29, "Pendapatan bersih CV per tahun", "=B28", note="Tidak ada uang keluar ke vendor selama perangkat dalam garansi.")
+line(SB, 30, "Setara per bulan", "=B29/12", bold=True)
 
 # ------------------------------------------------------------------ Ringkasan
-R = sheet("Ringkasan", [50, 26, 26])
-title(R, "Ringkasan: Hitung Karton per Palet di Loading Dock, 8 Kamera, On-Premise", "Semua harga dari sumber publik (sheet Sumber Harga). Tidak ada cloud; seluruh sistem berjalan di lokasi.")
-header(R, 4, ["", "A. Beli putus", "B. Langganan per tahun"])
+R = sheet("Ringkasan", [50, 24, 24, 24])
+title(R, "Ringkasan: Hitung Karton per Palet di Loading Dock, 8 Kamera, On-Premise", "Semua harga dari sumber publik (sheet Sumber Harga). Tanpa cloud. Hitungan per tahun (12 bulan).")
+header(R, 4, ["", "A. Beli putus", "B. Langganan tahun pertama", "B. Perpanjangan per tahun"])
 SUM = [
-    ("Pemilik perangkat", '="Minyakita (inventaris klien)"', '="Kita (disewakan)"', None),
-    ("Investasi / biaya kita", "='Skenario A'!B9", "='Skenario B'!B8", RP),
-    ("Harga ke klien (sebelum PPN)", "='Skenario A'!B15", "='Skenario B'!B16", RP),
-    ("Satuan harga", '="sekali bayar"', '="per tahun, di muka"', None),
-    ("Tagihan termasuk PPN", "='Skenario A'!B17", "='Skenario B'!B19", RP),
-    ("Laba", "='Skenario A'!B20", "='Skenario B'!B24", RP),
-    ("Satuan laba", '="sekali, per proyek"', '="per tahun"', None),
-    ("Laba per bulan (A: selama pengerjaan; B: selama kontrak)", "='Skenario A'!B22", "='Skenario B'!B22", RP),
-    ("Margin", "='Skenario A'!B21", "='Skenario B'!B23", PCT),
-    ("Balik modal (bulan)", '="langsung (DP 50%)"', "='Skenario B'!B26", NUM),
-    ("Total dibayar klien selama 36 bulan (sebelum PPN)", "='Skenario A'!B15", f"='Skenario B'!B16*{DK['n']}/12", RP),
-    ("Total laba kita selama 36 bulan", "='Skenario A'!B20", "='Skenario B'!B25", RP),
-    ("Jasa tim CV di dalam biaya, 36 bulan", "='Skenario A'!B7+'Skenario A'!B8", f"='Skenario B'!B7+'Skenario B'!B12*{DK['n']}", RP),
-    ("Total diterima tim CV selama 36 bulan (jasa tim + laba)", "='Skenario A'!B7+'Skenario A'!B8+'Skenario A'!B20", f"='Skenario B'!B7+'Skenario B'!B12*{DK['n']}+'Skenario B'!B25", RP),
-    ("Laba per bulan setelah kontrak diperpanjang", '="-"', "='Skenario B'!B27", RP),
+    ("Pemilik perangkat", '="Minyakita"', '="Kita (disewakan)"', '="Kita (disewakan)"', None),
+    ("Uang keluar ke vendor (hardware + instalasi)", "='Skenario A'!B7", "='Skenario B'!B7", "=0", RP),
+    ("Tagihan ke klien (sebelum PPN)", "='Skenario A'!B14", "='Skenario B'!B13", "='Skenario B'!B28", RP),
+    ("Tagihan termasuk PPN", "='Skenario A'!B16", "='Skenario B'!B16", f"='Skenario B'!B28*(1+{DK['ppn']})", RP),
+    ("Jasa tim CV di dalam tagihan", "='Skenario A'!B19", "='Skenario B'!B19", "='Skenario B'!B27", RP),
+    ("Margin perangkat dan instalasi", "='Skenario A'!B20", "='Skenario B'!B20", "='Skenario B'!B26", RP),
+    ("Pendapatan bersih CV per tahun", "='Skenario A'!B21", "='Skenario B'!B21", "='Skenario B'!B29", RP),
+    ("Pendapatan bersih CV per bulan (dibagi 12)", "='Skenario A'!B22", "='Skenario B'!B22", "='Skenario B'!B30", RP),
 ]
 r = 5
-for lab, fa, fb, fmt in SUM:
+for lab, fa, fb, fc, fmt in SUM:
     put(R, f"A{r}", lab, bold=True)
-    for col, f in zip("BC", (fa, fb)):
+    for col, f in zip("BCD", (fa, fb, fc)):
         put(R, f"{col}{r}", f, color=GREEN, fmt=fmt, right=True)
     r += 1
 r += 1
@@ -392,10 +383,11 @@ for n in [
     "Web app on-premise: dashboard per dock, input DO, hitung karton per palet (60 karton), alert palet kurang, laporan per DO, truk, dan palet.",
     "Instalasi 8 titik, kalibrasi, UAT paralel 2 minggu, training pengguna dan SOP.",
     "Tidak termasuk: listrik, alat kerja ketinggian, pekerjaan sipil, transport di luar Jabodetabek.",
+    "Pendapatan bersih CV = tagihan dikurangi uang keluar ke vendor, sebelum pajak penghasilan dan pembagian ke anggota tim.",
 ]:
     r += 1
     put(R, f"A{r}", "• " + n, wrap=True, color=GREY)
-    R.merge_cells(f"A{r}:C{r}")
+    R.merge_cells(f"A{r}:D{r}")
     R.row_dimensions[r].height = 28
 
 wb.move_sheet("Ringkasan", offset=-(len(wb.sheetnames) - 1))
