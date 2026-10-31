@@ -92,8 +92,8 @@ DEC = [
     ("m_rent", "Margin sewa perangkat selama kontrak minimum (Opsi B)", 0.40, PCT, "Total sewa selama kontrak = uang keluar perangkat / (1 - margin)."),
     ("spare", "Cadangan pengganti per jenis perangkat yang garansinya habis sebelum kontrak selesai (unit)", 1, "0", "Dipakai di sheet Cadangan Penggantian."),
     ("late", "Batas telat bayar sebelum layanan dihentikan sementara (hari)", 30, "0", "Pengaman pembayaran Opsi B; ditulis di penawaran."),
-    ("sw_target", "Nilai jual jasa aplikasi AI computer vision dan web app (Opsi A dan B)", 125000000, RP,
-     "Di atas tarif minimum INKINDO: sistem video analytics realtime 8 kamera dengan event trigger dan akses jarak jauh owner. Seluruhnya porsi developer."),
+    ("sw_target", "Total diterima developer di Opsi A (jasa aplikasi + garansi software + bagian margin)", 125000000, RP,
+     "Nilai jual jasa aplikasi AI dan web app dihitung mundur dari angka ini (sheet Jasa INKINDO); nilai jasa yang sama dipakai di Opsi B."),
     ("split_dev", "Bagian developer dari margin perangkat/sewa", 0.50, PCT, "Tanpa kas CV: margin dibagi langsung ke 2 orang, sisanya untuk infrastruktur."),
     ("ppn", "PPN efektif (isi 0 bila belum PKP)", 0.11, PCT, "PMK 131/2024: 12% x DPP 11/12."),
 ]
@@ -279,39 +279,6 @@ for gname, acts in GROUPS:
     put(J, f"H{r}", f"=SUM(H{g0}:H{r - 1})", bold=True, fmt=RP, fill=TOTAL)
     GROUP_TOTAL[gname] = f"'Jasa INKINDO'!$H${r}"
     r += 1
-SOFTWARE = ("Pembuatan AI Computer Vision", "Pembuatan Web App", "Setup dan Implementasi AI dan Web App")
-INFRA_GROUPS = ("Implementasi Infrastruktur", "Manajemen Proyek")
-r += 1
-section(J, r, "Nilai jual jasa aplikasi AI computer vision dan web app", 9)
-r += 1
-put(J, f"B{r}", "Nilai minimum INKINDO (hari kerja x tarif)")
-put(J, f"H{r}", "=" + "+".join(GROUP_TOTAL[g].split("!")[1] for g in SOFTWARE), fmt=RP)
-floor = r
-r += 1
-put(J, f"B{r}", "Nilai jual yang ditetapkan (Keputusan Bisnis)")
-put(J, f"H{r}", f"={DK['sw_target']}", fmt=RP, color=GREEN)
-target = r
-r += 1
-put(J, f"B{r}", "Faktor di atas tarif minimum")
-put(J, f"H{r}", f"=H{target}/H{floor}", fmt="0.00")
-factor = r
-r += 1
-sell = []
-for i, g in enumerate(SOFTWARE):
-    put(J, f"B{r}", f"Nilai jual {g}")
-    if i < len(SOFTWARE) - 1:
-        put(J, f"H{r}", f"=ROUND({GROUP_TOTAL[g].split('!')[1]}*H{factor},-3)", fmt=RP)
-    else:
-        put(J, f"H{r}", f"=H{target}-" + "-".join(f"H{x}" for x in sell), fmt=RP)
-    sell.append(r)
-    GROUP_TOTAL[g] = f"'Jasa INKINDO'!$H${r}"
-    r += 1
-put(J, f"B{r}", "Tarif INKINDO adalah standar minimal; nilai jual di atasnya mencerminkan keahlian video analytics realtime dan "
-    "integrasi event trigger. Selisihnya masuk ke porsi developer.", italic=True, color="595959")
-r += 2
-put(J, f"B{r}", "Total jasa (nilai jual)", bold=True, fill=TOTAL)
-put(J, f"H{r}", "=" + "+".join(v.split("!")[1] for v in GROUP_TOTAL.values()), bold=True, fmt=RP, fill=TOTAL)
-JASA = f"'Jasa INKINDO'!$H${r}"
 r += 1
 put(J, f"B{r}", "Total hari kerja per peran (pembuatan + implementasi)", bold=True)
 for col in "CDEFG":
@@ -345,6 +312,48 @@ put(J, f"B{r}", "Total layanan per bulan", bold=True, fill=TOTAL)
 put(J, f"H{r}", f"={SUP_PART['software'].split('!')[1]}+{SUP_PART['infra'].split('!')[1]}", bold=True, fmt=RP, fill=TOTAL)
 SUPPORT, SUPPORT_SW, SUPPORT_INF = f"'Jasa INKINDO'!$H${r}", SUP_PART["software"], SUP_PART["infra"]
 SUP_DAYS = {k: f"SUM('Jasa INKINDO'!${c}${sup0}:${c}${r - 1})" for k, c in zip(("pm", "ai", "dev", "asst", "tech"), "CDEFG")}
+SOFTWARE = ("Pembuatan AI Computer Vision", "Pembuatan Web App", "Setup dan Implementasi AI dan Web App")
+INFRA_GROUPS = ("Implementasi Infrastruktur", "Manajemen Proyek")
+r += 2
+section(J, r, "Nilai jual jasa aplikasi AI computer vision dan web app", 9)
+r += 1
+put(J, f"B{r}", "Nilai minimum INKINDO (hari kerja x tarif)")
+put(J, f"H{r}", "=" + "+".join(GROUP_TOTAL[g].split("!")[1] for g in SOFTWARE), fmt=RP)
+floor = r
+r += 1
+put(J, f"B{r}", "Total diterima developer di Opsi A (Keputusan Bisnis)")
+put(J, f"H{r}", f"={DK['sw_target']}", fmt=RP, color=GREEN)
+r += 1
+put(J, f"B{r}", "Dikurangi garansi software Opsi A")
+put(J, f"H{r}", f"=-{SUPPORT_SW}*{DK['warranty']}", fmt=RP)
+r += 1
+put(J, f"B{r}", "Dikurangi bagian margin perangkat developer di Opsi A")
+put(J, f"H{r}", f"=-ROUND(({HW_SELL}+{INST_SELL}-{HW_COST}-{HW_CONT}-{INST_COST})*{DK['split_dev']},-3)", fmt=RP)
+r += 1
+put(J, f"B{r}", "Nilai jual jasa aplikasi AI computer vision dan web app", bold=True)
+put(J, f"H{r}", f"=SUM(H{r - 3}:H{r - 1})", fmt=RP, bold=True)
+target = r
+r += 1
+put(J, f"B{r}", "Faktor di atas tarif minimum")
+put(J, f"H{r}", f"=H{target}/H{floor}", fmt="0.00")
+factor = r
+r += 1
+sell = []
+for i, g in enumerate(SOFTWARE):
+    put(J, f"B{r}", f"Nilai jual {g}")
+    if i < len(SOFTWARE) - 1:
+        put(J, f"H{r}", f"=ROUND({GROUP_TOTAL[g].split('!')[1]}*H{factor},-3)", fmt=RP)
+    else:
+        put(J, f"H{r}", f"=H{target}-" + "-".join(f"H{x}" for x in sell), fmt=RP)
+    sell.append(r)
+    GROUP_TOTAL[g] = f"'Jasa INKINDO'!$H${r}"
+    r += 1
+put(J, f"B{r}", "Tarif INKINDO adalah standar minimal; nilai jual di atasnya mencerminkan keahlian video analytics realtime dan "
+    "integrasi event trigger. Selisihnya masuk ke porsi developer.", italic=True, color="595959")
+r += 2
+put(J, f"B{r}", "Total jasa (nilai jual)", bold=True, fill=TOTAL)
+put(J, f"H{r}", "=" + "+".join(v.split("!")[1] for v in GROUP_TOTAL.values()), bold=True, fmt=RP, fill=TOTAL)
+JASA = f"'Jasa INKINDO'!$H${r}"
 
 # ------------------------------------------------------------------ Skenario A
 SA = sheet("Skenario A", [64, 18, 58])
@@ -534,13 +543,13 @@ both(12, "Pembuatan AI Computer Vision, Pembuatan Web App, Setup dan Implementas
      nt="Sama di kedua opsi, dibayar di depan.")
 both(13, "Support AI dan web app (retraining, update)", f"=({dev_sup})*{DK['warranty']}", f"=({dev_sup})*{DK['term']}",
      nt="Opsi A: garansi 3 bulan. Opsi B: selama kontrak minimum (1 hari AI + 1 hari web app per bulan).")
-both(14, "Bagian margin", "=B8*$B$11", "=C8*$B$11")
+both(14, "Bagian margin", "=ROUND(B8*$B$11,-3)", "=ROUND(C8*$B$11,-3)")
 both(15, "Total developer", "=SUM(B12:B14)", "=SUM(C12:C14)", bold=True, fill=TOTAL)
 section(PT, 17, "3. Infrastruktur: team leader/PM dan teknisi", 4)
 both(18, "Implementasi Infrastruktur, Manajemen Proyek", inf_work, "=B18",
      nt="Jasa pasang kamera dari vendor luar; bila dipasang sendiri, biaya vendor ikut masuk ke porsi ini.")
 both(19, "Kunjungan rutin", f"=({inf_sup})*{DK['warranty']}", f"=({inf_sup})*{DK['term']}")
-both(20, "Bagian margin", "=B8*(1-$B$11)", "=C8*(1-$B$11)")
+both(20, "Bagian margin", "=B8-B14", "=C8-C14")
 both(21, "Total infrastruktur", "=SUM(B18:B20)", "=SUM(C18:C20)", bold=True, fill=TOTAL)
 section(PT, 23, "4. Kontrol", 4)
 both(24, "Total dibayarkan ke 2 orang", "=B15+B21", "=C15+C21", bold=True)
