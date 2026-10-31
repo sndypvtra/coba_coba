@@ -199,18 +199,21 @@ note(RB, r, "Harga Tokopedia dari RAB Factory_Vision_Presentation.pptx (dicek 12
 J = sheet("Jasa INKINDO", [5, 58, 9, 9, 9, 9, 9, 17, 34])
 title(J, "Jasa Pembuatan AI, Web App, dan Implementasi (tarif INKINDO 2026)",
       "Pedoman Standar Minimal INKINDO 2026, DKI Jakarta (indeks 1,000). Tarif sudah termasuk gaji, beban sosial, overhead, dan keuntungan.")
-header(J, 4, ["", "Peran", "", "", "", "", "Tarif per bulan (Rp)", "Tarif per hari (Rp)", "Acuan INKINDO 2026"])
+header(J, 4, ["", "Peran", "Dikerjakan oleh", "", "", "", "Tarif per bulan (Rp)", "Tarif per hari (Rp)", "Acuan INKINDO 2026"])
+DEV, INFRA = "Developer", "Infrastruktur"
 ROLES = [
-    ("pm", "Team Leader / Project Manager", 37400000, "Tabel 3-26: Tenaga Ahli S1, pengalaman 8 tahun"),
-    ("ai", "AI / Computer Vision Engineer", 32300000, "Tabel 3-26: Tenaga Ahli S1, pengalaman 5 tahun"),
-    ("dev", "Pemrogram perangkat lunak (web app)", 17600000, "Tabel 4-26: Pemrogram Perangkat Lunak"),
-    ("asst", "Asisten tenaga ahli (pelabelan data)", 17600000, "Tabel 4-26: Asisten Tenaga Ahli/Teknisi/Analis"),
-    ("tech", "Teknisi jaringan TI", 16900000, "Tabel 4-26: Teknisi Jaringan Teknologi Informasi"),
+    ("pm", "Team Leader / Project Manager", DEV, 37400000, "Tabel 3-26: Tenaga Ahli S1, pengalaman 8 tahun"),
+    ("ai", "AI / Computer Vision Engineer", DEV, 32300000, "Tabel 3-26: Tenaga Ahli S1, pengalaman 5 tahun"),
+    ("dev", "Pemrogram perangkat lunak (web app)", DEV, 17600000, "Tabel 4-26: Pemrogram Perangkat Lunak"),
+    ("asst", "Asisten tenaga ahli (pelabelan data)", DEV, 17600000, "Tabel 4-26: Asisten Tenaga Ahli/Teknisi/Analis"),
+    ("tech", "Teknisi jaringan TI", INFRA, 16900000, "Tabel 4-26: Teknisi Jaringan Teknologi Informasi"),
 ]
-RATE = {}
+RATE, OWNER = {}, {}
 r = 5
-for key, lab, monthly, ref in ROLES:
+for key, lab, who, monthly, ref in ROLES:
+    OWNER[key] = who
     put(J, f"B{r}", lab)
+    put(J, f"C{r}", who, bold=True)
     put(J, f"G{r}", monthly, color=BLUE, fmt=RP)
     put(J, f"H{r}", f"=G{r}/22*1.1", fmt=RP, bold=True)
     put(J, f"I{r}", ref, wrap=True, color=GREY)
@@ -222,7 +225,7 @@ header(J, r, ["No", "Pekerjaan", "PM", "AI/CV", "Pemrogram", "Asisten", "Teknisi
 r += 1
 GROUPS = [
     ("Pembuatan AI", [
-        ("Pengambilan data dan pelabelan sekitar 3.000 gambar karton dan palet dari CCTV dock", 0, 2, 0, 8, 0, "Dataset kemasan Minyakita"),
+        ("Pengambilan data dan pelabelan sekitar 3.000 gambar karton dan palet dari CCTV dock (auto-labeling model pra-latih dan SAM, lalu dikoreksi)", 0, 2, 0, 8, 0, "Dataset kemasan Minyakita"),
         ("Training dan tuning model (karton, palet, lapisan)", 0, 10, 0, 0, 0, "Model deteksi khusus kemasan"),
         ("Logika hitung 60 karton per palet dan rekonsiliasi per DO", 0, 8, 0, 0, 0, "Status palet lengkap atau kurang, selisih per DO"),
         ("Optimasi pipeline realtime 8 kamera 20-30 fps (decode GPU, TensorRT)", 0, 6, 0, 0, 0, "Sistem realtime stabil"),
@@ -239,16 +242,19 @@ GROUPS = [
         ("Training pengguna, SOP, serah terima", 2, 0, 1, 0, 0, "SOP checker dan supervisor"),
     ]),
     ("Manajemen Proyek", [
-        ("Koordinasi, rapat mingguan, laporan progres selama 8-10 minggu", 10, 0, 0, 0, 0, "Laporan progres"),
+        ("Koordinasi, rapat mingguan, laporan progres selama sekitar 16 minggu", 10, 0, 0, 0, 0, "Laporan progres"),
     ]),
 ]
 GROUP_TOTAL = {}
 n = 1
+act0 = None
 for gname, acts in GROUPS:
     section(J, r, gname, 9)
     r += 1
     g0 = r
     for act, pm, ai, dev, asst, tech, out in acts:
+        act0 = act0 or r
+        act1 = r
         put(J, f"A{r}", n)
         put(J, f"B{r}", act, wrap=True)
         for col, v in zip("CDEFG", (pm, ai, dev, asst, tech)):
@@ -264,10 +270,19 @@ for gname, acts in GROUPS:
 put(J, f"B{r}", "Total jasa", bold=True, fill=TOTAL)
 put(J, f"H{r}", "=" + "+".join(v.split("!")[1] for v in GROUP_TOTAL.values()), bold=True, fmt=RP, fill=TOTAL)
 JASA = f"'Jasa INKINDO'!$H${r}"
+r += 1
+put(J, f"B{r}", "Total hari kerja per peran (pembuatan + implementasi)", bold=True)
+for col in "CDEFG":
+    put(J, f"{col}{r}", f"=SUM({col}{act0}:{col}{act1})", fmt="0", bold=True)
+DAYS = {k: f"'Jasa INKINDO'!${c}${r}" for k, c in zip(("pm", "ai", "dev", "asst", "tech"), "CDEFG")}
+r += 1
+put(J, f"B{r}", "Pelabelan memakai auto-labeling lalu dikoreksi, jadi waktu kerja nyata lebih pendek; nilai jasa tetap karena yang dijual "
+    "hasilnya (dataset siap latih), bukan jam kerja.", italic=True, color="595959")
 r += 2
 section(J, r, "Layanan support per bulan (garansi dan langganan)", 9)
 r += 1
 s0 = r
+sup0 = r
 for act, pm, ai, dev, asst, tech in [
     ("Kunjungan rutin: cek kamera, bersihkan lensa, cek server dan rekaman", 0, 0, 0, 0, 1),
     ("Pemantauan akurasi dan retraining model", 0, 1, 0, 0, 0),
@@ -281,6 +296,7 @@ for act, pm, ai, dev, asst, tech in [
 put(J, f"B{r}", "Total layanan per bulan", bold=True, fill=TOTAL)
 put(J, f"H{r}", f"=SUM(H{s0}:H{r - 1})", bold=True, fmt=RP, fill=TOTAL)
 SUPPORT = f"'Jasa INKINDO'!$H${r}"
+SUP_DAYS = {k: f"SUM('Jasa INKINDO'!${c}${sup0}:${c}${r - 1})" for k, c in zip(("pm", "ai", "dev", "asst", "tech"), "CDEFG")}
 
 # ------------------------------------------------------------------ Skenario A
 SA = sheet("Skenario A", [64, 18, 58])
@@ -407,6 +423,57 @@ line(SB, 42, "Biaya pemutusan bila berhenti setelah tahun ke-1", f"=B18*({DK['te
 line(SB, 43, "Biaya pemutusan bila berhenti setelah tahun ke-2", f"=B18*MAX({DK['term']}/12-2,0)")
 line(SB, 44, "Pendapatan bersih bila berhenti setelah tahun ke-1 (bayar biaya pemutusan)", "=B24+B42-B8")
 
+# ------------------------------------------------------------------ Porsi tim (internal)
+def value(who, days):
+    return "+".join(f"{days[k]}*{RATE[k]}" for k in RATE if OWNER[k] == who)
+
+
+PT = sheet("Porsi Tim", [64, 18, 18, 52])
+title(PT, "Porsi Tim: Developer dan Infrastruktur",
+      "Nilai jasa per orang dari hari kerja x tarif INKINDO. Developer memegang AI, web app, manajemen proyek, dan pelabelan.")
+header(PT, 4, ["", "Opsi A", "Opsi B (kontrak minimum)", "Keterangan"])
+section(PT, 5, "Developer: AI/CV, web app, manajemen proyek, pelabelan", 4)
+line(PT, 6, "Pembuatan AI, web app, implementasi, manajemen proyek", f"={value(DEV, DAYS)}")
+PT["C6"] = "=B6"
+line(PT, 7, "Support AI dan web app (retraining, update)", f"=({value(DEV, SUP_DAYS)})*{DK['warranty']}")
+PT["C7"] = f"=({value(DEV, SUP_DAYS)})*{DK['term']}"
+line(PT, 8, "Total developer", "=B6+B7", bold=True, fill=TOTAL)
+PT["C8"] = "=C6+C7"
+section(PT, 10, "Infrastruktur", 4)
+line(PT, 11, "Survey, instalasi, kalibrasi, uji paralel", f"={value(INFRA, DAYS)}")
+PT["C11"] = "=B11"
+line(PT, 12, "Kunjungan rutin", f"=({value(INFRA, SUP_DAYS)})*{DK['warranty']}")
+PT["C12"] = f"=({value(INFRA, SUP_DAYS)})*{DK['term']}"
+line(PT, 13, "Total infrastruktur", "=B11+B12", bold=True, fill=TOTAL)
+PT["C13"] = "=C11+C12"
+section(PT, 15, "Kas CV", 4)
+line(PT, 16, "Pendapatan bersih", "='Skenario A'!B25", color=GREEN)
+PT["C16"] = "='Skenario B'!B34"
+line(PT, 17, "Dikurangi porsi developer dan infrastruktur", "=-(B8+B13)")
+PT["C17"] = "=-(C8+C13)"
+line(PT, 18, "Sisa kas CV", "=B16+B17", bold=True, fill=TOTAL)
+PT["C18"] = "=C16+C17"
+line(PT, 19, "Tambahan bila cadangan penggantian tidak terpakai (Opsi B)", "=0")
+PT["C19"] = f"={RESERVE_TOTAL}"
+for ref in ("C6", "C7", "C8", "C11", "C12", "C13", "C16", "C17", "C18", "C19"):
+    c = PT[ref]
+    c.font = Font(name=F, size=10, bold=PT[f"A{ref[1:]}"].font.b, color=GREEN if ref == "C16" else BLACK)
+    c.number_format = RP
+    c.alignment = Alignment(vertical="top")
+for row, nt in [
+    (6, "Opsi A dan B sama: kerja custom dibayar penuh di depan."),
+    (7, "Opsi A: garansi 3 bulan. Opsi B: support selama kontrak minimum (1 hari AI + 1 hari web app per bulan)."),
+    (11, "Jasa pasang kamera dari vendor luar; bila dipasang sendiri oleh infrastruktur, biaya vendor ikut masuk ke porsi ini."),
+    (18, "Sisa: margin perangkat (Opsi A) atau margin sewa (Opsi B), dibagi sesuai kesepakatan internal."),
+]:
+    put(PT, f"D{row}", nt, wrap=True, color=GREY)
+    PT.row_dimensions[row].height = 28
+section(PT, 21, "Beban kerja dan jadwal", 4)
+line(PT, 22, "Hari kerja developer (ditagih)", "=" + "+".join(DAYS[k] for k in RATE if OWNER[k] == DEV), fmt="0")
+line(PT, 23, "Hari kerja infrastruktur (ditagih)", "=" + "+".join(DAYS[k] for k in RATE if OWNER[k] == INFRA), fmt="0")
+put(PT, "D22", "Sekitar 16 minggu (80 hari kerja); pelabelan dipercepat dengan auto-labeling.", wrap=True, color=GREY)
+put(PT, "D23", "Berjalan paralel dengan pekerjaan developer.", wrap=True, color=GREY)
+
 # ------------------------------------------------------------------ Sumber
 SS = sheet("Sumber Harga", [7, 95, 70])
 title(SS, "Sumber Harga", "Harga toko dapat berubah; minta penawaran tertulis sebelum membeli.")
@@ -463,13 +530,14 @@ for t in [
     "PC server: GPU RTX 5070 Ti 16 GB mendekode 8 stream 4MP di GPU dan menjalankan model TensorRT; target 20-30 fps per kamera. Kapasitas final dibuktikan dengan benchmark saat uji paralel.",
     "Tarif jasa INKINDO adalah standar minimal nasional untuk badan usaha jasa konsultansi dan sudah termasuk overhead dan keuntungan.",
     "Opsi B: pembayaran saat PO (50% setup + langganan tahun pertama) sudah menutup uang keluar perangkat; berhenti sebelum kontrak minimum selesai dikenai sisa sewa perangkat.",
+    "Tim 2 orang: developer (AI, web app, manajemen proyek, pelabelan) dan infrastruktur. Jadwal sekitar 16 minggu (4 bulan); pembagian per orang di sheet Porsi Tim.",
 ]:
     put(R, f"A{r}", "• " + t, wrap=True, color=GREY)
     R.merge_cells(f"A{r}:E{r}")
     R.row_dimensions[r].height = 30
     r += 1
 
-order = ["Ringkasan", "RAB", "Jasa INKINDO", "Skenario A", "Skenario B", "Cadangan Penggantian", "Keputusan Bisnis", "Sumber Harga"]
+order = ["Ringkasan", "RAB", "Jasa INKINDO", "Skenario A", "Skenario B", "Cadangan Penggantian", "Porsi Tim", "Keputusan Bisnis", "Sumber Harga"]
 wb._sheets = [wb[n] for n in order]
 wb.active = 0
 for ws in wb.worksheets:

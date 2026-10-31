@@ -166,7 +166,7 @@ SERVICE_TEXT = {
     "Pembuatan AI": "Model AI khusus kemasan Minyakita, berjalan realtime 8 kamera pada 20-30 fps",
     "Pembuatan Web App": "Web app on-premise untuk dock dan manajemen",
     "Implementasi Lapangan": "Pemasangan, kalibrasi, uji paralel, dan serah terima di lokasi",
-    "Manajemen Proyek": "Pengelolaan proyek selama 8-10 minggu",
+    "Manajemen Proyek": "Pengelolaan proyek selama sekitar 16 minggu",
 }
 SUPPORT_TEXT = ("Kunjungan rutin bulanan (cek kamera, lensa, server, rekaman), pemantauan akurasi dan retraining model, "
                 "perbaikan dan update web app")
@@ -329,9 +329,14 @@ r = bullets(R, r + 1, [
 r += 1
 band(R, r, "Jadwal", 4)
 r = bullets(R, r + 1, [
-    "Sekitar 8 sampai 10 minggu sejak PO: survey dan desain, pengambilan data dan training model, pembuatan web app, "
-    "instalasi dan kalibrasi, uji paralel 2 minggu (termasuk uji performa 8 kamera), serah terima.",
-], 4, 30)
+    "Total sekitar 16 minggu (4 bulan) sejak PO.",
+    "Minggu 1-2: survey dock, desain posisi kamera dan zona cek palet, pengadaan perangkat.",
+    "Minggu 3-4: instalasi kamera, jaringan, dan server; pengambilan data dari CCTV dock dimulai.",
+    "Minggu 5-10: pelabelan data, training dan tuning model, logika hitung karton dan rekonsiliasi DO; pembuatan web app berjalan paralel.",
+    "Minggu 11-13: optimasi realtime 8 kamera, integrasi data DO, kalibrasi zona cek.",
+    "Minggu 14-15: uji paralel 2 minggu dibanding hitung manual, termasuk uji performa 8 kamera 20-30 fps.",
+    "Minggu 16: training pengguna, SOP, dan serah terima (go-live).",
+], 4)
 r += 1
 band(R, r, "Garansi dan layanan", 4)
 r = bullets(R, r + 1, [
