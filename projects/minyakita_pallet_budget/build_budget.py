@@ -92,6 +92,8 @@ DEC = [
     ("m_rent", "Margin sewa perangkat selama kontrak minimum (Opsi B)", 0.40, PCT, "Total sewa selama kontrak = uang keluar perangkat / (1 - margin)."),
     ("spare", "Cadangan pengganti per jenis perangkat yang garansinya habis sebelum kontrak selesai (unit)", 1, "0", "Dipakai di sheet Cadangan Penggantian."),
     ("late", "Batas telat bayar sebelum layanan dihentikan sementara (hari)", 30, "0", "Pengaman pembayaran Opsi B; ditulis di penawaran."),
+    ("sw_target", "Nilai jual jasa aplikasi AI computer vision dan web app (Opsi A dan B)", 125000000, RP,
+     "Di atas tarif minimum INKINDO: sistem video analytics realtime 8 kamera dengan event trigger Telegram. Seluruhnya porsi developer."),
     ("split_dev", "Bagian developer dari margin perangkat/sewa", 0.50, PCT, "Tanpa kas CV: margin dibagi langsung ke 2 orang, sisanya untuk infrastruktur."),
     ("ppn", "PPN efektif (isi 0 bila belum PKP)", 0.11, PCT, "PMK 131/2024: 12% x DPP 11/12."),
 ]
@@ -233,6 +235,8 @@ GROUPS = [
     ]),
     ("Pembuatan Web App", [
         ("Dashboard dock dan manajemen, input DO, laporan per DO/truk/palet, alert, user", 0, 0, 20, 0, 0, "Web app on-premise"),
+        ("Live view 8 kamera di web app dengan overlay hasil deteksi dan hitungan", 0, 0, 4, 0, 0, "Pantau dock secara realtime"),
+        ("Event trigger ke Telegram: aturan event (palet kurang, selisih DO, kamera mati), foto bukti, riwayat notifikasi", 0, 0, 5, 0, 0, "Notifikasi otomatis ke grup Telegram"),
         ("Integrasi data DO dari WMS/ERP (file CSV atau API)", 0, 0, 5, 0, 0, "DO otomatis di sistem"),
     ]),
     ("Setup dan Implementasi AI dan Web App", [
@@ -274,7 +278,37 @@ for gname, acts in GROUPS:
     put(J, f"H{r}", f"=SUM(H{g0}:H{r - 1})", bold=True, fmt=RP, fill=TOTAL)
     GROUP_TOTAL[gname] = f"'Jasa INKINDO'!$H${r}"
     r += 1
-put(J, f"B{r}", "Total jasa", bold=True, fill=TOTAL)
+SOFTWARE = ("Pembuatan AI Computer Vision", "Pembuatan Web App", "Setup dan Implementasi AI dan Web App")
+INFRA_GROUPS = ("Implementasi Infrastruktur", "Manajemen Proyek")
+r += 1
+section(J, r, "Nilai jual jasa aplikasi AI computer vision dan web app", 9)
+r += 1
+put(J, f"B{r}", "Nilai minimum INKINDO (hari kerja x tarif)")
+put(J, f"H{r}", "=" + "+".join(GROUP_TOTAL[g].split("!")[1] for g in SOFTWARE), fmt=RP)
+floor = r
+r += 1
+put(J, f"B{r}", "Nilai jual yang ditetapkan (Keputusan Bisnis)")
+put(J, f"H{r}", f"={DK['sw_target']}", fmt=RP, color=GREEN)
+target = r
+r += 1
+put(J, f"B{r}", "Faktor di atas tarif minimum")
+put(J, f"H{r}", f"=H{target}/H{floor}", fmt="0.00")
+factor = r
+r += 1
+sell = []
+for i, g in enumerate(SOFTWARE):
+    put(J, f"B{r}", f"Nilai jual {g}")
+    if i < len(SOFTWARE) - 1:
+        put(J, f"H{r}", f"=ROUND({GROUP_TOTAL[g].split('!')[1]}*H{factor},-3)", fmt=RP)
+    else:
+        put(J, f"H{r}", f"=H{target}-" + "-".join(f"H{x}" for x in sell), fmt=RP)
+    sell.append(r)
+    GROUP_TOTAL[g] = f"'Jasa INKINDO'!$H${r}"
+    r += 1
+put(J, f"B{r}", "Tarif INKINDO adalah standar minimal; nilai jual di atasnya mencerminkan keahlian video analytics realtime dan "
+    "integrasi event trigger. Selisihnya masuk ke porsi developer.", italic=True, color="595959")
+r += 2
+put(J, f"B{r}", "Total jasa (nilai jual)", bold=True, fill=TOTAL)
 put(J, f"H{r}", "=" + "+".join(v.split("!")[1] for v in GROUP_TOTAL.values()), bold=True, fmt=RP, fill=TOTAL)
 JASA = f"'Jasa INKINDO'!$H${r}"
 r += 1
@@ -484,8 +518,8 @@ def both(row, label, fa, fb, bold=False, fill=None, color=BLACK, fmt=RP, nt=None
         PT.row_dimensions[row].height = 28
 
 
-dev_work, dev_sup = f"={value(DEV, DAYS)}", value(DEV, SUP_DAYS)
-inf_work, inf_sup = f"={value(INFRA, DAYS)}", value(INFRA, SUP_DAYS)
+dev_work, dev_sup = "=" + "+".join(GROUP_TOTAL[g] for g in SOFTWARE), value(DEV, SUP_DAYS)
+inf_work, inf_sup = "=" + "+".join(GROUP_TOTAL[g] for g in INFRA_GROUPS), value(INFRA, SUP_DAYS)
 section(PT, 5, "1. Margin yang dibagi berdua", 4)
 both(6, "Pendapatan bersih", f"={A_REF['net']}", f"={B_REF['net']}", color=GREEN,
      nt="Opsi B dengan asumsi cadangan penggantian terpakai semua.")
