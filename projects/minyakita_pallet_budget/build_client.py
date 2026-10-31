@@ -207,7 +207,7 @@ put(B, "A2", "Perangkat disediakan dan tetap milik penyedia, ditagih per tahun (
 header(B, 4, COLS)
 band(B, 5, "Tahun pertama", 7)
 line(B, 6, 1, "Sewa perangkat dan pemasangan, 12 bulan", "Seluruh perangkat di daftar bawah",
-     "8 kamera, PC server AI, penyimpanan rekaman dan backup, UPS, rak dan jaringan, monitor, TV dashboard dock; "
+     "8 kamera, PC server AI, penyimpanan rekaman dan backup, UPS, rak dan jaringan, TV status loading dock; "
      "terpasang di 8 titik; penggantian perangkat rusak selama langganan", 1, rent_year1)
 band(B, 7, SERVICES_BAND, 7)
 r, n = service_lines(B, 8, 2)
@@ -273,7 +273,7 @@ r = bullets(R, r + 1, [
     "Hitung karton setiap palet (standar 60 karton) di zona cek depan dock, dan peringatan langsung bila palet kurang.",
     "Video analytics realtime 8 kamera pada 20-30 fps, diproses di PC server AI dengan GPU NVIDIA RTX 5070 Ti 16 GB di lokasi.",
     "Rekonsiliasi jumlah karton per DO, per truk, dan per palet sebelum barang naik ke armada ekspedisi.",
-    "Web app on-premise: dashboard di kantor gudang dan layar status di loading dock; laporan per DO, truk, dan palet.",
+    "Web app on-premise, dibuka dari laptop tim gudang lewat jaringan/VPN perusahaan (tanpa install aplikasi), plus TV status di loading dock; laporan per DO, truk, dan palet.",
     "Rekaman 8 kamera sebagai bukti audit dan penyelesaian selisih.",
     "Seluruh sistem berjalan di lokasi (on-premise), tanpa cloud; data tetap di gudang.",
 ], 4)
@@ -293,6 +293,7 @@ r += 1
 band(R, r, "Yang disiapkan perusahaan", 4)
 r = bullets(R, r + 1, [
     "Listrik di titik kamera dan ruang server, alat kerja ketinggian (forklift dengan man basket atau sejenisnya) saat pemasangan.",
+    "Laptop untuk memantau dashboard, serta 1 alamat IP dan port LAN di jaringan perusahaan untuk server dan TV dock (akses dari luar gudang lewat VPN perusahaan yang sudah ada).",
     "Data DO (ekspor file atau akses API WMS/ERP) dan satu PIC gudang untuk koordinasi dan uji paralel.",
     "SOP: palet berhenti sejenak di zona cek, plastik wrap bening agar karton terlihat kamera.",
 ], 4)

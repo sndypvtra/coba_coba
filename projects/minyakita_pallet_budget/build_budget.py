@@ -113,13 +113,9 @@ ITEMS = [
         ("HDD backup eksternal", "Seagate Expansion Desktop 12TB (STKP12000400)", "USB 3.0, backup database dan klip bukti", 1, 9980000, TOKO + "seagate-expansion-12tb"),
         ("Sistem operasi & software", "Ubuntu Server 24.04 LTS, driver NVIDIA, TensorRT, MediaMTX, PostgreSQL", "Open source / gratis", 1, 0, "https://docs.nvidia.com/metropolis/deepstream/8.0/text/DS_Installation.html"),
     ]),
-    ("Control room & dock", [
-        ("Mini PC operator & dashboard TV", "ASUS NUC 13 Pro", "Intel Core i5-1340P, 16GB, SSD 512GB, Windows 11 Pro, 2x HDMI 2.1", 1, 7794000, TOKO + "asus-nuc-13-pro-i5"),
-        ("Monitor operator", "Dell P2725H", "27\" IPS FHD 100Hz, garansi 3 tahun", 1, 3479000, TOKO + "dell-monitor-p2725h"),
-        ("TV dashboard loading dock", "Samsung Business TV BE55FX-H (LH55BEFHVGKXXD)", "55\" 4K, rating 16 jam/hari x 7 hari, garansi 3 tahun", 1, 8899000, TOKO + "samsung-business-tv-55"),
+    ("Layar loading dock", [
+        ("TV status loading dock", "Samsung Business TV BE55FX-H (LH55BEFHVGKXXD)", "55\" 4K, Tizen dengan web browser bawaan (buka dashboard web app langsung via LAN, tanpa PC tambahan), rating 16 jam/hari x 7 hari, garansi 3 tahun", 1, 8899000, TOKO + "samsung-business-tv-55"),
         ("Bracket TV", "Krisbow bracket fixed 32-55\"", "Wall mount", 1, 129000, TOKO + "bracket-tv-55-inch-fixed"),
-        ("Kabel HDMI", "UGREEN 45437 HDMI 2.1 15m", "4K, 48Gbps", 1, 644000, TOKO + "kabel-hdmi-15-meter-ugreen"),
-        ("Keyboard & mouse", "Logitech MK540 Advanced", "Wireless 2.4GHz", 1, 995000, TOKO + "logitech-mk540"),
     ]),
     ("Jaringan", [
         ("Router", "MikroTik RB5009UG+S+IN", "7x GbE, 1x 2.5GbE, 1x SFP+, VLAN kamera terpisah", 1, 4175000, TOKO + "rb5009ug-s-in"),
@@ -350,6 +346,9 @@ for i, (c, d, u) in enumerate([
     ("S4", "INKINDO, Pedoman Standar Minimal Tahun 2026 Remunerasi (Billing Rate): Tabel 3-26 (Tenaga Ahli tanpa SKK) dan Tabel 4-26 (Teknisi/Analis); SBOH = SBOB / 22 x 1,1.", "https://www.inkindo.org/documents/ikdweb-billing-rate-2026.pdf"),
     ("S5", "GSI Indonesia, Harga Pasang CCTV Per Titik 2026: IP camera jasa saja Rp 200.000 sampai Rp 350.000 per titik. Dipakai batas atas.", "https://gsi-indo.com/2026/04/17/harga-pasang-cctv-per-titik/"),
     ("S6", "PMK No. 131 Tahun 2024: PPN 12% x DPP 11/12, efektif 11%.", "Peraturan Menteri Keuangan No. 131 Tahun 2024"),
+    ("S7", "Samsung BE55FX-H: spesifikasi toko mencantumkan Tizen dan web browser bawaan, jadi TV dock membuka dashboard tanpa mini PC. "
+           "Stasiun operator (mini PC, monitor, keyboard) dihapus karena klien memantau dari laptop sendiri lewat VPN perusahaan. "
+           "Cek browser di SKU LH55BEFHVGKXXD saat pembelian.", "https://www.dateks.lv/ru/cenas/televizori/1417992-samsung-be55fx-h-lh55befhlguxen-55-"),
 ], 5):
     put(SS, f"A{i}", c, bold=True)
     put(SS, f"B{i}", d, wrap=True)
