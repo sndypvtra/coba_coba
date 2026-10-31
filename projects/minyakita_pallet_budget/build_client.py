@@ -36,9 +36,8 @@ def by_label(ws, label, col="B"):
 
 
 warranty = by_label(kb, "Garansi layanan termasuk harga Opsi A (bulan)")
-ppn = by_label(kb, "PPN efektif (isi 0 bila belum PKP)")
 sa, sb = src["Skenario A"], src["Skenario B"]
-total_a = by_label(sa, "Total harga (sebelum PPN)")
+total_a = by_label(sa, "Total harga")
 gar_sw_a = by_label(sa, "Garansi software AI dan web app")
 gar_inf_a = by_label(sa, "Garansi infrastruktur")
 maint_a = by_label(sa, "Maintenance opsional per tahun setelah garansi")
@@ -51,7 +50,7 @@ rent_b = by_label(sb, "Sewa perangkat dan pemasangan")
 sup_sw_b = by_label(sb, "Support software AI dan web app 12 bulan")
 sup_inf_b = by_label(sb, "Support infrastruktur 12 bulan")
 reserve_b = by_label(sb, "Jaminan penggantian perangkat")
-sub_b = by_label(sb, "Langganan per tahun (sebelum PPN)")
+sub_b = by_label(sb, "Langganan per tahun")
 year1 = by_label(sb, "Tahun pertama (jasa sekali bayar + langganan)")
 total_b = by_label(sb, "Total selama kontrak minimum")
 YEARS = int(term // 12)
@@ -158,15 +157,12 @@ def subtotal(ws, r, name, first, last):
     return f"G{r}"
 
 
-def totals(ws, r, cells, label="Total (sebelum PPN)"):
+def totals(ws, r, cells, label="Total harga"):
+    for col in "DEFG":
+        ws[f"{col}{r}"].fill = TOTAL
     put(ws, f"D{r}", label, bold=True, fill=TOTAL)
     put(ws, f"G{r}", "=" + "+".join(cells), bold=True, fmt=RP, fill=TOTAL)
-    put(ws, f"D{r + 1}", "PPN")
-    put(ws, f"F{r + 1}", ppn, fmt="0%")
-    put(ws, f"G{r + 1}", f"=G{r}*F{r + 1}", fmt=RP)
-    put(ws, f"D{r + 2}", "Total tagihan", bold=True, fill=TOTAL)
-    put(ws, f"G{r + 2}", f"=G{r}+G{r + 1}", bold=True, fmt=RP, fill=TOTAL)
-    return r, r + 2
+    return r, r
 
 
 SERVICE_TEXT = {
@@ -232,7 +228,7 @@ def full_breakdown(ws, r):
 # ---------------------------------------------------------------- Rincian Opsi A
 A = sheet("Rincian Opsi A", WIDTHS)
 put(A, "A1", "Rincian Opsi A: Beli Putus", bold=True, size=14)
-put(A, "A2", "Semua perangkat, instalasi, aplikasi AI, dan web app menjadi milik perusahaan. Harga dalam Rupiah, belum termasuk PPN.",
+put(A, "A2", "Semua perangkat, instalasi, aplikasi AI, dan web app menjadi milik perusahaan. Harga dalam Rupiah, tidak dikenakan PPN.",
     italic=True, color="595959")
 header(A, 4, COLS)
 r, subs = full_breakdown(A, 5)
@@ -243,7 +239,7 @@ B = sheet("Rincian Opsi B", WIDTHS)
 put(B, "A1", f"Rincian Opsi B: Sewa dan Langganan, Kontrak Minimum {term} Bulan", bold=True, size=14)
 put(B, "A2", "Perangkat disediakan, dipasang, dan dirawat penyedia. Jasa aplikasi dan jasa infrastruktur dibayar sekali; "
     "langganan dibayar di muka per 12 bulan. "
-    "Harga dalam Rupiah, belum termasuk PPN.", italic=True, color="595959")
+    "Harga dalam Rupiah, tidak dikenakan PPN.", italic=True, color="595959")
 header(B, 4, COLS)
 band(B, 5, SOFTWARE_BAND + " (dibayar sekali)", 7)
 r, n = service_lines(B, 6, 1, SOFTWARE)
@@ -272,7 +268,7 @@ for y in range(1, YEARS + 1):
     put(B, f"G{r}", f"={setup_cell}+{sub_cell}" if y == 1 else f"={sub_cell}", fmt=RP)
     year_rows.append(f"G{r}")
     r += 1
-tot_bk, grand_bk = totals(B, r + 1, year_rows, f"Total kontrak {term} bulan (sebelum PPN)")
+tot_bk, grand_bk = totals(B, r + 1, year_rows, f"Total kontrak {term} bulan")
 r = grand_bk + 2
 band(B, r, "BIAYA PEMUTUSAN bila kontrak dihentikan sebelum masa minimum", 7)
 r += 1
@@ -304,18 +300,10 @@ put(R, "A1", "Penawaran: Sistem Hitung Karton per Palet di Loading Dock (8 Kamer
 put(R, "A2", "Kepada: PT [nama perusahaan], Gudang Minyakita  ·  Tanggal: [isi tanggal]  ·  Berlaku 14 hari sejak tanggal penawaran",
     italic=True, color="595959")
 header(R, 4, ["", "Opsi A: Beli putus", "Opsi B: Tahun ke-1", f"Opsi B: Tahun ke-2 s.d. {YEARS} (per tahun)"])
-rows = [
-    ("Total (sebelum PPN)", f"='Rincian Opsi A'!G{tot_a}", f"='Rincian Opsi B'!{year_rows[0]}", f"='Rincian Opsi B'!{year_rows[1]}"),
-    ("PPN", f"='Rincian Opsi A'!G{tot_a + 1}", f"=C5*'Rincian Opsi B'!F{tot_bk + 1}", f"=D5*'Rincian Opsi B'!F{tot_bk + 1}"),
-    ("Total tagihan", f"='Rincian Opsi A'!G{grand_a}", "=C5+C6", "=D5+D6"),
-]
-r = 5
-for lab, fa, fb, fc in rows:
-    bold = lab == "Total tagihan"
-    put(R, f"A{r}", lab, bold=True)
-    for col, f in zip("BCD", (fa, fb, fc)):
-        put(R, f"{col}{r}", f, fmt=RP, right=True, bold=bold, fill=TOTAL if bold else None)
-    r += 1
+put(R, "A5", "Total harga (tanpa PPN)", bold=True, fill=TOTAL)
+for col, f in zip("BCD", (f"='Rincian Opsi A'!G{tot_a}", f"='Rincian Opsi B'!{year_rows[0]}", f"='Rincian Opsi B'!{year_rows[1]}")):
+    put(R, f"{col}5", f, fmt=RP, right=True, bold=True, fill=TOTAL)
+r = 6
 put(R, f"A{r}", "Pemilik perangkat", bold=True)
 put(R, f"B{r}", "Perusahaan", right=True)
 put(R, f"C{r}", "Penyedia", right=True)
@@ -336,7 +324,7 @@ put(R, f"B{r}", maint_a, fmt=RP, right=True)
 put(R, f"C{r}", "termasuk", right=True)
 put(R, f"D{r}", "termasuk", right=True)
 r += 1
-put(R, f"A{r}", f"Total selama {YEARS} tahun (sebelum PPN)", bold=True)
+put(R, f"A{r}", f"Total selama {YEARS} tahun", bold=True)
 put(R, f"B{r}", f"=B5+B{r - 1}*{YEARS - 1}", fmt=RP, right=True)
 put(R, f"C{r}", f"='Rincian Opsi B'!G{tot_bk}", fmt=RP, right=True)
 R.merge_cells(f"C{r}:D{r}")

@@ -102,7 +102,6 @@ DEC = [
     ("cr_inf", "Tarif change request infrastruktur per hari kerja", 900000, RP,
      "Tarif harian Teknisi Jaringan TI INKINDO Rp 845.000, dibulatkan ke atas. Perangkat tambahan ditagih terpisah."),
     ("split_dev", "Bagian developer dari margin perangkat/sewa", 0.50, PCT, "Tanpa kas CV: margin dibagi langsung ke 2 orang, sisanya untuk infrastruktur."),
-    ("ppn", "PPN efektif (isi 0 bila belum PKP)", 0.11, PCT, "PMK 131/2024: 12% x DPP 11/12."),
 ]
 DK = {}
 for i, (key, lab, v, fmt, nt) in enumerate(DEC, 5):
@@ -387,13 +386,10 @@ for g, cell in GROUP_TOTAL.items():
     r += 1
 line(SA, r, "Garansi software AI dan web app", f"={SUPPORT_SW}*{DK['warranty']}", nt="Retraining model dan update web app selama masa garansi.")
 line(SA, r + 1, "Garansi infrastruktur", f"={SUPPORT_INF}*{DK['warranty']}", nt="Kunjungan rutin perangkat selama masa garansi.")
-line(SA, r + 2, "Total harga (sebelum PPN)", f"=SUM(B11:B{r + 1})", bold=True, fill=TOTAL)
-line(SA, r + 3, "PPN", f"=B{r + 2}*{DK['ppn']}")
-line(SA, r + 4, "Total tagihan", f"=B{r + 2}+B{r + 3}", bold=True)
+line(SA, r + 2, "Total harga", f"=SUM(B11:B{r + 1})", bold=True, fill=TOTAL, nt="Tanpa PPN.")
 ref(A_REF, "total", SA, r + 2)
-ref(A_REF, "bill", SA, r + 4)
-jasa_end, total_row, bill_row = r + 1, r + 2, r + 4
-r += 6
+jasa_end, total_row, bill_row = r + 1, r + 2, r + 2
+r += 4
 section(SA, r, "3. Pendapatan", 3)
 line(SA, r + 1, "Jasa tim (AI, web app, implementasi, manajemen, garansi)", f"=SUM(B13:B{jasa_end})")
 line(SA, r + 2, "Margin perangkat dan jasa pasang", "=B11+B12-B8")
@@ -486,21 +482,19 @@ ref(B_REF, "sup_sw", SB, r + 2)
 line(SB, r + 3, "Support infrastruktur 12 bulan", f"={SUPPORT_INF}*12", nt="Kunjungan rutin perangkat (sheet Jasa INKINDO).")
 line(SB, r + 4, "Jaminan penggantian perangkat", f"=ROUNDUP({RESERVE_TOTAL}/({DK['term']}/12),-5)",
      nt="Cadangan penggantian dibagi rata per tahun (sheet Cadangan Penggantian).")
-line(SB, r + 5, "Langganan per tahun (sebelum PPN)", f"=SUM(B{r + 1}:B{r + 4})", bold=True, fill=TOTAL)
+line(SB, r + 5, "Langganan per tahun", f"=SUM(B{r + 1}:B{r + 4})", bold=True, fill=TOTAL)
 rent, sub = r + 1, r + 5
 r += 7
-section(SB, r, "4. Tagihan ke klien (sebelum PPN)", 3)
+section(SB, r, "4. Tagihan ke klien (tanpa PPN)", 3)
 line(SB, r + 1, "Tahun pertama (jasa sekali bayar + langganan)", f"=B{setup}+B{sub}", bold=True)
 line(SB, r + 2, "Per tahun berikutnya", f"=B{sub}")
 line(SB, r + 3, "Total selama kontrak minimum", f"=B{setup}+B{sub}*{DK['term']}/12", bold=True, fill=TOTAL)
-line(SB, r + 4, "PPN tahun pertama", f"=B{r + 1}*{DK['ppn']}")
-line(SB, r + 5, "Tagihan tahun pertama termasuk PPN", f"=B{r + 1}+B{r + 4}", bold=True)
-for k, off in (("year1", 1), ("next", 2), ("total", 3), ("bill1", 5)):
+for k, off in (("year1", 1), ("next", 2), ("total", 3)):
     ref(B_REF, k, SB, r + off)
 year1_row, total_row = r + 1, r + 3
-r += 7
+r += 5
 section(SB, r, "5. Pendapatan selama kontrak minimum", 3)
-line(SB, r + 1, "Total pendapatan (sebelum PPN)", f"=B{total_row}")
+line(SB, r + 1, "Total pendapatan", f"=B{total_row}")
 line(SB, r + 2, "Uang keluar perangkat", "=-B8")
 line(SB, r + 3, "Cadangan penggantian bila terpakai semua", f"=-{RESERVE_TOTAL}", color=GREEN)
 line(SB, r + 4, "Pendapatan bersih (cadangan terpakai semua)", f"=SUM(B{r + 1}:B{r + 3})", bold=True, fill=TOTAL)
@@ -586,7 +580,7 @@ for i, (c, d, u) in enumerate([
      "https://katalog.inaproc.id/pt-bangun-jaya-pedia/agres-cryo-pc-ultra-5-245kf-rtx-5070-12g-32gb-1tb-win-11-pro-rakitan-pc-gaming"),
     ("S4", "INKINDO, Pedoman Standar Minimal Tahun 2026 Remunerasi (Billing Rate): Tabel 3-26 (Tenaga Ahli tanpa SKK) dan Tabel 4-26 (Teknisi/Analis); SBOH = SBOB / 22 x 1,1.", "https://www.inkindo.org/documents/ikdweb-billing-rate-2026.pdf"),
     ("S5", "GSI Indonesia, Harga Pasang CCTV Per Titik 2026: IP camera jasa saja Rp 200.000 sampai Rp 350.000 per titik. Dipakai batas atas.", "https://gsi-indo.com/2026/04/17/harga-pasang-cctv-per-titik/"),
-    ("S6", "PMK No. 131 Tahun 2024: PPN 12% x DPP 11/12, efektif 11%.", "Peraturan Menteri Keuangan No. 131 Tahun 2024"),
+    ("S6", "PPN tidak dipakai: penagihan langsung atas nama pribadi (bukan PKP), sesuai keputusan tim. PPh atas jasa tetap berlaku.", "Keputusan tim"),
     ("S7", "Samsung BE55FX-H: spesifikasi toko mencantumkan Tizen dan web browser bawaan, jadi TV dock membuka dashboard tanpa mini PC. "
            "Stasiun operator (mini PC, monitor, keyboard) dihapus karena klien memantau dari laptop sendiri lewat VPN perusahaan. "
            "Cek browser di SKU LH55BEFHVGKXXD saat pembelian.", "https://www.dateks.lv/ru/cenas/televizori/1417992-samsung-be55fx-h-lh55befhlguxen-55-"),
@@ -610,8 +604,7 @@ title(R, "Ringkasan: Hitung Karton per Palet di Loading Dock, 8 Kamera 20-30 fps
 header(R, 4, ["", "A. Beli putus", "B. Tahun pertama", "B. Per tahun berikutnya", "B. Total kontrak minimum"])
 SUM = [
     ("Uang keluar ke vendor", f"={A_REF['out']}", f"={B_REF['out']}", "=0", f"={B_REF['out']}"),
-    ("Harga ke klien (sebelum PPN)", f"={A_REF['total']}", f"={B_REF['year1']}", f"={B_REF['next']}", f"={B_REF['total']}"),
-    ("Tagihan termasuk PPN", f"={A_REF['bill']}", f"={B_REF['bill1']}", f"={B_REF['next']}*(1+{DK['ppn']})", f"={B_REF['total']}*(1+{DK['ppn']})"),
+    ("Harga ke klien (tanpa PPN)", f"={A_REF['total']}", f"={B_REF['year1']}", f"={B_REF['next']}", f"={B_REF['total']}"),
     ("Pendapatan bersih (B: cadangan terpakai semua)", f"={A_REF['net']}", None, None, f"={B_REF['net']}"),
     ("Pendapatan bersih (B: cadangan tidak terpakai)", None, None, None, f"={B_REF['net_unused']}"),
     ("Modal perangkat kembali (bulan ke-)", None, None, None, f"={B_REF['payback']}"),
