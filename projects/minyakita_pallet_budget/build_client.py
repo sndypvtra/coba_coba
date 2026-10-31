@@ -138,9 +138,17 @@ def line(ws, r, n, item, brand, spec, qty, unit, height=None):
     ws.row_dimensions[r].height = height or max(15, 13 * (int(longest) + 1))
 
 
-def totals(ws, r, first, last, label="Total (sebelum PPN)"):
-    put(ws, f"D{r}", label, bold=True, fill=TOTAL)
+def subtotal(ws, r, name, first, last):
+    for col in "BCDEFG":
+        ws[f"{col}{r}"].fill = TOTAL
+    put(ws, f"B{r}", f"Subtotal {name}", bold=True, fill=TOTAL)
     put(ws, f"G{r}", f"=SUM(G{first}:G{last})", bold=True, fmt=RP, fill=TOTAL)
+    return f"G{r}"
+
+
+def totals(ws, r, cells, label="Total (sebelum PPN)"):
+    put(ws, f"D{r}", label, bold=True, fill=TOTAL)
+    put(ws, f"G{r}", "=" + "+".join(cells), bold=True, fmt=RP, fill=TOTAL)
     put(ws, f"D{r + 1}", "PPN")
     put(ws, f"F{r + 1}", ppn, fmt="0%")
     put(ws, f"G{r + 1}", f"=G{r}*F{r + 1}", fmt=RP)
@@ -174,17 +182,22 @@ put(A, "A1", "Rincian Opsi A: Beli Putus", bold=True, size=14)
 put(A, "A2", "Semua perangkat, instalasi, aplikasi AI, dan web app menjadi milik perusahaan. Harga dalam Rupiah, belum termasuk PPN.",
     italic=True, color="595959")
 header(A, 4, COLS)
-r, n, cur, first = 5, 1, None, 5
-for cat, item, brand, spec, q, u in goods:
-    if cat != cur:
-        band(A, r, cat, 7)
-        r, cur = r + 1, cat
-    line(A, r, n, item, brand, spec, q, u if u else "termasuk")
-    r, n = r + 1, n + 1
-band(A, r, "Aplikasi AI, web app, dan implementasi", 7)
-r, n = service_lines(A, r + 1, n)
+r, n, subs = 5, 1, []
+for cat in dict.fromkeys(g[0] for g in goods):
+    band(A, r, cat, 7)
+    first = r = r + 1
+    for _, item, brand, spec, q, u in (g for g in goods if g[0] == cat):
+        line(A, r, n, item, brand, spec, q, u if u else "termasuk")
+        r, n = r + 1, n + 1
+    subs.append(subtotal(A, r, cat, first, r - 1))
+    r += 1
+SERVICES_BAND = "Aplikasi AI, web app, dan implementasi"
+band(A, r, SERVICES_BAND, 7)
+first = r + 1
+r, n = service_lines(A, first, n)
 line(A, r, n, f"Garansi layanan {warranty} bulan", "Setelah serah terima", SUPPORT_TEXT, 1, garansi_a)
-tot_a, grand_a = totals(A, r + 2, first, r)
+subs.append(subtotal(A, r + 1, SERVICES_BAND, first, r))
+tot_a, grand_a = totals(A, r + 3, subs)
 
 # ---------------------------------------------------------------- Rincian Opsi B
 B = sheet("Rincian Opsi B", WIDTHS)
@@ -196,15 +209,17 @@ band(B, 5, "Tahun pertama", 7)
 line(B, 6, 1, "Sewa perangkat dan pemasangan, 12 bulan", "Seluruh perangkat di daftar bawah",
      "8 kamera, PC server AI, penyimpanan rekaman dan backup, UPS, rak dan jaringan, monitor, TV dashboard dock; "
      "terpasang di 8 titik; penggantian perangkat rusak selama langganan", 1, rent_year1)
-r, n = service_lines(B, 7, 2)
-line(B, r, n, "Layanan support dan maintenance, 12 bulan", "Selama masa langganan", SUPPORT_TEXT, 1, support_year)
-tot_b1, grand_b1 = totals(B, r + 2, 6, r)
+band(B, 7, SERVICES_BAND, 7)
+r, n = service_lines(B, 8, 2)
+jasa_b = subtotal(B, r, SERVICES_BAND, 8, r - 1)
+band(B, r + 1, "Layanan", 7)
+line(B, r + 2, n, "Layanan support dan maintenance, 12 bulan", "Selama masa langganan", SUPPORT_TEXT, 1, support_year)
+tot_b1, grand_b1 = totals(B, r + 4, ["G6", jasa_b, f"G{r + 2}"])
 r = grand_b1 + 2
 band(B, r, "Perpanjangan tahun berikutnya", 7)
-first_renew = r + 1
 line(B, r + 1, 1, "Sewa perangkat, 12 bulan", "Perangkat yang sama", "Tetap terpasang, penggantian perangkat rusak", 1, rent_renew)
 line(B, r + 2, 2, "Layanan support dan maintenance, 12 bulan", "Sama seperti tahun pertama", SUPPORT_TEXT, 1, support_year)
-tot_bn, grand_bn = totals(B, r + 4, first_renew, r + 2)
+tot_bn, grand_bn = totals(B, r + 4, [f"G{r + 1}", f"G{r + 2}"])
 r = grand_bn + 2
 band(B, r, "Perangkat yang disediakan (tanpa harga, tetap milik penyedia)", 7)
 r += 1
