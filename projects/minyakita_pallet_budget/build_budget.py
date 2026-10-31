@@ -94,9 +94,9 @@ DEC = [
     ("late", "Batas telat bayar sebelum layanan dihentikan sementara (hari)", 30, "0", "Pengaman pembayaran Opsi B; ditulis di penawaran."),
     ("sw_target", "Total diterima developer di Opsi A (jasa aplikasi + garansi software + bagian margin)", 125000000, RP,
      "Nilai jual jasa aplikasi AI dan web app dihitung mundur dari angka ini (sheet Jasa INKINDO); nilai jasa yang sama dipakai di Opsi B."),
-    ("sup_pct", "Support software per tahun (% dari nilai jasa aplikasi AI dan web app)", 0.35, PCT,
-     "Acuan pasar: pemeliharaan aplikasi 15-25% per tahun dari biaya pembuatan, sampai 30-35% bila mencakup seluruh dukungan berkelanjutan. "
-     "Sistem AI perlu retraining berkala, jadi dipakai batas atas (sheet Sumber Harga S9)."),
+    ("sup_sw_year", "Support software AI dan web app per tahun (Opsi B, juga maintenance opsional Opsi A)", 33600000, RP,
+     "Sekitar 31% dari nilai jasa aplikasi per tahun. Acuan pasar: 15-25% dari biaya pembuatan, sampai 30-35% bila mencakup seluruh "
+     "dukungan berkelanjutan; sistem AI perlu retraining berkala (sheet Sumber Harga S9)."),
     ("cr_sw", "Tarif change request software (AI computer vision dan web app) per hari kerja", 1800000, RP,
      "Tarif harian Tenaga Ahli INKINDO Rp 1.615.000 x faktor nilai jual software, dibulatkan ke atas."),
     ("cr_inf", "Tarif change request infrastruktur per hari kerja", 900000, RP,
@@ -405,8 +405,8 @@ section(SA, r, "4. Termin dan opsi", 3)
 line(SA, r + 1, "DP 50% saat PO", f"=B{bill_row}*50%")
 line(SA, r + 2, "30% setelah instalasi selesai", f"=B{bill_row}*30%")
 line(SA, r + 3, "20% setelah uji paralel dan serah terima", f"=B{bill_row}*20%")
-line(SA, r + 4, "Maintenance opsional per tahun setelah garansi", f"=ROUNDUP(({'+'.join(GROUP_TOTAL[g] for g in SOFTWARE)})*{DK['sup_pct']},-5)+{SUPPORT_INF}*12",
-     nt="Support software (persentase nilai jasa aplikasi, sama dengan Opsi B) ditambah support infrastruktur, 12 bulan.")
+line(SA, r + 4, "Maintenance opsional per tahun setelah garansi", f"={DK['sup_sw_year']}+{SUPPORT_INF}*12",
+     nt="Support software (sama dengan Opsi B) ditambah support infrastruktur, 12 bulan.")
 
 # ------------------------------------------------------------------ Cadangan penggantian (Opsi B)
 CP = sheet("Cadangan Penggantian", [30, 34, 15, 11, 50, 12, 9, 16])
@@ -480,8 +480,8 @@ section(SB, r, "3. Langganan per tahun (selama kontrak minimum)", 3)
 sub0 = r + 1
 line(SB, r + 1, "Sewa perangkat dan pemasangan", f"=ROUNDUP(B8/(1-{DK['m_rent']})/({DK['term']}/12),-5)",
      nt="Uang keluar perangkat + margin sewa, dibagi rata selama kontrak minimum.")
-line(SB, r + 2, "Support software AI dan web app 12 bulan", f"=ROUNDUP(({'+'.join(GROUP_TOTAL[g] for g in SOFTWARE)})*{DK['sup_pct']},-5)",
-     nt="Persentase nilai jasa aplikasi per tahun (Keputusan Bisnis): pemantauan jarak jauh, retraining per kuartal, perbaikan bug, update keamanan, SLA.")
+line(SB, r + 2, "Support software AI dan web app 12 bulan", f"={DK['sup_sw_year']}",
+     nt="Keputusan Bisnis, sekitar 31% dari nilai jasa aplikasi: pemantauan jarak jauh, retraining per kuartal, perbaikan bug, update keamanan, SLA.")
 ref(B_REF, "sup_sw", SB, r + 2)
 line(SB, r + 3, "Support infrastruktur 12 bulan", f"={SUPPORT_INF}*12", nt="Kunjungan rutin perangkat (sheet Jasa INKINDO).")
 line(SB, r + 4, "Jaminan penggantian perangkat", f"=ROUNDUP({RESERVE_TOTAL}/({DK['term']}/12),-5)",
