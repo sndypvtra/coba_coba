@@ -84,20 +84,15 @@ SRC = [
      "https://hikvision-indonesia.com/daftar-harga-cctv-hikvision-terbaru-2026-seri-2mp-hingga-5mp/"),
     ("S14", "GSI Indonesia, Harga Pasang CCTV Per Titik 2026 (terbit 17 Apr 2026): IP camera jasa + material Rp 900.000 sampai Rp 1.500.000 per titik. Dipakai batas atas.",
      "https://gsi-indo.com/2026/04/17/harga-pasang-cctv-per-titik/"),
-    ("S15", "Okezone Economy, Berapa Gaji Engineering AI (28 Mei 2026): level menengah Rp 16 juta sampai Rp 25 juta per bulan. Dipakai nilai tengah.",
+    ("S15", "Acuan tarif tim. Okezone Economy, Berapa Gaji Engineering AI (28 Mei 2026): level menengah Rp 16 juta sampai Rp 25 juta per bulan. Dipakai nilai tengah.",
      "https://economy.okezone.com/read/2026/05/28/320/3221176/berapa-gaji-engineering-ai-segini-kisarannya?page=all"),
-    ("S16", "Indeed Indonesia, gaji Full Stack Developer di Jakarta: rata-rata Rp 10.203.433 per bulan (49 laporan, diperbarui 15 Agu 2026)",
+    ("S16", "Acuan tarif tim. Indeed Indonesia, gaji Full Stack Developer di Jakarta: rata-rata Rp 10.203.433 per bulan (49 laporan, diperbarui 15 Agu 2026)",
      "https://id.indeed.com/career/full-stack-developer/salaries/Jakarta"),
-    ("S17", "LokerID, gaji Manajemen dan Strategi IT di DKI Jakarta: rata-rata Rp 13,3 juta per bulan",
+    ("S17", "Acuan tarif tim. LokerID, gaji Manajemen dan Strategi IT di DKI Jakarta: rata-rata Rp 13,3 juta per bulan",
      "https://www.loker.id/gaji/information-technology/manajemen-it/jakarta"),
-    ("S18", "Indeed Indonesia, gaji Staf Teknisi di Jakarta: Rp 4.912.597 per bulan (107 laporan)",
+    ("S18", "Acuan tarif tim. Indeed Indonesia, gaji Staf Teknisi di Jakarta: Rp 4.912.597 per bulan (107 laporan)",
      "https://id.indeed.com/salaries/staf-teknisi-Salaries"),
-    ("S19", "BPJS Ketenagakerjaan, besaran iuran pemberi kerja: JHT 3,7%, JKK 0,24% (risiko sangat rendah), JKM 0,3%, JP 2%",
-     "https://www.bpjsketenagakerjaan.go.id/artikel/18913/artikel-berapa-besaran-iuran-jht,-jkk,-jkm,-jp-dan-jkp"),
-    ("S20", "Detik Finance, iuran BPJS Kesehatan pekerja penerima upah 2026: 4% ditanggung pemberi kerja",
-     "https://finance.detik.com/moneter/d-8287514/daftar-iuran-bpjs-kesehatan-berlaku-1-januari-2026"),
-    ("S21", "Permenaker No. 6 Tahun 2016: THR keagamaan 1 bulan upah per tahun", "Peraturan Menteri Ketenagakerjaan No. 6 Tahun 2016"),
-    ("S22", "PMK No. 131 Tahun 2024: PPN 12% dengan DPP 11/12, tarif efektif 11% untuk barang dan jasa non mewah", "Peraturan Menteri Keuangan No. 131 Tahun 2024"),
+    ("S19", "PMK No. 131 Tahun 2024: PPN 12% dengan DPP 11/12, tarif efektif 11% untuk barang dan jasa non mewah", "Peraturan Menteri Keuangan No. 131 Tahun 2024"),
 ]
 SS = sheet("Sumber Harga", [7, 90, 70])
 title(SS, "Sumber Harga", f"Semua harga diambil dari sumber publik di bawah, diakses {ACCESSED}. Harga toko dapat berubah; minta penawaran tertulis sebelum pembelian.")
@@ -186,63 +181,32 @@ put(I, f"B{r}", "Tidak termasuk: alat kerja ketinggian (umumnya memakai forklift
 I.merge_cells(f"B{r}:G{r}")
 I.row_dimensions[r].height = 28
 
-# ------------------------------------------------------------------ Tim & Tarif
-T = sheet("Tim & Tarif", [44, 17, 10, 17, 17, 8])
-title(T, "Biaya Tim per Hari Kerja", "Gaji pasar Jakarta + THR + iuran BPJS pemberi kerja, dibagi hari kerja per bulan.")
-header(T, 4, ["Komponen", "Nilai", "", "", "", "Sumber"])
-rows = [
-    ("Iuran BPJS Kesehatan (pemberi kerja)", 0.04, PCT, "S20"),
-    ("JHT (pemberi kerja)", 0.037, PCT, "S19"),
-    ("JKK, kelompok risiko sangat rendah", 0.0024, PCT, "S19"),
-    ("JKM", 0.003, PCT, "S19"),
-    ("JP (pemberi kerja)", 0.02, PCT, "S19"),
-]
-r = 5
-for lab, v, fmt, src in rows:
-    put(T, f"A{r}", lab)
-    put(T, f"B{r}", v, color=BLUE, fmt=fmt)
-    put(T, f"F{r}", src)
-    r += 1
-put(T, f"A{r}", "Total iuran pemberi kerja", bold=True, fill=TOTAL)
-put(T, f"B{r}", f"=SUM(B5:B{r - 1})", bold=True, fmt=PCT, fill=TOTAL)
-BPJS = f"'Tim & Tarif'!$B${r}"
-r += 1
-put(T, f"A{r}", "THR per tahun (bulan upah)")
-put(T, f"B{r}", 1, color=BLUE, fmt="0")
-put(T, f"F{r}", "S21")
-THR = f"'Tim & Tarif'!$B${r}"
-r += 1
-put(T, f"A{r}", "Hari kerja per bulan")
-put(T, f"B{r}", 21, color=BLUE, fmt="0")
-put(T, f"C{r}", "5 hari kerja x 52 minggu / 12 bulan, dibulatkan", italic=True, color=GREY)
-DAYS = f"'Tim & Tarif'!$B${r}"
-r += 2
-header(T, r, ["Peran", "Gaji per bulan (Rp)", "", "Biaya per bulan termasuk THR dan BPJS (Rp)", "Biaya per hari kerja (Rp)", "Sumber"])
-r += 1
-ROLES = [
+# ------------------------------------------------------------------ Implementasi
+M = sheet("Implementasi", [5, 56, 8, 8, 9, 9, 16, 42])
+title(M, "Pembangunan Web App dan AI + Implementasi oleh Tim CV", "Biaya jasa tim CV = hari kerja x tarif harian. Tarif harian mengacu gaji pasar Jakarta per peran dibagi hari kerja.")
+section(M, 4, "1. Tarif jasa tim CV per hari kerja", 8)
+header(M, 5, ["", "Peran", "", "", "", "Acuan per bulan (Rp)", "Tarif per hari (Rp)", "Sumber acuan"])
+put(M, "B6", "Hari kerja per bulan")
+put(M, "G6", 21, color=BLUE, fmt="0")
+put(M, "H6", "5 hari kerja x 52 minggu / 12 bulan, dibulatkan", color=GREY)
+DAYS = "Implementasi!$G$6"
+RATE = {}
+r = 7
+for key, lab, sal, src in [
     ("pm", "Project Manager IT", 13300000, "S17"),
     ("ai", "AI / Computer Vision Engineer (level menengah)", 20500000, "S15"),
     ("fs", "Fullstack Developer (web app)", 10203433, "S16"),
     ("fe", "Teknisi lapangan", 4912597, "S18"),
-]
-RATE = {}
-for key, lab, sal, src in ROLES:
-    put(T, f"A{r}", lab)
-    put(T, f"B{r}", sal, color=BLUE, fmt=RP)
-    put(T, f"D{r}", f"=B{r}*(12+{THR})/12*(1+{BPJS})", fmt=RP)
-    put(T, f"E{r}", f"=D{r}/{DAYS}", fmt=RP, bold=True)
-    put(T, f"F{r}", src)
-    RATE[key] = f"'Tim & Tarif'!$E${r}"
+]:
+    put(M, f"B{r}", lab)
+    put(M, f"F{r}", sal, color=BLUE, fmt=RP)
+    put(M, f"G{r}", f"=F{r}/{DAYS}", fmt=RP, bold=True)
+    put(M, f"H{r}", src)
+    RATE[key] = f"Implementasi!$G${r}"
     r += 1
-r += 1
-put(T, f"A{r}", "Catatan: perhitungan iuran memakai gaji penuh tanpa batas upah JP dan BPJS Kesehatan, sehingga sedikit lebih tinggi dari aktual (konservatif).", wrap=True, italic=True, color="595959")
-T.merge_cells(f"A{r}:F{r}")
-T.row_dimensions[r].height = 28
-
-# ------------------------------------------------------------------ Implementasi
-M = sheet("Implementasi", [5, 56, 8, 8, 9, 9, 16, 42])
-title(M, "Pembangunan Web App dan AI + Implementasi", "Estimasi hari kerja per peran (bukan harga). Biaya = hari kerja x biaya harian di sheet Tim & Tarif.")
-header(M, 4, ["No", "Pekerjaan", "PM", "AI/CV", "Fullstack", "Teknisi", "Biaya (Rp)", "Hasil"])
+section(M, r + 1, "2. Pekerjaan dan biaya jasa tim", 8)
+ACT0 = r + 3
+header(M, ACT0 - 1, ["No", "Pekerjaan", "PM", "AI/CV", "Fullstack", "Teknisi", "Biaya jasa tim (Rp)", "Hasil"])
 ACTS = [
     ("Survey lokasi, layout dock, desain posisi kamera dan zona cek palet", 1, 1, 0, 1, "Gambar posisi kamera per dock"),
     ("Pengambilan dan pelabelan gambar karton dan palet dari CCTV lokasi", 0, 2, 0, 4, "Dataset karton dan palet Minyakita"),
@@ -255,7 +219,7 @@ ACTS = [
     ("Training pengguna, SOP, serah terima", 2, 0, 0, 1, "SOP checker dan supervisor"),
     ("Manajemen proyek", 8, 0, 0, 0, "Rapat mingguan, laporan progres"),
 ]
-r = 5
+r = ACT0
 for i, (act, pm, ai, fs, fe, out) in enumerate(ACTS, 1):
     put(M, f"A{r}", i)
     put(M, f"B{r}", act, wrap=True)
@@ -264,9 +228,9 @@ for i, (act, pm, ai, fs, fe, out) in enumerate(ACTS, 1):
     put(M, f"G{r}", f"=C{r}*{RATE['pm']}+D{r}*{RATE['ai']}+E{r}*{RATE['fs']}+F{r}*{RATE['fe']}", fmt=RP)
     put(M, f"H{r}", out, wrap=True, color=GREY)
     r += 1
-put(M, f"B{r}", "Total pembangunan dan implementasi", bold=True, fill=TOTAL)
+put(M, f"B{r}", "Total biaya jasa tim CV", bold=True, fill=TOTAL)
 for col in "CDEFG":
-    put(M, f"{col}{r}", f"=SUM({col}5:{col}{r - 1})", bold=True, fmt=RP if col == "G" else "0", fill=TOTAL)
+    put(M, f"{col}{r}", f"=SUM({col}{ACT0}:{col}{r - 1})", bold=True, fmt=RP if col == "G" else "0", fill=TOTAL)
 IMPL_TOTAL = f"Implementasi!$G${r}"
 r += 2
 put(M, f"B{r}", "Durasi proyek dari survey sampai serah terima (bulan), sekitar 8 sampai 10 minggu", italic=True, color="595959")
@@ -275,7 +239,7 @@ DURATION = f"Implementasi!$G${r}"
 
 # ------------------------------------------------------------------ Layanan (support)
 L = sheet("Layanan", [52, 9, 9, 9, 9, 16, 40])
-title(L, "Layanan Support (on-site, tanpa cloud)", "Hari kerja per bulan per peran. Skenario A: garansi software 3 bulan. Skenario B: selama masa langganan.")
+title(L, "Layanan Support oleh Tim CV (on-site, tanpa cloud)", "Hari kerja per bulan x tarif harian di sheet Implementasi. Skenario A: garansi software 3 bulan. Skenario B: selama masa langganan.")
 header(L, 4, ["Kegiatan per bulan", "PM", "AI/CV", "Fullstack", "Teknisi", "Biaya per bulan (Rp)", "Keterangan"])
 SUPPORT = [
     ("Kunjungan rutin: cek kamera, bersihkan lensa, cek server dan rekaman", 0, 0.5, 0, 1, "1 kali per bulan"),
@@ -319,7 +283,7 @@ for key, lab, v, fmt, note in DEC:
     put(K, f"C{r}", note, wrap=True, color=GREY)
     DK[key] = f"'Keputusan Bisnis'!$B${r}"
     r += 1
-put(K, f"A{r + 1}", "PPN efektif (S22)")
+put(K, f"A{r + 1}", "PPN efektif (S19)")
 put(K, f"B{r + 1}", 0.11, color=BLUE, fmt=PCT)
 put(K, f"C{r + 1}", "Ditambahkan di invoice. Untuk jasa dan sewa (skenario B), klien memotong PPh 23 sebesar 2%.", wrap=True, color=GREY)
 DK["ppn"] = f"'Keputusan Bisnis'!$B${r + 1}"
@@ -338,8 +302,8 @@ title(SA, "Skenario A: Beli Putus", "Klien membeli semua: kamera, NVR, PC server
 section(SA, 4, "1. Biaya kita", 3)
 line(SA, 5, "Hardware", f"={HW_TOTAL}", color=GREEN)
 line(SA, 6, "Instalasi", f"={INST_TOTAL}", color=GREEN)
-line(SA, 7, "Pembangunan web app, AI, dan implementasi", f"={IMPL_TOTAL}", color=GREEN)
-line(SA, 8, "Support selama garansi software", f"={SUPPORT_M}*{DK['warranty']}", color=GREEN)
+line(SA, 7, "Jasa tim CV: pembangunan web app, AI, dan implementasi", f"={IMPL_TOTAL}", color=GREEN)
+line(SA, 8, "Jasa tim CV: support selama garansi software", f"={SUPPORT_M}*{DK['warranty']}", color=GREEN)
 line(SA, 9, "Total biaya kita", "=SUM(B5:B8)", bold=True, fill=TOTAL)
 section(SA, 11, "2. Harga ke klien", 3)
 line(SA, 12, "Hardware", f"=B5*(1+{DK['mk_hw']})")
@@ -365,11 +329,11 @@ title(SB, "Skenario B: Langganan per Tahun", "Semua infrastruktur milik kita (ka
 section(SB, 4, "1. Investasi kita di depan", 3)
 line(SB, 5, "Hardware", f"={HW_TOTAL}", color=GREEN)
 line(SB, 6, "Instalasi", f"={INST_TOTAL}", color=GREEN)
-line(SB, 7, "Pembangunan web app, AI, dan implementasi", f"={IMPL_TOTAL}", color=GREEN)
+line(SB, 7, "Jasa tim CV: pembangunan web app, AI, dan implementasi", f"={IMPL_TOTAL}", color=GREEN)
 line(SB, 8, "Total investasi", "=SUM(B5:B7)", bold=True, fill=TOTAL)
 section(SB, 10, "2. Biaya per bulan", 3)
 line(SB, 11, "Pemulihan investasi per bulan", f"=B8/{DK['n']}", note="Dibagi rata selama masa kontrak minimum.")
-line(SB, 12, "Layanan support", f"={SUPPORT_M}", color=GREEN)
+line(SB, 12, "Jasa tim CV: layanan support", f"={SUPPORT_M}", color=GREEN)
 line(SB, 13, "Total biaya per bulan", "=B11+B12", bold=True, fill=TOTAL)
 section(SB, 15, "3. Harga ke klien", 3)
 line(SB, 16, "Langganan per tahun (sebelum PPN)", f"=ROUNDUP(B13*12/(1-{DK['m_b']}),-6)", bold=True, fill=TOTAL)
@@ -411,6 +375,8 @@ SUM = [
     ("Balik modal (bulan)", '="langsung (DP 50%)"', "='Skenario B'!B26", NUM),
     ("Total dibayar klien selama 36 bulan (sebelum PPN)", "='Skenario A'!B15", f"='Skenario B'!B16*{DK['n']}/12", RP),
     ("Total laba kita selama 36 bulan", "='Skenario A'!B20", "='Skenario B'!B25", RP),
+    ("Jasa tim CV di dalam biaya, 36 bulan", "='Skenario A'!B7+'Skenario A'!B8", f"='Skenario B'!B7+'Skenario B'!B12*{DK['n']}", RP),
+    ("Total diterima tim CV selama 36 bulan (jasa tim + laba)", "='Skenario A'!B7+'Skenario A'!B8+'Skenario A'!B20", f"='Skenario B'!B7+'Skenario B'!B12*{DK['n']}+'Skenario B'!B25", RP),
     ("Laba per bulan setelah kontrak diperpanjang", '="-"', "='Skenario B'!B27", RP),
 ]
 r = 5
