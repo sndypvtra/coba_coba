@@ -228,7 +228,7 @@ def full_breakdown(ws, r):
 # ---------------------------------------------------------------- Rincian Opsi A
 A = sheet("Rincian Opsi A", WIDTHS)
 put(A, "A1", "Rincian Opsi A: Beli Putus", bold=True, size=14)
-put(A, "A2", "Semua perangkat, instalasi, aplikasi AI, dan web app menjadi milik perusahaan. Harga dalam Rupiah, tidak dikenakan PPN.",
+put(A, "A2", "Semua perangkat, instalasi, aplikasi AI, dan web app menjadi milik perusahaan. Harga dalam Rupiah.",
     italic=True, color="595959")
 header(A, 4, COLS)
 r, subs = full_breakdown(A, 5)
@@ -239,7 +239,7 @@ B = sheet("Rincian Opsi B", WIDTHS)
 put(B, "A1", f"Rincian Opsi B: Sewa dan Langganan, Kontrak Minimum {term} Bulan", bold=True, size=14)
 put(B, "A2", "Perangkat disediakan, dipasang, dan dirawat penyedia. Jasa aplikasi dan jasa infrastruktur dibayar sekali; "
     "langganan dibayar di muka per 12 bulan. "
-    "Harga dalam Rupiah, tidak dikenakan PPN.", italic=True, color="595959")
+    "Harga dalam Rupiah.", italic=True, color="595959")
 header(B, 4, COLS)
 band(B, 5, SOFTWARE_BAND + " (dibayar sekali)", 7)
 r, n = service_lines(B, 6, 1, SOFTWARE)
@@ -300,7 +300,7 @@ put(R, "A1", "Penawaran: Sistem Hitung Karton per Palet di Loading Dock (8 Kamer
 put(R, "A2", "Kepada: PT [nama perusahaan], Gudang Minyakita  ·  Tanggal: [isi tanggal]  ·  Berlaku 14 hari sejak tanggal penawaran",
     italic=True, color="595959")
 header(R, 4, ["", "Opsi A: Beli putus", "Opsi B: Tahun ke-1", f"Opsi B: Tahun ke-2 s.d. {YEARS} (per tahun)"])
-put(R, "A5", "Total harga (tanpa PPN)", bold=True, fill=TOTAL)
+put(R, "A5", "Total harga", bold=True, fill=TOTAL)
 for col, f in zip("BCD", (f"='Rincian Opsi A'!G{tot_a}", f"='Rincian Opsi B'!{year_rows[0]}", f"='Rincian Opsi B'!{year_rows[1]}")):
     put(R, f"{col}5", f, fmt=RP, right=True, bold=True, fill=TOTAL)
 r = 6

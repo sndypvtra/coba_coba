@@ -96,7 +96,7 @@ DEC = [
      "Nilai jual jasa aplikasi AI dan web app dihitung mundur dari angka ini (sheet Jasa INKINDO); nilai jasa yang sama dipakai di Opsi B."),
     ("sup_sw_year", "Support software AI dan web app per tahun (Opsi B, juga maintenance opsional Opsi A)", 33600000, RP,
      "Sekitar 31% dari nilai jasa aplikasi per tahun. Acuan pasar: 15-25% dari biaya pembuatan, sampai 30-35% bila mencakup seluruh "
-     "dukungan berkelanjutan; sistem AI perlu retraining berkala (sheet Sumber Harga S9)."),
+     "dukungan berkelanjutan; sistem AI perlu retraining berkala (sheet Sumber Harga S8)."),
     ("cr_sw", "Tarif change request software (AI computer vision dan web app) per hari kerja", 1800000, RP,
      "Tarif harian Tenaga Ahli INKINDO Rp 1.615.000 x faktor nilai jual software, dibulatkan ke atas."),
     ("cr_inf", "Tarif change request infrastruktur per hari kerja", 900000, RP,
@@ -201,7 +201,7 @@ put(RB, f"J{r}", link, wrap=True, color="0563C1")
 RB[f"J{r}"].hyperlink = link
 INST_COST, INST_SELL = f"RAB!$G${r}", f"RAB!$I${r}"
 r += 2
-note(RB, r, "Harga Tokopedia dari RAB Factory_Vision_Presentation.pptx (dicek 12 Okt 2026, umumnya sudah termasuk PPN). PC server: Agres Komputer Official, dicek 31 Okt 2026. "
+note(RB, r, "Harga Tokopedia dari RAB Factory_Vision_Presentation.pptx (dicek 12 Okt 2026). PC server: Agres Komputer Official, dicek 31 Okt 2026. "
      "Panjang kabel dan conduit adalah perkiraan; angka final setelah survey dock.", 10, 30)
 
 # ------------------------------------------------------------------ Jasa (INKINDO 2026)
@@ -386,7 +386,7 @@ for g, cell in GROUP_TOTAL.items():
     r += 1
 line(SA, r, "Garansi software AI dan web app", f"={SUPPORT_SW}*{DK['warranty']}", nt="Retraining model dan update web app selama masa garansi.")
 line(SA, r + 1, "Garansi infrastruktur", f"={SUPPORT_INF}*{DK['warranty']}", nt="Kunjungan rutin perangkat selama masa garansi.")
-line(SA, r + 2, "Total harga", f"=SUM(B11:B{r + 1})", bold=True, fill=TOTAL, nt="Tanpa PPN.")
+line(SA, r + 2, "Total harga", f"=SUM(B11:B{r + 1})", bold=True, fill=TOTAL)
 ref(A_REF, "total", SA, r + 2)
 jasa_end, total_row, bill_row = r + 1, r + 2, r + 2
 r += 4
@@ -485,7 +485,7 @@ line(SB, r + 4, "Jaminan penggantian perangkat", f"=ROUNDUP({RESERVE_TOTAL}/({DK
 line(SB, r + 5, "Langganan per tahun", f"=SUM(B{r + 1}:B{r + 4})", bold=True, fill=TOTAL)
 rent, sub = r + 1, r + 5
 r += 7
-section(SB, r, "4. Tagihan ke klien (tanpa PPN)", 3)
+section(SB, r, "4. Tagihan ke klien", 3)
 line(SB, r + 1, "Tahun pertama (jasa sekali bayar + langganan)", f"=B{setup}+B{sub}", bold=True)
 line(SB, r + 2, "Per tahun berikutnya", f"=B{sub}")
 line(SB, r + 3, "Total selama kontrak minimum", f"=B{setup}+B{sub}*{DK['term']}/12", bold=True, fill=TOTAL)
@@ -574,22 +574,21 @@ SS = sheet("Sumber Harga", [7, 95, 70])
 title(SS, "Sumber Harga", "Harga toko dapat berubah; minta penawaran tertulis sebelum membeli.")
 header(SS, 4, ["Kode", "Sumber", "Tautan"])
 for i, (c, d, u) in enumerate([
-    ("S1", "RAB Factory_Vision_Presentation.pptx (slide RAB 1/3 sampai 3/3): harga Tokopedia dicek 12 Okt 2026, umumnya sudah termasuk PPN. Tautan per item ada di sheet RAB.", "Factory_Vision_Presentation.pptx"),
+    ("S1", "RAB Factory_Vision_Presentation.pptx (slide RAB 1/3 sampai 3/3): harga Tokopedia dicek 12 Okt 2026. Tautan per item ada di sheet RAB.", "Factory_Vision_Presentation.pptx"),
     ("S2", "Agres Komputer Official (Tokopedia): AGRES CRYO PC ULTRA 5 245KF RTX 5070 TI 16G / 32GB 1TB, Rp 35.000.000 (dicek 31 Okt 2026 lewat hasil pencarian). Konfirmasi varian, PSU, dan casing ke penjual.", AGRES),
-    ("S3", "Pembanding: e-katalog INAPROC/LKPP, AGRES CRYO PC ULTRA 5 245KF RTX 5070 12G 32GB/1TB + Win 11 Pro: Rp 34.234.234 + PPN Rp 3.765.766. Situs Agres (agres.id, agreskomputer.com) saat ini tidak menampilkan stok PC Ready/workstation.",
+    ("S3", "Pembanding: e-katalog INAPROC/LKPP, AGRES CRYO PC ULTRA 5 245KF RTX 5070 12G 32GB/1TB + Win 11 Pro: total Rp 38.000.000. Situs Agres (agres.id, agreskomputer.com) saat ini tidak menampilkan stok PC Ready/workstation.",
      "https://katalog.inaproc.id/pt-bangun-jaya-pedia/agres-cryo-pc-ultra-5-245kf-rtx-5070-12g-32gb-1tb-win-11-pro-rakitan-pc-gaming"),
     ("S4", "INKINDO, Pedoman Standar Minimal Tahun 2026 Remunerasi (Billing Rate): Tabel 3-26 (Tenaga Ahli tanpa SKK) dan Tabel 4-26 (Teknisi/Analis); SBOH = SBOB / 22 x 1,1.", "https://www.inkindo.org/documents/ikdweb-billing-rate-2026.pdf"),
     ("S5", "GSI Indonesia, Harga Pasang CCTV Per Titik 2026: IP camera jasa saja Rp 200.000 sampai Rp 350.000 per titik. Dipakai batas atas.", "https://gsi-indo.com/2026/04/17/harga-pasang-cctv-per-titik/"),
-    ("S6", "PPN tidak dipakai: penagihan langsung atas nama pribadi (bukan PKP), sesuai keputusan tim. PPh atas jasa tetap berlaku.", "Keputusan tim"),
-    ("S7", "Samsung BE55FX-H: spesifikasi toko mencantumkan Tizen dan web browser bawaan, jadi TV dock membuka dashboard tanpa mini PC. "
+    ("S6", "Samsung BE55FX-H: spesifikasi toko mencantumkan Tizen dan web browser bawaan, jadi TV dock membuka dashboard tanpa mini PC. "
            "Stasiun operator (mini PC, monitor, keyboard) dihapus karena klien memantau dari laptop sendiri lewat VPN perusahaan. "
            "Cek browser di SKU LH55BEFHVGKXXD saat pembelian.", "https://www.dateks.lv/ru/cenas/televizori/1417992-samsung-be55fx-h-lh55befhlguxen-55-"),
-    ("S9", "Biaya pemeliharaan aplikasi per tahun: vendor Indonesia 10-15% dari biaya pembuatan (website); benchmark aplikasi custom 15-25%, "
+    ("S7", "Garansi pabrik per perangkat untuk cadangan penggantian Opsi B: tautan sumber ada di tiap baris sheet Cadangan Penggantian. "
+           "Bila sumber berbeda, dipakai masa garansi terpendek. Konfirmasi masa garansi resmi Indonesia saat pembelian.", "Sheet Cadangan Penggantian"),
+    ("S8", "Biaya pemeliharaan aplikasi per tahun: vendor Indonesia 10-15% dari biaya pembuatan (website); benchmark aplikasi custom 15-25%, "
            "sampai 30-35% bila mencakup seluruh dukungan berkelanjutan; biaya maintenance lisensi software 17-22%, kini 20-25%.",
      "https://next-it.co.id/blog/berapa-biaya-buat-website-profesional-di-2026-panduan-lengkap-untuk-pemilik-bisnis ; "
      "https://closeloop.com/blog/mobile-app-maintenance-cost-after-launch/ ; https://avasant.com/report/high-software-maintenance-fees-and-what-to-do-about-them/"),
-    ("S8", "Garansi pabrik per perangkat untuk cadangan penggantian Opsi B: tautan sumber ada di tiap baris sheet Cadangan Penggantian. "
-           "Bila sumber berbeda, dipakai masa garansi terpendek. Konfirmasi masa garansi resmi Indonesia saat pembelian.", "Sheet Cadangan Penggantian"),
 ], 5):
     put(SS, f"A{i}", c, bold=True)
     put(SS, f"B{i}", d, wrap=True)
@@ -604,7 +603,7 @@ title(R, "Ringkasan: Hitung Karton per Palet di Loading Dock, 8 Kamera 20-30 fps
 header(R, 4, ["", "A. Beli putus", "B. Tahun pertama", "B. Per tahun berikutnya", "B. Total kontrak minimum"])
 SUM = [
     ("Uang keluar ke vendor", f"={A_REF['out']}", f"={B_REF['out']}", "=0", f"={B_REF['out']}"),
-    ("Harga ke klien (tanpa PPN)", f"={A_REF['total']}", f"={B_REF['year1']}", f"={B_REF['next']}", f"={B_REF['total']}"),
+    ("Harga ke klien", f"={A_REF['total']}", f"={B_REF['year1']}", f"={B_REF['next']}", f"={B_REF['total']}"),
     ("Pendapatan bersih (B: cadangan terpakai semua)", f"={A_REF['net']}", None, None, f"={B_REF['net']}"),
     ("Pendapatan bersih (B: cadangan tidak terpakai)", None, None, None, f"={B_REF['net_unused']}"),
     ("Modal perangkat kembali (bulan ke-)", None, None, None, f"={B_REF['payback']}"),
