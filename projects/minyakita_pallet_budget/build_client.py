@@ -42,6 +42,8 @@ total_a = by_label(sa, "Total harga (sebelum PPN)")
 gar_sw_a = by_label(sa, "Garansi software AI dan web app")
 gar_inf_a = by_label(sa, "Garansi infrastruktur")
 maint_a = by_label(sa, "Maintenance opsional per tahun setelah garansi")
+cr_sw = by_label(kb, "Tarif change request software (AI computer vision dan web app) per hari kerja")
+cr_inf = by_label(kb, "Tarif change request infrastruktur per hari kerja")
 term = by_label(kb, "Kontrak minimum Opsi B (bulan)")
 late = by_label(kb, "Batas telat bayar sebelum layanan dihentikan sementara (hari)")
 setup_b = by_label(sb, "Total jasa sekali bayar")
@@ -175,6 +177,9 @@ SERVICE_TEXT = {
     "Manajemen Proyek": "Pengelolaan proyek selama sekitar 16 minggu",
 }
 SUPPORT_SW_TEXT = "Pemantauan akurasi dan retraining model, perbaikan dan update web app"
+SUPPORT_SW_B_TEXT = ("Pemantauan sistem jarak jauh, review akurasi bulanan, retraining model per kuartal, perbaikan bug, "
+                     "update web app dan keamanan, penyesuaian konfigurasi (zona, ambang, akun, format laporan); "
+                     "respons gangguan kritis maksimal 1x24 jam")
 SUPPORT_INF_TEXT = "Kunjungan rutin bulanan: cek kamera, bersihkan lensa, cek server, jaringan, dan rekaman"
 WIDTHS = [5, 30, 28, 52, 6, 17, 18]
 COLS = ["No", "Item", "Merek / Tipe", "Spesifikasi / lingkup", "Qty", "Harga satuan (Rp)", "Jumlah (Rp)"]
@@ -253,7 +258,7 @@ band(B, r, "LANGGANAN PER TAHUN (dibayar di muka per 12 bulan)", 7)
 first = r + 1
 line(B, r + 1, 1, "Sewa perangkat dan pemasangan", "Seluruh perangkat di daftar bawah",
      "8 kamera, PC server AI, penyimpanan rekaman dan backup, UPS, rak dan jaringan, TV status loading dock; terpasang di 8 titik", 1, rent_b)
-line(B, r + 2, 2, "Support software AI dan web app", "12 bulan, menggantikan garansi", SUPPORT_SW_TEXT, 1, sup_sw_b)
+line(B, r + 2, 2, "Support software AI dan web app", "12 bulan, menggantikan garansi", SUPPORT_SW_B_TEXT, 1, sup_sw_b)
 line(B, r + 3, 3, "Support infrastruktur", "12 bulan, menggantikan garansi", SUPPORT_INF_TEXT, 1, sup_inf_b)
 line(B, r + 4, 4, "Jaminan penggantian perangkat", "Kerusakan karena pemakaian normal",
      "Perangkat rusak diganti unit setara oleh penyedia, termasuk setelah garansi pabrik habis", 1, reserve_b)
@@ -398,6 +403,19 @@ r = bullets(R, r + 1, [
     "Kedua opsi: kerusakan karena kelalaian, salah pakai, benturan forklift atau alat angkut, bencana alam, banjir, kebakaran, petir, "
     "tegangan listrik tidak stabil, atau perubahan instalasi oleh pihak lain ditanggung perusahaan sesuai harga perangkat dan jasa saat itu.",
     "Kedua opsi: perusahaan memberikan akses lokasi untuk pemasangan dan kunjungan maintenance terjadwal.",
+], 4, 30)
+r += 1
+band(R, r, "Penambahan atau perubahan fitur (change request)", 4)
+r = bullets(R, r + 1, [
+    "Garansi dan langganan support mencakup perbaikan bug dan penyesuaian konfigurasi pada fitur yang tercantum di penawaran ini. "
+    "Fitur baru atau perubahan alur di luar lingkup tersebut diperlakukan sebagai change request dan ditagih terpisah.",
+    "Prosedur: perusahaan mengajukan permintaan tertulis; dalam 5 hari kerja penyedia menyampaikan lingkup, estimasi hari kerja, biaya, "
+    "dan dampak jadwal; pekerjaan dimulai setelah persetujuan tertulis (PO atau adendum).",
+    f"Tarif: software (AI computer vision dan web app) Rp {cr_sw:,.0f} per hari kerja; infrastruktur Rp {cr_inf:,.0f} per hari kerja; "
+    "minimal 1 hari kerja per permintaan. Perangkat atau material tambahan ditagih sesuai harga saat itu.".replace(",", "."),
+    "Pembayaran change request: 50% saat persetujuan, 50% setelah fitur diserahkan dan diuji bersama. Tarif berlaku selama masa kontrak "
+    "atau 12 bulan sejak serah terima (Opsi A); setelahnya dapat disesuaikan.",
+    "Opsi B: fitur hasil change request menjadi bagian sistem yang dirawat dalam langganan tanpa tambahan biaya support.",
 ], 4, 30)
 r += 1
 band(R, r, "Catatan", 4)

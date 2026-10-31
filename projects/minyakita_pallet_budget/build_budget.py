@@ -94,6 +94,13 @@ DEC = [
     ("late", "Batas telat bayar sebelum layanan dihentikan sementara (hari)", 30, "0", "Pengaman pembayaran Opsi B; ditulis di penawaran."),
     ("sw_target", "Total diterima developer di Opsi A (jasa aplikasi + garansi software + bagian margin)", 125000000, RP,
      "Nilai jual jasa aplikasi AI dan web app dihitung mundur dari angka ini (sheet Jasa INKINDO); nilai jasa yang sama dipakai di Opsi B."),
+    ("sup_pct", "Support software per tahun (% dari nilai jasa aplikasi AI dan web app)", 0.35, PCT,
+     "Acuan pasar: pemeliharaan aplikasi 15-25% per tahun dari biaya pembuatan, sampai 30-35% bila mencakup seluruh dukungan berkelanjutan. "
+     "Sistem AI perlu retraining berkala, jadi dipakai batas atas (sheet Sumber Harga S9)."),
+    ("cr_sw", "Tarif change request software (AI computer vision dan web app) per hari kerja", 1800000, RP,
+     "Tarif harian Tenaga Ahli INKINDO Rp 1.615.000 x faktor nilai jual software, dibulatkan ke atas."),
+    ("cr_inf", "Tarif change request infrastruktur per hari kerja", 900000, RP,
+     "Tarif harian Teknisi Jaringan TI INKINDO Rp 845.000, dibulatkan ke atas. Perangkat tambahan ditagih terpisah."),
     ("split_dev", "Bagian developer dari margin perangkat/sewa", 0.50, PCT, "Tanpa kas CV: margin dibagi langsung ke 2 orang, sisanya untuk infrastruktur."),
     ("ppn", "PPN efektif (isi 0 bila belum PKP)", 0.11, PCT, "PMK 131/2024: 12% x DPP 11/12."),
 ]
@@ -398,7 +405,8 @@ section(SA, r, "4. Termin dan opsi", 3)
 line(SA, r + 1, "DP 50% saat PO", f"=B{bill_row}*50%")
 line(SA, r + 2, "30% setelah instalasi selesai", f"=B{bill_row}*30%")
 line(SA, r + 3, "20% setelah uji paralel dan serah terima", f"=B{bill_row}*20%")
-line(SA, r + 4, "Maintenance opsional per tahun setelah garansi", f"={SUPPORT}*12", nt="Software AI dan web app ditambah infrastruktur, 12 bulan.")
+line(SA, r + 4, "Maintenance opsional per tahun setelah garansi", f"=ROUNDUP(({'+'.join(GROUP_TOTAL[g] for g in SOFTWARE)})*{DK['sup_pct']},-5)+{SUPPORT_INF}*12",
+     nt="Support software (persentase nilai jasa aplikasi, sama dengan Opsi B) ditambah support infrastruktur, 12 bulan.")
 
 # ------------------------------------------------------------------ Cadangan penggantian (Opsi B)
 CP = sheet("Cadangan Penggantian", [30, 34, 15, 11, 50, 12, 9, 16])
@@ -472,7 +480,9 @@ section(SB, r, "3. Langganan per tahun (selama kontrak minimum)", 3)
 sub0 = r + 1
 line(SB, r + 1, "Sewa perangkat dan pemasangan", f"=ROUNDUP(B8/(1-{DK['m_rent']})/({DK['term']}/12),-5)",
      nt="Uang keluar perangkat + margin sewa, dibagi rata selama kontrak minimum.")
-line(SB, r + 2, "Support software AI dan web app 12 bulan", f"={SUPPORT_SW}*12", nt="Retraining model, update web app (sheet Jasa INKINDO).")
+line(SB, r + 2, "Support software AI dan web app 12 bulan", f"=ROUNDUP(({'+'.join(GROUP_TOTAL[g] for g in SOFTWARE)})*{DK['sup_pct']},-5)",
+     nt="Persentase nilai jasa aplikasi per tahun (Keputusan Bisnis): pemantauan jarak jauh, retraining per kuartal, perbaikan bug, update keamanan, SLA.")
+ref(B_REF, "sup_sw", SB, r + 2)
 line(SB, r + 3, "Support infrastruktur 12 bulan", f"={SUPPORT_INF}*12", nt="Kunjungan rutin perangkat (sheet Jasa INKINDO).")
 line(SB, r + 4, "Jaminan penggantian perangkat", f"=ROUNDUP({RESERVE_TOTAL}/({DK['term']}/12),-5)",
      nt="Cadangan penggantian dibagi rata per tahun (sheet Cadangan Penggantian).")
@@ -541,7 +551,7 @@ put(PT, "A11", "Bagian margin", color=GREY)
 put(PT, "B11", f"={DK['split_dev']}", fmt=PCT, color=GREEN)
 both(12, "Pembuatan AI Computer Vision, Pembuatan Web App, Setup dan Implementasi AI dan Web App", dev_work, "=B12",
      nt="Sama di kedua opsi, dibayar di depan.")
-both(13, "Support AI dan web app (retraining, update)", f"=({dev_sup})*{DK['warranty']}", f"=({dev_sup})*{DK['term']}",
+both(13, "Support AI dan web app (retraining, update)", f"=({dev_sup})*{DK['warranty']}", f"={B_REF['sup_sw']}*{DK['term']}/12",
      nt="Opsi A: garansi 3 bulan. Opsi B: selama kontrak minimum (1 hari AI + 1 hari web app per bulan).")
 both(14, "Bagian margin", "=ROUND(B8*$B$11,-3)", "=ROUND(C8*$B$11,-3)")
 both(15, "Total developer", "=SUM(B12:B14)", "=SUM(C12:C14)", bold=True, fill=TOTAL)
@@ -580,6 +590,10 @@ for i, (c, d, u) in enumerate([
     ("S7", "Samsung BE55FX-H: spesifikasi toko mencantumkan Tizen dan web browser bawaan, jadi TV dock membuka dashboard tanpa mini PC. "
            "Stasiun operator (mini PC, monitor, keyboard) dihapus karena klien memantau dari laptop sendiri lewat VPN perusahaan. "
            "Cek browser di SKU LH55BEFHVGKXXD saat pembelian.", "https://www.dateks.lv/ru/cenas/televizori/1417992-samsung-be55fx-h-lh55befhlguxen-55-"),
+    ("S9", "Biaya pemeliharaan aplikasi per tahun: vendor Indonesia 10-15% dari biaya pembuatan (website); benchmark aplikasi custom 15-25%, "
+           "sampai 30-35% bila mencakup seluruh dukungan berkelanjutan; biaya maintenance lisensi software 17-22%, kini 20-25%.",
+     "https://next-it.co.id/blog/berapa-biaya-buat-website-profesional-di-2026-panduan-lengkap-untuk-pemilik-bisnis ; "
+     "https://closeloop.com/blog/mobile-app-maintenance-cost-after-launch/ ; https://avasant.com/report/high-software-maintenance-fees-and-what-to-do-about-them/"),
     ("S8", "Garansi pabrik per perangkat untuk cadangan penggantian Opsi B: tautan sumber ada di tiap baris sheet Cadangan Penggantian. "
            "Bila sumber berbeda, dipakai masa garansi terpendek. Konfirmasi masa garansi resmi Indonesia saat pembelian.", "Sheet Cadangan Penggantian"),
 ], 5):
