@@ -560,6 +560,12 @@ w("## 10. Data grafik\n")
 w("**Saldo kumulatif investor, beli putus (juta Rp, bulan 0-4):** " + ", ".join(f"{m}: {v / 1e6:.1f}" for m, v in enumerate(cum_a)) + "\n")
 w("**Saldo kumulatif investor, subscription (juta Rp, bulan 0-39):** " + ", ".join(f"{m}: {v / 1e6:.1f}" for m, v in enumerate(cum_b)) + "\n")
 w("**Sama, bila cadangan penggantian tidak terpakai:** " + ", ".join(f"{m}: {v / 1e6:.1f}" for m, v in enumerate(cum_b_best)) + "\n")
+w("**File gambar siap pakai (folder `grafik/`, PNG resolusi 3x + SVG vektor):**\n\n"
+  "| File | Dipakai di slide |\n| --- | --- |\n"
+  "| grafik-01-alur-sistem | 3. Cara kerja |\n| grafik-02-contoh-dashboard | 3. Cara kerja |\n"
+  "| grafik-03-timeline-16-minggu | 4. Timeline |\n| grafik-04-komposisi-investasi | 5. Investasi awal |\n"
+  "| grafik-05-waterfall-beli-putus | 8. Proyeksi beli putus |\n| grafik-06-saldo-subscription | 9. Proyeksi subscription |\n\n"
+  "Mockup slide lengkap ada di folder `slides/` (3200x1800 px) sebagai acuan layout.\n")
 w("## 11. Sumber\n")
 w("- Budget internal: `Budget_Minyakita_Pallet_Counting_4Kamera.xlsx` (sheet RAB, Jasa INKINDO, Skenario A, Skenario B, Cadangan Penggantian).\n"
   "- Tarif jasa: Pedoman Standar Minimal Billing Rate INKINDO 2026 (https://www.inkindo.org/documents/ikdweb-billing-rate-2026.pdf).\n"

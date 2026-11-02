@@ -156,6 +156,19 @@ Gaya: bersih, latar putih, satu warna aksen biru untuk angka utama, abu-abu untu
 
 **Sama, bila cadangan penggantian tidak terpakai:** 0: -76.9, 1: -76.9, 2: -76.9, 3: -76.9, 4: -16.8, 5: -20.1, 6: -23.3, 7: -26.6, 8: -29.8, 9: -33.0, 10: -36.3, 11: -39.5, 12: -42.8, 13: -46.0, 14: -49.3, 15: -52.5, 16: 50.6, 17: 47.3, 18: 44.1, 19: 40.8, 20: 37.6, 21: 34.4, 22: 31.1, 23: 27.9, 24: 24.6, 25: 21.4, 26: 18.1, 27: 14.9, 28: 118.0, 29: 114.7, 30: 111.5, 31: 108.2, 32: 105.0, 33: 101.8, 34: 98.5, 35: 95.3, 36: 92.0, 37: 88.8, 38: 85.5, 39: 82.3
 
+**File gambar siap pakai (folder `grafik/`, PNG resolusi 3x + SVG vektor):**
+
+| File | Dipakai di slide |
+| --- | --- |
+| grafik-01-alur-sistem | 3. Cara kerja |
+| grafik-02-contoh-dashboard | 3. Cara kerja |
+| grafik-03-timeline-16-minggu | 4. Timeline |
+| grafik-04-komposisi-investasi | 5. Investasi awal |
+| grafik-05-waterfall-beli-putus | 8. Proyeksi beli putus |
+| grafik-06-saldo-subscription | 9. Proyeksi subscription |
+
+Mockup slide lengkap ada di folder `slides/` (3200x1800 px) sebagai acuan layout.
+
 ## 11. Sumber
 
 - Budget internal: `Budget_Minyakita_Pallet_Counting_4Kamera.xlsx` (sheet RAB, Jasa INKINDO, Skenario A, Skenario B, Cadangan Penggantian).
