@@ -298,51 +298,119 @@ for cat, item, brand, spec, q, u in goods:
     B.row_dimensions[r].height = max(15, 13 * (int(max(len(str(brand)) / 28, len(str(spec)) / 52)) + 1))
     r += 1
 
+# ---------------------------------------------------------------- Rincian Opsi C (4 kamera)
+HAS_C = "Skenario C" in src.sheetnames
+BC = "Opsi B dan C" if HAS_C else "Opsi B"
+if HAS_C:
+    sc = src["Skenario C"]
+    monthly = by_label(sc, "Tagihan per bulan (dibulatkan)")
+    c_sw = by_label(sc, "Support software AI dan web app")
+    c_inf = by_label(sc, "Support infrastruktur")
+    c_res = by_label(sc, "Jaminan penggantian perangkat")
+    c_sys = monthly - c_sw - c_inf - c_res
+    build_m = by_label(kb, "Lama pengerjaan sampai go-live (bulan, Opsi C)")
+    assert monthly * term == by_label(sc, "Total selama kontrak minimum")
+    C = sheet("Rincian Opsi C", WIDTHS)
+    put(C, "A1", f"Rincian Opsi C: Langganan Bulanan Tanpa Biaya di Depan, Kontrak Minimum {term} Bulan", bold=True, size=14)
+    put(C, "A2", "Perangkat, aplikasi AI, web app, instalasi, dan implementasi disediakan penyedia tanpa pembayaran di depan. "
+        "Tagihan bulanan dibayar di muka mulai go-live. Harga dalam Rupiah.", italic=True, color="595959")
+    header(C, 4, COLS)
+    band(C, 5, "LANGGANAN PER BULAN (mulai go-live)", 7)
+    line(C, 6, 1, "Langganan sistem lengkap", "Perangkat, aplikasi, dan implementasi",
+         f"{CAMS} kamera, PC server AI, penyimpanan, UPS, rak dan jaringan, TV status dock; aplikasi AI computer vision dan web app; "
+         "instalasi, setup, dan implementasi sampai go-live", 1, c_sys)
+    line(C, 7, 2, "Support software AI dan web app", "Per bulan", SUPPORT_SW_B_TEXT, 1, c_sw)
+    line(C, 8, 3, "Support infrastruktur", "Per bulan", SUPPORT_INF_TEXT, 1, c_inf)
+    line(C, 9, 4, "Jaminan penggantian perangkat", "Kerusakan karena pemakaian normal",
+         "Perangkat rusak diganti unit setara oleh penyedia, termasuk setelah garansi pabrik habis", 1, c_res)
+    c_month = subtotal(C, 10, "tagihan per bulan", 6, 9)
+    band(C, 12, f"TAGIHAN SELAMA KONTRAK MINIMUM ({term} bulan)", 7)
+    put(C, "B13", f"Tagihan per bulan x {term} bulan")
+    put(C, "G13", f"={c_month}*{term}", fmt=RP)
+    c_tot, _ = totals(C, 15, ["G13"], f"Total kontrak {term} bulan")
+    band(C, 17, "BIAYA PEMUTUSAN bila kontrak dihentikan sebelum masa minimum", 7)
+    r = 18
+    for y in range(1, YEARS):
+        put(C, f"B{r}", f"Berhenti setelah tahun ke-{y}")
+        put(C, f"D{r}", f"Sisa langganan sistem lengkap sampai bulan ke-{term} ({term - 12 * y} bulan)", color="404040")
+        put(C, f"G{r}", f"=F6*{term - 12 * y}", fmt=RP)
+        r += 1
+    put(C, f"B{r}", "Langganan yang sudah dibayar tidak dikembalikan. Pembatalan sebelum go-live: perusahaan mengganti biaya perangkat "
+        "dan pekerjaan yang sudah berjalan.", wrap=True, color="404040", italic=True)
+    C.merge_cells(f"B{r}:G{r}")
+    C.row_dimensions[r].height = 28
+    r += 2
+    band(C, r, "Perangkat yang disediakan (tanpa harga, tetap milik penyedia)", 7)
+    r += 1
+    for cat, item, brand, spec, q, u in goods:
+        if cat == "Jasa pasang":
+            continue
+        put(C, f"B{r}", item, wrap=True)
+        put(C, f"C{r}", brand, wrap=True, color="404040")
+        put(C, f"D{r}", spec, wrap=True, color="404040")
+        put(C, f"E{r}", q, fmt="0")
+        C.row_dimensions[r].height = max(15, 13 * (int(max(len(str(brand)) / 28, len(str(spec)) / 52)) + 1))
+        r += 1
+
 # ---------------------------------------------------------------- Ringkasan Penawaran
-R = sheet("Ringkasan Penawaran", [52, 26, 26, 26])
+NC = 5 if HAS_C else 4
+R = sheet("Ringkasan Penawaran", [52, 26, 26, 26] + ([26] if HAS_C else []))
 put(R, "A1", f"Penawaran: Sistem Hitung Karton per Palet di Loading Dock ({CAMS} Kamera)", bold=True, size=14)
 put(R, "A2", "Kepada: PT [nama perusahaan], Gudang Minyakita  ·  Tanggal: [isi tanggal]  ·  Berlaku 14 hari sejak tanggal penawaran",
     italic=True, color="595959")
-header(R, 4, ["", "Opsi A: Beli putus", "Opsi B: Tahun ke-1", f"Opsi B: Tahun ke-2 s.d. {YEARS} (per tahun)"])
+header(R, 4, ["", "Opsi A: Beli putus", "Opsi B: Tahun ke-1", f"Opsi B: Tahun ke-2 s.d. {YEARS} (per tahun)"]
+       + (["Opsi C: Per bulan, tanpa biaya di depan"] if HAS_C else []))
 put(R, "A5", "Total harga", bold=True, fill=TOTAL)
-for col, f in zip("BCD", (f"='Rincian Opsi A'!G{tot_a}", f"='Rincian Opsi B'!{year_rows[0]}", f"='Rincian Opsi B'!{year_rows[1]}")):
+for col, f in zip("BCDE", (f"='Rincian Opsi A'!G{tot_a}", f"='Rincian Opsi B'!{year_rows[0]}", f"='Rincian Opsi B'!{year_rows[1]}")
+                  + ((f"='Rincian Opsi C'!G10",) if HAS_C else ())):
     put(R, f"{col}5", f, fmt=RP, right=True, bold=True, fill=TOTAL)
 r = 6
 put(R, f"A{r}", "Pemilik perangkat", bold=True)
 put(R, f"B{r}", "Perusahaan", right=True)
 put(R, f"C{r}", "Penyedia", right=True)
 put(R, f"D{r}", "Penyedia", right=True)
+if HAS_C:
+    put(R, f"E{r}", "Penyedia", right=True)
 r += 1
 put(R, f"A{r}", "Layanan support dan maintenance", bold=True)
 put(R, f"B{r}", f"{warranty} bulan termasuk", right=True)
 put(R, f"C{r}", "12 bulan termasuk", right=True)
 put(R, f"D{r}", "12 bulan termasuk", right=True)
+if HAS_C:
+    put(R, f"E{r}", "Termasuk selama kontrak", right=True)
 r += 1
 put(R, f"A{r}", "Penggantian perangkat rusak (pemakaian normal)", bold=True)
 put(R, f"B{r}", "Garansi pabrik", right=True)
 put(R, f"C{r}", "Ditanggung penyedia", right=True)
 put(R, f"D{r}", "Ditanggung penyedia", right=True)
+if HAS_C:
+    put(R, f"E{r}", "Ditanggung penyedia", right=True)
 r += 1
 put(R, f"A{r}", "Maintenance setelah masa garansi (Opsi A, opsional, per tahun)", bold=True)
 put(R, f"B{r}", maint_a, fmt=RP, right=True)
 put(R, f"C{r}", "termasuk", right=True)
 put(R, f"D{r}", "termasuk", right=True)
+if HAS_C:
+    put(R, f"E{r}", "termasuk", right=True)
 r += 1
 put(R, f"A{r}", f"Total selama {YEARS} tahun", bold=True)
 put(R, f"B{r}", f"=B5+B{r - 1}*{YEARS - 1}", fmt=RP, right=True)
 put(R, f"C{r}", f"='Rincian Opsi B'!G{tot_bk}", fmt=RP, right=True)
 R.merge_cells(f"C{r}:D{r}")
+if HAS_C:
+    put(R, f"E{r}", f"='Rincian Opsi C'!G{c_tot}", fmt=RP, right=True)
 r += 1
 put(R, f"A{r}", "(Opsi A dihitung dengan maintenance opsional mulai tahun ke-2)", italic=True, color="595959")
 r += 2
-band(R, r, "Termin pembayaran", 4)
+band(R, r, "Termin pembayaran", NC)
 r = bullets(R, r + 1, [
     "Opsi A: DP 50% saat PO, 30% setelah instalasi selesai, 20% setelah uji paralel dan serah terima.",
     "Opsi B: saat PO dibayar 50% jasa sekali bayar (aplikasi dan infrastruktur) serta langganan tahun ke-1; sisa 50% jasa saat sistem mulai dipakai (go-live). "
     "Periode langganan dihitung sejak go-live; tahun berikutnya dibayar di muka di awal tiap periode 12 bulan.",
-], 4)
+] + ([f"Opsi C: tanpa pembayaran di depan. Tagihan bulanan dibayar di muka setiap awal bulan, mulai bulan go-live "
+      f"(sekitar {build_m} bulan setelah PO), selama kontrak minimum {term} bulan."] if HAS_C else []), NC)
 r += 1
-band(R, r, "Yang didapatkan", 4)
+band(R, r, "Yang didapatkan", NC)
 r = bullets(R, r + 1, [
     "Hitung karton setiap palet (standar 60 karton) di zona cek depan dock, dan peringatan langsung bila palet kurang.",
     f"Video analytics realtime {CAMS} kamera pada 20-30 fps, diproses di PC server AI dengan GPU {GPU} di lokasi.",
@@ -352,9 +420,9 @@ r = bullets(R, r + 1, [
     f"Owner dapat live monitoring {CAMS} kamera serta melihat riwayat event dan laporan dari luar gudang melalui Tailscale (koneksi terenkripsi langsung ke server).",
     f"Rekaman {CAMS} kamera sebagai bukti audit dan penyelesaian selisih.",
     "Seluruh sistem berjalan di lokasi (on-premise): rekaman video, event, dan data tersimpan di PC server gudang, tanpa penyimpanan cloud.",
-], 4)
+], NC)
 r += 1
-band(R, r, "Jadwal", 4)
+band(R, r, "Jadwal", NC)
 r = bullets(R, r + 1, [
     "Total sekitar 16 minggu (4 bulan) sejak PO.",
     "Minggu 1-2: survey dock, desain posisi kamera dan zona cek palet, pengadaan perangkat.",
@@ -363,41 +431,45 @@ r = bullets(R, r + 1, [
     f"Minggu 11-13: optimasi realtime {CAMS} kamera, integrasi data DO, kalibrasi zona cek.",
     f"Minggu 14-15: uji paralel 2 minggu dibanding hitung manual, termasuk uji performa {CAMS} kamera 20-30 fps.",
     "Minggu 16: training pengguna, SOP, dan serah terima (go-live).",
-], 4)
+], NC)
 r += 1
-band(R, r, "Garansi dan layanan", 4)
+band(R, r, "Garansi dan layanan", NC)
 r = bullets(R, r + 1, [
     "Opsi A: perangkat bergaransi resmi pabrikan; layanan " + str(warranty) + " bulan setelah serah terima.",
-    "Opsi B: selama kontrak, layanan support, maintenance, dan penggantian perangkat rusak karena pemakaian normal ditanggung penyedia.",
-], 4)
+    f"{BC}: selama kontrak, layanan support, maintenance, dan penggantian perangkat rusak karena pemakaian normal ditanggung penyedia.",
+], NC)
 r += 1
-band(R, r, "Yang disiapkan perusahaan", 4)
+band(R, r, "Yang disiapkan perusahaan", NC)
 r = bullets(R, r + 1, [
     "Listrik di titik kamera dan ruang server, alat kerja ketinggian (forklift dengan man basket atau sejenisnya) saat pemasangan.",
     "Laptop untuk memantau dashboard, serta 1 alamat IP dan port LAN di jaringan perusahaan untuk server dan TV dock (akses dari luar gudang lewat VPN perusahaan yang sudah ada).",
     "Koneksi internet di server untuk akses jarak jauh owner, serta akun Tailscale atas nama owner (biaya langganan Tailscale, bila ada, ditanggung perusahaan).",
     "Data DO (ekspor file atau akses API WMS/ERP) dan satu PIC gudang untuk koordinasi dan uji paralel.",
     "SOP: palet berhenti sejenak di zona cek, plastik wrap bening agar karton terlihat kamera.",
-], 4)
+], NC)
 r += 1
-band(R, r, "Ketentuan dan pengamanan", 4)
+band(R, r, "Ketentuan dan pengamanan", NC)
 r = bullets(R, r + 1, [
     f"Opsi B: kontrak minimum {term} bulan. Bila dihentikan lebih awal, perusahaan membayar biaya pemutusan sebesar sisa sewa perangkat "
     "sampai akhir kontrak minimum (rincian di sheet Rincian Opsi B), atau membeli perangkat dengan nilai yang sama.",
     "Opsi B: jasa sekali bayar dan langganan yang sudah dibayar tidak dapat dikembalikan.",
-    f"Opsi B: perangkat, aplikasi AI, dan web app tetap milik penyedia; perusahaan mendapat hak pakai selama langganan aktif. "
+] + ([f"Opsi C: kontrak minimum {term} bulan sejak go-live. Bila dihentikan lebih awal, perusahaan membayar biaya pemutusan sebesar sisa "
+      "langganan sistem lengkap sampai akhir kontrak minimum (rincian di sheet Rincian Opsi C). Langganan yang sudah dibayar tidak dikembalikan.",
+      "Opsi C: pembatalan setelah PO dan sebelum go-live, perusahaan mengganti biaya perangkat dan pekerjaan yang sudah berjalan."]
+     if HAS_C else []) + [
+    f"{BC}: perangkat, aplikasi AI, dan web app tetap milik penyedia; perusahaan mendapat hak pakai selama langganan aktif. "
     "Data operasional milik perusahaan dan dapat diekspor kapan saja.",
-    f"Opsi B: keterlambatan pembayaran lebih dari {late} hari, layanan support dan pembaruan dihentikan sementara sampai pembayaran diterima.",
-    "Opsi B: perangkat tidak boleh dipindahkan, dibongkar, atau diubah tanpa persetujuan tertulis penyedia. Setelah kontrak minimum, "
+    f"{BC}: keterlambatan pembayaran lebih dari {late} hari, layanan support dan pembaruan dihentikan sementara sampai pembayaran diterima.",
+    f"{BC}: perangkat tidak boleh dipindahkan, dibongkar, atau diubah tanpa persetujuan tertulis penyedia. Setelah kontrak minimum, "
     "langganan dapat diperpanjang dengan harga yang disepakati ulang, atau perangkat ditarik oleh penyedia.",
     f"Opsi A: hak milik perangkat dan hak pakai aplikasi AI serta web app (1 lokasi, {CAMS} kamera) berpindah ke perusahaan setelah pembayaran lunas. "
     "Kode sumber aplikasi tidak termasuk.",
-    "Kedua opsi: kerusakan karena kelalaian, salah pakai, benturan forklift atau alat angkut, bencana alam, banjir, kebakaran, petir, "
+    "Semua opsi: kerusakan karena kelalaian, salah pakai, benturan forklift atau alat angkut, bencana alam, banjir, kebakaran, petir, "
     "tegangan listrik tidak stabil, atau perubahan instalasi oleh pihak lain ditanggung perusahaan sesuai harga perangkat dan jasa saat itu.",
-    "Kedua opsi: perusahaan memberikan akses lokasi untuk pemasangan dan kunjungan maintenance terjadwal.",
-], 4, 30)
+    "Semua opsi: perusahaan memberikan akses lokasi untuk pemasangan dan kunjungan maintenance terjadwal.",
+], NC, 30)
 r += 1
-band(R, r, "Penambahan atau perubahan fitur (change request)", 4)
+band(R, r, "Penambahan atau perubahan fitur (change request)", NC)
 r = bullets(R, r + 1, [
     "Garansi dan langganan support mencakup perbaikan bug dan penyesuaian konfigurasi pada fitur yang tercantum di penawaran ini. "
     "Fitur baru atau perubahan alur di luar lingkup tersebut diperlakukan sebagai change request dan ditagih terpisah.",
@@ -407,16 +479,16 @@ r = bullets(R, r + 1, [
     "minimal 1 hari kerja per permintaan. Perangkat atau material tambahan ditagih sesuai harga saat itu.".replace(",", "."),
     "Pembayaran change request: 50% saat persetujuan, 50% setelah fitur diserahkan dan diuji bersama. Tarif berlaku selama masa kontrak "
     "atau 12 bulan sejak serah terima (Opsi A); setelahnya dapat disesuaikan.",
-    "Opsi B: fitur hasil change request menjadi bagian sistem yang dirawat dalam langganan tanpa tambahan biaya support.",
-], 4, 30)
+    f"{BC}: fitur hasil change request menjadi bagian sistem yang dirawat dalam langganan tanpa tambahan biaya support.",
+], NC, 30)
 r += 1
-band(R, r, "Catatan", 4)
+band(R, r, "Catatan", NC)
 bullets(R, r + 1, [
     "Jumlah kabel dan conduit berdasarkan perkiraan; disesuaikan setelah survey lokasi.",
     "Tidak termasuk pekerjaan sipil, instalasi listrik baru, dan perjalanan di luar Jabodetabek (ditagihkan sesuai biaya aktual bila ada).",
-], 4)
+], NC)
 
-wb._sheets = [wb[n] for n in ["Ringkasan Penawaran", "Rincian Opsi A", "Rincian Opsi B"]]
+wb._sheets = [wb[n] for n in ["Ringkasan Penawaran", "Rincian Opsi A", "Rincian Opsi B"] + (["Rincian Opsi C"] if HAS_C else [])]
 wb.active = 0
 for ws in wb.worksheets:
     ws.freeze_panes = "A5"

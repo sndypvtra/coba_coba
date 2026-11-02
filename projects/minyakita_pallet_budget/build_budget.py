@@ -138,6 +138,10 @@ DEC = [
      "Nilai jual jasa aplikasi AI dan web app dihitung mundur dari angka ini (sheet Jasa INKINDO), kira-kira setara tarif minimum INKINDO; dipakai juga di Opsi B."),
     ("sup_pct", "Support software AI dan web app per tahun (% dari nilai jasa aplikasi)", 0.313, PCT,
      "Sama dengan versi 8 kamera (Rp 33.600.000 / Rp 107.278.000). Acuan pasar 15-25%, sampai 30-35% untuk dukungan menyeluruh (sheet Sumber Harga S8)."),
+    ("inv_rate", "Imbal hasil investor per tahun (Opsi C)", 0.15, PCT,
+     "Acuan Okt 2026: bunga penjaminan LPS 3,75%, BI Rate 5,75%, bunga kredit modal kerja bank sekitar 8,24%, pendanaan produktif "
+     "fintech 12-20% (AFPI). Dipakai 15% karena dana tertanam di satu klien; dijamin perangkat dan biaya pemutusan (sheet Sumber Harga S9)."),
+    ("build_m", "Lama pengerjaan sampai go-live (bulan, Opsi C)", 4, "0", "Tagihan bulanan klien dan cicilan investor mulai saat go-live."),
 ]) + [
     ("cr_sw", "Tarif change request software (AI computer vision dan web app) per hari kerja", 1800000, RP,
      "Tarif harian Tenaga Ahli INKINDO Rp 1.615.000 x faktor nilai jual software, dibulatkan ke atas."),
@@ -516,6 +520,7 @@ for g, cell in GROUP_TOTAL.items():
     r += 1
 line(SB, r, "Total jasa sekali bayar", f"=SUM(B11:B{r - 1})", bold=True, fill=TOTAL)
 setup = r
+ref(B_REF, "setup", SB, setup)
 r += 2
 section(SB, r, "3. Langganan per tahun (selama kontrak minimum)", 3)
 sub0 = r + 1
@@ -557,6 +562,59 @@ line(SB, r + 3, "Biaya pemutusan bila berhenti setelah tahun ke-1", f"=B{rent}*(
      nt="Sisa sewa perangkat sampai akhir kontrak minimum.")
 line(SB, r + 4, "Biaya pemutusan bila berhenti setelah tahun ke-2", f"=B{rent}*MAX({DK['term']}/12-2,0)")
 line(SB, r + 5, "Pendapatan bersih bila berhenti setelah tahun ke-1 (bayar biaya pemutusan)", f"=B{year1_row}+B{r + 3}-B8")
+
+# ------------------------------------------------------------------ Skenario C (4 kamera): langganan bulanan, didanai investor
+if CAMS == 4:
+    SC = sheet("Skenario C", [66, 18, 60])
+    title(SC, "Skenario C: Langganan Bulanan Tanpa Biaya di Depan, Didanai Investor",
+          "Investor membiayai perangkat dan jasa pembuatan di awal. Klien membayar per bulan sejak go-live; investor menerima cicilan bulanan pokok + imbal hasil.")
+    rate, term, build = DK["inv_rate"], DK["term"], DK["build_m"]
+    section(SC, 4, "1. Modal di depan (dibiayai investor)", 3)
+    line(SC, 5, "Uang keluar perangkat (beli, kontinjensi, jasa pasang vendor)", f"={B_REF['out']}", color=GREEN)
+    line(SC, 6, "Jasa sekali bayar untuk tim (aplikasi, infrastruktur, manajemen proyek)", f"={B_REF['setup']}", color=GREEN)
+    line(SC, 7, "Total modal investor", "=B5+B6", bold=True, fill=TOTAL)
+    section(SC, 9, "2. Pengembalian ke investor", 3)
+    line(SC, 10, "Imbal hasil selama pengerjaan (ditambahkan ke pokok)", f"=B7*((1+{rate}/12)^{build}-1)",
+         nt="Dana sudah keluar sejak PO, tagihan klien baru mulai saat go-live.")
+    line(SC, 11, "Pokok saat go-live", "=B7+B10")
+    line(SC, 12, "Cicilan ke investor per bulan", f"=PMT({rate}/12,{term},-B11)", bold=True,
+         nt="Anuitas tetap (pokok + imbal hasil), dibayar tiap bulan sejak go-live selama kontrak minimum.")
+    line(SC, 13, "Total diterima investor", f"=B12*{term}")
+    line(SC, 14, "Keuntungan investor", "=B13-B7", bold=True, fill=TOTAL)
+    line(SC, 15, "Keuntungan atas modal (total)", "=B14/B7", fmt=PCT)
+    line(SC, 16, "Lama dana tertanam (bulan, PO sampai cicilan terakhir)", f"={build}+{term}", fmt="0")
+    line(SC, 17, "Modal investor kembali pada bulan ke- (sejak go-live)", "=B7/B12", fmt="0.0",
+         nt="Setelah itu cicilan yang diterima adalah keuntungan.")
+    section(SC, 19, "3. Tagihan bulanan ke klien (mulai go-live)", 3)
+    line(SC, 20, "Cicilan investor", "=B12")
+    line(SC, 21, "Margin sewa perangkat", f"=({B_REF['out']}/(1-{DK['m_rent']})-{B_REF['out']})/{term}",
+         nt="Sama dengan margin sewa Opsi B, dibagi per bulan.")
+    line(SC, 22, "Support software AI dan web app", f"=ROUNDUP({SUP_SW_YEAR}/12,-3)")
+    line(SC, 23, "Support infrastruktur", f"=ROUNDUP({SUPPORT_INF},-3)")
+    line(SC, 24, "Jaminan penggantian perangkat", f"=ROUNDUP({RESERVE_TOTAL}/{term},-3)")
+    line(SC, 25, "Tagihan per bulan (dibulatkan)", "=ROUNDUP(SUM(B20:B24),-5)", bold=True, fill=TOTAL)
+    line(SC, 26, "Total selama kontrak minimum", f"=B25*{term}", bold=True)
+    line(SC, 27, "Selisih dengan total Opsi B", f"=B26-{B_REF['total']}",
+         nt="Biaya pendanaan yang ditanggung klien karena tidak membayar apa pun di depan.")
+    section(SC, 29, "4. Pendapatan tim selama kontrak (2 orang, tanpa kas CV)", 3)
+    line(SC, 30, "Jasa sekali bayar (diterima di awal dari dana investor)", "=B6")
+    line(SC, 31, "Support software dan infrastruktur", f"=(B22+B23)*{term}")
+    line(SC, 32, "Margin sewa dan pembulatan tagihan", f"=(B25-B20-B22-B23-B24)*{term}")
+    line(SC, 33, "Pendapatan tim (cadangan terpakai semua)", "=SUM(B30:B32)", bold=True, fill=TOTAL)
+    line(SC, 34, "Porsi developer", "=" + "+".join(GROUP_TOTAL[g] for g in SOFTWARE) + f"+B22*{term}+ROUND(B32*{DK['split_dev']},-3)",
+         nt="Jasa aplikasi AI dan web app + support software + bagian margin.")
+    line(SC, 35, "Porsi infrastruktur", "=B33-B34")
+    line(SC, 36, "Tambahan bila cadangan penggantian tidak terpakai (dibagi sama)", f"={RESERVE_TOTAL}")
+    section(SC, 38, "5. Pengamanan", 3)
+    line(SC, 39, "Sisa pokok investor setelah tahun ke-1", f"=PV({rate}/12,{term}-12,-B12)")
+    line(SC, 40, "Sisa pokok investor setelah tahun ke-2", f"=PV({rate}/12,MAX({term}-24,0),-B12)")
+    line(SC, 41, "Biaya pemutusan setelah tahun ke-1 (sisa langganan sistem)", f"=(B25-B22-B23-B24)*({term}-12)",
+         nt="Lebih besar dari sisa pokok investor, jadi investor tetap lunas bila klien berhenti.")
+    line(SC, 42, "Biaya pemutusan setelah tahun ke-2", f"=(B25-B22-B23-B24)*MAX({term}-24,0)")
+    line(SC, 43, "Pembatalan sebelum go-live", "=B7", nt="Klien mengganti biaya yang sudah dikeluarkan (perangkat dan pekerjaan berjalan).")
+    C_REF = {k: f"'Skenario C'!$B${row}" for k, row in
+             (("capital", 7), ("inst", 12), ("inv_total", 13), ("inv_profit", 14), ("monthly", 25), ("total", 26),
+              ("team", 33), ("dev", 34), ("payback", 17))}
 
 # ------------------------------------------------------------------ Porsi tim (internal)
 def value(who, days):
@@ -641,7 +699,14 @@ for i, (c, d, u) in enumerate([
            "sampai 30-35% bila mencakup seluruh dukungan berkelanjutan; biaya maintenance lisensi software 17-22%, kini 20-25%.",
      "https://next-it.co.id/blog/berapa-biaya-buat-website-profesional-di-2026-panduan-lengkap-untuk-pemilik-bisnis ; "
      "https://closeloop.com/blog/mobile-app-maintenance-cost-after-launch/ ; https://avasant.com/report/high-software-maintenance-fees-and-what-to-do-about-them/"),
-], 5):
+] + ([
+    ("S9", "Acuan imbal hasil investor (Okt 2026): BI Rate 5,75% (RDG 20-21 Okt 2026); bunga penjaminan LPS bank umum 3,75%; bunga kredit modal kerja "
+           "bank 8,24% (OJK, Jan 2026); imbal hasil pendanaan fintech 12-20% per tahun (AFPI), TWP90 industri 4,73% (Agu 2026).",
+     "https://nasional.kontan.co.id/news/bi-pertahankan-bi-rate-di-level-575-pada-rdg-oktober-2026 ; "
+     "https://investortrust.id/macro/107527/lps-naikkan-tingkat-bunga-penjaminan-bank-umum-jadi-3-75-mulai-1-juli-2026 ; "
+     "https://finance.detik.com/moneter/d-8480188/ojk-catat-bunga-kredit-bank-turun-jadi-8-76 ; "
+     "https://keuangan.kontan.co.id/news/investasi-p2p-lending-masih-menarik-tetapi-risiko-gagal-bayar-perlu-diwaspadai"),
+] if CAMS == 4 else []), 5):
     put(SS, f"A{i}", c, bold=True)
     put(SS, f"B{i}", d, wrap=True)
     put(SS, f"C{i}", u, wrap=True, color="0563C1" if u.startswith("http") else GREY)
@@ -667,8 +732,21 @@ for lab, *fs in SUM:
         if f:
             put(R, f"{col}{r}", f, color=GREEN, fmt="0.0" if "bulan ke" in lab else RP, right=True)
     r += 1
+if CAMS == 4:
+    r += 1
+    for lab, f, fmt in [
+        ("C. Tagihan per bulan (tanpa biaya di depan)", C_REF["monthly"], RP),
+        ("C. Total selama kontrak minimum", C_REF["total"], RP),
+        ("C. Modal investor", C_REF["capital"], RP),
+        ("C. Keuntungan investor", C_REF["inv_profit"], RP),
+        ("C. Pendapatan tim (cadangan terpakai semua)", C_REF["team"], RP),
+        ("C. Modal investor kembali (bulan ke- sejak go-live)", C_REF["payback"], "0.0"),
+    ]:
+        put(R, f"A{r}", lab, bold=True)
+        put(R, f"B{r}", f"={f}", color=GREEN, fmt=fmt, right=True)
+        r += 1
 r += 1
-put(R, f"A{r}", "Rincian jasa (sama di kedua opsi)", bold=True)
+put(R, f"A{r}", "Rincian jasa (sama di semua opsi)", bold=True)
 r += 1
 for g, ref in GROUP_TOTAL.items():
     put(R, f"A{r}", g)
@@ -686,7 +764,8 @@ for t in [
     R.row_dimensions[r].height = 30
     r += 1
 
-order = ["Ringkasan", "RAB", "Jasa INKINDO", "Skenario A", "Skenario B", "Cadangan Penggantian", "Porsi Tim", "Keputusan Bisnis", "Sumber Harga"]
+order = (["Ringkasan", "RAB", "Jasa INKINDO", "Skenario A", "Skenario B"] + (["Skenario C"] if CAMS == 4 else [])
+         + ["Cadangan Penggantian", "Porsi Tim", "Keputusan Bisnis", "Sumber Harga"])
 wb._sheets = [wb[n] for n in order]
 wb.active = 0
 for ws in wb.worksheets:
