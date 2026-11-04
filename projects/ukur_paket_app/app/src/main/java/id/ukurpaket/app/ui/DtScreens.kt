@@ -242,15 +242,27 @@ private fun DtRecorder(model: AppModel) {
             override fun onError(msg: String) { main.post { error = msg } }
         })
     }
+    var pick by remember { mutableStateOf(LivePick()) }
     LaunchedEffect(Unit) { if (model.diag == null) model.runDiagnosis() }
     DisposableEffect(Unit) { onDispose { rec.close(); if (!keep[0]) dir.deleteRecursively() } }
     fun stop() {
         if (phase != RecPhase.RECORDING) return
         phase = RecPhase.SAVING
-        rec.stop { d -> main.post { keep[0] = true; runCatching { model.diagFile(d) }; model.openReview(d) } }
+        val p = pick
+        rec.stop { d -> main.post {
+            keep[0] = true; runCatching { model.diagFile(d) }
+            if (p.tap != null || p.box != null) model.cutPick(d, rec.sensorOrientation, p.tap?.x, p.tap?.y, p.box)
+            model.openReview(d)
+        } }
     }
+    fun begin() { if (phase == RecPhase.READY && status != null && error == null) { phase = RecPhase.RECORDING; rec.start() } }
     LaunchedEffect(status?.seconds) { if ((status?.seconds ?: 0.0) > 20) stop() }
-    DtRecordChrome(status, phase, error, onBack = { model.back() }, onStart = { phase = RecPhase.RECORDING; rec.start() }, onStop = { stop() }) {
+    DtRecordChrome(status, phase, error, onBack = { model.back() }, onStart = { begin() }, onStop = { stop() }, pick = pick,
+        onMode = { pick = pick.copy(mode = it) },
+        onTap = { o -> if (status != null && error == null) { pick = pick.copy(tap = o, box = null, drag = null); begin() } },
+        onDrag = { r -> pick = pick.copy(drag = r) },
+        onBox = { r -> if (status != null && error == null && abs(r[2] - r[0]) > 0.04f && abs(r[3] - r[1]) > 0.04f) {
+            pick = pick.copy(box = r, tap = null, drag = null); begin() } else pick = pick.copy(drag = null) }) {
         AndroidView(factory = { c ->
             TextureView(c).apply {
                 surfaceTextureListener = object : TextureView.SurfaceTextureListener {
@@ -266,7 +278,9 @@ private fun DtRecorder(model: AppModel) {
 
 @Composable
 private fun DtRecordChrome(status: SweepRecorder.LiveStatus?, phase: RecPhase, error: String?, onBack: () -> Unit,
-                           onStart: () -> Unit, onStop: () -> Unit, preview: @Composable () -> Unit) {
+                           onStart: () -> Unit, onStop: () -> Unit, pick: LivePick = LivePick(), onMode: (PickMode) -> Unit = {},
+                           onTap: (Offset) -> Unit = {}, onDrag: (FloatArray?) -> Unit = {}, onBox: (FloatArray) -> Unit = {},
+                           preview: @Composable () -> Unit) {
     val turn = status?.turnDeg ?: 0.0
     val gyroDead = status != null && status.gyroHz < 1 && status.accelHz > 1
     Column(Modifier.fillMaxSize()) {
@@ -276,8 +290,26 @@ private fun DtRecordChrome(status: SweepRecorder.LiveStatus?, phase: RecPhase, e
             val pw = min(maxWidth.value, maxHeight.value * 3f / 4f).dp          // 3:4, as large as fits both ways
             Box(Modifier.size(pw, (pw.value * 4f / 3f).dp)) {
                 preview()
+                // touch the object (or drag a box round it) on the live picture: it is picked, and recording starts
+                Box(Modifier.fillMaxSize().pointerInput(phase, pick.mode) {
+                    if (phase != RecPhase.READY) return@pointerInput
+                    val wpx = size.width.toFloat(); val hpx = size.height.toFloat()
+                    if (pick.mode == PickMode.TAP) detectTapGestures { o -> onTap(Offset(o.x / wpx, o.y / hpx)) }
+                    else {
+                        var a = Offset.Zero; var b = Offset.Zero
+                        fun r() = floatArrayOf(min(a.x, b.x) / wpx, min(a.y, b.y) / hpx, max(a.x, b.x) / wpx, max(a.y, b.y) / hpx)
+                        detectDragGestures(onDragStart = { a = it; b = it }, onDrag = { ch, _ -> b = ch.position; onDrag(r()) }, onDragEnd = { onBox(r()) })
+                    }
+                })
+                Canvas(Modifier.fillMaxSize()) {
+                    (pick.box ?: pick.drag)?.let { r -> drawRect(Color.White, Offset(r[0] * size.width, r[1] * size.height),
+                        Size((r[2] - r[0]) * size.width, (r[3] - r[1]) * size.height), style = Stroke(3.dp.toPx())) }
+                    pick.tap?.let { p -> val c = Offset(p.x * size.width, p.y * size.height)
+                        drawCircle(Color.White, 12.dp.toPx(), c); drawCircle(C.brand, 8.dp.toPx(), c) }
+                }
                 Row(Modifier.align(Alignment.TopStart).padding(8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     if (phase == RecPhase.RECORDING) Chip("REC ${(status?.seconds ?: 0.0).f1()} s", Tone.RED, "fiber_manual_record")
+                    if (phase != RecPhase.READY && (pick.tap != null || pick.box != null)) Chip("Objek dipilih", Tone.OK, "check")
                     Chip(status?.size ?: "kamera…", Tone.GREY, "photo_camera")
                 }
                 Column(Modifier.align(Alignment.BottomStart).padding(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -296,8 +328,14 @@ private fun DtRecordChrome(status: SweepRecorder.LiveStatus?, phase: RecPhase, e
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (error != null) Banner(error, C.redL, C.red, "error")
             when (phase) {
-                RecPhase.READY -> T("Objek apa saja, terlihat utuh dari ±50–80 cm. Tekan Mulai, lalu kelilingi objek pelan ±60–90° (3–8 detik).",
-                    13.sp, color = C.t2)
+                RecPhase.READY -> {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Chip("Klik objek", if (pick.mode == PickMode.TAP) Tone.BRAND else Tone.GREY, "touch_app") { onMode(PickMode.TAP) }
+                        Chip("Tarik kotak", if (pick.mode == PickMode.BOX) Tone.BRAND else Tone.GREY, "highlight_alt") { onMode(PickMode.BOX) }
+                    }
+                    T((if (pick.mode == PickMode.TAP) "Sentuh objeknya" else "Tarik kotak di sekeliling objek") +
+                        " untuk memilih dan mulai rekam, lalu kelilingi objek pelan ±60–90° (3–8 detik).", 13.sp, color = C.t2)
+                }
                 RecPhase.RECORDING -> {
                     T("Kelilingi objek pelan… putaran ${turn.toInt()}° dari target 60°", 14.sp, FontWeight.SemiBold)
                     LinearProgressIndicator(progress = { min(1f, (turn / 60.0).toFloat()) }, modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
@@ -309,7 +347,7 @@ private fun DtRecordChrome(status: SweepRecorder.LiveStatus?, phase: RecPhase, e
                 }
             }
             when (phase) {
-                RecPhase.READY -> PrimaryButton("Mulai rekam", "fiber_manual_record", Modifier.fillMaxWidth(), enabled = status != null && error == null) { onStart() }
+                RecPhase.READY -> SecondaryButton("Mulai tanpa pilih (pilih nanti)", "fiber_manual_record", Modifier.fillMaxWidth()) { onStart() }
                 RecPhase.RECORDING -> PrimaryButton("Selesai", "stop_circle", Modifier.fillMaxWidth(), color = C.green, enabled = (status?.seconds ?: 0.0) >= 1.5) { onStop() }
                 RecPhase.SAVING -> Unit
             }
@@ -319,16 +357,19 @@ private fun DtRecordChrome(status: SweepRecorder.LiveStatus?, phase: RecPhase, e
 
 /** For the screenshot test: the recorder's screen around a still picture. */
 @Composable
-internal fun DtRecordPreview(picture: Bitmap?, recording: Boolean, gyroSilent: Boolean = false) {
+internal fun DtRecordPreview(picture: Bitmap?, recording: Boolean, gyroSilent: Boolean = false, tap: Offset? = null) {
     val st = SweepRecorder.LiveStatus(recording, if (recording) 3.4 else 0.0, if (recording) 48 else 0, 0, 29.8, 198.0,
         if (gyroSilent) 0.0 else 199.0, if (recording) 38.0 else 0.0, "1280×960", rotationHz = 200.0)
-    DtRecordChrome(st, if (recording) RecPhase.RECORDING else RecPhase.READY, null, {}, {}, {}) {
+    DtRecordChrome(st, if (recording) RecPhase.RECORDING else RecPhase.READY, null, {}, {}, {}, pick = LivePick(tap = tap)) {
         if (picture != null) Image(picture.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
     }
 }
 
 // ------------------------------------------------------------------ review + pick the object
-private enum class PickMode { TAP, BOX }
+internal enum class PickMode { TAP, BOX }
+
+/** The pick made on the live picture, as fractions of it. */
+internal data class LivePick(val mode: PickMode = PickMode.TAP, val tap: Offset? = null, val box: FloatArray? = null, val drag: FloatArray? = null)
 
 private fun Double.cmText() = (if (this % 1.0 == 0.0) "%.0f" else "%.1f").format(this).replace('.', ',')
 
@@ -392,6 +433,16 @@ fun DtReviewScreen(model: AppModel, activity: Activity, dirPath: String) {
             mask = l.mask; tint = l.mask?.let { withContext(Dispatchers.Default) { ObjectPick.tint(it) } }
         }
     }
+    val job = model.pickJobs[dirPath]
+    LaunchedEffect(job) {
+        if (job != "done") return@LaunchedEffect
+        val l = withContext(Dispatchers.IO) { ReviewLoad.load(dir, rotation) }
+        val p = l.pick ?: return@LaunchedEffect
+        loadedFrame = l.frame; frame = l.frame; picture = l.picture; mask = l.mask
+        tint = l.mask?.let { withContext(Dispatchers.Default) { ObjectPick.tint(it) } }
+        mode = if (p.mode == "box") PickMode.BOX else PickMode.TAP
+        tap = p.tap?.let { Offset(it[0], it[1]) }; box = p.box?.toFloatArray(); encMs = p.samEncodeMs; decMs = p.samDecodeMs; saved = true
+    }
     LaunchedEffect(frame) {
         if (frame < 0 || frame == loadedFrame) return@LaunchedEffect
         loadedFrame = frame
@@ -440,7 +491,7 @@ fun DtReviewScreen(model: AppModel, activity: Activity, dirPath: String) {
             quality?.let { q ->
                 VerdictCard(q.level, "Kualitas rekaman", SweepAnalysis.verdict(q) + if (detail) "" else " Ketuk untuk detail.",
                     onClick = { detail = !detail }, open = detail)
-                if (detail || q.level == Level.FAIL) Card(padding = 10.dp) { q.checks.forEach { CheckLine(it) } }
+                if (detail) Card(padding = 10.dp) { q.checks.forEach { CheckLine(it) } }
             } ?: Row(verticalAlignment = Alignment.CenterVertically) {
                 CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = C.brand)
                 T("Memeriksa rekaman…", 14.sp, modifier = Modifier.padding(start = 10.dp))
@@ -467,6 +518,10 @@ fun DtReviewScreen(model: AppModel, activity: Activity, dirPath: String) {
                     Slider(value = i.toFloat(), onValueChange = { v -> frames.getOrNull(v.toInt())?.let { if (it != frame && busy == null) frame = it } },
                         valueRange = 0f..(frames.size - 1).toFloat())
                     T("Foto ${i + 1} dari ${frames.size}" + if (frame == quality?.bestFrame) " · paling tajam" else "", 12.sp, color = C.t3)
+                }
+                if (job == "cutting") Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+                    CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = C.brand)
+                    T("Memotong objek yang disentuh di perekam… bisa 10–30 detik", 13.sp, FontWeight.SemiBold, C.brandD, modifier = Modifier.padding(start = 8.dp))
                 }
                 busy?.let { b ->
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {

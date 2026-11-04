@@ -15,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -39,6 +40,8 @@ import id.ukurpaket.app.data.Store
 import id.ukurpaket.app.dt.Check
 import id.ukurpaket.app.dt.Diagnosis
 import id.ukurpaket.app.dt.Diagnostics
+import id.ukurpaket.app.dt.ObjectPick
+import id.ukurpaket.app.dt.Pick
 import id.ukurpaket.app.measure.Segmenter
 import id.ukurpaket.app.scan.HardwareScanner
 import kotlinx.coroutines.Dispatchers
@@ -233,6 +236,39 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
     private fun endSession() { releaseEngine(); session = null }
 
     fun toast(m: String) { message = m }
+
+    /** Object picks waiting for or being cut out: recording folder -> "cutting" | "done" | "failed". */
+    val pickJobs = mutableStateMapOf<String, String>()
+
+    /**
+     * The object touched on the recorder's live picture, cut out of the sweep's first frame (taken at that touch) once
+     * recording has stopped: MobileSAM during the sweep would take the CPU the recording needs.
+     * [nx], [ny] or [box] (x0, y0, x1, y1): fractions of the upright picture.
+     */
+    fun cutPick(dir: File, rotation: Int, nx: Float?, ny: Float?, box: FloatArray?) {
+        pickJobs[dir.path] = "cutting"
+        viewModelScope.launch {
+            val ok = runCatching {
+                val sam = samNow() ?: error("MobileSAM tidak bisa dimuat")
+                withContext(Dispatchers.Default) {
+                    val pic = ObjectPick.upright(dir, 0, rotation) ?: error("foto pertama tidak ada")
+                    val t0 = System.nanoTime()
+                    val e = sam.embed(ObjectPick.argb(pic), pic.width, pic.height)
+                    val enc = (System.nanoTime() - t0) / 1_000_000
+                    val t1 = System.nanoTime()
+                    val b = box?.let { floatArrayOf(it[0] * pic.width, it[1] * pic.height, it[2] * pic.width, it[3] * pic.height) }
+                    val tap = if (b == null && nx != null && ny != null) floatArrayOf(nx * pic.width, ny * pic.height) else null
+                    val m = (if (b != null) sam.box(e, b[0], b[1], b[2], b[3]) else sam.tap(e, tap!![0], tap[1])).largestPart()
+                    val dec = (System.nanoTime() - t1) / 1_000_000
+                    ObjectPick.save(dir, Pick(0, ObjectPick.frameFile(dir, 0).relativeTo(dir).path, rotation, pic.width, pic.height,
+                        if (b != null) "box" else "tap", tap?.toList(), b?.toList(), maskScore = m.score, maskAreaPx = m.area,
+                        maskBox = m.bounds()?.toList(), samEncodeMs = enc, samDecodeMs = dec, name = "", tapeCm = listOf(null, null, null)), pic, m)
+                }
+            }
+            pickJobs[dir.path] = if (ok.isSuccess) "done" else "failed"
+            if (ok.isFailure) toast("Objek tidak bisa dipotong: pilih lagi di foto")
+        }
+    }
 
     /** The recorder screen is done: its recording opens in its place. */
     fun openReview(dir: File) {

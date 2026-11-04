@@ -1,4 +1,4 @@
-# UkurPaket: Android app (v0.2.1, test build)
+# UkurPaket: Android app (v0.2.2, test build)
 
 Measures a parcel's length × width × height with the phone camera, the way the courier mockup
 (`../ukur_paket_mockup`) describes: method A, ARCore depth + floor detection, with the parcel picked by a tap or a
@@ -53,7 +53,7 @@ the hub instead of being typed in.
 
 JDK 17+ and the Android SDK (platform 35). AGP 8.7.3, Kotlin 2.1.0, Compose BOM 2024.12.01, ARCore 1.47.0,
 ONNX Runtime 1.20.0, minSdk 26, targetSdk 35, arm64-v8a + armeabi-v7a. The test APK is
-`release/UkurPaket-0.2.1-uji.apk` (29 MB; MobileSAM is 18,8 MB of it: encoder float16 13,8 MB + decoder with int8
+`release/UkurPaket-0.2.2-uji.apk` (29 MB; MobileSAM is 18,8 MB of it: encoder float16 13,8 MB + decoder with int8
 weights 4,6 MB, made by `tools/export_sam.py`; the int8 decoder's masks are within IoU 0,989 of float32). It installs directly (allow "install unknown apps"); for the Play Store use your own key.
 
 ## Urovo DT20 (and other Urovo PDAs)
@@ -83,7 +83,7 @@ Entry: home card **Uji DT20** (phones without ARCore), the start screen, Setting
 | Screen | What it does |
 |---|---|
 | **Diagnostik HP** (`dt/Diagnostics.kt`) | Device, chip, RAM; each motion sensor with its rated and **measured** rate (3 s at the fastest rate); the back camera's Camera2 facts (hardware level, timestamp source, focus calibration and control, AE/AWB lock, OIS, YUV sizes and fps, factory intrinsics if any); MobileSAM speed test. Each requirement of the engine gets ✅ / ⚠️ / ❌ with the reason (no gyroscope = ❌; camera and sensor clocks not shared = ⚠️). Shared as JSON. |
-| **Perekam DT20** (`dt/SweepRecorder.kt`) | Camera2 preview + YUV frames (4:3 near 1280 × 960, falls back to 640 × 480) saved as JPEG at ~15/s, every accelerometer / gyroscope (+ uncalibrated, magnetometer, gravity, rotation vector) event at the fastest rate. Focus, exposure and white balance locked while recording; OIS and video stabilisation off (they move the image against the lens). Live: fps, sensor Hz, turn angle against a 60° target. |
+| **Perekam DT20** (`dt/SweepRecorder.kt`) | Camera2 preview + YUV frames (4:3 near 1280 × 960, falls back to 640 × 480) saved as JPEG at ~15/s, every accelerometer / gyroscope (+ uncalibrated, magnetometer, gravity, rotation vector) event at the fastest rate. Focus, exposure and white balance locked while recording; OIS and video stabilisation off (they move the image against the lens). Live: fps, sensor Hz, turn angle against a 60° target. **Klik objek / Tarik kotak on the live picture** picks the object and starts recording at once (frame 0 is the picked view); MobileSAM cuts it out when recording stops, not during it (on the PDA's CPU it would cost frames). **Mulai tanpa pilih** records first and picks later. |
 | **Rekaman DT20** (`dt/SweepQuality.kt`, `dt/ObjectPick.kt`) | Checks the files just written: length, frames/s and gaps, sensor rates, same clock and coverage, turn angle, **acceleration** (no acceleration = no metric scale), blurred frames. Then **any object** is picked in the sharpest frame (or another, slider): **Klik objek** or **Tarik kotak**, cut out by MobileSAM. Name and the tape-measure size (optional) are saved with it. Share the recording as ZIP. |
 
 One recording folder (`files/dt_sessions/<time>/`): `frames/NNNNN.jpg`, `frames.csv` (index, camera timestamp, sharpness),

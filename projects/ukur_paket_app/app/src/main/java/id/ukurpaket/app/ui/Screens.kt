@@ -93,7 +93,9 @@ fun StartScreen(model: AppModel, activity: Activity) {
     LaunchedEffect(c.arcore, c.depth) {
         if (c.arcore == ArState.READY && st.prepShown > 0) model.home()
     }
-    Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    // scrolls on short screens (720 x 1440 Urovo PDAs): the buttons stay pinned below
+    Column(Modifier.fillMaxSize()) {
+    Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Spacer(Modifier.height(24.dp))
         IconTile("deployed_code", Color.White, C.brand, 64.dp)
         T("UkurPaket", 28.sp, FontWeight.Bold)
@@ -117,13 +119,16 @@ fun StartScreen(model: AppModel, activity: Activity) {
                 Mode.NONE -> noArText(c.arcore)
             }, 13.5.sp, color = C.t2)
         }
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.height(4.dp))
+    }
+    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         if (c.arcore == ArState.NEEDS_INSTALL || c.arcore == ArState.INSTALL_DECLINED)
             PrimaryButton("Pasang Komponen AR", "download", Modifier.fillMaxWidth()) { model.install(activity) }
         if (c.mode == Mode.NONE && c.arcore != ArState.CHECKING)
             SecondaryButton("Diagnostik HP (uji tanpa ARCore)", "monitor_heart", Modifier.fillMaxWidth()) { model.go(Screen.Diag) }
         if (c.arcore != ArState.CHECKING)
             SecondaryButton(if (c.arcore == ArState.READY) "Lanjut" else "Lanjut tanpa AR", "arrow_forward", Modifier.fillMaxWidth()) { model.home() }
+    }
     }
 }
 
@@ -384,7 +389,8 @@ fun SavedScreen(model: AppModel, activity: Activity, id: String) {
     var typing by remember { mutableStateOf(false) }
     if (m == null) { LaunchedEffect(Unit) { model.home() }; return }
     val n = model.sessionCount(m, ms)
-    Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    Column(Modifier.fillMaxSize()) {
+    Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Column(Modifier.fillMaxWidth().padding(top = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Box(Modifier.size(64.dp).clip(CircleShape).background(C.green), contentAlignment = Alignment.Center) { Sym("check", 40.dp, Color.White, filled = true) }
             Spacer(Modifier.height(12.dp))
@@ -395,7 +401,9 @@ fun SavedScreen(model: AppModel, activity: Activity, id: String) {
         Chip("Tersimpan di HP · belum sinkron", Tone.BRAND, "cloud_upload")
         T(if (m.atHub) "Foto, waktu, lokasi, dan alasan disimpan. Ukuran diisi oleh hub."
           else "Foto, kotak 3D, ukuran, waktu, dan lokasi disimpan sebagai bukti. Angka ukur tidak bisa diedit.", 12.5.sp, color = C.t2)
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.height(2.dp))
+    }
+    Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         if (!m.atHub && model.caps.mode != Mode.NONE) T("Lantai sudah dikenali: paket berikutnya langsung bisa diukur.", 12.5.sp, color = C.t3)
         if (model.hardwareScanner) T("Atau tekan tombol scan di samping HP untuk paket berikutnya.", 12.5.sp, color = C.t3)
         PrimaryButton("Paket berikutnya", "barcode_scanner", Modifier.fillMaxWidth()) { model.scanResi(activity) }
@@ -403,6 +411,7 @@ fun SavedScreen(model: AppModel, activity: Activity, id: String) {
             SecondaryButton("Ketik Resi", "keyboard", Modifier.weight(1f)) { typing = true }
             SecondaryButton("Selesai", "check", Modifier.weight(1f)) { model.home() }
         }
+    }
     }
     if (typing) ResiDialog(onDismiss = { typing = false }) { typing = false; model.openResi(it) }
 }
@@ -580,7 +589,7 @@ fun NoArScreen(model: AppModel, activity: Activity) {
     val c = model.caps
     Column(Modifier.fillMaxSize()) {
         TopBar("Ukur paket", model.draft?.resi, onBack = { model.back() })
-        Column(Modifier.weight(1f).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Card {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconTile("view_in_ar", C.amber, C.amberL)

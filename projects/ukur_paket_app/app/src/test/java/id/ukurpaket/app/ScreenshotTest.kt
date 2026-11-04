@@ -162,10 +162,43 @@ class ScreenshotTest {
     @Test @Config(sdk = [35], qualifiers = "w360dp-h720dp-xhdpi") fun recorderOnSmallScreen() {
         val photo = BitmapFactory.decodeFile(resource("paket.jpg"))
         shot("21_perekam_layar_dt50") { Box(Modifier.fillMaxSize().background(C.bg)) { DtRecordPreview(photo, recording = false, gyroSilent = true) } }
+        shot("23_perekam_objek_disentuh") { Box(Modifier.fillMaxSize().background(C.bg)) {
+            DtRecordPreview(photo, recording = true, gyroSilent = true, tap = androidx.compose.ui.geometry.Offset(0.5f, 0.55f)) } }
         val m = model(Mode.NONE)
         m.diag = Dt20Test.diagnosis()
         m.diagRates = mapOf("accelerometer" to 200.0, "gyroscope" to 0.0, "game_rotation_vector" to 200.0)
         screen("22_diagnostik_gyro_diam_dt50", m, Screen.Diag)
+        // the screens whose bottom buttons were cut off on this screen size
+        screen("24_awal_layar_dt50", m, Screen.Start)
+        m.draft = Draft("TSA-90100000104")
+        screen("25_tanpa_arcore_layar_dt50", m, Screen.NoAr)
+        val saved = measured("TSA-90100000104", 27.0, 15.0, 6.0, 0.10)
+        m.store.save(saved)
+        screen("26_tersimpan_layar_dt50", m, Screen.Saved(saved.id))
+    }
+
+    /** Touching the object on the recorder's live picture: the first frame of the sweep is cut out once it stops. */
+    @Test @Config(sdk = [35], qualifiers = "w360dp-h720dp-xhdpi") fun livePickIsCutAfterRecording() {
+        val m = model(Mode.NONE)
+        val photo = BitmapFactory.decodeFile(resource("paket.jpg"))
+        val dir = File(m.store.dtDir, "20261104_111111").apply { deleteRecursively(); mkdirs() }
+        File(dir, "frames").mkdirs()
+        val sideways = Bitmap.createBitmap(photo, 0, 0, photo.width, photo.height, Matrix().apply { postRotate(-90f) }, true)
+        File(dir, "frames/00000.jpg").outputStream().use { sideways.compress(Bitmap.CompressFormat.JPEG, 90, it) }
+        // a box dragged round the parcel on the live picture, as fractions of it
+        m.cutPick(dir, 90, null, null, floatArrayOf(185f / 899, 345f / 1599, 815f / 899, 1560f / 1599))
+        val t0 = System.currentTimeMillis()
+        while (m.pickJobs[dir.path] == "cutting" && System.currentTimeMillis() - t0 < 120_000) {
+            org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle(); Thread.sleep(50)
+        }
+        org.junit.Assert.assertEquals("done", m.pickJobs[dir.path])
+        val p = ObjectPick.load(dir)!!
+        org.junit.Assert.assertEquals(0, p.frame)
+        org.junit.Assert.assertEquals("box", p.mode)
+        val frac = p.maskAreaPx.toDouble() / (p.width * p.height)
+        org.junit.Assert.assertTrue("mask covers $frac of the picture", frac in 0.3..0.6)     // the parcel fills about 45 % of the frame
+        LocalStillValue.set(true)
+        try { screen("27_rekaman_objek_dari_perekam", m, Screen.DtReview(dir.path)) } finally { LocalStillValue.set(false) }
     }
 
     /** The DT20 test screens. Device values are test data (TestMaker Test Phone), not a real DT20 reading. */

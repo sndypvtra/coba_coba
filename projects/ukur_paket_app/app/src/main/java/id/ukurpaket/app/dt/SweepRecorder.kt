@@ -68,6 +68,8 @@ class SweepRecorder(private val ctx: Context, val dir: File, private val cb: Cal
     private var chars: CameraCharacteristics? = null
     private var texture: SurfaceTexture? = null
     var size: Size = Size(640, 480); private set
+    /** How far the frames turn to stand upright (the camera's sensor orientation). */
+    val sensorOrientation get() = chars?.get(CameraCharacteristics.SENSOR_ORIENTATION) ?: 90
     var cameraId: String = ""; private set
 
     @Volatile private var recording = false
