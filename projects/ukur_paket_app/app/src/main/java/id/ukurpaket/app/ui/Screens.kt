@@ -121,7 +121,7 @@ fun StartScreen(model: AppModel, activity: Activity) {
         if (c.arcore == ArState.NEEDS_INSTALL || c.arcore == ArState.INSTALL_DECLINED)
             PrimaryButton("Pasang Komponen AR", "download", Modifier.fillMaxWidth()) { model.install(activity) }
         if (c.mode == Mode.NONE && c.arcore != ArState.CHECKING)
-            SecondaryButton("Diagnostik HP (uji DT20)", "monitor_heart", Modifier.fillMaxWidth()) { model.go(Screen.Diag) }
+            SecondaryButton("Diagnostik HP (uji tanpa ARCore)", "monitor_heart", Modifier.fillMaxWidth()) { model.go(Screen.Diag) }
         if (c.arcore != ArState.CHECKING)
             SecondaryButton(if (c.arcore == ArState.READY) "Lanjut" else "Lanjut tanpa AR", "arrow_forward", Modifier.fillMaxWidth()) { model.home() }
     }
@@ -598,7 +598,7 @@ fun NoArScreen(model: AppModel, activity: Activity) {
             if (c.arcore == ArState.NEEDS_INSTALL || c.arcore == ArState.INSTALL_DECLINED)
                 PrimaryButton("Pasang Komponen AR", "download", Modifier.fillMaxWidth()) { model.install(activity) }
             SecondaryButton("Ukur di Hub", "warehouse", Modifier.fillMaxWidth()) { model.markHub("HP kurir belum mendukung kamera AR", null) }
-            SecondaryButton("Rekam untuk uji DT20", "videocam", Modifier.fillMaxWidth()) { model.go(Screen.DtRecord) }
+            SecondaryButton("Rekam untuk uji tanpa ARCore", "videocam", Modifier.fillMaxWidth()) { model.go(Screen.DtRecord) }
         }
     }
 }

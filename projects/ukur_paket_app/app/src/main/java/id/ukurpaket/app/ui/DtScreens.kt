@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -79,6 +80,17 @@ import kotlin.math.max
 import kotlin.math.min
 
 private fun Double.f1() = "%.1f".format(this).replace('.', ',')
+
+/** A smaller outlined button that keeps its label on narrow screens and large font settings. */
+@Composable
+private fun SmallButton(text: String, icon: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    androidx.compose.material3.OutlinedButton(onClick = onClick, modifier = modifier.height(46.dp), shape = RoundedCornerShape(12.dp),
+        border = androidx.compose.foundation.BorderStroke(1.5.dp, C.line), contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp),
+        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = Color.White)) {
+        Sym(icon, 18.dp, C.ink); Spacer(Modifier.width(4.dp))
+        T(text, 13.sp, FontWeight.SemiBold, C.ink, maxLines = 1)
+    }
+}
 
 @Composable
 private fun LevelIcon(l: Level) = when (l) {
@@ -147,7 +159,7 @@ fun DiagScreen(model: AppModel, activity: Activity) {
             }
             if (checks.isNotEmpty()) {
                 val (lv, txt) = Diagnostics.verdict(checks)
-                VerdictCard(lv, "Syarat engine DT20 (pengganti ARCore)", txt)
+                VerdictCard(lv, "Syarat engine tanpa ARCore", txt)
                 Card(padding = 10.dp) { checks.forEach { CheckLine(it) } }
             }
             if (d != null) {
@@ -193,15 +205,15 @@ fun DiagScreen(model: AppModel, activity: Activity) {
             Spacer(Modifier.height(4.dp))
         }
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                SecondaryButton("Sensor", "refresh", Modifier.weight(1f)) { model.runDiagnosis() }
-                SecondaryButton("Uji SAM", "speed", Modifier.weight(1f)) { model.timeSam() }
-                SecondaryButton("JSON", "share", Modifier.weight(0.9f)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                SmallButton("Sensor", "refresh", Modifier.weight(1f)) { model.runDiagnosis() }
+                SmallButton("Uji SAM", "speed", Modifier.weight(1f)) { model.timeSam() }
+                SmallButton("JSON", "share", Modifier.weight(1f)) {
                     if (model.diag == null) model.toast("Tunggu diagnostik selesai")
                     else model.shareFile(activity, "application/json", "Bagikan diagnostik") { model.diagFile()!! }
                 }
             }
-            PrimaryButton("Buka perekam DT20", "videocam", Modifier.fillMaxWidth()) { model.go(Screen.DtRecord) }
+            PrimaryButton("Buka perekam sapuan", "videocam", Modifier.fillMaxWidth()) { model.go(Screen.DtRecord) }
         }
     }
 }
@@ -256,28 +268,36 @@ private fun DtRecorder(model: AppModel) {
 private fun DtRecordChrome(status: SweepRecorder.LiveStatus?, phase: RecPhase, error: String?, onBack: () -> Unit,
                            onStart: () -> Unit, onStop: () -> Unit, preview: @Composable () -> Unit) {
     val turn = status?.turnDeg ?: 0.0
+    val gyroDead = status != null && status.gyroHz < 1 && status.accelHz > 1
     Column(Modifier.fillMaxSize()) {
-        TopBar("Perekam DT20", "Rekam sapuan objek · kamera + sensor gerak", onBack = if (phase == RecPhase.READY) onBack else null)
-        Box(Modifier.fillMaxWidth().aspectRatio(3f / 4f).background(Color.Black)) {
-            preview()
-            Row(Modifier.align(Alignment.TopStart).padding(10.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                if (phase == RecPhase.RECORDING) Chip("REC ${(status?.seconds ?: 0.0).f1()} s", Tone.RED, "fiber_manual_record")
-                Chip(status?.size ?: "kamera…", Tone.GREY, "photo_camera")
-            }
-            Column(Modifier.align(Alignment.BottomStart).padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Chip("kamera ${status?.cameraFps?.toInt() ?: 0} fps", Tone.GREY)
-                    Chip("acc ${status?.accelHz?.toInt() ?: 0} Hz", Tone.GREY)
-                    Chip("gyro ${status?.gyroHz?.toInt() ?: 0} Hz", if ((status?.gyroHz ?: 0.0) > 0) Tone.GREY else Tone.WARN)
+        TopBar("Perekam sapuan", "Kamera + sensor gerak", onBack = if (phase == RecPhase.READY) onBack else null)
+        // the preview takes what is left: the controls below always stay on screen, whatever the screen's height
+        androidx.compose.foundation.layout.BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().background(Color.Black), contentAlignment = Alignment.Center) {
+            val pw = min(maxWidth.value, maxHeight.value * 3f / 4f).dp          // 3:4, as large as fits both ways
+            Box(Modifier.size(pw, (pw.value * 4f / 3f).dp)) {
+                preview()
+                Row(Modifier.align(Alignment.TopStart).padding(8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (phase == RecPhase.RECORDING) Chip("REC ${(status?.seconds ?: 0.0).f1()} s", Tone.RED, "fiber_manual_record")
+                    Chip(status?.size ?: "kamera…", Tone.GREY, "photo_camera")
                 }
-                if (phase != RecPhase.READY) Chip("${status?.savedFrames ?: 0} foto · ${status?.dropped ?: 0} terlewat", Tone.GREY)
+                Column(Modifier.align(Alignment.BottomStart).padding(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Chip("kamera ${status?.cameraFps?.toInt() ?: 0} fps", Tone.GREY)
+                        Chip("acc ${status?.accelHz?.toInt() ?: 0} Hz", Tone.GREY)
+                        Chip(if (gyroDead) "gyro diam" else "gyro ${status?.gyroHz?.toInt() ?: 0} Hz", if (gyroDead) Tone.WARN else Tone.GREY)
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        if (gyroDead) Chip("rotasi ${status!!.rotationHz.toInt()} Hz", Tone.WARN)
+                        if (phase != RecPhase.READY) Chip("${status?.savedFrames ?: 0} foto · ${status?.dropped ?: 0} terlewat", Tone.GREY)
+                    }
+                }
             }
         }
-        Column(Modifier.weight(1f).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (error != null) Banner(error, C.redL, C.red, "error")
             when (phase) {
-                RecPhase.READY -> T("Objek apa saja (paket, galon, kursi…) di lantai atau meja. Arahkan kamera dari ±50–80 cm sampai objek terlihat utuh, " +
-                    "tekan Mulai, lalu jalan pelan mengitari objek ±60–90° dalam 3–8 detik. Objek tetap di tengah layar.", 13.5.sp, color = C.t2)
+                RecPhase.READY -> T("Objek apa saja, terlihat utuh dari ±50–80 cm. Tekan Mulai, lalu kelilingi objek pelan ±60–90° (3–8 detik).",
+                    13.sp, color = C.t2)
                 RecPhase.RECORDING -> {
                     T("Kelilingi objek pelan… putaran ${turn.toInt()}° dari target 60°", 14.sp, FontWeight.SemiBold)
                     LinearProgressIndicator(progress = { min(1f, (turn / 60.0).toFloat()) }, modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
@@ -288,7 +308,6 @@ private fun DtRecordChrome(status: SweepRecorder.LiveStatus?, phase: RecPhase, e
                     T("Menyimpan rekaman…", 14.sp, modifier = Modifier.padding(start = 10.dp))
                 }
             }
-            Spacer(Modifier.weight(1f))
             when (phase) {
                 RecPhase.READY -> PrimaryButton("Mulai rekam", "fiber_manual_record", Modifier.fillMaxWidth(), enabled = status != null && error == null) { onStart() }
                 RecPhase.RECORDING -> PrimaryButton("Selesai", "stop_circle", Modifier.fillMaxWidth(), color = C.green, enabled = (status?.seconds ?: 0.0) >= 1.5) { onStop() }
@@ -300,8 +319,9 @@ private fun DtRecordChrome(status: SweepRecorder.LiveStatus?, phase: RecPhase, e
 
 /** For the screenshot test: the recorder's screen around a still picture. */
 @Composable
-internal fun DtRecordPreview(picture: Bitmap?, recording: Boolean) {
-    val st = SweepRecorder.LiveStatus(recording, if (recording) 3.4 else 0.0, if (recording) 48 else 0, 0, 29.8, 198.0, 199.0, if (recording) 38.0 else 0.0, "1280×960")
+internal fun DtRecordPreview(picture: Bitmap?, recording: Boolean, gyroSilent: Boolean = false) {
+    val st = SweepRecorder.LiveStatus(recording, if (recording) 3.4 else 0.0, if (recording) 48 else 0, 0, 29.8, 198.0,
+        if (gyroSilent) 0.0 else 199.0, if (recording) 38.0 else 0.0, "1280×960", rotationHz = 200.0)
     DtRecordChrome(st, if (recording) RecPhase.RECORDING else RecPhase.READY, null, {}, {}, {}) {
         if (picture != null) Image(picture.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
     }
@@ -415,7 +435,7 @@ fun DtReviewScreen(model: AppModel, activity: Activity, dirPath: String) {
     }
 
     Column(Modifier.fillMaxSize()) {
-        TopBar("Rekaman DT20", dir.name, onBack = { model.back() })
+        TopBar("Rekaman sapuan", dir.name, onBack = { model.back() })
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             quality?.let { q ->
                 VerdictCard(q.level, "Kualitas rekaman", SweepAnalysis.verdict(q) + if (detail) "" else " Ketuk untuk detail.",
@@ -461,7 +481,7 @@ fun DtReviewScreen(model: AppModel, activity: Activity, dirPath: String) {
             }
             Card {
                 T("Data uji", 15.sp, FontWeight.SemiBold)
-                T("Ukuran belum dihitung di versi ini: rekaman dipakai untuk membangun dan menguji engine DT20. Ukuran meteran jadi pembanding.",
+                T("Ukuran belum dihitung di HP pada versi ini: rekaman dipakai untuk membangun dan menguji engine tanpa ARCore. Ukuran meteran jadi pembanding.",
                     12.5.sp, color = C.t2)
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(name, { name = it.take(40); saved = false }, singleLine = true, modifier = Modifier.fillMaxWidth(),
@@ -486,7 +506,7 @@ fun DtReviewScreen(model: AppModel, activity: Activity, dirPath: String) {
                 SecondaryButton("Bagikan ZIP", "folder_zip", Modifier.weight(1f)) {
                     if (mask != null && !saved) save()
                     val label = name.trim().ifEmpty { "objek" }.replace(Regex("[^A-Za-z0-9_-]+"), "_")
-                    model.shareFile(activity, "application/zip", "Bagikan rekaman DT20") { model.zip(listOf(dir), "dt20_${dir.name}_$label.zip") }
+                    model.shareFile(activity, "application/zip", "Bagikan rekaman sapuan") { model.zip(listOf(dir), "dt20_${dir.name}_$label.zip") }
                 }
                 SecondaryButton("Rekam lagi", "videocam", Modifier.weight(1f)) { model.back(); model.go(Screen.DtRecord) }
             }
@@ -530,7 +550,7 @@ fun DtSettingsCard(model: AppModel, activity: Activity) {
     val dirs = remember(tick) { model.store.dtDir.listFiles()?.filter { it.isDirectory }.orEmpty() }
     val mb = remember(tick) { dirs.sumOf { d -> d.walkTopDown().filter { it.isFile }.sumOf { it.length() } } / (1 shl 20) }
     Card {
-        T("Uji DT20 (HP tanpa ARCore)", 15.sp, FontWeight.SemiBold)
+        T("Uji HP tanpa ARCore (Urovo DT20/DT50)", 15.sp, FontWeight.SemiBold)
         T("Diagnostik sensor dan kamera, dan rekaman sapuan objek untuk membangun engine pengganti ARCore.", 12.5.sp, color = C.t2)
         Spacer(Modifier.height(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -541,15 +561,15 @@ fun DtSettingsCard(model: AppModel, activity: Activity) {
         T("${dirs.size} rekaman tersimpan · $mb MB", 12.5.sp, color = C.t3)
         if (dirs.isNotEmpty()) {
             Spacer(Modifier.height(6.dp))
-            SecondaryButton("Bagikan semua rekaman DT20 (ZIP)", "folder_zip", Modifier.fillMaxWidth()) {
-                model.shareFile(activity, "application/zip", "Bagikan rekaman DT20") { model.zip(dirs, "dt20_semua_rekaman.zip") }
+            SecondaryButton("Bagikan semua rekaman sapuan (ZIP)", "folder_zip", Modifier.fillMaxWidth()) {
+                model.shareFile(activity, "application/zip", "Bagikan rekaman sapuan") { model.zip(dirs, "dt20_semua_rekaman.zip") }
             }
-            TextButton(onClick = { ask = true }) { T("Hapus semua rekaman DT20", 13.sp, color = C.red) }
+            TextButton(onClick = { ask = true }) { T("Hapus semua rekaman sapuan", 13.sp, color = C.red) }
         }
     }
     if (ask) AlertDialog(onDismissRequest = { ask = false },
         title = { T("Hapus ${dirs.size} rekaman?", 18.sp, FontWeight.SemiBold) },
-        text = { T("Foto dan data sensor rekaman DT20 terhapus dari HP ini. Hasil ukur paket tidak ikut terhapus.", color = C.t2) },
+        text = { T("Foto dan data sensor rekaman sapuan terhapus dari HP ini. Hasil ukur paket tidak ikut terhapus.", color = C.t2) },
         confirmButton = { TextButton(onClick = { dirs.forEach { it.deleteRecursively() }; ask = false; tick++ }) { T("Hapus", weight = FontWeight.SemiBold, color = C.red) } },
         dismissButton = { TextButton(onClick = { ask = false }) { T("Batal", color = C.t2) } })
 }
@@ -561,7 +581,7 @@ fun DtHomeCard(model: AppModel) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconTile("biotech", C.brand, C.brandL)
             Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                T("Uji DT20", 15.sp, FontWeight.SemiBold)
+                T("Uji tanpa ARCore", 15.sp, FontWeight.SemiBold)
                 T("Diagnostik HP dan perekam sapuan objek (klik atau tarik kotak)", 12.5.sp, color = C.t2)
             }
         }

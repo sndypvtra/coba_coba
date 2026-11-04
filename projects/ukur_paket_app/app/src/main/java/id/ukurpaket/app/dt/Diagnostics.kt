@@ -58,6 +58,7 @@ object Diagnostics {
         Sensor.TYPE_ACCELEROMETER to "accelerometer", Sensor.TYPE_GYROSCOPE to "gyroscope",
         Sensor.TYPE_ACCELEROMETER_UNCALIBRATED to "accelerometer_uncalibrated", Sensor.TYPE_GYROSCOPE_UNCALIBRATED to "gyroscope_uncalibrated",
         Sensor.TYPE_MAGNETIC_FIELD to "magnetometer", Sensor.TYPE_GRAVITY to "gravity", Sensor.TYPE_ROTATION_VECTOR to "rotation_vector",
+        Sensor.TYPE_GAME_ROTATION_VECTOR to "game_rotation_vector",
     )
 
     fun device(ctx: Context): DeviceInfo {
@@ -77,28 +78,38 @@ object Diagnostics {
         }
     }
 
-    /** Counts the events each sensor really delivers at the fastest rate for [ms]. */
-    suspend fun measureRates(ctx: Context, ms: Long = 3000): Map<String, Double> {
+    /**
+     * Counts the events each sensor really delivers, one sensor at a time (so one silent sensor cannot hide behind
+     * another): at the fastest rate, and for a silent one once more at a fixed 5 ms period, as some drivers ignore
+     * "fastest". 0 means the sensor is listed but sends nothing.
+     */
+    suspend fun measureRates(ctx: Context, msEach: Long = 1500, onStep: (String) -> Unit = {}): Map<String, Double> {
         val sm = ctx.getSystemService(Context.SENSOR_SERVICE) as SensorManager
         val thread = HandlerThread("diag-imu").apply { start() }
-        val counts = HashMap<String, IntArray>()
-        val first = HashMap<String, Long>(); val last = HashMap<String, Long>()
-        val listener = object : SensorEventListener {
+        val out = LinkedHashMap<String, Double>()
+        try {
+            for ((type, name) in SENSORS) {
+                val s = sm.getDefaultSensor(type) ?: continue
+                onStep(name)
+                var hz = count(sm, s, SensorManager.SENSOR_DELAY_FASTEST, Handler(thread.looper), msEach)
+                if (hz == 0.0) hz = count(sm, s, 5000, Handler(thread.looper), msEach)
+                out[name] = hz
+            }
+        } finally { thread.quitSafely() }
+        return out
+    }
+
+    private suspend fun count(sm: SensorManager, s: Sensor, period: Int, h: Handler, ms: Long): Double {
+        val n = IntArray(1); val first = LongArray(1); val last = LongArray(1)
+        val l = object : SensorEventListener {
             override fun onSensorChanged(e: SensorEvent) {
-                val k = SENSORS[e.sensor.type] ?: return
-                synchronized(counts) {
-                    counts.getOrPut(k) { IntArray(1) }[0]++
-                    first.putIfAbsent(k, e.timestamp); last[k] = e.timestamp
-                }
+                synchronized(n) { if (n[0] == 0) first[0] = e.timestamp; last[0] = e.timestamp; n[0]++ }
             }
             override fun onAccuracyChanged(s: Sensor?, a: Int) {}
         }
-        val types = listOf(Sensor.TYPE_ACCELEROMETER, Sensor.TYPE_GYROSCOPE, Sensor.TYPE_ACCELEROMETER_UNCALIBRATED, Sensor.TYPE_GYROSCOPE_UNCALIBRATED)
-        types.forEach { t -> sm.getDefaultSensor(t)?.let { sm.registerListener(listener, it, SensorManager.SENSOR_DELAY_FASTEST, Handler(thread.looper)) } }
-        try { delay(ms) } finally { sm.unregisterListener(listener); thread.quitSafely() }
-        return synchronized(counts) {
-            counts.mapValues { (k, c) -> val span = (last[k]!! - first[k]!!) / 1e9; if (span > 0 && c[0] > 1) (c[0] - 1) / span else 0.0 }
-        }
+        sm.registerListener(l, s, period, h)
+        try { delay(ms) } finally { sm.unregisterListener(l) }
+        return synchronized(n) { val span = (last[0] - first[0]) / 1e9; if (n[0] > 1 && span > 0) (n[0] - 1) / span else 0.0 }
     }
 
     fun cameras(ctx: Context): List<CameraInfo> {
@@ -172,14 +183,22 @@ object Diagnostics {
         val out = ArrayList<Check>()
         val has = d.sensors.associateBy { it.type }
         fun rate(name: String) = rates[name] ?: rates["${name}_uncalibrated"]
-        out += if (has["gyroscope"] != null) Check("gyro", "Gyroscope", has["gyroscope"]!!.name, Level.OK, "Ada: putaran HP terbaca langsung.")
-        else Check("gyro", "Gyroscope", "Tidak ada", Level.FAIL, "Tanpa gyroscope, skala dari sensor gerak tidak bisa. Sisa cara: label resi sebagai penggaris.")
+        val gyroHz = rates["gyroscope"]
+        val rvHz = listOfNotNull(rates["game_rotation_vector"], rates["rotation_vector"]).maxOrNull()
+        out += when {
+            has["gyroscope"] == null -> Check("gyro", "Gyroscope", "Tidak ada", Level.FAIL, "Tanpa gyroscope, skala dari sensor gerak tidak bisa. Sisa cara: label resi sebagai penggaris.")
+            gyroHz == 0.0 && (rvHz ?: 0.0) > 0 -> Check("gyro", "Gyroscope", "terdaftar, tapi diam", Level.WARN,
+                "Gyroscope tidak mengirim data. Putaran HP diambil dari rotation vector (${rvHz!!.toInt()} Hz): bisa, kurang teliti.")
+            gyroHz == 0.0 -> Check("gyro", "Gyroscope", "terdaftar, tapi diam", Level.FAIL, "Gyroscope dan rotation vector tidak mengirim data.")
+            else -> Check("gyro", "Gyroscope", has["gyroscope"]!!.name, Level.OK, "Ada: putaran HP terbaca langsung.")
+        }
         out += if (has["accelerometer"] != null) Check("accel", "Accelerometer", has["accelerometer"]!!.name, Level.OK, "Ada: sumber skala meter dan arah gravitasi.")
         else Check("accel", "Accelerometer", "Tidak ada", Level.FAIL, "Tanpa accelerometer tidak ada skala dan arah lantai.")
         for ((key, name, label) in listOf(Triple("accel_hz", "accelerometer", "Kecepatan accelerometer"), Triple("gyro_hz", "gyroscope", "Kecepatan gyroscope"))) {
             val r = rate(name)
             out += when {
-                r == null -> Check(key, label, "belum diukur", Level.INFO, "Tekan Uji Sensor.")
+                r == null -> Check(key, label, "belum diukur", Level.INFO, "Tekan Sensor.")
+                r == 0.0 -> Check(key, label, "0 Hz", if (name == "gyroscope") Level.WARN else Level.FAIL, "Sensor terdaftar tetapi tidak mengirim data.")
                 r >= 150 -> Check(key, label, "${r.toInt()} Hz", Level.OK, "Cukup (≥ 150 Hz).")
                 r >= 90 -> Check(key, label, "${r.toInt()} Hz", Level.WARN, "Bisa dipakai, ideal ≥ 150 Hz.")
                 else -> Check(key, label, "${r.toInt()} Hz", Level.FAIL, "Terlalu pelan untuk mengikuti gerakan HP (perlu ≥ 90 Hz).")
@@ -223,8 +242,8 @@ object Diagnostics {
 
     /** One line for the screen: can our own engine run here? */
     fun verdict(checks: List<Check>): Pair<Level, String> = when {
-        checks.any { it.level == Level.FAIL } -> Level.FAIL to "Belum memenuhi syarat engine DT20: lihat tanda merah."
+        checks.any { it.level == Level.FAIL } -> Level.FAIL to "Belum memenuhi syarat: lihat tanda merah."
         checks.any { it.level == Level.WARN } -> Level.WARN to "Bisa dipakai, dengan catatan (kuning)."
-        else -> Level.OK to "Memenuhi syarat engine DT20."
+        else -> Level.OK to "Memenuhi syarat engine tanpa ARCore."
     }
 }

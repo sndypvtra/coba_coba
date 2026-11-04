@@ -158,6 +158,16 @@ class ScreenshotTest {
         screen("17_scan_resi_urovo", m, Screen.Home)
     }
 
+    /** The recorder on the Urovo DT50's screen (720 x 1440 px): the start button must stay on screen. */
+    @Test @Config(sdk = [35], qualifiers = "w360dp-h720dp-xhdpi") fun recorderOnSmallScreen() {
+        val photo = BitmapFactory.decodeFile(resource("paket.jpg"))
+        shot("21_perekam_layar_dt50") { Box(Modifier.fillMaxSize().background(C.bg)) { DtRecordPreview(photo, recording = false, gyroSilent = true) } }
+        val m = model(Mode.NONE)
+        m.diag = Dt20Test.diagnosis()
+        m.diagRates = mapOf("accelerometer" to 200.0, "gyroscope" to 0.0, "game_rotation_vector" to 200.0)
+        screen("22_diagnostik_gyro_diam_dt50", m, Screen.Diag)
+    }
+
     /** The DT20 test screens. Device values are test data (TestMaker Test Phone), not a real DT20 reading. */
     @Test fun dt20Screens() {
         val m = model(Mode.NONE)

@@ -51,7 +51,7 @@ class SweepRecorder(private val ctx: Context, val dir: File, private val cb: Cal
     }
 
     data class LiveStatus(val recording: Boolean, val seconds: Double, val savedFrames: Int, val dropped: Int, val cameraFps: Double,
-                          val accelHz: Double, val gyroHz: Double, val turnDeg: Double, val size: String)
+                          val accelHz: Double, val gyroHz: Double, val turnDeg: Double, val size: String, val rotationHz: Double = 0.0)
 
     private val camThread = HandlerThread("sweep-cam").apply { start() }
     private val camHandler = Handler(camThread.looper)
@@ -76,14 +76,19 @@ class SweepRecorder(private val ctx: Context, val dir: File, private val cb: Cal
     private var lastSavedNs = 0L
     private val saved = AtomicInteger(0)
     private val dropped = AtomicInteger(0)
-    private val frameRows = StringBuilder("index,t_ns,sharpness,width,height,bytes\n")
+    // arrival_ns: when the frame reached the app, on the motion sensors' clock; it maps a camera clock that is not
+    // REALTIME onto the sensors' one (to within the delivery delay, which the solver then estimates)
+    private val frameRows = StringBuilder("index,t_ns,sharpness,width,height,bytes,arrival_ns\n")
+    private val clockOffsets = ArrayList<Long>()
     private val captureRows = StringBuilder("t_ns,exposure_ns,frame_duration_ns,rolling_shutter_skew_ns,focus_diopters,af_state,ae_state,iso\n")
     private var imuOut: BufferedWriter? = null
     private var lastFocus: Float? = null
 
     // live counters for the screen
     private var camFrames = 0; private var camT0 = 0L
-    private val imuCount = IntArray(2); private var imuT0 = 0L
+    private val imuCount = IntArray(3); private var imuT0 = 0L
+    private var lastRv: FloatArray? = null; private var lastRvNs = 0L
+    @Volatile private var gyroTotal = 0
     private var lastGyroNs = 0L
     @Volatile private var turnRad = 0.0
     private var lastStatus = 0L
@@ -186,8 +191,10 @@ class SweepRecorder(private val ctx: Context, val dir: File, private val cb: Cal
         val img = try { r.acquireNextImage() } catch (e: Exception) { null } ?: return
         try {
             val now = img.timestamp
-            if (camT0 == 0L) camT0 = now
+            val arrival = SystemClock.elapsedRealtimeNanos()
+            if (camT0 == 0L) camT0 = arrival           // rate on the wall clock: the camera's own clock may be another one
             camFrames++
+            if (recording) synchronized(clockOffsets) { clockOffsets.add(arrival - now) }
             if (!recording || now < startNs || now - lastSavedNs < minFrameGapNs) return
             lastSavedNs = now
             val nv21 = toNv21(img)
@@ -199,7 +206,7 @@ class SweepRecorder(private val ctx: Context, val dir: File, private val cb: Cal
                 f.outputStream().buffered().use { YuvImage(nv21, ImageFormat.NV21, w, h, null).compressToJpeg(Rect(0, 0, w, h), 92, it) }
                 val sharp = sharpness(nv21, w, h)
                 synchronized(frameRows) { frameRows.append(idx).append(',').append(now).append(',').append("%.2f".format(Locale.US, sharp)).append(',')
-                    .append(w).append(',').append(h).append(',').append(f.length()).append('\n') }
+                    .append(w).append(',').append(h).append(',').append(f.length()).append(',').append(arrival).append('\n') }
             }
         } finally { img.close(); status() }
     }
@@ -211,8 +218,16 @@ class SweepRecorder(private val ctx: Context, val dir: File, private val cb: Cal
             if (imuT0 == 0L) imuT0 = e.timestamp
             when (e.sensor.type) {
                 Sensor.TYPE_ACCELEROMETER -> imuCount[0]++
+                Sensor.TYPE_ROTATION_VECTOR, Sensor.TYPE_GAME_ROTATION_VECTOR -> {
+                    imuCount[2]++
+                    // turn angle from the fused orientation when the gyroscope itself sends nothing
+                    val q = rvQuat(e.values)
+                    val prev = lastRv
+                    if (recording && gyroTotal == 0 && prev != null && e.timestamp - lastRvNs < 100_000_000L) turnRad += quatAngle(prev, q)
+                    lastRv = q; lastRvNs = e.timestamp
+                }
                 Sensor.TYPE_GYROSCOPE -> {
-                    imuCount[1]++
+                    imuCount[1]++; gyroTotal++
                     if (recording && lastGyroNs > 0) {
                         val dt = (e.timestamp - lastGyroNs) / 1e9
                         if (dt in 0.0..0.1) turnRad += sqrt((e.values[0] * e.values[0] + e.values[1] * e.values[1] + e.values[2] * e.values[2]).toDouble()) * dt
@@ -279,6 +294,8 @@ class SweepRecorder(private val ctx: Context, val dir: File, private val cb: Cal
   "timestamp_source": "${if (c.isRealtime()) "REALTIME" else "UNKNOWN"}",
   "frames_saved": ${saved.get()},
   "frames_dropped": ${dropped.get()},
+  "camera_to_sensor_clock_ns": ${synchronized(clockOffsets) { clockOffsets.sorted().let { if (it.isEmpty()) 0 else it[it.size / 2] } }},
+  "gyroscope_events": $gyroTotal,
   "min_frame_gap_ms": ${minFrameGapNs / 1_000_000},
   "turn_deg": ${"%.1f".format(Locale.US, Math.toDegrees(turnRad))},
   "imu_axes": "Android sensor axes of the device's natural orientation (portrait on the DT20); m/s^2 and rad/s",
@@ -307,15 +324,28 @@ class SweepRecorder(private val ctx: Context, val dir: File, private val cb: Cal
         cb.onStatus(LiveStatus(recording, if (recording) (SystemClock.elapsedRealtimeNanos() - recWallNs) / 1e9 else 0.0,
             saved.get(), dropped.get(), if (camSpan > 0.5) camFrames / camSpan else 0.0,
             if (imuSpan > 0.5) imuCount[0] / imuSpan else 0.0, if (imuSpan > 0.5) imuCount[1] / imuSpan else 0.0,
-            Math.toDegrees(turnRad), "${size.width}×${size.height}"))
+            Math.toDegrees(turnRad), "${size.width}×${size.height}", if (imuSpan > 0.5) imuCount[2] / imuSpan else 0.0))
         if (camSpan > 4) { camFrames = 0; camT0 = SystemClock.elapsedRealtimeNanos() }
-        if (imuSpan > 4) { imuCount[0] = 0; imuCount[1] = 0; imuT0 = SystemClock.elapsedRealtimeNanos() }
+        if (imuSpan > 4) { imuCount[0] = 0; imuCount[1] = 0; imuCount[2] = 0; imuT0 = SystemClock.elapsedRealtimeNanos() }
     }
 
     private fun CameraCharacteristics?.isRealtime() =
         this?.get(CameraCharacteristics.SENSOR_INFO_TIMESTAMP_SOURCE) == CameraMetadata.SENSOR_INFO_TIMESTAMP_SOURCE_REALTIME
 
     companion object {
+        /** Rotation vector event -> unit quaternion (x, y, z, w); w is optional in the event. */
+        fun rvQuat(v: FloatArray): FloatArray {
+            val x = v[0]; val y = v[1]; val z = v[2]
+            val w = if (v.size > 3) v[3] else sqrt(maxOf(0f, 1 - x * x - y * y - z * z))
+            return floatArrayOf(x, y, z, w)
+        }
+
+        /** Angle (rad) between two orientations. */
+        fun quatAngle(a: FloatArray, b: FloatArray): Double {
+            val d = kotlin.math.abs((a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3]).toDouble()).coerceAtMost(1.0)
+            return 2 * kotlin.math.acos(d)
+        }
+
         /** 4:3, about 1280 wide (label still readable, small files); else the nearest 4:3 at least 640 wide. */
         fun pickSize(sizes: List<Pair<Int, Int>>): Pair<Int, Int>? {
             val four3 = sizes.filter { (w, h) -> w * 3 == h * 4 && w >= 640 }

@@ -17,26 +17,52 @@ data class SweepQuality(
 }
 
 object SweepAnalysis {
-    data class Frame(val index: Int, val t: Long, val sharpness: Double)
-    data class Imu(val sensor: String, val t: Long, val x: Double, val y: Double, val z: Double)
+    data class Frame(val index: Int, val t: Long, val sharpness: Double, val arrival: Long? = null)
+    data class Imu(val sensor: String, val t: Long, val x: Double, val y: Double, val z: Double, val w: Double? = null)
+
+    private val KEEP = setOf("accelerometer", "gyroscope", "game_rotation_vector", "rotation_vector")
+
+    /** Angular rate from the fused orientation (rotation vector), for phones whose gyroscope sends nothing. */
+    fun gyroFromRotationVector(rv: List<Imu>): List<Imu> {
+        fun q(i: Imu): DoubleArray { val w = i.w ?: sqrt(maxOf(0.0, 1 - i.x * i.x - i.y * i.y - i.z * i.z)); return doubleArrayOf(w, i.x, i.y, i.z) }
+        return rv.zipWithNext().mapNotNull { (a, b) ->
+            val dt = (b.t - a.t) / 1e9
+            if (dt <= 0 || dt > 0.1) return@mapNotNull null
+            val qa = q(a); val qb = q(b)
+            // rate in the device frame: 2 * vec(conj(qa) * qb) / dt
+            val w = qa[0] * qb[0] + qa[1] * qb[1] + qa[2] * qb[2] + qa[3] * qb[3]
+            val sgn = if (w < 0) -1.0 else 1.0
+            val x = qa[0] * qb[1] - qa[1] * qb[0] - qa[2] * qb[3] + qa[3] * qb[2]
+            val y = qa[0] * qb[2] + qa[1] * qb[3] - qa[2] * qb[0] - qa[3] * qb[1]
+            val z = qa[0] * qb[3] - qa[1] * qb[2] + qa[2] * qb[1] - qa[3] * qb[0]
+            Imu("gyroscope", (a.t + b.t) / 2, 2 * sgn * x / dt, 2 * sgn * y / dt, 2 * sgn * z / dt)
+        }
+    }
 
     fun read(dir: File, sameClock: Boolean): SweepQuality {
         val frames = File(dir, "frames.csv").takeIf { it.exists() }?.readLines()?.drop(1)?.mapNotNull { l ->
-            l.split(',').takeIf { it.size >= 3 }?.let { Frame(it[0].toInt(), it[1].toLong(), it[2].toDouble()) }
+            l.split(',').takeIf { it.size >= 3 }?.let { Frame(it[0].toInt(), it[1].toLong(), it[2].toDouble(), it.getOrNull(6)?.toLongOrNull()) }
         }.orEmpty().sortedBy { it.t }
         val imu = File(dir, "imu.csv").takeIf { it.exists() }?.useLines { ls ->
             ls.drop(1).mapNotNull { l ->
                 val p = l.split(',')
-                if (p.size < 5 || (p[0] != "accelerometer" && p[0] != "gyroscope")) null
-                else Imu(p[0], p[1].toLong(), p[2].toDouble(), p[3].toDouble(), p[4].toDouble())
+                if (p.size < 5 || p[0] !in KEEP) null
+                else Imu(p[0], p[1].toLong(), p[2].toDouble(), p[3].toDouble(), p[4].toDouble(), p.getOrNull(5)?.toDoubleOrNull())
             }.toList()
         }.orEmpty()
         return analyse(frames, imu, sameClock)
     }
 
-    fun analyse(frames: List<Frame>, imu: List<Imu>, sameClock: Boolean): SweepQuality {
+    fun analyse(framesIn: List<Frame>, imu: List<Imu>, sameClock: Boolean): SweepQuality {
+        // a camera clock that is not the sensors' one: moved onto it by the frames' arrival times (median offset)
+        val offsets = framesIn.mapNotNull { f -> f.arrival?.let { it - f.t } }.sorted()
+        val mapped = !sameClock && offsets.isNotEmpty()
+        val frames = if (mapped) framesIn.map { it.copy(t = it.t + offsets[offsets.size / 2]) } else framesIn
         val acc = imu.filter { it.sensor == "accelerometer" }.sortedBy { it.t }
-        val gyr = imu.filter { it.sensor == "gyroscope" }.sortedBy { it.t }
+        val realGyro = imu.filter { it.sensor == "gyroscope" }.sortedBy { it.t }
+        val rv = imu.filter { it.sensor == "game_rotation_vector" }.ifEmpty { imu.filter { it.sensor == "rotation_vector" } }.sortedBy { it.t }
+        val fromRv = realGyro.isEmpty() && rv.size > 2
+        val gyr = if (fromRv) gyroFromRotationVector(rv) else realGyro
         fun hz(l: List<Imu>) = if (l.size > 2) (l.size - 1) / ((l.last().t - l.first().t) / 1e9) else 0.0
         val secs = if (frames.size > 1) (frames.last().t - frames.first().t) / 1e9 else 0.0
         val gaps = frames.zipWithNext { a, b -> (b.t - a.t) / 1e6 }
@@ -50,17 +76,17 @@ object SweepAnalysis {
         val std = if (mags.size > 1) sqrt(mags.sumOf { (it - mean) * (it - mean) } / (mags.size - 1)) else 0.0
         val med = frames.map { it.sharpness }.sorted().let { if (it.isEmpty()) 0.0 else it[it.size / 2] }
         val blurry = frames.count { it.sharpness < 0.4 * med }
-        val covers = sameClock && acc.isNotEmpty() && gyr.isNotEmpty() && frames.isNotEmpty() &&
+        val covers = (sameClock || mapped) && acc.isNotEmpty() && gyr.isNotEmpty() && frames.isNotEmpty() &&
             acc.first().t <= frames.first().t && acc.last().t >= frames.last().t && gyr.first().t <= frames.first().t && gyr.last().t >= frames.last().t
         // the sharpest frame in the middle half: the view the object is picked in
         val mid = frames.drop(frames.size / 4).dropLast(frames.size / 4).ifEmpty { frames }
         val best = mid.maxByOrNull { it.sharpness }?.index ?: 0
         val q = SweepQuality(secs, frames.size, if (secs > 0) (frames.size - 1) / secs else 0.0, gaps.maxOrNull() ?: 0.0, blurry,
             hz(acc), hz(gyr), Math.toDegrees(turn), std, covers, best, emptyList())
-        return q.copy(checks = checks(q, sameClock))
+        return q.copy(checks = checks(q, sameClock, mapped, fromRv))
     }
 
-    private fun checks(q: SweepQuality, sameClock: Boolean): List<Check> {
+    private fun checks(q: SweepQuality, sameClock: Boolean, mapped: Boolean = false, fromRv: Boolean = false): List<Check> {
         val c = ArrayList<Check>()
         fun f1(d: Double) = "%.1f".format(d).replace('.', ',')
         c += when {
@@ -76,12 +102,16 @@ object SweepAnalysis {
         c += if (q.maxGapMs > 250) Check("gap", "Jeda foto terlama", "${q.maxGapMs.toInt()} ms", Level.WARN, "Ada foto yang terlewat.")
         else Check("gap", "Jeda foto terlama", "${q.maxGapMs.toInt()} ms", Level.OK, "")
         c += when {
-            q.gyroHz == 0.0 -> Check("gyro", "Gyroscope", "tidak ada data", Level.FAIL, "Tanpa gyroscope, engine DT20 tidak bisa jalan.")
+            q.gyroHz == 0.0 -> Check("gyro", "Gyroscope", "tidak ada data", Level.FAIL, "Tanpa gyroscope atau rotation vector, engine tidak bisa jalan.")
+            fromRv -> Check("imu", "Sensor gerak", "acc ${q.accelHz.toInt()} Hz · rotasi ${q.gyroHz.toInt()} Hz", Level.WARN,
+                "Gyroscope diam: putaran dari rotation vector (lebih halus, sedikit terlambat).")
             q.gyroHz < 90 || q.accelHz < 90 -> Check("imu", "Sensor gerak", "acc ${q.accelHz.toInt()} Hz · gyro ${q.gyroHz.toInt()} Hz", Level.WARN, "Ideal ≥ 150 Hz.")
             else -> Check("imu", "Sensor gerak", "acc ${q.accelHz.toInt()} Hz · gyro ${q.gyroHz.toInt()} Hz", Level.OK, "")
         }
         c += when {
-            !sameClock -> Check("sync", "Jam kamera & sensor", "terpisah", Level.WARN, "Selisih jam diperkirakan di PC.")
+            !sameClock && !mapped -> Check("sync", "Jam kamera & sensor", "terpisah", Level.WARN, "Selisih jam diperkirakan di PC.")
+            mapped && !q.imuCoversFrames -> Check("sync", "Jam kamera & sensor", "terpisah · tidak lengkap", Level.WARN, "Data sensor tidak menutupi semua foto.")
+            mapped -> Check("sync", "Jam kamera & sensor", "terpisah · dikoreksi", Level.WARN, "Dicocokkan dari waktu tiba foto; sisa selisihnya dihitung di PC.")
             !q.imuCoversFrames -> Check("sync", "Jam kamera & sensor", "tidak lengkap", Level.WARN, "Data sensor tidak menutupi semua foto.")
             else -> Check("sync", "Jam kamera & sensor", "cocok", Level.OK, "")
         }
@@ -104,9 +134,9 @@ object SweepAnalysis {
 
     /** The plain-words verdict for the review screen. */
     fun verdict(q: SweepQuality) = when (q.level) {
-        Level.FAIL -> "Rekaman belum layak untuk engine DT20: ulangi (lihat tanda merah)."
+        Level.FAIL -> "Rekaman belum layak: ulangi (lihat tanda merah)."
         Level.WARN -> "Rekaman bisa dipakai, dengan catatan."
-        else -> "Rekaman layak untuk engine DT20."
+        else -> "Rekaman layak untuk engine tanpa ARCore."
     }
 
 }

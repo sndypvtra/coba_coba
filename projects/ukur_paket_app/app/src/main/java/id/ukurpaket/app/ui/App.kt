@@ -138,8 +138,8 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
                 Diagnosis(Diagnostics.device(ctx), caps.arcore.label, hardwareScanner, Diagnostics.sensors(ctx), Diagnostics.cameras(ctx),
                     samEncodeMs = diag?.samEncodeMs)
             }
-            diagBusy = "Mengukur kecepatan sensor (3 detik)…"
-            diagRates = runCatching { Diagnostics.measureRates(ctx) }.getOrDefault(emptyMap())
+            diagBusy = "Mengukur kecepatan sensor satu per satu…"
+            diagRates = runCatching { Diagnostics.measureRates(ctx) { n -> diagBusy = "Mengukur sensor: ${n.replace('_', ' ')}…" } }.getOrDefault(emptyMap())
             diag = diag?.let { d -> d.copy(sensors = d.sensors.map { it.copy(measuredHz = diagRates[it.type]) }) }
             diagBusy = null
         }
@@ -286,7 +286,7 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
             HardwareScanner.looksLikeQr(code) -> toast("Itu kode QR. Scan barcode garis (resi) di label.")
             takesHardwareScan -> openResi(code)
             screen == Screen.Start -> toast("Tunggu cek HP selesai, lalu scan lagi")
-            screen == Screen.Diag || screen == Screen.DtRecord || screen is Screen.DtReview -> toast("Scanner tidak dipakai di layar uji DT20")
+            screen == Screen.Diag || screen == Screen.DtRecord || screen is Screen.DtReview -> toast("Scanner tidak dipakai di layar uji")
             else -> toast("Selesaikan paket ${draft?.resi ?: "ini"} dulu, lalu scan berikutnya")
         }
     }

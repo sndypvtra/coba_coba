@@ -73,6 +73,10 @@ class Dt20Test {
         assertEquals(Level.WARN, Diagnostics.verdict(good).first)
         // no gyroscope: our engine cannot run, whatever else the phone has
         val noGyro = Diagnostics.checks(diagnosis(gyro = false), mapOf("accelerometer" to 198.0))
+        // listed but silent, with a working rotation vector: usable with a warning; with nothing: not usable
+        val silent = Diagnostics.checks(diagnosis(), mapOf("accelerometer" to 200.0, "gyroscope" to 0.0, "game_rotation_vector" to 200.0))
+        assertEquals(Level.WARN, silent.first { it.key == "gyro" }.level)
+        assertEquals(Level.FAIL, Diagnostics.checks(diagnosis(), mapOf("accelerometer" to 200.0, "gyroscope" to 0.0)).first { it.key == "gyro" }.level)
         assertEquals(Level.FAIL, noGyro.first { it.key == "gyro" }.level)
         assertEquals(Level.FAIL, Diagnostics.verdict(noGyro).first)
         // separate clocks, slow sensors, a fixed-focus lens
@@ -108,6 +112,30 @@ class Dt20Test {
         val (f3, _) = sweep()
         val noImu = SweepAnalysis.analyse(f3, emptyList(), true)
         assertEquals(Level.FAIL, noImu.checks.first { it.key == "gyro" }.level)
+    }
+
+    /** A phone whose gyroscope is listed but silent (seen on a Urovo DT50), and whose camera clock is not the sensors'. */
+    @Test fun silentGyroAndSeparateClock() {
+        val (f, i) = sweep()
+        // the same turn as a rotation vector: rotation about the device y axis at 0,35 rad/s, as unit quaternions
+        val rv = i.filter { it.sensor == "gyroscope" }.map { g ->
+            val ang = 0.35 * (g.t - 1_000_000_000L) / 1e9
+            Imu("game_rotation_vector", g.t, 0.0, Math.sin(ang / 2), 0.0, Math.cos(ang / 2))
+        }
+        val noGyro = i.filter { it.sensor == "accelerometer" } + rv
+        val q = SweepAnalysis.analyse(f, noGyro, sameClock = true)
+        assertEquals(Math.toDegrees(0.35 * 5.4), q.turnDeg, 4.0)
+        assertEquals(Level.WARN, q.checks.first { it.key == "imu" }.level)
+        val rate = SweepAnalysis.gyroFromRotationVector(rv.take(3))
+        assertEquals(0.35, rate.first().y, 1e-3)
+        // camera clock 5 s behind the sensors, frames arriving 40 ms after their timestamps
+        val shifted = f.map { it.copy(t = it.t - 5_000_000_000L, arrival = it.t + 40_000_000L) }
+        val q2 = SweepAnalysis.analyse(shifted, i, sameClock = false)
+        assertTrue(q2.imuCoversFrames)
+        assertEquals("terpisah · dikoreksi", q2.checks.first { it.key == "sync" }.value)
+        // and without arrival times there is nothing to map with
+        val q3 = SweepAnalysis.analyse(f.map { it.copy(t = it.t - 5_000_000_000L) }, i, sameClock = false)
+        assertEquals("terpisah", q3.checks.first { it.key == "sync" }.value)
     }
 
     @Test fun qualityReadsTheRecorderFiles() {
@@ -147,7 +175,7 @@ class Dt20Test {
         m.go(Screen.Diag); m.go(Screen.DtRecord)
         m.onHardwareScan("TSA-1")                                           // the scan key does not jump out of a recording
         assertEquals(Screen.DtRecord, m.screen)
-        assertEquals("Scanner tidak dipakai di layar uji DT20", m.message)
+        assertEquals("Scanner tidak dipakai di layar uji", m.message)
         m.openReview(File("/x/20261104_101010"))
         assertEquals(listOf(Screen.Home, Screen.Diag, Screen.DtReview("/x/20261104_101010")), m.stack.toList())
         assertTrue(m.store.dtDir.isDirectory)
