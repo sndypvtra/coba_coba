@@ -73,6 +73,25 @@ Scanner settings on the DT20 (Settings → Scanner, the names vary a little by f
 `scan/HardwareScanner.kt` holds the receiver and the keyboard reader. The receiver is registered only while the app
 is in front.
 
+### Smoke test: the resi label as the ruler (no ARCore, no extra items)
+
+`tools/smoke_label_ruler.py` (opencv-python-headless, onnxruntime, zxing-cpp, python-barcode) runs on the two photos
+already in the test resources. Result image: `docs/smoke_label_ruler.jpg`.
+
+| Step | Result |
+|---|---|
+| Courier's box → MobileSAM (the app's own ONNX files) on `paket.jpg` (black poly mailer) | mask score 0,994, clean outline |
+| Label patch → 4 corners (Otsu inside the parcel mask) | found; width/height recovered from perspective 1,06–1,07, so the patch is about square |
+| Parcel outline in cm through the label homography | 28,3 × 15,0 cm if the label is 10 × 10 cm; 31,0 × 22,0 cm if 10 × 15 cm |
+| Sensitivity to the label edge | a fixed threshold instead of Otsu (corners ±15–30 px) gives 30,8 × 16,4 cm: **about 8 %** |
+| Height | not measurable from one top-down photo (needs gravity from the phone and a second view) |
+| Barcode crop as ruler | decodes `TSA-80745081104`; the best Code 128 encoding (B + C, 156 modules) fits the bars only weakly (0,42), so this soft crop gives no reliable module width |
+
+What it shows: the steps run, and with this photo the size depends on facts it does not have. The label here is
+blurred for privacy, so its edges are soft, and its real size and the parcel's real size are unknown. The outline is
+measured on the label's plane, while the parcel's widest part lies lower, so a parcel 8 cm thick seen from about
+25 cm reads roughly 10–15 % small. Next: sharp DT20 photos (label readable, 2–3 views) of parcels measured with a tape.
+
 ## What has and has not been tested
 
 Tested here, on the PC:
