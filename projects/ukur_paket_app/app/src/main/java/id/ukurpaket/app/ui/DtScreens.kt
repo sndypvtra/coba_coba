@@ -74,7 +74,8 @@ import id.ukurpaket.app.measure.Mask
 import id.ukurpaket.app.dt.SweepRun
 import id.ukurpaket.app.data.cm
 import id.ukurpaket.app.data.id
-import id.ukurpaket.app.vio.LiveTracker
+import id.ukurpaket.app.vio.LiveSegmenter
+import java.util.concurrent.atomic.AtomicInteger
 import id.ukurpaket.app.vio.SweepResult
 import androidx.compose.runtime.collectAsState
 import kotlinx.coroutines.Dispatchers
@@ -189,6 +190,15 @@ fun DiagScreen(model: AppModel, activity: Activity) {
                         Kv(s.type.replace('_', ' '), "${s.maxHz.toInt()} Hz" + (s.measuredHz?.let { " · terukur ${it.toInt()} Hz" } ?: "") + "\n${s.name}")
                     }
                 }
+                if (d.gyroProbes.isNotEmpty()) Card {
+                    T("Semua gyroscope di HP ini", 15.sp, FontWeight.SemiBold)
+                    T("Dicoba satu per satu: diterima Android? · data per detik di kecepatan tercepat / game / 5 ms", 12.sp, color = C.t3)
+                    Spacer(Modifier.height(6.dp))
+                    d.gyroProbes.forEach { g ->
+                        Kv(g.type.replace('_', ' ') + if (g.wakeUp) " · wake-up" else "",
+                            "${if (g.registered) "diterima" else "DITOLAK"} · ${g.hzFastest.toInt()} / ${g.hzGame.toInt()} / ${g.hz5ms.toInt()} Hz\n${g.name} (${g.vendor})")
+                    }
+                }
                 Diagnostics.mainCamera(d.cameras)?.let { c ->
                     Card {
                         T("Kamera belakang (id ${c.id})", 15.sp, FontWeight.SemiBold)
@@ -249,34 +259,58 @@ private fun DtRecorder(model: AppModel) {
         })
     }
     var pick by remember { mutableStateOf(LivePick()) }
-    var outline by remember { mutableStateOf<FloatArray?>(null) }
-    var followed by remember { mutableStateOf(0) }
+    var live by remember { mutableStateOf<LiveSegmenter.Update?>(null) }
+    // the live pick: 0 none yet, 1 being saved, 2 saved (then measured at Stop), 3 left to the cut after recording
+    val pickState = remember { AtomicInteger(0) }
     LaunchedEffect(Unit) { if (model.diag == null) model.runDiagnosis() }
+    LaunchedEffect(Unit) { model.samLightNow() }
     DisposableEffect(Unit) { onDispose { rec.close(); if (!keep[0]) dir.deleteRecursively() } }
     fun stop() {
         if (phase != RecPhase.RECORDING) return
         phase = RecPhase.SAVING
         val p = pick
-        rec.stop { d -> main.post {
-            keep[0] = true; runCatching { model.diagFile(d) }
-            if (p.tap != null || p.box != null) model.cutPick(d, rec.sensorOrientation, p.tap?.x, p.tap?.y, p.box)
-            model.openReview(d)
-        } }
+        rec.stop { d ->
+            // the live segmentation stops; a pick it is still writing is waited for (a few ms)
+            rec.live?.close()
+            val t0 = System.currentTimeMillis()
+            while (pickState.get() == 1 && System.currentTimeMillis() - t0 < 3000) Thread.sleep(10)
+            val cutLater = pickState.compareAndSet(0, 3)
+            main.post {
+                keep[0] = true; runCatching { model.diagFile(d) }
+                if (p.tap != null || p.box != null) { if (cutLater) model.cutPick(d, rec.sensorOrientation, p.tap?.x, p.tap?.y, p.box) else model.runSweep(d) }
+                model.openReview(d)
+            }
+        }
     }
     fun begin(p: LivePick? = null) {
         if (phase != RecPhase.READY || status == null || error != null) return
         if (p != null && (p.tap != null || p.box != null)) {
-            // the live outline: tracks inside the pick at the start, then whatever joins them
-            val region: (Float, Float) -> Boolean = p.box?.let { b -> { x: Float, y: Float -> x in b[0]..b[2] && y in b[1]..b[3] } }
-                ?: p.tap!!.let { t -> { x: Float, y: Float -> val dx = x - t.x; val dy = (y - t.y) * 4f / 3f; dx * dx + dy * dy < 0.07f * 0.07f } }
-            rec.live = LiveTracker(rec.sensorOrientation, region) { poly, n -> main.post { outline = poly; followed = n } }
+            // the tracking picture, upright: frames over 1000 px wide are halved, as in the engine
+            val sz = rec.size; val down = if (sz.width > 1000) 2 else 1
+            val turned = rec.sensorOrientation % 180 != 0
+            val w = (if (turned) sz.height else sz.width) / down; val h = (if (turned) sz.width else sz.height) / down
+            val rot = rec.sensorOrientation
+            val mode = if (p.box != null) "box" else "tap"
+            rec.live = LiveSegmenter({ model.samLight }, w, h,
+                onUpdate = { u -> main.post { live = u } },
+                onFirstMask = { f, m, ms ->
+                    if (pickState.compareAndSet(0, 1)) {
+                        runCatching {
+                            val b = p.box?.let { listOf(it[0] * m.w, it[1] * m.h, it[2] * m.w, it[3] * m.h) }
+                            val t = p.tap?.let { listOf(it.x * m.w, it.y * m.h) }
+                            ObjectPick.saveMask(dir, Pick(f, ObjectPick.frameFile(dir, f).relativeTo(dir).path, rot, m.w, m.h, mode, t, b,
+                                maskScore = m.score, maskAreaPx = m.area, maskBox = m.bounds()?.toList(), samEncodeMs = ms, samDecodeMs = 0,
+                                name = "", tapeCm = listOf(null, null, null)), m)
+                        }.onFailure { pickState.set(0) }.onSuccess { pickState.set(2) }
+                    }
+                }).also { it.begin(p.box, p.tap?.let { o -> floatArrayOf(o.x, o.y) }) }
         }
         phase = RecPhase.RECORDING; rec.start()
     }
     LaunchedEffect(status?.seconds) { if ((status?.seconds ?: 0.0) > 20) stop() }
     DtRecordChrome(status, phase, error, onBack = { model.back() }, onStart = { begin() }, onStop = { stop() }, pick = pick,
         onMode = { pick = pick.copy(mode = it) },
-        outline = outline, followed = followed,
+        outline = live?.outline, followed = live?.tracked ?: 0, segmented = live?.segmented == true, samMs = live?.samMs, anchors = live?.anchors ?: 0,
         onTap = { o -> if (status != null && error == null) { pick = pick.copy(tap = o, box = null, drag = null); begin(pick) } },
         onDrag = { r -> pick = pick.copy(drag = r) },
         onBox = { r -> if (status != null && error == null && abs(r[2] - r[0]) > 0.04f && abs(r[3] - r[1]) > 0.04f) {
@@ -298,7 +332,7 @@ private fun DtRecorder(model: AppModel) {
 private fun DtRecordChrome(status: SweepRecorder.LiveStatus?, phase: RecPhase, error: String?, onBack: () -> Unit,
                            onStart: () -> Unit, onStop: () -> Unit, pick: LivePick = LivePick(), onMode: (PickMode) -> Unit = {},
                            onTap: (Offset) -> Unit = {}, onDrag: (FloatArray?) -> Unit = {}, onBox: (FloatArray) -> Unit = {},
-                           outline: FloatArray? = null, followed: Int = 0,
+                           outline: FloatArray? = null, followed: Int = 0, segmented: Boolean = false, samMs: Long? = null, anchors: Int = 0,
                            preview: @Composable () -> Unit) {
     val turn = status?.turnDeg ?: 0.0
     val gyroDead = status != null && status.gyroHz < 1 && status.accelHz > 1
@@ -331,8 +365,9 @@ private fun DtRecordChrome(status: SweepRecorder.LiveStatus?, phase: RecPhase, e
                 Row(Modifier.align(Alignment.TopStart).padding(8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     if (phase == RecPhase.RECORDING) Chip("REC ${(status?.seconds ?: 0.0).f1()} s", Tone.RED, "fiber_manual_record")
                     if (phase != RecPhase.READY && (pick.tap != null || pick.box != null))
-                        Chip(if (followed >= 3) "Objek diikuti · $followed titik" else "Objek dipilih", Tone.OK, "check")
-                    Chip(status?.size ?: "kamera…", Tone.GREY, "photo_camera")
+                        Chip(if (segmented) "Tersegmentasi · $followed titik" else "Memotong objek…", if (segmented) Tone.OK else Tone.GREY,
+                            if (segmented) "check" else "sync")
+                    if (phase == RecPhase.READY) Chip(status?.size ?: "kamera…", Tone.GREY, "photo_camera")
                 }
                 Column(Modifier.align(Alignment.BottomStart).padding(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -344,6 +379,9 @@ private fun DtRecordChrome(status: SweepRecorder.LiveStatus?, phase: RecPhase, e
                         if (gyroDead) Chip("rotasi ${status!!.rotationHz.toInt()} Hz", Tone.WARN)
                         if (phase != RecPhase.READY) Chip("${status?.savedFrames ?: 0} foto · ${status?.dropped ?: 0} terlewat", Tone.GREY)
                     }
+                    // MobileSAM: how long one cut takes on this phone, and how many times it has re-cut the object
+                    if (phase != RecPhase.READY && segmented && samMs != null)
+                        Chip("MobileSAM ${(samMs / 1000.0).f1()} s · dipotong ulang ${anchors}×", Tone.GREY, "memory")
                 }
             }
         }
@@ -356,17 +394,18 @@ private fun DtRecordChrome(status: SweepRecorder.LiveStatus?, phase: RecPhase, e
                         Chip("Tarik kotak", if (pick.mode == PickMode.BOX) Tone.BRAND else Tone.GREY, "highlight_alt") { onMode(PickMode.BOX) }
                     }
                     T((if (pick.mode == PickMode.TAP) "Sentuh objeknya" else "Tarik kotak di sekeliling objek") +
-                        " untuk memilih dan mulai rekam, lalu kelilingi objek pelan ±90° (5–10 detik). Ukuran keluar setelah Selesai.", 13.sp, color = C.t2)
+                        " untuk memilih dan mulai rekam: objek langsung tersegmentasi. Kelilingi objek pelan ±90° (5–10 detik); " +
+                        "ukuran dan berat volumetrik keluar otomatis setelah Selesai.", 13.sp, color = C.t2)
                 }
                 RecPhase.RECORDING -> {
                     T("Kelilingi objek pelan… putaran ${turn.toInt()}° dari target 60°", 14.sp, FontWeight.SemiBold)
-                    T("Area magenta = objek yang diikuti. Jaga objek tetap di layar.", 12.sp, color = C.t3)
+                    T("Area magenta = objek tersegmentasi, tiap frame. Jaga objek tetap di layar.", 12.sp, color = C.t3)
                     LinearProgressIndicator(progress = { min(1f, (turn / 60.0).toFloat()) }, modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
                         color = if (turn >= 60) C.green else C.brand, trackColor = C.line)
                 }
                 RecPhase.SAVING -> Row(verticalAlignment = Alignment.CenterVertically) {
                     CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = C.brand)
-                    T("Menyimpan rekaman…", 14.sp, modifier = Modifier.padding(start = 10.dp))
+                    T("Menyimpan rekaman, lalu langsung dihitung…", 14.sp, modifier = Modifier.padding(start = 10.dp))
                 }
             }
             when (phase) {
@@ -401,7 +440,8 @@ internal fun DtRecordPreview(picture: Bitmap?, recording: Boolean, gyroSilent: B
     val st = SweepRecorder.LiveStatus(recording, if (recording) 3.4 else 0.0, if (recording) 48 else 0, 0, 29.8, 198.0,
         if (gyroSilent) 0.0 else 199.0, if (recording) 38.0 else 0.0, "1280×960", rotationHz = 200.0)
     DtRecordChrome(st, if (recording) RecPhase.RECORDING else RecPhase.READY, null, {}, {}, {}, pick = LivePick(tap = tap),
-        outline = outline, followed = if (outline != null) 42 else 0) {
+        outline = outline, followed = if (outline != null) 42 else 0, segmented = outline != null, samMs = if (outline != null) 1800L else null,
+        anchors = if (outline != null) 3 else 0) {
         if (picture != null) Image(picture.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
     }
 }
@@ -501,10 +541,10 @@ fun DtReviewScreen(model: AppModel, activity: Activity, dirPath: String) {
         if (busy != null) return
         scope.launch {
             busy = "Memuat MobileSAM…"
-            val sam = model.samNow()
+            val sam = model.samLightNow()
             if (sam == null) { busy = null; model.toast("MobileSAM tidak bisa dimuat."); return@launch }
             val e = cache[frame] ?: run {
-                busy = "Memotong objek… sekali per foto, bisa 10–30 detik di HP ini"
+                busy = "Memotong objek… sekali per foto, beberapa detik"
                 val t0 = System.nanoTime()
                 withContext(Dispatchers.Default) { sam.embed(ObjectPick.argb(pic), pic.width, pic.height) }.also {
                     cache[frame] = it; encMs = (System.nanoTime() - t0) / 1_000_000
@@ -512,7 +552,7 @@ fun DtReviewScreen(model: AppModel, activity: Activity, dirPath: String) {
             }
             val t1 = System.nanoTime()
             val m = withContext(Dispatchers.Default) {
-                (if (point != null) sam.tap(e, point.x, point.y) else sam.box(e, rect!![0], rect[1], rect[2], rect[3])).largestPart()
+                (if (point != null) sam.tapRefined(e, point.x, point.y).maxBy { it.score } else sam.box(e, rect!![0], rect[1], rect[2], rect[3])).largestPart()
             }
             decMs = (System.nanoTime() - t1) / 1_000_000
             mask = m; tint = withContext(Dispatchers.Default) { ObjectPick.tint(m) }; saved = false

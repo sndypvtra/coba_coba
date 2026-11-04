@@ -1,4 +1,4 @@
-# UkurPaket: Android app (v0.3.0, test build)
+# UkurPaket: Android app (v0.3.1, test build)
 
 Measures a parcel's length × width × height with the phone camera, the way the courier mockup
 (`../ukur_paket_mockup`) describes: method A, ARCore depth + floor detection, with the parcel picked by a tap or a
@@ -53,8 +53,9 @@ the hub instead of being typed in.
 
 JDK 17+ and the Android SDK (platform 35). AGP 8.7.3, Kotlin 2.1.0, Compose BOM 2024.12.01, ARCore 1.47.0,
 ONNX Runtime 1.20.0, minSdk 26, targetSdk 35, arm64-v8a + armeabi-v7a. The test APK is
-`release/UkurPaket-0.3.0-uji.apk` (29 MB; MobileSAM is 18,8 MB of it: encoder float16 13,8 MB + decoder with int8
-weights 4,6 MB, made by `tools/export_sam.py`; the int8 decoder's masks are within IoU 0,989 of float32). It installs directly (allow "install unknown apps"); for the Play Store use your own key.
+`release/UkurPaket-0.3.1-uji.apk` (54 MB; MobileSAM is two models: the 1024 one for ARCore phones, encoder float16
+13,8 MB + decoder with int8 weights 4,6 MB, made by `tools/export_sam.py`, the int8 decoder's masks within IoU 0,989 of
+float32; and the 512 one for PDAs, encoder float32 28 MB + decoder 4,7 MB, made by `tools/export_sam512.py`). It installs directly (allow "install unknown apps"); for the Play Store use your own key.
 
 ## Urovo DT20 (and other Urovo PDAs)
 
@@ -97,6 +98,53 @@ the device). Tested here: the diagnosis rules, the quality check on synthetic sw
 recorder's size choice and sharpness score, the navigation, and the screens (`18`–`20`; the diagnosis screenshot uses
 test values, not a DT20 reading; the pick screenshot runs the app's MobileSAM on the parcel photo with a box).
 
+### Live segmentation while recording (v0.3.1, `vio/LiveSeg.kt`)
+
+The object is cut out the moment it is touched (tap, or a box dragged round it like a snipping tool), and its mask is
+drawn over the preview on every frame while recording. When **Selesai** is pressed the cut from the touch is already
+saved, so the size, volume and volumetric weight are computed straight away, with no second pick.
+
+**Why MobileSAM was not live before.** The shipped 1024 encoder is float16. ARM cores without native float16 (the
+DT50/DT20 class) run it emulated: the DT50 took 13,7 s per picture. Two changes:
+
+| | 1024, float16 (ARCore phones) | 512, float32 (PDAs) |
+|---|---|---|
+| Model | MobileSAM as published | the same weights; TinyViT rebuilt at img_size 512 (window attention biases depend on the window, not the picture), 32 × 32 embedding, decoder with the 32 × 32 positional grid |
+| Encoder, this PC (4 threads) | 1,57 s | **0,15–0,20 s** (7,7× less) |
+| Box prompt vs the 1024 masks (7 parcels on the conveyor frame) | reference | IoU 0,83–0,96, median 0,91 |
+| Tap prompt | reference | lone tap 0,57–0,94; **tap → its box → box + tap again** (`Segmenter.tapRefined`): 0,77–0,97 |
+| On the DT50 | 13,7 s (measured) | not measured yet: Diagnostik → **Uji SAM** times it, and keeps XNNPACK or the default CPU kernels, whichever is faster |
+
+**Live loop** (`LiveSegmenter`, on its own thread, newest frame only):
+1. touch → MobileSAM-512 on that frame (box, or refined tap); until it answers the box/disc is shown;
+2. every frame: KLT on the object's points (4 pyramid levels, for 40–60 px jumps), a similarity carries the mask; with
+   fewer than 8 object points (blur, thin objects) the points round the object give the motion, and new corners are
+   added inside it;
+3. the edges, within 3 cells of the carried mask, follow the object's and background's colours learnt from the last
+   MobileSAM answer;
+4. MobileSAM runs again whenever it is free, prompted with the box of the mask and the tracked points; of its three
+   answers the one most like the carried mask is taken if it covers ≥ 60 % of the object's points.
+
+`LiveSegTest` (synthetic DT50 sweeps, true mask on every frame, `synth_sweep.py --masks`), IoU per frame:
+
+| Sweep | MobileSAM every 12 frames | every 30 frames (slow phone) | every 30, without the colour edges |
+|---|---|---|---|
+| box | median 0,96, min 0,88 | 0,90, min 0,73 | 0,86, min 0,62 |
+| sack | median 0,98, min 0,95 | 0,96, min 0,76 | 0,75, min 0,57 |
+
+On the hand-held test video (lighter on a glass table, 15 fps, fast pans; not committed, it shows people;
+`LiveSegVideoTest -Pukur.video=…`), against MobileSAM-1024 on frames 0–54 where that reference is right: median 0,92
+with MobileSAM every 12 frames. The live mask stays on the lighter until it leaves the picture at ~8 s, through blur and
+the lighter turning to its other side. Carrying the refined edges on from frame to frame (instead of from the carried
+mask) did better on the synthetic sweeps but crept into the glass table here (0,32), so it is off.
+
+**Gyroscope on the DT50.** The default gyroscope is listed at 200 Hz but sends nothing. The game rotation vector
+(200 Hz, smooth) is computed from the gyroscope, so the hardware works; only the raw events are not passed on. The
+recorder now registers every gyroscope listed (calibrated and uncalibrated, wake-up or not) and records the first
+that sends (`session.json`: `gyroscope_used`, events per sensor); the engine also reads the uncalibrated one (rate
+minus drift). Diagnostik tries each at three rates and shows whether Android accepted it. If none sends, the rotation
+vector is used, as in 0.3.0.
+
 ### Measuring without ARCore on the phone (v0.3.0, `vio/`)
 
 Phones without ARCore (Urovo DT50/DT20) now measure: scan resi → **Ukur dengan sapuan** → touch the parcel or drag a
@@ -105,7 +153,7 @@ box round it on the live picture (recording starts) → walk round it → **Sele
 
 | Step | On the phone (pure Kotlin, no new libraries) |
 |---|---|
-| Live segmentation | `LiveTracker`: KLT on the newest frame; tracks inside the pick, then those born inside the object, give the magenta outline over the preview every frame |
+| Live segmentation | `LiveSegmenter` (0.3.1, above): MobileSAM-512 + tracking + colour edges, the mask on every frame |
 | Tracks | `Klt.kt`: pyramidal Lucas-Kanade, forward-backward checked, Shi-Tomasi corners (up to 700 over 480 × 640) |
 | Rotations | game rotation vector (or integrated gyroscope); camera clock mapped by arrival times; time offset and focal length searched on the reprojection error |
 | Structure | `Vision.linear`: points on their viewing rays, a homogeneous system (points eliminated by Schur) solved as its smallest eigenvector, reweighted to pixels; then `Vision.bundleAdjust` (Gauss-Newton/LM with Schur, Huber, sensor rotations as prior) |

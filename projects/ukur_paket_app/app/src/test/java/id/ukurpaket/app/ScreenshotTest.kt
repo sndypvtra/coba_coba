@@ -167,7 +167,11 @@ class ScreenshotTest {
         shot("23_perekam_objek_disentuh") { Box(Modifier.fillMaxSize().background(C.bg)) {
             DtRecordPreview(photo, recording = true, gyroSilent = true, tap = androidx.compose.ui.geometry.Offset(0.5f, 0.55f), outline = outline) } }
         val m = model(Mode.NONE)
-        m.diag = Dt20Test.diagnosis()
+        // every gyroscope tried (example names): accepted by Android, but none sends events, as on the DT50
+        m.diag = Dt20Test.diagnosis().copy(sam512EncodeMs = 1800, sam512Kernels = "CPU (CPU 1800 ms · XNNPACK 2100 ms)", gyroProbes = listOf(
+            id.ukurpaket.app.dt.GyroProbe("gyroscope", "gyroscope (contoh)", "vendor", false, true, 0.0, 0.0, 0.0),
+            id.ukurpaket.app.dt.GyroProbe("gyroscope", "gyroscope (contoh)", "vendor", true, true, 0.0, 0.0, 0.0),
+            id.ukurpaket.app.dt.GyroProbe("gyroscope_uncalibrated", "gyroscope uncalibrated (contoh)", "vendor", false, true, 0.0, 0.0, 0.0)))
         m.diagRates = mapOf("accelerometer" to 200.0, "gyroscope" to 0.0, "game_rotation_vector" to 200.0)
         screen("22_diagnostik_gyro_diam_dt50", m, Screen.Diag)
         // the screens whose bottom buttons were cut off on this screen size

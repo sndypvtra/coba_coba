@@ -54,4 +54,35 @@ class SegmenterTest {
             File("build/conveyor/segmenter.txt").writeText(rows.toString())
         }
     }
+
+    /**
+     * The light model the DT50 recorder uses (512 input, float32) against the 1024 model's references on the same
+     * prompts. A box is what the recorder re-prompts with, so boxes must agree closely; a lone tap is looser at 512.
+     */
+    @Test fun light512AgreesWithThe1024Model() {
+        val img = TestImages.read(javaClass.getResourceAsStream("/conveyor/frame.jpg")!!)
+        Segmenter(File("src/main/assets/sam/encoder512.onnx").readBytes(), File("src/main/assets/sam/decoder512.onnx").readBytes()).use { sam ->
+            assertTrue(sam.size == 512)
+            val t0 = System.nanoTime()
+            val e = sam.embed(img.px, img.w, img.h)
+            val rows = StringBuilder(String.format(Locale.US, "encoder-512 %.0f ms (PC CPU)\n", (System.nanoTime() - t0) / 1e6))
+            val boxes = ArrayList<Float>(); val taps = ArrayList<Float>()
+            for (t in scene["taps"]!!.jsonArray) {
+                val o = t.jsonObject
+                val tid = o["tid"]!!.jsonPrimitive.int
+                val box = o["box_px"]!!.jsonArray.map { it.jsonPrimitive.float }
+                val tap = o["tap_px"]!!.jsonArray.map { it.jsonPrimitive.float }
+                val ib = sam.box(e, box[0], box[1], box[2], box[3]).iou(ref("sam_box_$tid"))
+                val it = sam.tap(e, tap[0], tap[1]).iou(ref("sam_tap_$tid"))
+                val tr = sam.tapRefined(e, tap[0], tap[1]).maxBy { m -> m.score }
+                val rt = tr.iou(ref("sam_tap_$tid")); val rb = tr.iou(ref("sam_box_$tid"))
+                boxes.add(ib); taps.add(rt)
+                rows.append(String.format(Locale.US, "#%-3d box IoU vs 1024 %.3f  tap %.3f  tap refined vs 1024 tap %.3f, vs 1024 box %.3f\n", tid, ib, it, rt, rb))
+                assertTrue("#$tid box $ib", ib > 0.8f)
+            }
+            println(rows)
+            assertTrue("median box IoU", boxes.sorted()[boxes.size / 2] > 0.9f)
+            assertTrue("median refined tap IoU", taps.sorted()[taps.size / 2] > 0.88f)
+        }
+    }
 }

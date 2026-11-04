@@ -95,8 +95,8 @@ class SweepRecorder(private val ctx: Context, val dir: File, private val cb: Cal
     @Volatile private var turnRad = 0.0
     private var lastStatus = 0L
 
-    /** Follows the picked object for the live outline (set when recording starts with a pick). */
-    @Volatile var live: id.ukurpaket.app.vio.LiveTracker? = null
+    /** Segments the picked object live (set when recording starts with a pick); fed every saved frame. */
+    @Volatile var live: id.ukurpaket.app.vio.LiveSegmenter? = null
 
     /** Target rate of saved frames: the solver needs ~10–15 per second; the motion sensors carry the fast motion. */
     var minFrameGapNs = 60_000_000L
@@ -210,7 +210,7 @@ class SweepRecorder(private val ctx: Context, val dir: File, private val cb: Cal
                 val f = File(dir, "frames/%05d.jpg".format(idx))
                 f.outputStream().buffered().use { YuvImage(nv21, ImageFormat.NV21, w, h, null).compressToJpeg(Rect(0, 0, w, h), 92, it) }
                 val sharp = sharpness(nv21, w, h)
-                live?.offer(nv21, w, h)
+                live?.offer(idx, nv21, w, h, sensorOrientation)
                 synchronized(frameRows) { frameRows.append(idx).append(',').append(now).append(',').append("%.2f".format(Locale.US, sharp)).append(',')
                     .append(w).append(',').append(h).append(',').append(f.length()).append(',').append(arrival).append('\n') }
             }
@@ -232,7 +232,12 @@ class SweepRecorder(private val ctx: Context, val dir: File, private val cb: Cal
                     if (recording && gyroTotal == 0 && prev != null && e.timestamp - lastRvNs < 100_000_000L) turnRad += quatAngle(prev, q)
                     lastRv = q; lastRvNs = e.timestamp
                 }
-                Sensor.TYPE_GYROSCOPE -> {
+                Sensor.TYPE_GYROSCOPE, Sensor.TYPE_GYROSCOPE_UNCALIBRATED -> {
+                    synchronized(gyroSeen) { val k = key(e.sensor); gyroSeen[k] = (gyroSeen[k] ?: 0).coerceAtLeast(0) + 1 }
+                    // one gyroscope only: the calibrated one when it delivers, else the first that does
+                    val used = gyroUsed
+                    if (used == null || (used.type == Sensor.TYPE_GYROSCOPE_UNCALIBRATED && e.sensor.type == Sensor.TYPE_GYROSCOPE)) gyroUsed = e.sensor
+                    else if (used !== e.sensor) return
                     imuCount[1]++; gyroTotal++
                     if (recording && lastGyroNs > 0) {
                         val dt = (e.timestamp - lastGyroNs) / 1e9
@@ -243,6 +248,7 @@ class SweepRecorder(private val ctx: Context, val dir: File, private val cb: Cal
             }
             val out = imuOut ?: return
             if (!recording) return
+            if ((e.sensor.type == Sensor.TYPE_GYROSCOPE || e.sensor.type == Sensor.TYPE_GYROSCOPE_UNCALIBRATED) && e.sensor !== gyroUsed) return
             out.append(name).append(',').append(e.timestamp.toString())
             for (i in 0 until minOf(e.values.size, 6)) out.append(',').append(e.values[i].toString())
             out.append('\n')
@@ -250,9 +256,28 @@ class SweepRecorder(private val ctx: Context, val dir: File, private val cb: Cal
         override fun onAccuracyChanged(s: Sensor?, a: Int) {}
     }
 
+    /**
+     * Every motion sensor the engine can use. For the gyroscope, every one the phone lists (calibrated, uncalibrated,
+     * wake-up or not): on the DT50 the default one is listed at 200 Hz but sends nothing, so whichever really delivers
+     * is recorded; session.json says which.
+     */
     private fun startImu() {
-        Diagnostics.SENSORS.keys.forEach { t -> sm.getDefaultSensor(t)?.let { sm.registerListener(imu, it, SensorManager.SENSOR_DELAY_FASTEST, imuHandler) } }
+        val gyroTypes = setOf(Sensor.TYPE_GYROSCOPE, Sensor.TYPE_GYROSCOPE_UNCALIBRATED)
+        Diagnostics.SENSORS.keys.filter { it !in gyroTypes }.forEach { t -> sm.getDefaultSensor(t)?.let { sm.registerListener(imu, it, SensorManager.SENSOR_DELAY_FASTEST, imuHandler) } }
+        for (t in gyroTypes) {
+            val all = (sm.getSensorList(t) + listOfNotNull(sm.getDefaultSensor(t, false), sm.getDefaultSensor(t, true))).distinct()
+            for (g in all) {
+                val ok = sm.registerListener(imu, g, SensorManager.SENSOR_DELAY_FASTEST, imuHandler)
+                synchronized(gyroSeen) { gyroSeen[key(g)] = if (ok) 0 else -1 }
+            }
+        }
     }
+
+    // gyroscope sensor -> events (-1: Android refused the listener)
+    private val gyroSeen = LinkedHashMap<String, Int>()
+    private fun key(s: Sensor) = "${Diagnostics.SENSORS[s.type]}|${s.name}|${if (s.isWakeUpSensor) "wakeup" else "non-wakeup"}"
+    // the gyroscope sensor whose events are recorded: the first one that sends any
+    @Volatile private var gyroUsed: Sensor? = null
 
     // ---------------------------------------------------------------- recording
     fun start() {
@@ -302,6 +327,8 @@ class SweepRecorder(private val ctx: Context, val dir: File, private val cb: Cal
   "frames_dropped": ${dropped.get()},
   "camera_to_sensor_clock_ns": ${synchronized(clockOffsets) { clockOffsets.sorted().let { if (it.isEmpty()) 0 else it[it.size / 2] } }},
   "gyroscope_events": $gyroTotal,
+  "gyroscope_used": "${gyroUsed?.let { key(it) } ?: ""}",
+  "gyroscopes": {${synchronized(gyroSeen) { gyroSeen.entries.joinToString(", ") { "\"${it.key}\": ${it.value}" } }}},
   "min_frame_gap_ms": ${minFrameGapNs / 1_000_000},
   "turn_deg": ${"%.1f".format(Locale.US, Math.toDegrees(turnRad))},
   "imu_axes": "Android sensor axes of the device's natural orientation (portrait on the DT20); m/s^2 and rad/s",

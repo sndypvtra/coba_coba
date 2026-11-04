@@ -60,6 +60,8 @@ data class Settings(
     val record: Boolean = false,
     val prepShown: Int = 0,
     val courier: String = "Andi",
+    /** MobileSAM-512 through XNNPACK: set by the diagnostics' timing when it is faster on this phone. */
+    val samXnnpack: Boolean = false,
 )
 
 @Serializable

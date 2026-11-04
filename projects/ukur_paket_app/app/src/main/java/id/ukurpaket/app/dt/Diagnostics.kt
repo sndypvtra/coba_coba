@@ -41,9 +41,20 @@ data class CameraInfo(
 data class DeviceInfo(val manufacturer: String, val model: String, val brand: String, val device: String, val hardware: String,
                       val android: String, val sdk: Int, val abis: List<String>, val cores: Int, val ramMb: Long, val freeMb: Long)
 
+/**
+ * One gyroscope the phone lists (there can be several: calibrated, uncalibrated, wake-up), tried on its own at three
+ * rates: whether Android accepted the listener, and the events per second that really came.
+ */
+@Serializable
+data class GyroProbe(val type: String, val name: String, val vendor: String, val wakeUp: Boolean, val registered: Boolean,
+                     val hzFastest: Double, val hzGame: Double, val hz5ms: Double) {
+    val delivers get() = maxOf(hzFastest, hzGame, hz5ms) > 1.0
+}
+
 @Serializable
 data class Diagnosis(val device: DeviceInfo, val arcore: String, val urovoScanner: Boolean, val sensors: List<SensorInfo>,
-                     val cameras: List<CameraInfo>, val samEncodeMs: Long? = null, val checks: List<Check> = emptyList())
+                     val cameras: List<CameraInfo>, val samEncodeMs: Long? = null, val checks: List<Check> = emptyList(),
+                     val sam512EncodeMs: Long? = null, val gyroProbes: List<GyroProbe> = emptyList(), val sam512Kernels: String? = null)
 
 enum class Level { OK, WARN, FAIL, INFO }
 
@@ -99,7 +110,29 @@ object Diagnostics {
         return out
     }
 
-    private suspend fun count(sm: SensorManager, s: Sensor, period: Int, h: Handler, ms: Long): Double {
+    /** Every gyroscope listed (calibrated and uncalibrated, wake-up or not), each at three rates. */
+    suspend fun probeGyros(ctx: Context, msEach: Long = 1200, onStep: (String) -> Unit = {}): List<GyroProbe> {
+        val sm = ctx.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        val thread = HandlerThread("diag-gyro").apply { start() }
+        val out = ArrayList<GyroProbe>()
+        try {
+            for ((type, name) in listOf(Sensor.TYPE_GYROSCOPE to "gyroscope", Sensor.TYPE_GYROSCOPE_UNCALIBRATED to "gyroscope_uncalibrated")) {
+                val all = (sm.getSensorList(type) + listOfNotNull(sm.getDefaultSensor(type, true), sm.getDefaultSensor(type, false))).distinct()
+                for (s in all) {
+                    onStep("${s.name}${if (s.isWakeUpSensor) " (wake-up)" else ""}")
+                    val h = Handler(thread.looper)
+                    val ok = IntArray(1)
+                    val fast = count(sm, s, SensorManager.SENSOR_DELAY_FASTEST, h, msEach, ok)
+                    val game = count(sm, s, SensorManager.SENSOR_DELAY_GAME, h, msEach, ok)
+                    val p5 = count(sm, s, 5000, h, msEach, ok)
+                    out += GyroProbe(name, s.name, s.vendor, s.isWakeUpSensor, ok[0] > 0, fast, game, p5)
+                }
+            }
+        } finally { thread.quitSafely() }
+        return out
+    }
+
+    private suspend fun count(sm: SensorManager, s: Sensor, period: Int, h: Handler, ms: Long, accepted: IntArray? = null): Double {
         val n = IntArray(1); val first = LongArray(1); val last = LongArray(1)
         val l = object : SensorEventListener {
             override fun onSensorChanged(e: SensorEvent) {
@@ -107,7 +140,7 @@ object Diagnostics {
             }
             override fun onAccuracyChanged(s: Sensor?, a: Int) {}
         }
-        sm.registerListener(l, s, period, h)
+        if (sm.registerListener(l, s, period, h)) accepted?.let { it[0]++ }
         try { delay(ms) } finally { sm.unregisterListener(l) }
         return synchronized(n) { val span = (last[0] - first[0]) / 1e9; if (n[0] > 1 && span > 0) (n[0] - 1) / span else 0.0 }
     }
@@ -185,7 +218,15 @@ object Diagnostics {
         fun rate(name: String) = rates[name] ?: rates["${name}_uncalibrated"]
         val gyroHz = rates["gyroscope"]
         val rvHz = listOfNotNull(rates["game_rotation_vector"], rates["rotation_vector"]).maxOrNull()
+        val live = d.gyroProbes.filter { it.delivers }
         out += when {
+            d.gyroProbes.isNotEmpty() && live.isNotEmpty() && gyroHz == 0.0 -> Check("gyro", "Gyroscope",
+                "${live.first().name} (${live.first().type.replace('_', ' ')})", Level.OK,
+                "Gyroscope utama diam, tapi yang ini mengirim ${maxOf(live.first().hzFastest, live.first().hzGame, live.first().hz5ms).toInt()} Hz: perekam memakainya.")
+            d.gyroProbes.isNotEmpty() && live.isEmpty() && (rvHz ?: 0.0) > 0 -> Check("gyro", "Gyroscope", "${d.gyroProbes.size} terdaftar, semua diam", Level.WARN,
+                "Semua gyroscope sudah dicoba (${d.gyroProbes.count { it.registered }} diterima Android, 3 kecepatan): tidak ada data mentah. " +
+                    "Hardware-nya hampir pasti bekerja: rotation vector (${rvHz!!.toInt()} Hz) dihitung dari gyroscope itu. Hanya data mentahnya " +
+                    "yang tidak diteruskan firmware HP, jadi putaran HP diambil dari rotation vector.")
             has["gyroscope"] == null -> Check("gyro", "Gyroscope", "Tidak ada", Level.FAIL, "Tanpa gyroscope, skala dari sensor gerak tidak bisa. Sisa cara: label resi sebagai penggaris.")
             gyroHz == 0.0 && (rvHz ?: 0.0) > 0 -> Check("gyro", "Gyroscope", "terdaftar, tapi diam", Level.WARN,
                 "Gyroscope tidak mengirim data. Putaran HP diambil dari rotation vector (${rvHz!!.toInt()} Hz): bisa, kurang teliti.")
@@ -232,10 +273,16 @@ object Diagnostics {
         val free = if (d.device.freeMb >= 1024) "${d.device.freeMb / 1024} GB" else "${d.device.freeMb} MB"
         out += if (d.device.freeMb in 0 until 1024) Check("disk", "Ruang kosong", free, Level.WARN, "Satu rekaman ±10–40 MB.")
         else Check("disk", "Ruang kosong", free, Level.OK, "Cukup untuk puluhan rekaman.")
+        d.sam512EncodeMs?.let { ms ->
+            out += Check("sam512", "MobileSAM-512 (segmentasi saat rekam)", "${"%.1f".format(ms / 1000.0).replace('.', ',')} s per foto",
+                if (ms <= 2500) Level.OK else if (ms <= 6000) Level.WARN else Level.FAIL,
+                when { ms <= 2500 -> "Cukup cepat: mask dipotong ulang tiap ~${"%.1f".format(ms / 1000.0).replace('.', ',')} s, di antaranya diikuti tracking."
+                    ms <= 6000 -> "Mask jarang dipotong ulang: sapukan lebih pelan."; else -> "Terlalu lambat untuk segmentasi saat rekam." } +
+                    (d.sam512Kernels?.let { " Kernel: $it." } ?: ""))
+        }
         d.samEncodeMs?.let { ms ->
-            out += Check("sam", "MobileSAM (pilih objek)", "${"%.1f".format(ms / 1000.0).replace('.', ',')} s per foto",
-                if (ms <= 8000) Level.OK else if (ms <= 25000) Level.WARN else Level.FAIL,
-                if (ms <= 8000) "Cukup cepat." else "Lambat: dipakai sekali per objek saja.")
+            out += Check("sam", "MobileSAM-1024 (pembanding)", "${"%.1f".format(ms / 1000.0).replace('.', ',')} s per foto", Level.INFO,
+                "Model besar float16, untuk HP ARCore. Tidak dipakai di perekam.")
         }
         return out
     }

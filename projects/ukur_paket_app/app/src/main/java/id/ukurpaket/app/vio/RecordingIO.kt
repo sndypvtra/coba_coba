@@ -29,6 +29,7 @@ object RecordingIO {
         val tCam = DoubleArray(rows.size) { rows[it][1].toLong() / 1e9 }
         val arrival = if (rows.isNotEmpty() && rows.all { it.size > 6 && it[6].isNotBlank() }) DoubleArray(rows.size) { rows[it][6].toLong() / 1e9 } else null
         val acc = ArrayList<Sample>(); val gyr = ArrayList<Sample>(); val rv = ArrayList<Sample>(); val rvAbs = ArrayList<Sample>()
+        val gyrRaw = ArrayList<Sample>()
         File(dir, "imu.csv").forEachLine { line ->
             val p = line.split(',')
             if (p.size < 5 || p[0] == "sensor") return@forEachLine
@@ -36,9 +37,12 @@ object RecordingIO {
             val v = p.drop(2).mapNotNull { it.toDoubleOrNull() }.toDoubleArray()
             when (p[0]) {
                 "accelerometer" -> acc.add(Sample(t, v)); "gyroscope" -> gyr.add(Sample(t, v))
+                // uncalibrated: rate and the driver's drift estimate; the rate minus the drift is the calibrated one
+                "gyroscope_uncalibrated" -> if (v.size >= 3) gyrRaw.add(Sample(t, if (v.size >= 6) DoubleArray(3) { v[it] - v[it + 3] } else v.copyOf(3)))
                 "game_rotation_vector" -> rv.add(Sample(t, v)); "rotation_vector" -> rvAbs.add(Sample(t, v))
             }
         }
+        if (gyr.isEmpty()) gyr.addAll(gyrRaw)
         acc.sortBy { it.t }; gyr.sortBy { it.t }; rv.sortBy { it.t }; rvAbs.sortBy { it.t }
         val first = decode(File(dir, "frames/%05d.jpg".format(idx[0])))
         // focal prior from the Camera2 facts: focal (mm) / sensor width (mm) x sensor-side width, at the tracking width

@@ -108,12 +108,35 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
 
     init { if (checkDevice) viewModelScope.launch { check() } }
 
-    /** Only phones that can measure need the model up front: it takes ~100 MB of memory once loaded. */
+    /**
+     * The model a phone uses, up front so the first touch is answered at once: the 1024 one with ARCore (~100 MB of
+     * memory once loaded), the light 512 one without (the sweep recorder).
+     */
     private fun loadSamIfNeeded() {
-        if (caps.arcore != ArState.READY || segmenter != null) return
-        viewModelScope.launch { samNow() }
+        if (caps.arcore == ArState.READY) { if (segmenter == null) viewModelScope.launch { samNow() } }
+        else if (caps.arcore != ArState.CHECKING && samLight == null) viewModelScope.launch { samLightNow() }
     }
     private val samLock = Mutex()
+    private val samLightLock = Mutex()
+
+    /**
+     * MobileSAM at 512 (float32, a quarter of the 1024 model's work) for phones without ARCore: the live segmentation
+     * while recording, and picks on a recording. On the DT50 the 1024 float16 model took 13,7 s per picture.
+     */
+    @Volatile var samLight: Segmenter? = null
+        private set
+
+    suspend fun samLightNow(): Segmenter? = samLightLock.withLock {
+        samLight ?: withContext(Dispatchers.Default) { runCatching { lightModel(store.settings.value.samXnnpack) }.getOrNull() }.also { samLight = it }
+    }
+
+    /** Half the cores (2–4): the other half keeps recording (JPEG, tracking) while MobileSAM runs. */
+    private fun lightModel(xnnpack: Boolean): Segmenter {
+        val am = getApplication<Application>().assets
+        val threads = (Runtime.getRuntime().availableProcessors() / 2).coerceIn(2, 4)
+        return Segmenter(am.open("sam/encoder512.onnx").use { it.readBytes() }, am.open("sam/decoder512.onnx").use { it.readBytes() },
+            threads = threads, xnnpack = xnnpack)
+    }
 
     /** The model now, loading it if needed (the DT20 recorder picks objects with it although the phone has no ARCore). */
     suspend fun samNow(): Segmenter? = samLock.withLock {
@@ -142,28 +165,51 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
             diagBusy = "Membaca HP…"
             diag = withContext(Dispatchers.Default) {
                 Diagnosis(Diagnostics.device(ctx), caps.arcore.label, hardwareScanner, Diagnostics.sensors(ctx), Diagnostics.cameras(ctx),
-                    samEncodeMs = diag?.samEncodeMs)
+                    samEncodeMs = diag?.samEncodeMs, sam512EncodeMs = diag?.sam512EncodeMs, sam512Kernels = diag?.sam512Kernels, gyroProbes = diag?.gyroProbes.orEmpty())
             }
             diagBusy = "Mengukur kecepatan sensor satu per satu…"
             diagRates = runCatching { Diagnostics.measureRates(ctx) { n -> diagBusy = "Mengukur sensor: ${n.replace('_', ' ')}…" } }.getOrDefault(emptyMap())
             diag = diag?.let { d -> d.copy(sensors = d.sensors.map { it.copy(measuredHz = diagRates[it.type]) }) }
+            diagBusy = "Memeriksa setiap gyroscope di HP ini…"
+            val probes = runCatching { Diagnostics.probeGyros(ctx) { n -> diagBusy = "Gyroscope: $n…" } }.getOrDefault(emptyList())
+            diag = diag?.copy(gyroProbes = probes)
             diagBusy = null
         }
     }
 
-    /** Times one MobileSAM picture encoding: the slow half of picking an object (the prompt itself takes milliseconds). */
+    /**
+     * Times one picture encoding, the slow half of picking an object (a prompt then takes milliseconds): the light
+     * 512 model the recorder uses, then the 1024 one for comparison.
+     */
     fun timeSam() {
         if (diagBusy != null) return
         viewModelScope.launch {
-            diagBusy = "Memuat MobileSAM…"
-            val sam = samNow()
-            if (sam == null) { diagBusy = null; toast("MobileSAM tidak bisa dimuat."); return@launch }
-            diagBusy = "Menguji MobileSAM (bisa 10–30 detik di HP ini)…"
-            val ms = withContext(Dispatchers.Default) {
-                val w = 640; val h = 480
-                val px = IntArray(w * h) { i -> val v = ((i % w) * 255 / w); (0xFF shl 24) or (v shl 16) or (((i / w) * 255 / h) shl 8) or 128 }
+            fun pattern(w: Int, h: Int) = IntArray(w * h) { i -> val v = ((i % w) * 255 / w); (0xFF shl 24) or (v shl 16) or (((i / w) * 255 / h) shl 8) or 128 }
+            suspend fun time(sam: Segmenter) = withContext(Dispatchers.Default) {
+                val w = 480; val h = 640; val px = pattern(w, h)
+                sam.embed(px, w, h)                                        // first run sets up the kernels
                 val t0 = System.nanoTime(); sam.embed(px, w, h); (System.nanoTime() - t0) / 1_000_000
             }
+            diagBusy = "Memuat MobileSAM-512…"
+            val light = samLightNow()
+            if (light == null) { diagBusy = null; toast("MobileSAM tidak bisa dimuat."); return@launch }
+            diagBusy = "Menguji MobileSAM-512 (model rekam)…"
+            val cur = store.settings.value.samXnnpack
+            val msCur = time(light)
+            // the other kernels (XNNPACK or the default CPU ones): whichever is faster here is kept
+            diagBusy = "Menguji MobileSAM-512 dengan ${if (cur) "kernel CPU biasa" else "XNNPACK"}…"
+            val other = withContext(Dispatchers.Default) { runCatching { lightModel(!cur) }.getOrNull() }
+            val msOther = other?.let { time(it) }
+            val ms512 = if (msOther != null && msOther < msCur * 0.9) {
+                store.update { it.copy(samXnnpack = !cur) }
+                samLightLock.withLock { val old = samLight; samLight = other; old?.let { o -> Thread { Thread.sleep(3000); o.close() }.start() } }
+                msOther
+            } else { other?.close(); msCur }
+            diag = diag?.copy(sam512EncodeMs = ms512, sam512Kernels = "${if (store.settings.value.samXnnpack) "XNNPACK" else "CPU"} " +
+                "(CPU ${if (cur) msOther else msCur} ms · XNNPACK ${if (cur) msCur else msOther} ms)")
+            diagBusy = "Menguji MobileSAM-1024 (pembanding, bisa 10–30 detik)…"
+            val big = samNow()
+            val ms = big?.let { time(it) }
             diag = diag?.copy(samEncodeMs = ms)
             diagBusy = null
         }
@@ -200,6 +246,7 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
         val sam = segmenter
         segmenter = null
         if (sam != null) Thread { e?.awaitWorker(); sam.close() }.start()
+        samLight?.let { l -> samLight = null; Thread { Thread.sleep(3000); l.close() }.start() }   // after a live run still in progress
     }
 
     private suspend fun check() {
@@ -275,14 +322,15 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
 
     /**
      * The object touched on the recorder's live picture, cut out of the sweep's first frame (taken at that touch) once
-     * recording has stopped: MobileSAM during the sweep would take the CPU the recording needs.
+     * recording has stopped: the fallback for when the live segmentation had no answer yet (a very short sweep, or the
+     * model still loading). Then measured, as after a live pick.
      * [nx], [ny] or [box] (x0, y0, x1, y1): fractions of the upright picture.
      */
     fun cutPick(dir: File, rotation: Int, nx: Float?, ny: Float?, box: FloatArray?) {
         pickJobs[dir.path] = "cutting"
         viewModelScope.launch {
             val ok = runCatching {
-                val sam = samNow() ?: error("MobileSAM tidak bisa dimuat")
+                val sam = samLightNow() ?: error("MobileSAM tidak bisa dimuat")
                 withContext(Dispatchers.Default) {
                     val pic = ObjectPick.upright(dir, 0, rotation) ?: error("foto pertama tidak ada")
                     val t0 = System.nanoTime()
@@ -291,7 +339,7 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
                     val t1 = System.nanoTime()
                     val b = box?.let { floatArrayOf(it[0] * pic.width, it[1] * pic.height, it[2] * pic.width, it[3] * pic.height) }
                     val tap = if (b == null && nx != null && ny != null) floatArrayOf(nx * pic.width, ny * pic.height) else null
-                    val m = (if (b != null) sam.box(e, b[0], b[1], b[2], b[3]) else sam.tap(e, tap!![0], tap[1])).largestPart()
+                    val m = (if (b != null) sam.box(e, b[0], b[1], b[2], b[3]) else sam.tapRefined(e, tap!![0], tap[1]).maxBy { it.score }).largestPart()
                     val dec = (System.nanoTime() - t1) / 1_000_000
                     ObjectPick.save(dir, Pick(0, ObjectPick.frameFile(dir, 0).relativeTo(dir).path, rotation, pic.width, pic.height,
                         if (b != null) "box" else "tap", tap?.toList(), b?.toList(), maskScore = m.score, maskAreaPx = m.area,

@@ -13,8 +13,8 @@ android {
         applicationId = "id.ukurpaket.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 12
-        versionName = "0.3.0-uji"
+        versionCode = 13
+        versionName = "0.3.1-uji"
         // 32-bit kept too, so the app still installs (and can mark parcels for the hub) on older phones.
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
     }
@@ -40,7 +40,12 @@ android {
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
-            all { it.systemProperty("roborazzi.test.record", "true"); it.maxHeapSize = "3g" }
+            all { t ->
+                t.systemProperty("roborazzi.test.record", "true"); t.maxHeapSize = "3g"
+                // a real video for LiveSegVideoTest, given on the command line (never committed: it shows people)
+                for (k in listOf("ukur.video", "ukur.videoRef", "ukur.videoOut", "ukur.videoBox", "ukur.videoRefine", "ukur.videoTrace"))
+                    project.findProperty(k)?.let { t.systemProperty(k, it.toString()) }
+            }
         }
     }
 }

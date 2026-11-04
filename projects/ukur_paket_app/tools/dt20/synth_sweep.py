@@ -215,7 +215,7 @@ def quat(r):
     return np.array([x, (r[0, 1] + r[1, 0]) / (4 * x), (r[0, 2] + r[2, 0]) / (4 * x), (r[2, 1] - r[1, 2]) / (4 * x)])
 
 
-def main(out, kind="box", rotate_only=False, seed=0, dt50=False, pick_first=False, quality=92):
+def main(out, kind="box", rotate_only=False, seed=0, dt50=False, pick_first=False, quality=92, masks=False):
     rng = np.random.default_rng(seed)
     out = Path(out); (out / "frames").mkdir(parents=True, exist_ok=True)
     sc = Scene(kind, rng)
@@ -233,6 +233,9 @@ def main(out, kind="box", rotate_only=False, seed=0, dt50=False, pick_first=Fals
         g = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         arrival = t0 + int(tf[i] * 1e9) + int((0.035 + rng.normal(0, 0.005)) * 1e9)
         rows.append(f"{i},{t0 + cam_clock + int(tf[i] * 1e9)},{cv2.Laplacian(g, cv2.CV_64F).var():.2f},{side.shape[1]},{side.shape[0]},{f.stat().st_size},{arrival}")
+        if masks:                                       # --masks: the object on every frame (upright), truth for live segmentation
+            (out / "masks").mkdir(exist_ok=True)
+            cv2.imwrite(str(out / "masks" / f"{i:05d}.png"), ob.astype(np.uint8) * 255)
         if i == mid:
             mask = ob
             cv2.imwrite(str(out / "mask.png"), mask.astype(np.uint8) * 255)
@@ -273,4 +276,4 @@ if __name__ == "__main__":
     seed = int(sys.argv[sys.argv.index("--seed") + 1]) if "--seed" in sys.argv else 0
     if "--seed" in sys.argv: a = [x for x in a if x != str(seed)]
     main(a[0], a[1] if len(a) > 1 else "box", "--rotate-only" in sys.argv, seed, "--dt50" in sys.argv, "--pick-first" in sys.argv,
-         85 if "--small" in sys.argv else 92)
+         85 if "--small" in sys.argv else 92, "--masks" in sys.argv)

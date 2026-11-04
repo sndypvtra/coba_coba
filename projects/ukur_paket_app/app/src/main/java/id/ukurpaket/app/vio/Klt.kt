@@ -205,7 +205,7 @@ class Track(val id: Int) {
  * KLT tracker over a sweep: frames in order (upright grey), tracks kept while forward-backward consistent, new
  * corners topped up in empty places. Every observation is kept for the solver.
  */
-class Tracker(val maxTracks: Int = 700, val minDist: Int = 9, val fbMax: Float = 0.7f) {
+class Tracker(val maxTracks: Int = 700, val minDist: Int = 9, val fbMax: Float = 0.7f, val levels: Int = 3) {
     val tracks = ArrayList<Track>()
     private val live = ArrayList<Track>()
     private var prev: Pyramid? = null
@@ -215,7 +215,7 @@ class Tracker(val maxTracks: Int = 700, val minDist: Int = 9, val fbMax: Float =
 
     /** Adds one frame; returns the tracks alive in it. */
     fun feed(g: Gray): List<Track> {
-        val pyr = Pyramid(g)
+        val pyr = Pyramid(g, levels)
         width = g.w; height = g.h
         val k = frames
         val pp = prev
@@ -241,6 +241,19 @@ class Tracker(val maxTracks: Int = 700, val minDist: Int = 9, val fbMax: Float =
     }
 
     fun alive(): List<Track> = live
+
+    /** Up to [n] new corners on the last frame where [inside] says, beyond the usual top-up (an object losing its points). */
+    fun topUp(n: Int, inside: (Float, Float) -> Boolean): Int {
+        val pyr = prev ?: return 0
+        val taken = live.map { floatArrayOf(it.lastX(), it.lastY()) }
+        var added = 0
+        for (c in Klt.corners(pyr, 4 * maxTracks, minDist, taken)) {
+            if (added >= n) break
+            if (!inside(c[0], c[1])) continue
+            val t = Track(tracks.size); t.add(frames - 1, c[0], c[1]); tracks.add(t); live.add(t); added++
+        }
+        return added
+    }
 
     companion object {
         fun floorI(v: Float) = floor(v).toInt()

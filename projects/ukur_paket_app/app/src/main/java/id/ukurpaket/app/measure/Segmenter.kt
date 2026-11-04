@@ -125,17 +125,25 @@ class Embedding internal constructor(internal val data: FloatArray, val w: Int, 
  * gets that parcel's mask. Encoder ~1 s per picture on a phone CPU, decoder a few ms per prompt.
  * Android-free, so the same code runs in the PC tests. Models: tools/export_sam.py.
  */
-class Segmenter(encoder: ByteArray, decoder: ByteArray, threads: Int = 4) : AutoCloseable {
+class Segmenter(encoder: ByteArray, decoder: ByteArray, threads: Int = 4, xnnpack: Boolean = false) : AutoCloseable {
     private val env = OrtEnvironment.getEnvironment()
-    private val opts = OrtSession.SessionOptions().apply { setIntraOpNumThreads(threads) }
+    private val opts = OrtSession.SessionOptions().apply {
+        setIntraOpNumThreads(threads)
+        // XNNPACK: ARM-optimised float kernels; ops it lacks fall back to the default CPU kernels
+        if (xnnpack) runCatching { addXnnpack(mapOf("intra_op_num_threads" to threads.toString())) }
+    }
     private val enc = env.createSession(encoder, opts)
     private val dec = env.createSession(decoder, opts)
+    /** Encoder input side (1024, or 512 for the light model on PDAs), read from the model itself. */
+    val size: Int = (enc.inputInfo["image"]!!.info as ai.onnxruntime.TensorInfo).shape[3].toInt()
+    private val grid = size / 16                 // embedding side
+    private val low = size / 4                   // decoder mask side
 
     /** [argb] packed 0xAARRGGBB, row by row. */
     fun embed(argb: IntArray, w: Int, h: Int): Embedding {
-        val s = SIZE.toFloat() / max(w, h)
+        val s = size.toFloat() / max(w, h)
         val nw = (w * s).roundToInt(); val nh = (h * s).roundToInt()
-        val plane = SIZE * SIZE
+        val plane = size * size
         val buf = FloatArray(3 * plane)                  // padding stays 0 (after normalising), as in SAM
         for (y in 0 until nh) {
             val sy = ((y + 0.5f) / s - 0.5f).coerceIn(0f, h - 1f)
@@ -149,11 +157,11 @@ class Segmenter(encoder: ByteArray, decoder: ByteArray, threads: Int = 4) : Auto
                     val sh = 16 - 8 * c
                     val v = ((p00 shr sh) and 255) * (1 - fx) * (1 - fy) + ((p01 shr sh) and 255) * fx * (1 - fy) +
                         ((p10 shr sh) and 255) * (1 - fx) * fy + ((p11 shr sh) and 255) * fx * fy
-                    buf[c * plane + y * SIZE + x] = (v - MEAN[c]) / STD[c]
+                    buf[c * plane + y * size + x] = (v - MEAN[c]) / STD[c]
                 }
             }
         }
-        OnnxTensor.createTensor(env, FloatBuffer.wrap(buf), longArrayOf(1, 3, SIZE.toLong(), SIZE.toLong())).use { t ->
+        OnnxTensor.createTensor(env, FloatBuffer.wrap(buf), longArrayOf(1, 3, size.toLong(), size.toLong())).use { t ->
             enc.run(mapOf("image" to t)).use { r ->
                 val fb = (r[0] as OnnxTensor).floatBuffer
                 val out = FloatArray(fb.remaining()); fb.get(out)
@@ -165,14 +173,35 @@ class Segmenter(encoder: ByteArray, decoder: ByteArray, threads: Int = 4) : Auto
     /** The parcel under one tap. */
     fun tap(e: Embedding, x: Float, y: Float): Mask = decode(e, floatArrayOf(x, y, 0f, 0f), floatArrayOf(1f, -1f))
 
+    /**
+     * A tap made firmer: the tap's own mask gives a box, and the box with the tap point is asked again (the small
+     * 512 model often answers a lone tap with only part of the object). [all]: the three answers, else the best.
+     */
+    fun tapRefined(e: Embedding, x: Float, y: Float): List<Mask> {
+        val first = tapAll(e, x, y).filter { it.area in 16 until e.w * e.h / 2 }.maxByOrNull { it.score } ?: return tapAll(e, x, y)
+        val b = first.bounds() ?: return listOf(first)
+        val mx = 0.05f * (b[2] - b[0]) + 2; val my = 0.05f * (b[3] - b[1]) + 2
+        val x0 = max(0f, b[0] - mx); val y0 = max(0f, b[1] - my); val x1 = min(e.w - 1f, b[2] + mx); val y1 = min(e.h - 1f, b[3] + my)
+        return decodeAll(e, floatArrayOf(x, y, x0, y0, x1, y1), floatArrayOf(1f, 2f, 3f))
+    }
+
+    /** All three answers to a tap (whole / part / sub-part). */
+    fun tapAll(e: Embedding, x: Float, y: Float): List<Mask> = decodeAll(e, floatArrayOf(x, y, 0f, 0f), floatArrayOf(1f, -1f))
+
     /** The parcel inside a drawn box (the fix when a tap only picks part of it). */
     fun box(e: Embedding, x0: Float, y0: Float, x1: Float, y1: Float): Mask =
         decode(e, floatArrayOf(min(x0, x1), min(y0, y1), max(x0, x1), max(y0, y1)), floatArrayOf(2f, 3f))
 
-    private fun decode(e: Embedding, pts: FloatArray, labels: FloatArray): Mask {
+    /** All three answers (whole / part / sub-part) to a box, for choosing the one that matches the object followed. */
+    fun boxAll(e: Embedding, x0: Float, y0: Float, x1: Float, y1: Float): List<Mask> =
+        decodeAll(e, floatArrayOf(min(x0, x1), min(y0, y1), max(x0, x1), max(y0, y1)), floatArrayOf(2f, 3f))
+
+    private fun decode(e: Embedding, pts: FloatArray, labels: FloatArray): Mask = decodeAll(e, pts, labels).maxBy { it.score }
+
+    private fun decodeAll(e: Embedding, pts: FloatArray, labels: FloatArray): List<Mask> {
         val n = labels.size.toLong()
         val coords = FloatArray(pts.size) { i -> if (labels[i / 2] < 0) 0f else pts[i] * e.scale }
-        val emb = OnnxTensor.createTensor(env, FloatBuffer.wrap(e.data), longArrayOf(1, 256, 64, 64))
+        val emb = OnnxTensor.createTensor(env, FloatBuffer.wrap(e.data), longArrayOf(1, 256, grid.toLong(), grid.toLong()))
         val c = OnnxTensor.createTensor(env, FloatBuffer.wrap(coords), longArrayOf(1, n, 2))
         val l = OnnxTensor.createTensor(env, FloatBuffer.wrap(labels), longArrayOf(1, n))
         try {
@@ -180,26 +209,27 @@ class Segmenter(encoder: ByteArray, decoder: ByteArray, threads: Int = 4) : Auto
                 val mb = (r[0] as OnnxTensor).floatBuffer
                 val sb = (r[1] as OnnxTensor).floatBuffer
                 val scores = FloatArray(sb.remaining()); sb.get(scores)
-                val best = scores.indices.maxBy { scores[it] }          // best-scoring of the three masks
-                val grid = FloatArray(LOW * LOW)
-                mb.position(best * LOW * LOW); mb.get(grid)
-                return Mask(e.w, e.h, upsample(grid, e), scores[best])
+                return scores.indices.map { i ->
+                    val g = FloatArray(low * low)
+                    mb.position(i * low * low); mb.get(g)
+                    Mask(e.w, e.h, upsample(g, e), scores[i])
+                }
             }
         } finally { emb.close(); c.close(); l.close() }
     }
 
-    /** 256 x 256 logits over the padded 1024 frame -> one flag per original pixel (bilinear, > 0). */
+    /** Decoder logits (size/4 square) over the padded frame -> one flag per original pixel (bilinear, > 0). */
     private fun upsample(g: FloatArray, e: Embedding): BooleanArray {
         val out = BooleanArray(e.w * e.h)
-        val k = e.scale * LOW / SIZE
+        val k = e.scale * low / size
         for (y in 0 until e.h) {
-            val v = ((y + 0.5f) * k - 0.5f).coerceIn(0f, LOW - 1f)
-            val v0 = v.toInt(); val v1 = min(v0 + 1, LOW - 1); val fv = v - v0
+            val v = ((y + 0.5f) * k - 0.5f).coerceIn(0f, low - 1f)
+            val v0 = v.toInt(); val v1 = min(v0 + 1, low - 1); val fv = v - v0
             for (x in 0 until e.w) {
-                val u = ((x + 0.5f) * k - 0.5f).coerceIn(0f, LOW - 1f)
-                val u0 = u.toInt(); val u1 = min(u0 + 1, LOW - 1); val fu = u - u0
-                val a = g[v0 * LOW + u0] * (1 - fu) + g[v0 * LOW + u1] * fu
-                val b = g[v1 * LOW + u0] * (1 - fu) + g[v1 * LOW + u1] * fu
+                val u = ((x + 0.5f) * k - 0.5f).coerceIn(0f, low - 1f)
+                val u0 = u.toInt(); val u1 = min(u0 + 1, low - 1); val fu = u - u0
+                val a = g[v0 * low + u0] * (1 - fu) + g[v0 * low + u1] * fu
+                val b = g[v1 * low + u0] * (1 - fu) + g[v1 * low + u1] * fu
                 out[y * e.w + x] = a * (1 - fv) + b * fv > 0f
             }
         }
@@ -210,7 +240,6 @@ class Segmenter(encoder: ByteArray, decoder: ByteArray, threads: Int = 4) : Auto
 
     companion object {
         const val SIZE = 1024
-        private const val LOW = 256
         private val MEAN = floatArrayOf(123.675f, 116.28f, 103.53f)
         private val STD = floatArrayOf(58.395f, 57.12f, 57.375f)
     }

@@ -65,6 +65,13 @@ object ObjectPick {
         File(dir, "pick.json").writeText(Diagnostics.json.encodeToString(Pick.serializer(), pick) + "\n")
     }
 
+    /** The pick made live while recording: the mask and pick.json only (the review draws the mask over the frame). */
+    fun saveMask(dir: File, pick: Pick, m: Mask) {
+        val bw = IntArray(m.w * m.h) { if (m.bits[it]) -1 else 0xFF000000.toInt() }
+        File(dir, pick.maskFile).outputStream().use { Bitmap.createBitmap(bw, m.w, m.h, Bitmap.Config.ARGB_8888).compress(Bitmap.CompressFormat.PNG, 100, it) }
+        File(dir, "pick.json").writeText(Diagnostics.json.encodeToString(Pick.serializer(), pick) + "\n")
+    }
+
     /** The saved mask (white = object), or null. */
     fun loadMask(dir: File, pick: Pick): Mask? {
         val b = BitmapFactory.decodeFile(File(dir, pick.maskFile).path) ?: return null
