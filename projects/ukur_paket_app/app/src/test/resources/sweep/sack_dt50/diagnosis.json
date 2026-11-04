@@ -1,0 +1,19 @@
+{
+  "cameras": [
+    {
+      "id": "0",
+      "facing": "back",
+      "focalLengthsMm": [
+        3.5
+      ],
+      "sensorSizeMm": [
+        5.333333333333333,
+        4.0
+      ],
+      "pixelArray": [
+        640,
+        480
+      ]
+    }
+  ]
+}

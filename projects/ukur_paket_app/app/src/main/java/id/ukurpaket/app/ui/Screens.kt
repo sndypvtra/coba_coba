@@ -73,6 +73,7 @@ private fun ModeChip(mode: Mode) = when (mode) {
     Mode.AR_FULL -> Chip(mode.label, Tone.OK, "check_circle")
     Mode.AR_BASIC -> Chip(mode.label, Tone.BRAND, "view_in_ar")
     Mode.NONE -> Chip(mode.label, Tone.WARN, "error")
+    Mode.SWEEP -> Chip(mode.label, Tone.BRAND, "videocam")
 }
 
 @Composable
@@ -116,7 +117,7 @@ fun StartScreen(model: AppModel, activity: Activity) {
             T(when (c.mode) {
                 Mode.AR_FULL -> "HP ini siap mengukur: lantai, paket, dan jarak dibaca langsung oleh kamera."
                 Mode.AR_BASIC -> "HP ini bisa mengukur tanpa sensor jarak. Hasilnya lebih sering Perlu Dicek."
-                Mode.NONE -> noArText(c.arcore)
+                Mode.NONE, Mode.SWEEP -> noArText(c.arcore)
             }, 13.5.sp, color = C.t2)
         }
         Spacer(Modifier.height(4.dp))
@@ -580,7 +581,7 @@ fun SettingsScreen(model: AppModel, activity: Activity) {
 private fun noArText(st: ArState) = when (st) {
     ArState.NEEDS_INSTALL -> "Komponen AR dari Google belum terpasang. Pasang sekali lewat Play Store, lalu kembali ke sini."
     ArState.INSTALL_DECLINED -> "Pemasangan komponen AR dibatalkan. Tanpa komponen itu, HP ini belum bisa mengukur paket."
-    else -> "HP ini belum mendukung kamera AR, jadi tidak bisa mengukur paket. Paket tetap bisa diambil dan diukur di hub."
+    else -> "HP ini tidak punya kamera AR. Paket diukur dengan sapuan: pilih paket di layar, kelilingi pelan, ukuran dihitung di HP. Atau tandai Ukur di Hub."
 }
 
 // ------------------------------------------------------------------ phone without ARCore
@@ -594,20 +595,19 @@ fun NoArScreen(model: AppModel, activity: Activity) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconTile("view_in_ar", C.amber, C.amberL)
                     Column(Modifier.padding(start = 12.dp)) {
-                        T("HP ini belum bisa mengukur", 16.sp, FontWeight.SemiBold)
+                        T("Ukur tanpa kamera AR", 16.sp, FontWeight.SemiBold)
                         T(c.model, 12.5.sp, color = C.t2)
                     }
                 }
                 Spacer(Modifier.height(10.dp))
                 T(noArText(c.arcore), 13.5.sp, color = C.t2)
             }
-            T("Untuk mengukur, pakai HP yang mendukung kamera AR (daftar resmi Google: developers.google.com/ar/devices).", 12.5.sp, color = C.t3)
         }
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (c.arcore == ArState.NEEDS_INSTALL || c.arcore == ArState.INSTALL_DECLINED)
                 PrimaryButton("Pasang Komponen AR", "download", Modifier.fillMaxWidth()) { model.install(activity) }
+            PrimaryButton("Ukur dengan sapuan", "videocam", Modifier.fillMaxWidth()) { model.go(Screen.DtRecord) }
             SecondaryButton("Ukur di Hub", "warehouse", Modifier.fillMaxWidth()) { model.markHub("HP kurir belum mendukung kamera AR", null) }
-            SecondaryButton("Rekam untuk uji tanpa ARCore", "videocam", Modifier.fillMaxWidth()) { model.go(Screen.DtRecord) }
         }
     }
 }

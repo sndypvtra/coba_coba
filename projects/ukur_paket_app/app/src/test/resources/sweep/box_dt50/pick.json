@@ -1,0 +1,31 @@
+{
+  "frame": 0,
+  "file": "frames/00000.jpg",
+  "rotationDeg": 90,
+  "width": 480,
+  "height": 640,
+  "mode": "box",
+  "box": [
+    129.0,
+    237.0,
+    362.0,
+    447.0
+  ],
+  "maskFile": "mask.png",
+  "maskScore": 1.0,
+  "maskAreaPx": 33004,
+  "maskBox": [
+    129,
+    237,
+    362,
+    447
+  ],
+  "samEncodeMs": null,
+  "samDecodeMs": 0,
+  "name": "sintetis box",
+  "tapeCm": [
+    40.0,
+    30.0,
+    20.0
+  ]
+}

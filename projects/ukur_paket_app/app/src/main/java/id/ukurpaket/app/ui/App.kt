@@ -42,6 +42,9 @@ import id.ukurpaket.app.dt.Diagnosis
 import id.ukurpaket.app.dt.Diagnostics
 import id.ukurpaket.app.dt.ObjectPick
 import id.ukurpaket.app.dt.Pick
+import id.ukurpaket.app.dt.SweepRun
+import id.ukurpaket.app.vio.EngineFailed
+import id.ukurpaket.app.vio.SweepResult
 import id.ukurpaket.app.measure.Segmenter
 import id.ukurpaket.app.scan.HardwareScanner
 import kotlinx.coroutines.Dispatchers
@@ -237,6 +240,36 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
 
     fun toast(m: String) { message = m }
 
+    /** The engine on a recording: where it is, and its answer. */
+    data class SweepJob(val stage: String, val progress: Float, val result: SweepResult? = null, val error: String? = null) {
+        val running get() = result == null && error == null
+    }
+    val sweepJobs = mutableStateMapOf<String, SweepJob>()
+
+    /** Measures the picked object of a recording on the phone (camera + motion sensors, no ARCore). */
+    fun runSweep(dir: File) {
+        if (sweepJobs[dir.path]?.running == true) return
+        sweepJobs[dir.path] = SweepJob("Menyiapkan", 0f)
+        viewModelScope.launch {
+            val r = runCatching {
+                withContext(Dispatchers.Default) {
+                    SweepRun.run(dir) { st, p -> viewModelScope.launch { if (sweepJobs[dir.path]?.running == true) sweepJobs[dir.path] = SweepJob(st, p) } }
+                }
+            }
+            sweepJobs[dir.path] = r.fold({ SweepJob("Selesai", 1f, it) },
+                { SweepJob("Gagal", 1f, error = (it as? EngineFailed)?.message ?: "Gagal menghitung: ${it.message ?: it.javaClass.simpleName}") })
+        }
+    }
+
+    /** A sweep's size for the parcel being measured: on to its weight, as after the ARCore measuring screen. */
+    fun useSweep(dir: File, r: SweepResult) {
+        val d = draft ?: return
+        draft = d.copy(result = ResultData(r.lengthCm, r.widthCm, r.heightCm, r.confidence, if (r.ok) Status.OK else Status.CHECK, r.seconds,
+            SweepRun.evidenceFile(dir).takeIf { it.exists() }?.path, dir.path, Mode.SWEEP))
+        leaveMeasuring()
+        go(Screen.Weight)
+    }
+
     /** Object picks waiting for or being cut out: recording folder -> "cutting" | "done" | "failed". */
     val pickJobs = mutableStateMapOf<String, String>()
 
@@ -266,7 +299,7 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
                 }
             }
             pickJobs[dir.path] = if (ok.isSuccess) "done" else "failed"
-            if (ok.isFailure) toast("Objek tidak bisa dipotong: pilih lagi di foto")
+            if (ok.isFailure) toast("Objek tidak bisa dipotong: pilih lagi di foto") else runSweep(dir)
         }
     }
 
@@ -367,7 +400,8 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
 
     /** Drops the measuring screens (camera / no-AR / weight, and the prep page under them) from the stack. */
     private fun leaveMeasuring() {
-        while (stack.size > 1 && stack.last().let { it == Screen.Measure || it == Screen.NoAr || it == Screen.Weight || it == Screen.Prep })
+        while (stack.size > 1 && stack.last().let { it == Screen.Measure || it == Screen.NoAr || it == Screen.Weight || it == Screen.Prep ||
+                it == Screen.DtRecord || it is Screen.DtReview })
             stack.removeAt(stack.size - 1)
     }
 

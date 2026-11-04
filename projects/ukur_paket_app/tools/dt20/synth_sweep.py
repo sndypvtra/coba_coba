@@ -215,7 +215,7 @@ def quat(r):
     return np.array([x, (r[0, 1] + r[1, 0]) / (4 * x), (r[0, 2] + r[2, 0]) / (4 * x), (r[2, 1] - r[1, 2]) / (4 * x)])
 
 
-def main(out, kind="box", rotate_only=False, seed=0, dt50=False):
+def main(out, kind="box", rotate_only=False, seed=0, dt50=False, pick_first=False, quality=92):
     rng = np.random.default_rng(seed)
     out = Path(out); (out / "frames").mkdir(parents=True, exist_ok=True)
     sc = Scene(kind, rng)
@@ -224,12 +224,12 @@ def main(out, kind="box", rotate_only=False, seed=0, dt50=False):
     t0 = 10_000_000_000
     rows = ["index,t_ns,sharpness,width,height,bytes,arrival_ns"]
     cam_clock = -3_200_000_000 if dt50 else 0             # DT50: camera clock 3,2 s behind the sensors' clock
-    mid = len(tf) // 2
+    mid = 0 if pick_first else len(tf) // 2            # --pick-first: as on the phone, touching the object starts recording
     for i, (pi, ri) in enumerate(zip(p, r_wc)):
         img, ob = sc.render(pi, ri)
         side = np.ascontiguousarray(np.rot90(img, 1))       # stored as the sensor sees it (upright = rotate 90 clockwise)
         f = out / "frames" / f"{i:05d}.jpg"
-        cv2.imwrite(str(f), side, [cv2.IMWRITE_JPEG_QUALITY, 92])
+        cv2.imwrite(str(f), side, [cv2.IMWRITE_JPEG_QUALITY, quality])
         g = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         arrival = t0 + int(tf[i] * 1e9) + int((0.035 + rng.normal(0, 0.005)) * 1e9)
         rows.append(f"{i},{t0 + cam_clock + int(tf[i] * 1e9)},{cv2.Laplacian(g, cv2.CV_64F).var():.2f},{side.shape[1]},{side.shape[0]},{f.stat().st_size},{arrival}")
@@ -272,4 +272,5 @@ if __name__ == "__main__":
     a = [x for x in sys.argv[1:] if not x.startswith("--")]
     seed = int(sys.argv[sys.argv.index("--seed") + 1]) if "--seed" in sys.argv else 0
     if "--seed" in sys.argv: a = [x for x in a if x != str(seed)]
-    main(a[0], a[1] if len(a) > 1 else "box", "--rotate-only" in sys.argv, seed, "--dt50" in sys.argv)
+    main(a[0], a[1] if len(a) > 1 else "box", "--rotate-only" in sys.argv, seed, "--dt50" in sys.argv, "--pick-first" in sys.argv,
+         85 if "--small" in sys.argv else 92)

@@ -1,0 +1,11 @@
+{
+  "camera_id": "0",
+  "size": [
+    640,
+    480
+  ],
+  "sensor_orientation": 90,
+  "timestamp_source": "UNKNOWN",
+  "frames_saved": 75,
+  "frames_dropped": 0
+}

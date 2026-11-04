@@ -94,7 +94,7 @@ class ScreenshotTest {
         m.caps = when (mode) {
             Mode.AR_FULL -> DeviceCaps(ArState.READY, true, "samsung SM-A356E")
             Mode.AR_BASIC -> DeviceCaps(ArState.READY, false, "samsung SM-A245F")
-            Mode.NONE -> DeviceCaps(ArState.UNSUPPORTED, false, "samsung SM-A055F")
+            Mode.NONE, Mode.SWEEP -> DeviceCaps(ArState.UNSUPPORTED, false, "samsung SM-A055F")
         }
         m.samState = SamState.READY
         return m
@@ -162,8 +162,10 @@ class ScreenshotTest {
     @Test @Config(sdk = [35], qualifiers = "w360dp-h720dp-xhdpi") fun recorderOnSmallScreen() {
         val photo = BitmapFactory.decodeFile(resource("paket.jpg"))
         shot("21_perekam_layar_dt50") { Box(Modifier.fillMaxSize().background(C.bg)) { DtRecordPreview(photo, recording = false, gyroSilent = true) } }
+        // the live outline as the tracker would follow the parcel (the mockup photo's parcel outline, in fractions)
+        val outline = floatArrayOf(0.21f, 0.24f, 0.83f, 0.23f, 0.87f, 0.40f, 0.86f, 0.80f, 0.73f, 0.92f, 0.19f, 0.93f, 0.17f, 0.50f)
         shot("23_perekam_objek_disentuh") { Box(Modifier.fillMaxSize().background(C.bg)) {
-            DtRecordPreview(photo, recording = true, gyroSilent = true, tap = androidx.compose.ui.geometry.Offset(0.5f, 0.55f)) } }
+            DtRecordPreview(photo, recording = true, gyroSilent = true, tap = androidx.compose.ui.geometry.Offset(0.5f, 0.55f), outline = outline) } }
         val m = model(Mode.NONE)
         m.diag = Dt20Test.diagnosis()
         m.diagRates = mapOf("accelerometer" to 200.0, "gyroscope" to 0.0, "game_rotation_vector" to 200.0)
@@ -175,6 +177,52 @@ class ScreenshotTest {
         val saved = measured("TSA-90100000104", 27.0, 15.0, 6.0, 0.10)
         m.store.save(saved)
         screen("26_tersimpan_layar_dt50", m, Screen.Saved(saved.id))
+    }
+
+    /** The sweep measured on the phone path (Android decoding, the Kotlin engine), the result screen, then weight and save. */
+    @Test @Config(sdk = [35], qualifiers = "w360dp-h720dp-xhdpi") fun sweepMeasuredOnThePhone() {
+        val m = model(Mode.NONE)
+        val src = File("src/test/resources/sweep/box_dt50")
+        val dir = File(m.store.dtDir, "20261104_120000").apply { deleteRecursively() }
+        src.copyRecursively(dir)
+        val r = id.ukurpaket.app.dt.SweepRun.run(dir) { _, _ -> }
+        println("phone path: ${r.lengthCm} x ${r.widthCm} x ${r.heightCm}, conf ${r.confidence}")
+        org.junit.Assert.assertEquals(40.0, r.lengthCm, 3.0); org.junit.Assert.assertEquals(30.0, r.widthCm, 3.0); org.junit.Assert.assertEquals(20.0, r.heightCm, 3.0)
+        org.junit.Assert.assertTrue(id.ukurpaket.app.dt.SweepRun.evidenceFile(dir).exists())
+        // every frame has its own segmentation: a contact sheet of six of them, outline and box as the review draws them
+        val frames = ObjectPick.frames(dir)
+        val sheet = Bitmap.createBitmap(3 * 240, 2 * 320, Bitmap.Config.ARGB_8888); val cv = android.graphics.Canvas(sheet)
+        val fill = android.graphics.Paint().apply { color = 0x66ED0677; style = android.graphics.Paint.Style.FILL; isAntiAlias = true }
+        val line = android.graphics.Paint().apply { color = android.graphics.Color.rgb(60, 220, 60); strokeWidth = 2.5f; isAntiAlias = true }
+        for ((j, pos) in listOf(0, 15, 30, 45, 60, frames.size - 1).withIndex()) {
+            val pic = Bitmap.createScaledBitmap(ObjectPick.upright(dir, frames[pos], 90)!!, 240, 320, true).copy(Bitmap.Config.ARGB_8888, true)
+            val c = android.graphics.Canvas(pic)
+            val o = r.outlines[pos]
+            if (o.size >= 6) { val p = android.graphics.Path(); p.moveTo(o[0] * 240, o[1] * 320); for (i in 2 until o.size step 2) p.lineTo(o[i] * 240, o[i + 1] * 320); p.close(); c.drawPath(p, fill) }
+            val b = r.boxes[pos]
+            if (b.size == 16) for ((a, e) in listOf(0 to 1, 1 to 2, 2 to 3, 3 to 0, 4 to 5, 5 to 6, 6 to 7, 7 to 4, 0 to 4, 1 to 5, 2 to 6, 3 to 7))
+                c.drawLine(b[2 * a] * 240, b[2 * a + 1] * 320, b[2 * e] * 240, b[2 * e + 1] * 320, line)
+            cv.drawBitmap(pic, (j % 3) * 240f, (j / 3) * 320f, null)
+        }
+        File("screenshots").mkdirs()
+        File("screenshots/31_segmentasi_tiap_frame.png").outputStream().use { sheet.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        m.stack.clear(); m.stack.add(Screen.Home)
+        m.draft = Draft("TSA-90100000104")
+        m.go(Screen.NoAr)
+        screen("28_tanpa_arcore_ukur_sapuan", m, Screen.NoAr)
+        m.stack.clear(); m.stack.addAll(listOf(Screen.Home, Screen.NoAr, Screen.DtReview(dir.path)))
+        LocalStillValue.set(true)
+        try { shot("29_hasil_ukur_sapuan") { App(m, LocalContext.current as Activity) } } finally { LocalStillValue.set(false) }
+        // on to the weight, and saved as a sweep measurement with its evidence photo
+        m.useSweep(dir, r)
+        org.junit.Assert.assertEquals(Screen.Weight, m.screen)
+        org.junit.Assert.assertEquals(listOf(Screen.Home, Screen.Weight), m.stack.toList())
+        m.save(1.1)
+        val saved = m.store.measurements.value.last()
+        org.junit.Assert.assertEquals(Mode.SWEEP, saved.mode)
+        org.junit.Assert.assertEquals(r.lengthCm, saved.lengthCm, 1e-9)
+        org.junit.Assert.assertTrue(File(saved.photo!!).exists())
+        screen("30_tersimpan_sapuan", m, Screen.Saved(saved.id))
     }
 
     /** Touching the object on the recorder's live picture: the first frame of the sweep is cut out once it stops. */

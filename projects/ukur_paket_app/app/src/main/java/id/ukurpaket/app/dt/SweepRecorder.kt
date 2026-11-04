@@ -95,6 +95,9 @@ class SweepRecorder(private val ctx: Context, val dir: File, private val cb: Cal
     @Volatile private var turnRad = 0.0
     private var lastStatus = 0L
 
+    /** Follows the picked object for the live outline (set when recording starts with a pick). */
+    @Volatile var live: id.ukurpaket.app.vio.LiveTracker? = null
+
     /** Target rate of saved frames: the solver needs ~10–15 per second; the motion sensors carry the fast motion. */
     var minFrameGapNs = 60_000_000L
 
@@ -207,6 +210,7 @@ class SweepRecorder(private val ctx: Context, val dir: File, private val cb: Cal
                 val f = File(dir, "frames/%05d.jpg".format(idx))
                 f.outputStream().buffered().use { YuvImage(nv21, ImageFormat.NV21, w, h, null).compressToJpeg(Rect(0, 0, w, h), 92, it) }
                 val sharp = sharpness(nv21, w, h)
+                live?.offer(nv21, w, h)
                 synchronized(frameRows) { frameRows.append(idx).append(',').append(now).append(',').append("%.2f".format(Locale.US, sharp)).append(',')
                     .append(w).append(',').append(h).append(',').append(f.length()).append(',').append(arrival).append('\n') }
             }
@@ -309,6 +313,7 @@ class SweepRecorder(private val ctx: Context, val dir: File, private val cb: Cal
 
     fun close() {
         recording = false
+        live?.close(); live = null
         sm.unregisterListener(imu)
         runCatching { session?.close() }; runCatching { device?.close() }; runCatching { reader?.close() }; runCatching { previewSurface?.release() }
         session = null; device = null; reader = null

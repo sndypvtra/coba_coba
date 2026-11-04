@@ -1,4 +1,4 @@
-# UkurPaket: Android app (v0.2.2, test build)
+# UkurPaket: Android app (v0.3.0, test build)
 
 Measures a parcel's length × width × height with the phone camera, the way the courier mockup
 (`../ukur_paket_mockup`) describes: method A, ARCore depth + floor detection, with the parcel picked by a tap or a
@@ -53,7 +53,7 @@ the hub instead of being typed in.
 
 JDK 17+ and the Android SDK (platform 35). AGP 8.7.3, Kotlin 2.1.0, Compose BOM 2024.12.01, ARCore 1.47.0,
 ONNX Runtime 1.20.0, minSdk 26, targetSdk 35, arm64-v8a + armeabi-v7a. The test APK is
-`release/UkurPaket-0.2.2-uji.apk` (29 MB; MobileSAM is 18,8 MB of it: encoder float16 13,8 MB + decoder with int8
+`release/UkurPaket-0.3.0-uji.apk` (29 MB; MobileSAM is 18,8 MB of it: encoder float16 13,8 MB + decoder with int8
 weights 4,6 MB, made by `tools/export_sam.py`; the int8 decoder's masks are within IoU 0,989 of float32). It installs directly (allow "install unknown apps"); for the Play Store use your own key.
 
 ## Urovo DT20 (and other Urovo PDAs)
@@ -96,6 +96,30 @@ Not tested on a DT20 yet: everything with the real camera and sensors (Camera2 s
 the device). Tested here: the diagnosis rules, the quality check on synthetic sweeps and on the file format, the
 recorder's size choice and sharpness score, the navigation, and the screens (`18`–`20`; the diagnosis screenshot uses
 test values, not a DT20 reading; the pick screenshot runs the app's MobileSAM on the parcel photo with a box).
+
+### Measuring without ARCore on the phone (v0.3.0, `vio/`)
+
+Phones without ARCore (Urovo DT50/DT20) now measure: scan resi → **Ukur dengan sapuan** → touch the parcel or drag a
+box round it on the live picture (recording starts) → walk round it → **Selesai** → the size comes out on the phone →
+**Pakai ukuran ini** → weight → saved (method "Sapuan", with the evidence photo). Same steps and output as method A.
+
+| Step | On the phone (pure Kotlin, no new libraries) |
+|---|---|
+| Live segmentation | `LiveTracker`: KLT on the newest frame; tracks inside the pick, then those born inside the object, give the magenta outline over the preview every frame |
+| Tracks | `Klt.kt`: pyramidal Lucas-Kanade, forward-backward checked, Shi-Tomasi corners (up to 700 over 480 × 640) |
+| Rotations | game rotation vector (or integrated gyroscope); camera clock mapped by arrival times; time offset and focal length searched on the reprojection error |
+| Structure | `Vision.linear`: points on their viewing rays, a homogeneous system (points eliminated by Schur) solved as its smallest eigenvector, reweighted to pixels; then `Vision.bundleAdjust` (Gauss-Newton/LM with Schur, Huber, sensor rotations as prior) |
+| Metric scale | `Inertial.align`: accelerometer between frames vs the camera path: scale, velocities, bias (gravity known from the rotation vector) |
+| Object | seeds = tracks in the pick mask (MobileSAM); support plane by RANSAC; **plane-sweep depth** (ZNCC, 64 planes) on the picked frame inside its mask and on 5 more views; dense points standing on the plane, grown in 3D from the picked frame's; box rule as method A |
+| Every frame | the object's outline and the box projected into each frame (review slider; evidence photo) |
+
+`SweepEngineTest` runs this code on synthetic DT50-like sweeps (gyroscope silent, rotation vector only, camera clock
+apart, pick on frame 0; `tools/dt20/synth_sweep.py --dt50 --pick-first`): box 40 × 30 × 20 → **39,7 × 29,5 × 21,0 cm**;
+irregular sack 45,4 × 30,1 × 19 → 41,8 × 24,5 × 19,1 cm (round, dark, low-texture surfaces come out small: no depth
+where there is no texture, and the far side is not seen). ~8 s on this PC's JVM; on the phone CPU expect several
+times that (not measured yet). `tools/dt20/vio_proto.py` is the Python prototype it was ported from.
+Not tested on a real DT50 yet: its rotation vector quality (its gyroscope reported nothing), rolling shutter, motion
+blur, plain cardboard, glass tables (reflections).
 
 ### Engine without ARCore: PC reference (`tools/dt20/`)
 

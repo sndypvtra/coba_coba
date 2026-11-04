@@ -15,6 +15,8 @@ enum class Mode(val label: String, val method: String) {
     AR_FULL("Siap Ukur", "Kamera AR + sensor jarak"),
     AR_BASIC("Mode Dasar", "Kamera AR"),
     NONE("Tidak Didukung", "Tidak diukur"),
+    /** Phones without ARCore: a sweep round the object, camera + motion sensors, solved on the phone. */
+    SWEEP("Sapuan", "Sapuan kamera + sensor gerak"),
 }
 enum class Status(val label: String) { OK("Akurat"), CHECK("Perlu Dicek"), HUB("Ukur di Hub") }
 

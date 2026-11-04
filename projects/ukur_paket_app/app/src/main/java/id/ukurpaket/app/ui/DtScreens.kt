@@ -71,6 +71,12 @@ import id.ukurpaket.app.dt.SweepQuality
 import id.ukurpaket.app.dt.SweepRecorder
 import id.ukurpaket.app.measure.Embedding
 import id.ukurpaket.app.measure.Mask
+import id.ukurpaket.app.dt.SweepRun
+import id.ukurpaket.app.data.cm
+import id.ukurpaket.app.data.id
+import id.ukurpaket.app.vio.LiveTracker
+import id.ukurpaket.app.vio.SweepResult
+import androidx.compose.runtime.collectAsState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -243,6 +249,8 @@ private fun DtRecorder(model: AppModel) {
         })
     }
     var pick by remember { mutableStateOf(LivePick()) }
+    var outline by remember { mutableStateOf<FloatArray?>(null) }
+    var followed by remember { mutableStateOf(0) }
     LaunchedEffect(Unit) { if (model.diag == null) model.runDiagnosis() }
     DisposableEffect(Unit) { onDispose { rec.close(); if (!keep[0]) dir.deleteRecursively() } }
     fun stop() {
@@ -255,14 +263,24 @@ private fun DtRecorder(model: AppModel) {
             model.openReview(d)
         } }
     }
-    fun begin() { if (phase == RecPhase.READY && status != null && error == null) { phase = RecPhase.RECORDING; rec.start() } }
+    fun begin(p: LivePick? = null) {
+        if (phase != RecPhase.READY || status == null || error != null) return
+        if (p != null && (p.tap != null || p.box != null)) {
+            // the live outline: tracks inside the pick at the start, then whatever joins them
+            val region: (Float, Float) -> Boolean = p.box?.let { b -> { x: Float, y: Float -> x in b[0]..b[2] && y in b[1]..b[3] } }
+                ?: p.tap!!.let { t -> { x: Float, y: Float -> val dx = x - t.x; val dy = (y - t.y) * 4f / 3f; dx * dx + dy * dy < 0.07f * 0.07f } }
+            rec.live = LiveTracker(rec.sensorOrientation, region) { poly, n -> main.post { outline = poly; followed = n } }
+        }
+        phase = RecPhase.RECORDING; rec.start()
+    }
     LaunchedEffect(status?.seconds) { if ((status?.seconds ?: 0.0) > 20) stop() }
     DtRecordChrome(status, phase, error, onBack = { model.back() }, onStart = { begin() }, onStop = { stop() }, pick = pick,
         onMode = { pick = pick.copy(mode = it) },
-        onTap = { o -> if (status != null && error == null) { pick = pick.copy(tap = o, box = null, drag = null); begin() } },
+        outline = outline, followed = followed,
+        onTap = { o -> if (status != null && error == null) { pick = pick.copy(tap = o, box = null, drag = null); begin(pick) } },
         onDrag = { r -> pick = pick.copy(drag = r) },
         onBox = { r -> if (status != null && error == null && abs(r[2] - r[0]) > 0.04f && abs(r[3] - r[1]) > 0.04f) {
-            pick = pick.copy(box = r, tap = null, drag = null); begin() } else pick = pick.copy(drag = null) }) {
+            pick = pick.copy(box = r, tap = null, drag = null); begin(pick) } else pick = pick.copy(drag = null) }) {
         AndroidView(factory = { c ->
             TextureView(c).apply {
                 surfaceTextureListener = object : TextureView.SurfaceTextureListener {
@@ -280,6 +298,7 @@ private fun DtRecorder(model: AppModel) {
 private fun DtRecordChrome(status: SweepRecorder.LiveStatus?, phase: RecPhase, error: String?, onBack: () -> Unit,
                            onStart: () -> Unit, onStop: () -> Unit, pick: LivePick = LivePick(), onMode: (PickMode) -> Unit = {},
                            onTap: (Offset) -> Unit = {}, onDrag: (FloatArray?) -> Unit = {}, onBox: (FloatArray) -> Unit = {},
+                           outline: FloatArray? = null, followed: Int = 0,
                            preview: @Composable () -> Unit) {
     val turn = status?.turnDeg ?: 0.0
     val gyroDead = status != null && status.gyroHz < 1 && status.accelHz > 1
@@ -302,14 +321,17 @@ private fun DtRecordChrome(status: SweepRecorder.LiveStatus?, phase: RecPhase, e
                     }
                 })
                 Canvas(Modifier.fillMaxSize()) {
-                    (pick.box ?: pick.drag)?.let { r -> drawRect(Color.White, Offset(r[0] * size.width, r[1] * size.height),
+                    // the object as followed by the tracker, every frame
+                    outline?.takeIf { it.size >= 6 }?.let { o -> drawOutline(o, size.width, size.height) }
+                    if (outline == null || phase == RecPhase.READY) (pick.box ?: pick.drag)?.let { r -> drawRect(Color.White, Offset(r[0] * size.width, r[1] * size.height),
                         Size((r[2] - r[0]) * size.width, (r[3] - r[1]) * size.height), style = Stroke(3.dp.toPx())) }
                     pick.tap?.let { p -> val c = Offset(p.x * size.width, p.y * size.height)
                         drawCircle(Color.White, 12.dp.toPx(), c); drawCircle(C.brand, 8.dp.toPx(), c) }
                 }
                 Row(Modifier.align(Alignment.TopStart).padding(8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     if (phase == RecPhase.RECORDING) Chip("REC ${(status?.seconds ?: 0.0).f1()} s", Tone.RED, "fiber_manual_record")
-                    if (phase != RecPhase.READY && (pick.tap != null || pick.box != null)) Chip("Objek dipilih", Tone.OK, "check")
+                    if (phase != RecPhase.READY && (pick.tap != null || pick.box != null))
+                        Chip(if (followed >= 3) "Objek diikuti · $followed titik" else "Objek dipilih", Tone.OK, "check")
                     Chip(status?.size ?: "kamera…", Tone.GREY, "photo_camera")
                 }
                 Column(Modifier.align(Alignment.BottomStart).padding(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -334,10 +356,11 @@ private fun DtRecordChrome(status: SweepRecorder.LiveStatus?, phase: RecPhase, e
                         Chip("Tarik kotak", if (pick.mode == PickMode.BOX) Tone.BRAND else Tone.GREY, "highlight_alt") { onMode(PickMode.BOX) }
                     }
                     T((if (pick.mode == PickMode.TAP) "Sentuh objeknya" else "Tarik kotak di sekeliling objek") +
-                        " untuk memilih dan mulai rekam, lalu kelilingi objek pelan ±60–90° (3–8 detik).", 13.sp, color = C.t2)
+                        " untuk memilih dan mulai rekam, lalu kelilingi objek pelan ±90° (5–10 detik). Ukuran keluar setelah Selesai.", 13.sp, color = C.t2)
                 }
                 RecPhase.RECORDING -> {
                     T("Kelilingi objek pelan… putaran ${turn.toInt()}° dari target 60°", 14.sp, FontWeight.SemiBold)
+                    T("Area magenta = objek yang diikuti. Jaga objek tetap di layar.", 12.sp, color = C.t3)
                     LinearProgressIndicator(progress = { min(1f, (turn / 60.0).toFloat()) }, modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
                         color = if (turn >= 60) C.green else C.brand, trackColor = C.line)
                 }
@@ -355,12 +378,30 @@ private fun DtRecordChrome(status: SweepRecorder.LiveStatus?, phase: RecPhase, e
     }
 }
 
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawOutline(o: FloatArray, w: Float, h: Float) {
+    val path = androidx.compose.ui.graphics.Path().apply {
+        moveTo(o[0] * w, o[1] * h); var i = 2
+        while (i + 1 < o.size) { lineTo(o[i] * w, o[i + 1] * h); i += 2 }
+        close()
+    }
+    drawPath(path, C.brand.copy(alpha = 0.35f))
+    drawPath(path, C.brand, style = Stroke(2.5f * density))
+}
+
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawBox(b: List<Float>, w: Float, h: Float) {
+    if (b.size != 16) return
+    fun p(i: Int) = Offset(b[2 * i] * w, b[2 * i + 1] * h)
+    for ((a, e) in listOf(0 to 1, 1 to 2, 2 to 3, 3 to 0, 4 to 5, 5 to 6, 6 to 7, 7 to 4, 0 to 4, 1 to 5, 2 to 6, 3 to 7))
+        drawLine(Color(0xFF3CDC3C), p(a), p(e), strokeWidth = 2.5f * density)
+}
+
 /** For the screenshot test: the recorder's screen around a still picture. */
 @Composable
-internal fun DtRecordPreview(picture: Bitmap?, recording: Boolean, gyroSilent: Boolean = false, tap: Offset? = null) {
+internal fun DtRecordPreview(picture: Bitmap?, recording: Boolean, gyroSilent: Boolean = false, tap: Offset? = null, outline: FloatArray? = null) {
     val st = SweepRecorder.LiveStatus(recording, if (recording) 3.4 else 0.0, if (recording) 48 else 0, 0, 29.8, 198.0,
         if (gyroSilent) 0.0 else 199.0, if (recording) 38.0 else 0.0, "1280×960", rotationHz = 200.0)
-    DtRecordChrome(st, if (recording) RecPhase.RECORDING else RecPhase.READY, null, {}, {}, {}, pick = LivePick(tap = tap)) {
+    DtRecordChrome(st, if (recording) RecPhase.RECORDING else RecPhase.READY, null, {}, {}, {}, pick = LivePick(tap = tap),
+        outline = outline, followed = if (outline != null) 42 else 0) {
         if (picture != null) Image(picture.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
     }
 }
@@ -434,6 +475,11 @@ fun DtReviewScreen(model: AppModel, activity: Activity, dirPath: String) {
         }
     }
     val job = model.pickJobs[dirPath]
+    val sj = model.sweepJobs[dirPath]
+    var result by remember(dirPath) { mutableStateOf(if (LocalStillValue.get()) SweepRun.load(dir) else null) }
+    LaunchedEffect(dirPath, sj?.result) {
+        result = sj?.result ?: withContext(Dispatchers.IO) { SweepRun.load(dir) }
+    }
     LaunchedEffect(job) {
         if (job != "done") return@LaunchedEffect
         val l = withContext(Dispatchers.IO) { ReviewLoad.load(dir, rotation) }
@@ -488,6 +534,27 @@ fun DtReviewScreen(model: AppModel, activity: Activity, dirPath: String) {
     Column(Modifier.fillMaxSize()) {
         TopBar("Rekaman sapuan", dir.name, onBack = { model.back() })
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            when {
+                sj?.running == true -> Card {
+                    T("Menghitung ukuran di HP", 15.sp, FontWeight.SemiBold)
+                    T(sj.stage + "…", 13.sp, color = C.t2)
+                    Spacer(Modifier.height(8.dp))
+                    LinearProgressIndicator(progress = { sj.progress }, modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
+                        color = C.brand, trackColor = C.line)
+                }
+                job == "cutting" -> Card {
+                    T("Memotong objek pilihan (MobileSAM)", 15.sp, FontWeight.SemiBold)
+                    T("Lalu ukurannya dihitung otomatis.", 13.sp, color = C.t2)
+                    Spacer(Modifier.height(8.dp))
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)), color = C.brand, trackColor = C.line)
+                }
+                sj?.error != null -> Card {
+                    Banner(sj.error, C.redL, C.red, "error")
+                    Spacer(Modifier.height(8.dp))
+                    SecondaryButton("Coba hitung lagi", "refresh", Modifier.fillMaxWidth()) { model.runSweep(dir) }
+                }
+                result != null -> ResultCard(result!!, model, tape) { model.useSweep(dir, result!!) }
+            }
             quality?.let { q ->
                 VerdictCard(q.level, "Kualitas rekaman", SweepAnalysis.verdict(q) + if (detail) "" else " Ketuk untuk detail.",
                     onClick = { detail = !detail }, open = detail)
@@ -506,7 +573,10 @@ fun DtReviewScreen(model: AppModel, activity: Activity, dirPath: String) {
                 }
                 Spacer(Modifier.height(10.dp))
                 val pic = picture
+                val pos = frames.indexOf(frame)
+                val res = result
                 if (pic != null) PickImage(pic, tint, mode, tap, box ?: drag,
+                    outline = res?.outlines?.getOrNull(pos)?.takeIf { tint == null }, boxLines = res?.boxes?.getOrNull(pos),
                     onTap = { p -> tap = p; box = null; cut(p, null) },
                     onDrag = { r -> drag = r },
                     onBox = { r -> drag = null; if (abs(r[2] - r[0]) > 12 && abs(r[3] - r[1]) > 12) { box = r; tap = null; cut(null, r) } })
@@ -536,8 +606,7 @@ fun DtReviewScreen(model: AppModel, activity: Activity, dirPath: String) {
             }
             Card {
                 T("Data uji", 15.sp, FontWeight.SemiBold)
-                T("Ukuran belum dihitung di HP pada versi ini: rekaman dipakai untuk membangun dan menguji engine tanpa ARCore. Ukuran meteran jadi pembanding.",
-                    12.5.sp, color = C.t2)
+                T("Ukuran dihitung otomatis. Isi ukuran meteran (boleh kosong) untuk membandingkan akurasinya.", 12.5.sp, color = C.t2)
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(name, { name = it.take(40); saved = false }, singleLine = true, modifier = Modifier.fillMaxWidth(),
                     label = { T("Nama objek (mis. kardus, galon)", 13.sp) })
@@ -554,9 +623,11 @@ fun DtReviewScreen(model: AppModel, activity: Activity, dirPath: String) {
             Spacer(Modifier.height(2.dp))
         }
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            PrimaryButton(if (saved) "Pilihan tersimpan" else "Simpan pilihan objek", "check", Modifier.fillMaxWidth(), enabled = mask != null && !saved && busy == null) {
-                if (save()) model.toast("Pilihan objek disimpan")
-            }
+            if (!saved || result == null && sj?.running != true && job != "cutting")
+                PrimaryButton(if (saved) "Hitung ukuran" else "Simpan pilihan & hitung ukuran", "straighten", Modifier.fillMaxWidth(),
+                    enabled = mask != null && busy == null && sj?.running != true) {
+                    if (saved || save()) model.runSweep(dir)
+                }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 SecondaryButton("Bagikan ZIP", "folder_zip", Modifier.weight(1f)) {
                     if (mask != null && !saved) save()
@@ -572,6 +643,7 @@ fun DtReviewScreen(model: AppModel, activity: Activity, dirPath: String) {
 /** The picture with the pick drawn on it; taps and drags come back in picture pixels. */
 @Composable
 private fun PickImage(pic: Bitmap, tint: Bitmap?, mode: PickMode, tap: Offset?, rect: FloatArray?,
+                      outline: List<Float>? = null, boxLines: List<Float>? = null,
                       onTap: (Offset) -> Unit, onDrag: (FloatArray) -> Unit, onBox: (FloatArray) -> Unit) {
     var view by remember { mutableStateOf(IntSize(1, 1)) }
     val k = pic.width.toFloat() / max(1, view.width)          // view px -> picture px
@@ -591,8 +663,41 @@ private fun PickImage(pic: Bitmap, tint: Bitmap?, mode: PickMode, tap: Offset?, 
         if (tint != null) Image(tint.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.FillBounds)
         Canvas(Modifier.fillMaxSize()) {
             val s = size.width / pic.width
+            // this frame's segmentation and box, from the measurement
+            outline?.takeIf { it.size >= 6 }?.let { drawOutline(it.toFloatArray(), size.width, size.height) }
+            boxLines?.let { drawBox(it, size.width, size.height) }
             rect?.let { r -> drawRect(Color.White, Offset(r[0] * s, r[1] * s), Size((r[2] - r[0]) * s, (r[3] - r[1]) * s), style = Stroke(3.dp.toPx())) }
             tap?.let { p -> drawCircle(Color.White, 9.dp.toPx(), Offset(p.x * s, p.y * s)); drawCircle(C.brand, 6.dp.toPx(), Offset(p.x * s, p.y * s)) }
+        }
+    }
+}
+
+/** The measured size, as the ARCore result shows it, with the tape size beside it when one was typed. */
+@Composable
+private fun ResultCard(r: SweepResult, model: AppModel, tape: List<String>, onUse: () -> Unit) {
+    val settings by model.store.settings.collectAsState()
+    val volL = r.lengthCm * r.widthCm * r.heightCm / 1000
+    val volKg = r.lengthCm * r.widthCm * r.heightCm / settings.divisor
+    Card(highlight = true) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            T("Ukuran", 15.sp, FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            if (r.ok) Chip("Akurat · skor ${r.confidence}", Tone.OK, "check_circle") else Chip("Perlu Dicek · skor ${r.confidence}", Tone.WARN, "warning")
+        }
+        T("${r.lengthCm.cm()} × ${r.widthCm.cm()} × ${r.heightCm.cm()} cm", 28.sp, FontWeight.Bold)
+        T("Volume ${volL.id()} L · berat volumetrik ${volKg.id(2)} kg (÷ ${settings.divisor.toDouble().id(0)})", 13.sp, color = C.t2)
+        val t = tape.map { ObjectPick.cm(it) }
+        if (t.all { it != null }) {
+            val e = listOf(r.lengthCm - t[0]!!, r.widthCm - t[1]!!, r.heightCm - t[2]!!)
+            T("Meteran ${t[0]!!.cm()} × ${t[1]!!.cm()} × ${t[2]!!.cm()} cm · selisih " + e.joinToString(" / ") { (if (it >= 0) "+" else "") + it.id() }, 12.5.sp, FontWeight.SemiBold, C.brandD)
+        }
+        T("${r.method} · ${r.frames} foto · ${r.densePoints} titik depth · ${r.seconds.id(0)} s di HP", 12.sp, color = C.t3)
+        r.notes.forEach { T("• $it", 12.sp, color = C.amber) }
+        Spacer(Modifier.height(4.dp))
+        T("Geser slider foto: area magenta dan kotak hijau = hasil segmentasi tiap frame.", 12.sp, color = C.t3)
+        if (model.draft != null) {
+            Spacer(Modifier.height(8.dp))
+            T("Resi ${model.draft!!.resi}", 12.5.sp, FontWeight.SemiBold, color = C.t2)
+            PrimaryButton("Pakai ukuran ini", "arrow_forward", Modifier.fillMaxWidth()) { onUse() }
         }
     }
 }
