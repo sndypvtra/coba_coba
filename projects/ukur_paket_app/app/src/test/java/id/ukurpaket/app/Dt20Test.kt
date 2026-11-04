@@ -112,6 +112,10 @@ class Dt20Test {
         val (f3, _) = sweep()
         val noImu = SweepAnalysis.analyse(f3, emptyList(), true)
         assertEquals(Level.FAIL, noImu.checks.first { it.key == "gyro" }.level)
+        // accelerometer only (the DT50 when neither gyroscope nor rotation vector send): usable, the turn from the camera
+        val accOnly = SweepAnalysis.analyse(f3, i.filter { it.sensor == "accelerometer" }, true)
+        assertEquals(Level.WARN, accOnly.checks.first { it.key == "gyro" }.level)
+        assertEquals(Level.INFO, accOnly.checks.first { it.key == "turn" }.level)
     }
 
     /** A phone whose gyroscope is listed but silent (seen on a Urovo DT50), and whose camera clock is not the sensors'. */

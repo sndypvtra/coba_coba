@@ -44,6 +44,7 @@ import id.ukurpaket.app.dt.ObjectPick
 import id.ukurpaket.app.dt.Pick
 import id.ukurpaket.app.dt.SweepRun
 import id.ukurpaket.app.vio.EngineFailed
+import id.ukurpaket.app.vio.RecordingTracker
 import id.ukurpaket.app.vio.SweepResult
 import id.ukurpaket.app.measure.Segmenter
 import id.ukurpaket.app.scan.HardwareScanner
@@ -157,8 +158,11 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
 
     fun diagChecks(): List<Check> = diag?.let { Diagnostics.checks(it, diagRates) }.orEmpty()
 
-    /** Reads the phone (instant), then measures the real sensor rates for 3 s. */
-    fun runDiagnosis() {
+    /**
+     * Reads the phone (instant), then measures the real sensor rates and tries every gyroscope ([measure]; not while
+     * recording: switching sensors on and off then would disturb the recording's own).
+     */
+    fun runDiagnosis(measure: Boolean = true) {
         if (diagBusy != null) return
         val ctx = getApplication<Application>()
         viewModelScope.launch {
@@ -167,6 +171,7 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
                 Diagnosis(Diagnostics.device(ctx), caps.arcore.label, hardwareScanner, Diagnostics.sensors(ctx), Diagnostics.cameras(ctx),
                     samEncodeMs = diag?.samEncodeMs, sam512EncodeMs = diag?.sam512EncodeMs, sam512Kernels = diag?.sam512Kernels, gyroProbes = diag?.gyroProbes.orEmpty())
             }
+            if (!measure) { diagBusy = null; return@launch }
             diagBusy = "Mengukur kecepatan sensor satu per satu…"
             diagRates = runCatching { Diagnostics.measureRates(ctx) { n -> diagBusy = "Mengukur sensor: ${n.replace('_', ' ')}…" } }.getOrDefault(emptyMap())
             diag = diag?.let { d -> d.copy(sensors = d.sensors.map { it.copy(measuredHz = diagRates[it.type]) }) }
@@ -294,13 +299,13 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
     val sweepJobs = mutableStateMapOf<String, SweepJob>()
 
     /** Measures the picked object of a recording on the phone (camera + motion sensors, no ARCore). */
-    fun runSweep(dir: File) {
+    fun runSweep(dir: File, prepared: RecordingTracker.Prepared? = null) {
         if (sweepJobs[dir.path]?.running == true) return
         sweepJobs[dir.path] = SweepJob("Menyiapkan", 0f)
         viewModelScope.launch {
             val r = runCatching {
                 withContext(Dispatchers.Default) {
-                    SweepRun.run(dir) { st, p -> viewModelScope.launch { if (sweepJobs[dir.path]?.running == true) sweepJobs[dir.path] = SweepJob(st, p) } }
+                    SweepRun.run(dir, prepared) { st, p -> viewModelScope.launch { if (sweepJobs[dir.path]?.running == true) sweepJobs[dir.path] = SweepJob(st, p) } }
                 }
             }
             sweepJobs[dir.path] = r.fold({ SweepJob("Selesai", 1f, it) },
@@ -326,7 +331,7 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
      * model still loading). Then measured, as after a live pick.
      * [nx], [ny] or [box] (x0, y0, x1, y1): fractions of the upright picture.
      */
-    fun cutPick(dir: File, rotation: Int, nx: Float?, ny: Float?, box: FloatArray?) {
+    fun cutPick(dir: File, rotation: Int, nx: Float?, ny: Float?, box: FloatArray?, prepared: RecordingTracker.Prepared? = null) {
         pickJobs[dir.path] = "cutting"
         viewModelScope.launch {
             val ok = runCatching {
@@ -347,7 +352,7 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
                 }
             }
             pickJobs[dir.path] = if (ok.isSuccess) "done" else "failed"
-            if (ok.isFailure) toast("Objek tidak bisa dipotong: pilih lagi di foto") else runSweep(dir)
+            if (ok.isFailure) toast("Objek tidak bisa dipotong: pilih lagi di foto") else runSweep(dir, prepared)
         }
     }
 

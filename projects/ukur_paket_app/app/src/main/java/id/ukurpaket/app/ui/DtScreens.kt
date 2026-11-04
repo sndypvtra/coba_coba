@@ -262,7 +262,7 @@ private fun DtRecorder(model: AppModel) {
     var live by remember { mutableStateOf<LiveSegmenter.Update?>(null) }
     // the live pick: 0 none yet, 1 being saved, 2 saved (then measured at Stop), 3 left to the cut after recording
     val pickState = remember { AtomicInteger(0) }
-    LaunchedEffect(Unit) { if (model.diag == null) model.runDiagnosis() }
+    LaunchedEffect(Unit) { if (model.diag == null) model.runDiagnosis(measure = false) }
     LaunchedEffect(Unit) { model.samLightNow() }
     DisposableEffect(Unit) { onDispose { rec.close(); if (!keep[0]) dir.deleteRecursively() } }
     fun stop() {
@@ -277,7 +277,8 @@ private fun DtRecorder(model: AppModel) {
             val cutLater = pickState.compareAndSet(0, 3)
             main.post {
                 keep[0] = true; runCatching { model.diagFile(d) }
-                if (p.tap != null || p.box != null) { if (cutLater) model.cutPick(d, rec.sensorOrientation, p.tap?.x, p.tap?.y, p.box) else model.runSweep(d) }
+                val prep = rec.prepared
+                if (p.tap != null || p.box != null) { if (cutLater) model.cutPick(d, rec.sensorOrientation, p.tap?.x, p.tap?.y, p.box, prep) else model.runSweep(d, prep) }
                 model.openReview(d)
             }
         }
@@ -291,7 +292,7 @@ private fun DtRecorder(model: AppModel) {
             val w = (if (turned) sz.height else sz.width) / down; val h = (if (turned) sz.width else sz.height) / down
             val rot = rec.sensorOrientation
             val mode = if (p.box != null) "box" else "tap"
-            rec.live = LiveSegmenter({ model.samLight }, w, h,
+            rec.live = LiveSegmenter({ model.samLight }, w, h, shared = rec.tracking.tracker,
                 onUpdate = { u -> main.post { live = u } },
                 onFirstMask = { f, m, ms ->
                     if (pickState.compareAndSet(0, 1)) {
@@ -376,7 +377,7 @@ private fun DtRecordChrome(status: SweepRecorder.LiveStatus?, phase: RecPhase, e
                         Chip(if (gyroDead) "gyro diam" else "gyro ${status?.gyroHz?.toInt() ?: 0} Hz", if (gyroDead) Tone.WARN else Tone.GREY)
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        if (gyroDead) Chip("rotasi ${status!!.rotationHz.toInt()} Hz", Tone.WARN)
+                        if (gyroDead) Chip(if (status!!.rotationHz < 1) "putaran dari kamera" else "rotasi ${status.rotationHz.toInt()} Hz", Tone.WARN)
                         if (phase != RecPhase.READY) Chip("${status?.savedFrames ?: 0} foto · ${status?.dropped ?: 0} terlewat", Tone.GREY)
                     }
                     // MobileSAM: how long one cut takes on this phone, and how many times it has re-cut the object
@@ -398,10 +399,13 @@ private fun DtRecordChrome(status: SweepRecorder.LiveStatus?, phase: RecPhase, e
                         "ukuran dan berat volumetrik keluar otomatis setelah Selesai.", 13.sp, color = C.t2)
                 }
                 RecPhase.RECORDING -> {
-                    T("Kelilingi objek pelan… putaran ${turn.toInt()}° dari target 60°", 14.sp, FontWeight.SemiBold)
+                    T(if (gyroDead && (status?.rotationHz ?: 0.0) < 1) "Kelilingi objek pelan ±60–90°, 5–10 detik" else "Kelilingi objek pelan… putaran ${turn.toInt()}° dari target 60°", 14.sp, FontWeight.SemiBold)
                     T("Area magenta = objek tersegmentasi, tiap frame. Jaga objek tetap di layar.", 12.sp, color = C.t3)
-                    LinearProgressIndicator(progress = { min(1f, (turn / 60.0).toFloat()) }, modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
-                        color = if (turn >= 60) C.green else C.brand, trackColor = C.line)
+                    // without any rotation sensor the bar follows the time (5–10 s), else the turn
+                    val noTurn = gyroDead && (status?.rotationHz ?: 0.0) < 1
+                    val prog = if (noTurn) ((status?.seconds ?: 0.0) / 7.0).toFloat() else (turn / 60.0).toFloat()
+                    LinearProgressIndicator(progress = { min(1f, prog) }, modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
+                        color = if (prog >= 1f) C.green else C.brand, trackColor = C.line)
                 }
                 RecPhase.SAVING -> Row(verticalAlignment = Alignment.CenterVertically) {
                     CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = C.brand)

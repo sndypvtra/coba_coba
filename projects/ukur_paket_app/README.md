@@ -1,4 +1,4 @@
-# UkurPaket: Android app (v0.3.1, test build)
+# UkurPaket: Android app (v0.3.2, test build)
 
 Measures a parcel's length × width × height with the phone camera, the way the courier mockup
 (`../ukur_paket_mockup`) describes: method A, ARCore depth + floor detection, with the parcel picked by a tap or a
@@ -53,7 +53,7 @@ the hub instead of being typed in.
 
 JDK 17+ and the Android SDK (platform 35). AGP 8.7.3, Kotlin 2.1.0, Compose BOM 2024.12.01, ARCore 1.47.0,
 ONNX Runtime 1.20.0, minSdk 26, targetSdk 35, arm64-v8a + armeabi-v7a. The test APK is
-`release/UkurPaket-0.3.1-uji.apk` (54 MB; MobileSAM is two models: the 1024 one for ARCore phones, encoder float16
+`release/UkurPaket-0.3.2-uji.apk` (54 MB; MobileSAM is two models: the 1024 one for ARCore phones, encoder float16
 13,8 MB + decoder with int8 weights 4,6 MB, made by `tools/export_sam.py`, the int8 decoder's masks within IoU 0,989 of
 float32; and the 512 one for PDAs, encoder float32 28 MB + decoder 4,7 MB, made by `tools/export_sam512.py`). It installs directly (allow "install unknown apps"); for the Play Store use your own key.
 
@@ -97,6 +97,38 @@ Not tested on a DT20 yet: everything with the real camera and sensors (Camera2 s
 the device). Tested here: the diagnosis rules, the quality check on synthetic sweeps and on the file format, the
 recorder's size choice and sharpness score, the navigation, and the screens (`18`–`20`; the diagnosis screenshot uses
 test values, not a DT20 reading; the pick screenshot runs the app's MobileSAM on the parcel photo with a box).
+
+### No rotation sensor, and the size within seconds of Selesai (v0.3.2)
+
+**The DT50 recording that failed** ("Tidak ada data putaran"): its imu.csv had neither gyroscope nor rotation-vector
+events. On that phone the rotation vector is fused from the gyroscope, so when the gyroscope's driver sends nothing,
+both are silent; only the accelerometer works. No app setting can make the driver send, so the engine no longer needs
+it: **the camera's own rotation** (`vio/VisualRotation.kt`):
+
+1. relative rotations for frame pairs (i, i+1 / +2 / +4 / +8) from the tracked points: essential matrix (normalised
+   8-point, RANSAC on the Sampson error, refitted on the inliers, the rotation chosen by points in front of both
+   cameras); a pair that fits a pure turn as well (short baseline) uses that turn (Kabsch);
+2. rotation averaging over all pairs (Gauss-Newton on the tangent space, Huber), so single-pair errors do not add up;
+3. bundle adjustment with a looser rotation prior; gravity and the accelerometer's clock offset solved with the scale
+   (offset: the best inertial fit over −80…+40 ms).
+
+The recorder still tries every gyroscope the phone lists; a rotation sensor, when one sends, is used as before.
+
+| Synthetic DT50 sweep, accelerometer only | Truth (cm) | Camera rotation (cm) | With the rotation vector (cm) |
+|---|---|---|---|
+| box | 40 × 30 × 20 | 39,2 × 29,4 × 20,9 | 39,6 × 29,5 × 21,0 |
+| sack | 45,4 × 30,1 × 19 | 43,2 × 25,8 × 19,0 | 42,9 × 25,0 × 19,0 |
+
+**Speed.** The engine's tracking (the largest part, 3,2 s of 5 s on this PC) now runs **while recording**
+(`vio/RecordingTracker.kt`): every saved frame, in order, goes to the engine's tracker on its own thread, its KLT spread
+over the cores, and the same tracks drive the live segmentation (one tracker, not two). The greys stay in memory, so
+no JPEG is read back. The independent parts left (clock and focal search, frame pairs, the 64 depth planes) run on all
+cores. On this PC (4 cores): tracking 1,4–1,6 s for 75 frames, i.e. faster than the recording itself; after
+**Selesai** 1,3–2,6 s to the size. On the DT50 expect several times that (not measured yet: `result.json` and the
+result card show the seconds).
+
+Phone path on the test video (the recording tracker driving the live segmentation): IoU 0,93 median against
+MobileSAM-1024 on frames 0–54, the lighter followed until it leaves the picture.
 
 ### Live segmentation while recording (v0.3.1, `vio/LiveSeg.kt`)
 

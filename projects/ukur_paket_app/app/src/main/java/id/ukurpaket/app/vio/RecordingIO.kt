@@ -20,7 +20,12 @@ object RecordingIO {
 
     class Loaded(val input: SweepInput, val frameIndex: IntArray, val dir: File)
 
-    fun load(dir: File, decode: (File) -> Gray, decodeMask: (File) -> Bits?, tracks: List<Track>? = null): Loaded {
+    /**
+     * [prepared]: the tracks and greys made while recording (RecordingTracker); used when they are of exactly these
+     * frames, else the frames are decoded and tracked again.
+     */
+    fun load(dir: File, decode: (File) -> Gray, decodeMask: (File) -> Bits?, tracks: List<Track>? = null,
+             prepared: RecordingTracker.Prepared? = null): Loaded {
         val ses = json.parseToJsonElement(File(dir, "session.json").readText()).jsonObject
         val realtime = ses["timestamp_source"]?.jsonPrimitive?.content == "REALTIME"
         val rows = File(dir, "frames.csv").readLines().drop(1).filter { it.isNotBlank() }.map { it.split(',') }
@@ -44,7 +49,8 @@ object RecordingIO {
         }
         if (gyr.isEmpty()) gyr.addAll(gyrRaw)
         acc.sortBy { it.t }; gyr.sortBy { it.t }; rv.sortBy { it.t }; rvAbs.sortBy { it.t }
-        val first = decode(File(dir, "frames/%05d.jpg".format(idx[0])))
+        val prep = prepared?.takeIf { it.frameIndex.contentEquals(idx) }
+        val first = prep?.grays?.get(0)?.gray() ?: decode(File(dir, "frames/%05d.jpg".format(idx[0])))
         // focal prior from the Camera2 facts: focal (mm) / sensor width (mm) x sensor-side width, at the tracking width
         val size = ses["size"]?.jsonArray?.map { it.jsonPrimitive.int } ?: listOf(first.h, first.w)
         val side = size.max()
@@ -63,8 +69,9 @@ object RecordingIO {
             raw[(i % first.w) * raw.w / first.w, (i / first.w) * raw.h / first.h]
         })
         val cache = HashMap<Int, Gray>()
-        val gray = { i: Int -> synchronized(cache) { cache.getOrPut(i) { decode(File(dir, "frames/%05d.jpg".format(idx[i]))).also { if (cache.size > 40) cache.clear() } } } }
-        val inp = SweepInput(tCam, arrival, realtime, acc, gyr, rv.ifEmpty { rvAbs }, fPrior, first.w, first.h, gray, pos, m, tracks)
+        val gray = { i: Int -> synchronized(cache) { cache.getOrPut(i) {
+            (prep?.grays?.get(i)?.gray() ?: decode(File(dir, "frames/%05d.jpg".format(idx[i])))).also { if (cache.size > 40) cache.clear() } } } }
+        val inp = SweepInput(tCam, arrival, realtime, acc, gyr, rv.ifEmpty { rvAbs }, fPrior, first.w, first.h, gray, pos, m, tracks ?: prep?.tracks)
         return Loaded(inp, idx, dir)
     }
 

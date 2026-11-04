@@ -95,8 +95,15 @@ class SweepRecorder(private val ctx: Context, val dir: File, private val cb: Cal
     @Volatile private var turnRad = 0.0
     private var lastStatus = 0L
 
-    /** Segments the picked object live (set when recording starts with a pick); fed every saved frame. */
-    @Volatile var live: id.ukurpaket.app.vio.LiveSegmenter? = null
+    /** The engine's tracking, done while recording on every saved frame; it also drives the live segmentation. */
+    val tracking = id.ukurpaket.app.vio.RecordingTracker()
+    /** What [tracking] handed over once recording stopped (null before, or if it failed). */
+    @Volatile var prepared: id.ukurpaket.app.vio.RecordingTracker.Prepared? = null; private set
+
+    /** Segments the picked object live (set when recording starts with a pick), on the tracking thread's tracks. */
+    var live: id.ukurpaket.app.vio.LiveSegmenter?
+        get() = tracking.seg
+        set(v) { tracking.seg = v }
 
     /** Target rate of saved frames: the solver needs ~10–15 per second; the motion sensors carry the fast motion. */
     var minFrameGapNs = 60_000_000L
@@ -210,7 +217,7 @@ class SweepRecorder(private val ctx: Context, val dir: File, private val cb: Cal
                 val f = File(dir, "frames/%05d.jpg".format(idx))
                 f.outputStream().buffered().use { YuvImage(nv21, ImageFormat.NV21, w, h, null).compressToJpeg(Rect(0, 0, w, h), 92, it) }
                 val sharp = sharpness(nv21, w, h)
-                live?.offer(idx, nv21, w, h, sensorOrientation)
+                tracking.offer(idx, nv21, w, h, sensorOrientation)
                 synchronized(frameRows) { frameRows.append(idx).append(',').append(now).append(',').append("%.2f".format(Locale.US, sharp)).append(',')
                     .append(w).append(',').append(h).append(',').append(f.length()).append(',').append(arrival).append('\n') }
             }
@@ -304,6 +311,9 @@ class SweepRecorder(private val ctx: Context, val dir: File, private val cb: Cal
             Thread {
                 encoder.shutdown()
                 encoder.awaitTermination(15, TimeUnit.SECONDS)
+                // the live segmentation stops; the frames still queued are tracked for the engine
+                live?.close()
+                prepared = tracking.finish()
                 File(dir, "frames.csv").writeText(synchronized(frameRows) { frameRows.toString() })
                 File(dir, "capture.csv").writeText(synchronized(captureRows) { captureRows.toString() })
                 imuHandler.post {
@@ -341,6 +351,7 @@ class SweepRecorder(private val ctx: Context, val dir: File, private val cb: Cal
     fun close() {
         recording = false
         live?.close(); live = null
+        if (prepared == null) tracking.cancel()
         sm.unregisterListener(imu)
         runCatching { session?.close() }; runCatching { device?.close() }; runCatching { reader?.close() }; runCatching { previewSurface?.release() }
         session = null; device = null; reader = null

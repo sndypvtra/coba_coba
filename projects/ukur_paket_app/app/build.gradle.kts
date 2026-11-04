@@ -13,8 +13,8 @@ android {
         applicationId = "id.ukurpaket.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 13
-        versionName = "0.3.1-uji"
+        versionCode = 14
+        versionName = "0.3.2-uji"
         // 32-bit kept too, so the app still installs (and can mark parcels for the hub) on older phones.
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
     }

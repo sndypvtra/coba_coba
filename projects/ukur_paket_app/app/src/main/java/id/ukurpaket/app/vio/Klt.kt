@@ -205,7 +205,7 @@ class Track(val id: Int) {
  * KLT tracker over a sweep: frames in order (upright grey), tracks kept while forward-backward consistent, new
  * corners topped up in empty places. Every observation is kept for the solver.
  */
-class Tracker(val maxTracks: Int = 700, val minDist: Int = 9, val fbMax: Float = 0.7f, val levels: Int = 3) {
+class Tracker(val maxTracks: Int = 700, val minDist: Int = 9, val fbMax: Float = 0.7f, val levels: Int = 3, private val pool: Par? = null) {
     val tracks = ArrayList<Track>()
     private val live = ArrayList<Track>()
     private var prev: Pyramid? = null
@@ -220,13 +220,18 @@ class Tracker(val maxTracks: Int = 700, val minDist: Int = 9, val fbMax: Float =
         val k = frames
         val pp = prev
         if (pp != null) {
-            val keep = ArrayList<Track>()
-            for (t in live) {
-                val fw = Klt.track(pp, pyr, t.lastX(), t.lastY()) ?: continue
-                val bw = Klt.track(pyr, pp, fw[0], fw[1]) ?: continue
-                if (abs(bw[0] - t.lastX()) + abs(bw[1] - t.lastY()) > fbMax) continue
-                t.add(k, fw[0], fw[1]); keep.add(t)
+            // each track on its own: split over the cores when there are many
+            fun follow(t: Track): Boolean {
+                val fw = Klt.track(pp, pyr, t.lastX(), t.lastY()) ?: return false
+                val bw = Klt.track(pyr, pp, fw[0], fw[1]) ?: return false
+                if (abs(bw[0] - t.lastX()) + abs(bw[1] - t.lastY()) > fbMax) return false
+                t.add(k, fw[0], fw[1]); return true
             }
+            val ok = if (pool != null && pool.threads > 1 && live.size > 64) {
+                val chunks = live.chunked((live.size + pool.threads - 1) / pool.threads)
+                pool.map(chunks) { c -> c.map { follow(it) } }.flatten()
+            } else live.map { follow(it) }
+            val keep = live.filterIndexed { i, _ -> ok[i] }
             live.clear(); live.addAll(keep)
         }
         if (live.size < maxTracks * 0.8) {

@@ -100,8 +100,9 @@ class Aff(val a: Double, val b: Double, val c: Double, val d: Double, val tx: Do
  * The mask is kept as it was on its last anchor frame plus the motion since, so small motions add up instead of
  * being rounded away frame by frame.
  * Coordinates: the upright tracking picture [w] x [h]; the mask is kept at a quarter of that.
- * [threads] = true runs tracking and MobileSAM on their own threads (the phone); false runs everything in [step]
- * (tests, deterministic), with MobileSAM every [syncEvery] frames.
+ * [shared]: the recording's tracker (the engine's tracks, fed every frame by the recorder), whose tracks [step] is given;
+ * without it the segmenter tracks on its own. [threads] = true runs MobileSAM on its own thread (the phone); false runs
+ * it inside [step] (tests, deterministic), every [syncEvery] frames.
  */
 class LiveSegmenter(
     /** The model, once loaded (it may still be loading when recording starts: then the first answer comes later). */
@@ -109,6 +110,7 @@ class LiveSegmenter(
     private val onUpdate: (Update) -> Unit,
     private val onFirstMask: (frame: Int, mask: Mask, samMs: Long) -> Unit = { _, _, _ -> },
     private val threads: Boolean = true, private val syncEvery: Int = 12, private val motion: Motion = Motion.SIMILARITY,
+    shared: Tracker? = null,
     private val refine: Refine = Refine.PER_FRAME,
 ) {
     enum class Motion { SHIFT, SHIFT_SCALE, SIMILARITY, AFFINE }
@@ -121,7 +123,8 @@ class LiveSegmenter(
 
     private val gw = max(1, w / 4); private val gh = max(1, h / 4)
     // 4 pyramid levels: a hand-held sweep at ~15 frames a second can move 40-60 px between frames
-    private val tracker = Tracker(maxTracks = 300, minDist = 10, levels = 4)
+    private val tracker = shared ?: Tracker(maxTracks = 300, minDist = 10, levels = 4)
+    private var prevTf = -1                                // the tracker's frame at the previous step
     private val member = HashSet<Int>()
     private var base = BooleanArray(gw * gh)               // the mask on its anchor frame
     private var cum = Aff.ID                               // anchor frame -> now
@@ -137,7 +140,6 @@ class LiveSegmenter(
     @Volatile var segmented = false; private set          // MobileSAM has cut the object at least once
     private var firstTried = false
     @Volatile private var closed = false
-    private val trackExec = ThreadPoolExecutor(1, 1, 0, TimeUnit.SECONDS, ArrayBlockingQueue(1), ThreadPoolExecutor.DiscardPolicy())
     private val samExec = ThreadPoolExecutor(1, 1, 0, TimeUnit.SECONDS, ArrayBlockingQueue(1), ThreadPoolExecutor.DiscardPolicy())
     private var prompt: FloatArray? = null                  // the touch: box (4) or tap (2), fractions
     val maskNow: Mask get() = synchronized(this) { Mask(gw, gh, mask.copyOf()) }
@@ -163,23 +165,16 @@ class LiveSegmenter(
         segmented = true; firstTried = true
     }
 
-    /** A new frame (phone): NV21 in sensor orientation and its frame number; converted and processed on the tracking thread. */
-    fun offer(frameNo: Int, nv21: ByteArray, sw: Int, sh: Int, rotation: Int) {
-        if (!threads || closed) return
-        if (trackExec.queue.isNotEmpty() || trackExec.activeCount > 0) return
-        val copy = nv21.copyOf(sw * sh * 3 / 2)
-        trackExec.execute { runCatching { step(frameNo, Gray.fromLuma(copy, sw, sh, down = if (sw > 1000) 2 else 1, rotation = rotation),
-            { Yuv.argb(copy, sw, sh, rotation, w, h) }, { Yuv.argb(copy, sw, sh, rotation, gw, gh) }) } }
-    }
-
     /** One frame: track, carry the mask, maybe start MobileSAM, report the outline. [argb] gives the frame in colour for MobileSAM. */
-    fun step(frameNo: Int, g: Gray, argb: () -> IntArray, small: (() -> IntArray)? = null) {
-        val live = tracker.feed(g)
+    fun step(frameNo: Int, g: Gray, argb: () -> IntArray, small: (() -> IntArray)? = null, tracks: List<Track>? = null) {
+        if (closed) return
+        val live = tracks ?: tracker.feed(g)
+        val tf = tracker.frames - 1; val ptf = prevTf; prevTf = tf
         val prev = frame; frame = frameNo
         if (prev >= 0) {
             // the members' motion from the previous frame
             val p = ArrayList<FloatArray>(); val q = ArrayList<FloatArray>(); val ids = ArrayList<Int>()
-            for (t in live) if (t.id in member && t.n >= 2) { p.add(floatArrayOf(t.x[t.n - 2], t.y[t.n - 2])); q.add(floatArrayOf(t.x[t.n - 1], t.y[t.n - 1])); ids.add(t.id) }
+            for (t in live) if (t.id in member) { val j = t.at(ptf); if (j >= 0) { p.add(floatArrayOf(t.x[j], t.y[j])); q.add(floatArrayOf(t.lastX(), t.lastY())); ids.add(t.id) } }
             // too few of the object's own points (blur, a thin object): the points round it, which move with the camera
             var own = true
             if (p.size < MIN_OWN) {
@@ -187,9 +182,9 @@ class LiveSegmenter(
                 if (b != null) {
                     val mx = 0.5f * (b[2] - b[0]) + 24; val my = 0.5f * (b[3] - b[1]) + 24
                     p.clear(); q.clear(); ids.clear(); own = false
-                    for (t in live) if (t.n >= 2 && t.f[t.n - 2] == t.f[t.n - 1] - 1) {
-                        val x = t.x[t.n - 2]; val y = t.y[t.n - 2]
-                        if (x in b[0] - mx..b[2] + mx && y in b[1] - my..b[3] + my) { p.add(floatArrayOf(x, y)); q.add(floatArrayOf(t.x[t.n - 1], t.y[t.n - 1])); ids.add(-1) }
+                    for (t in live) { val j = t.at(ptf); if (j < 0) continue
+                        val x = t.x[j]; val y = t.y[j]
+                        if (x in b[0] - mx..b[2] + mx && y in b[1] - my..b[3] + my) { p.add(floatArrayOf(x, y)); q.add(floatArrayOf(t.lastX(), t.lastY())); ids.add(-1) }
                     }
                 }
             }
@@ -217,7 +212,7 @@ class LiveSegmenter(
         synchronized(this) {
             for (t in live) {
                 val inM = at(mask, t.lastX(), t.lastY())
-                if (t.n == 1 && inM && atEroded(mask, t.lastX(), t.lastY())) member.add(t.id)
+                if (t.f[0] == tf && inM && atEroded(mask, t.lastX(), t.lastY())) member.add(t.id)
                 if (t.id in member && !inM && !near(mask, t.lastX(), t.lastY())) member.remove(t.id)
             }
         }
@@ -371,7 +366,7 @@ class LiveSegmenter(
     }
 
     /** Stops both threads; a MobileSAM run in progress finishes but its answer is dropped. */
-    fun close() { closed = true; trackExec.shutdownNow(); samExec.shutdownNow() }
+    fun close() { closed = true; samExec.shutdownNow() }
 }
 
 /**

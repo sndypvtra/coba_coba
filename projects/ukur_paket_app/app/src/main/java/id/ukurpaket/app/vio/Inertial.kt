@@ -9,7 +9,31 @@ class Sample(val t: Double, val v: DoubleArray)
  * World <- device rotation at any time. With the game rotation vector the world is gravity-aligned (z up), so gravity
  * is known; with only the gyroscope it is integrated from the first sample and gravity has to be solved for.
  */
-class RotationSource(gyro: List<Sample>, rv: List<Sample>) {
+class RotationSource(gyro: List<Sample>, rv: List<Sample>, val visual: Boolean = false) {
+    companion object {
+        /** From world <- device rotations at given times (the camera's own rotations): as a rotation-vector stream. */
+        fun fromFrames(times: DoubleArray, rwd: Array<DoubleArray>): RotationSource =
+            RotationSource(emptyList(), times.indices.map { Sample(times[it], quatOf(rwd[it])) }, visual = true)
+
+        /** Rotation -> quaternion (x, y, z, w). */
+        fun quatOf(r: DoubleArray): DoubleArray {
+            val tr = r[0] + r[4] + r[8]
+            return if (tr > 0) {
+                val s = sqrt(tr + 1.0) * 2
+                doubleArrayOf((r[7] - r[5]) / s, (r[2] - r[6]) / s, (r[3] - r[1]) / s, 0.25 * s)
+            } else if (r[0] > r[4] && r[0] > r[8]) {
+                val s = sqrt(1.0 + r[0] - r[4] - r[8]) * 2
+                doubleArrayOf(0.25 * s, (r[1] + r[3]) / s, (r[2] + r[6]) / s, (r[7] - r[5]) / s)
+            } else if (r[4] > r[8]) {
+                val s = sqrt(1.0 + r[4] - r[0] - r[8]) * 2
+                doubleArrayOf((r[1] + r[3]) / s, 0.25 * s, (r[5] + r[7]) / s, (r[2] - r[6]) / s)
+            } else {
+                val s = sqrt(1.0 + r[8] - r[0] - r[4]) * 2
+                doubleArrayOf((r[2] + r[6]) / s, (r[5] + r[7]) / s, 0.25 * s, (r[3] - r[1]) / s)
+            }
+        }
+    }
+
     val fromRv = rv.size > 10
     private val t: DoubleArray
     private val q: Array<DoubleArray>          // quaternions (x, y, z, w), sign-continuous

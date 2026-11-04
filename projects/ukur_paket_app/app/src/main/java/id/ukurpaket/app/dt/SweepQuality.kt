@@ -102,7 +102,10 @@ object SweepAnalysis {
         c += if (q.maxGapMs > 250) Check("gap", "Jeda foto terlama", "${q.maxGapMs.toInt()} ms", Level.WARN, "Ada foto yang terlewat.")
         else Check("gap", "Jeda foto terlama", "${q.maxGapMs.toInt()} ms", Level.OK, "")
         c += when {
-            q.gyroHz == 0.0 -> Check("gyro", "Gyroscope", "tidak ada data", Level.FAIL, "Tanpa gyroscope atau rotation vector, engine tidak bisa jalan.")
+            q.gyroHz == 0.0 && q.accelHz == 0.0 -> Check("gyro", "Sensor gerak", "tidak ada data", Level.FAIL,
+                "Tidak ada data sensor gerak sama sekali: tanpa accelerometer ukuran meter tidak bisa dihitung.")
+            q.gyroHz == 0.0 -> Check("gyro", "Gyroscope", "tidak ada data", Level.WARN,
+                "Gyroscope dan rotation vector diam (firmware HP tidak meneruskan datanya): putaran HP dihitung dari kamera.")
             fromRv -> Check("imu", "Sensor gerak", "acc ${q.accelHz.toInt()} Hz · rotasi ${q.gyroHz.toInt()} Hz", Level.WARN,
                 "Gyroscope diam: putaran dari rotation vector (lebih halus, sedikit terlambat).")
             q.gyroHz < 90 || q.accelHz < 90 -> Check("imu", "Sensor gerak", "acc ${q.accelHz.toInt()} Hz · gyro ${q.gyroHz.toInt()} Hz", Level.WARN, "Ideal ≥ 150 Hz.")
@@ -116,6 +119,7 @@ object SweepAnalysis {
             else -> Check("sync", "Jam kamera & sensor", "cocok", Level.OK, "")
         }
         c += when {
+            q.gyroHz == 0.0 -> Check("turn", "Putaran HP", "dihitung dari kamera", Level.INFO, "Tanpa data sensor putaran, sudutnya dihitung saat mengukur.")
             q.turnDeg < 25 -> Check("turn", "Putaran HP", "${q.turnDeg.toInt()}°", Level.FAIL, "Kurang berputar: kelilingi objek ±45–90°.")
             q.turnDeg < 40 -> Check("turn", "Putaran HP", "${q.turnDeg.toInt()}°", Level.WARN, "Lebih baik ≥ 45°.")
             else -> Check("turn", "Putaran HP", "${q.turnDeg.toInt()}°", Level.OK, "")

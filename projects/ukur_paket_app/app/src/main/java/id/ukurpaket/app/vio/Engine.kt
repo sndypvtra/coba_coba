@@ -41,14 +41,14 @@ object Engine {
     /** Optional trace of the intermediate numbers (tests, and the recording's result.json). */
     var trace: ((String) -> Unit)? = null
 
-    fun run(inp: SweepInput, progress: (String, Float) -> Unit = { _, _ -> }): SweepResult {
+    fun run(inp: SweepInput, pool: Par = Par.default, progress: (String, Float) -> Unit = { _, _ -> }): SweepResult {
         val t0 = System.nanoTime()
         val n = inp.tCam.size
         if (n < 15) throw EngineFailed("Rekaman terlalu pendek ($n foto)")
         val notes = ArrayList<String>()
         // 1. tracks
         val tracks = inp.tracks ?: run {
-            val tr = Tracker()
+            val tr = Tracker(levels = RecordingTracker.ENGINE_LEVELS, pool = pool)
             for (i in 0 until n) { tr.feed(inp.gray(i)); if (i % 5 == 0) progress("Melacak titik", 0.25f * i / n) }
             tr.tracks
         }
@@ -60,36 +60,78 @@ object Engine {
             val off = inp.tCam.indices.map { inp.arrival[it] - inp.tCam[it] }.sorted()[n / 2]
             times = DoubleArray(n) { inp.tCam[it] + off }
         }
-        val rot = RotationSource(inp.gyro, inp.rv)
-        if (!rot.available) throw EngineFailed("Tidak ada data putaran (gyroscope / rotation vector)")
-        if (!rot.fromRv) notes += "Putaran dari gyroscope (tanpa koreksi bias)."
-        val gKnown = if (rot.fromRv) doubleArrayOf(0.0, 0.0, -Inertial.G) else null
+        val sensorRot = RotationSource(inp.gyro, inp.rv)
         val cx = inp.w / 2.0; val cy = inp.h / 2.0
-        fun rwc(td: Double) = Array(n) { M3.mul(rot.at(times[it] + td), RDC) }
-        // 3. time offset and focal length: least reprojection error of the linear stage
-        val sub = obs.filterIndexed { i, _ -> i % 3 == 0 }
-        fun err(td: Double, f: Double) = Vision.linear(rwc(td), sub, Intrinsics(f, cx, cy), iters = 1).medianErr
-        progress("Mencocokkan jam kamera dan sensor", 0.3f)
-        var bestTd = 0.0; var bestE = Double.MAX_VALUE
-        var td = -0.08
-        while (td <= 0.0401) { val e = err(td, inp.focalPrior); if (e < bestE) { bestE = e; bestTd = td }; td += 0.01 }
-        var tdF = bestTd - 0.008
-        while (tdF <= bestTd + 0.0081) { val e = err(tdF, inp.focalPrior); if (e < bestE) { bestE = e; bestTd = tdF }; tdF += 0.002 }
-        progress("Mengkalibrasi lensa", 0.4f)
-        var f = inp.focalPrior
-        for (fs in doubleArrayOf(0.9, 0.95, 1.05, 1.1)) { val e = err(bestTd, inp.focalPrior * fs); if (e < bestE) { bestE = e; f = inp.focalPrior * fs } }
+        var rot: RotationSource
+        var gKnown: DoubleArray?
+        var bestTd = 0.0; var f = inp.focalPrior
+        val ba: Structure
+        val pre: List<Preint>
+        val al: Inertial.Alignment
+        if (sensorRot.available) {
+            rot = sensorRot
+            if (!rot.fromRv) notes += "Putaran dari gyroscope (tanpa koreksi bias)."
+            gKnown = if (rot.fromRv) doubleArrayOf(0.0, 0.0, -Inertial.G) else null
+            fun rwc(td: Double) = Array(n) { M3.mul(rot.at(times[it] + td), RDC) }
+            // 3. time offset and focal length: least reprojection error of the linear stage (independent tries, in parallel)
+            val sub = obs.filterIndexed { i, _ -> i % 3 == 0 }
+            fun err(td: Double, ff: Double) = Vision.linear(rwc(td), sub, Intrinsics(ff, cx, cy), iters = 1).medianErr
+            progress("Mencocokkan jam kamera dan sensor", 0.3f)
+            val coarse = (0..12).map { -0.08 + 0.01 * it }
+            val ce = pool.map(coarse) { err(it, inp.focalPrior) }
+            var bestE = ce.min(); bestTd = coarse[ce.indexOf(bestE)]
+            val fine = (0..8).map { bestTd - 0.008 + 0.002 * it }
+            val fe = pool.map(fine) { err(it, inp.focalPrior) }
+            if (fe.min() < bestE) { bestE = fe.min(); bestTd = fine[fe.indexOf(bestE)] }
+            progress("Mengkalibrasi lensa", 0.4f)
+            val fs = listOf(0.9, 0.95, 1.05, 1.1).map { inp.focalPrior * it }
+            val fsE = pool.map(fs) { err(bestTd, it) }
+            if (fsE.min() < bestE) { bestE = fsE.min(); f = fs[fsE.indexOf(bestE)] }
+            trace?.invoke("tracks ${tracks.size}, used ${obs.size}, td ${bestTd}, f ${f}, search err ${bestE}")
+            // 4. structure, bundle adjustment, metric scale
+            progress("Menghitung posisi kamera", 0.45f)
+            val lin = Vision.linear(rwc(bestTd), obs, Intrinsics(f, cx, cy))
+            progress("Bundle adjustment", 0.55f)
+            trace?.invoke("linear: points ${lin.points.size}, median err ${lin.medianErr}")
+            ba = Vision.bundleAdjust(lin, obs, Intrinsics(f, cx, cy))
+            pre = Inertial.preintegrate(DoubleArray(n) { times[it] + bestTd }, rot, inp.acc)
+            al = Inertial.align(Array(n) { ba.cams[it].c }, pre, gKnown)
+        } else {
+            // no gyroscope and no rotation vector (the DT50's sensor hub sends neither): the camera's own rotation
+            progress("Menghitung putaran HP dari kamera", 0.3f)
+            val cam0 = Intrinsics(f, cx, cy)
+            val rwcV = VisualRotation.estimate(obs, n, cam0, pool) ?: throw EngineFailed("Putaran HP tidak terbaca dari kamera: sapukan lebih pelan, objek tetap di layar")
+            notes += "Gyroscope dan rotation vector tidak mengirim data: putaran HP dihitung dari kamera."
+            progress("Menghitung posisi kamera", 0.45f)
+            val lin = Vision.linear(rwcV, obs, cam0)
+            trace?.invoke("visual: linear points ${lin.points.size}, median err ${lin.medianErr}")
+            progress("Bundle adjustment", 0.55f)
+            ba = Vision.bundleAdjust(lin, obs, cam0, sigRotDeg = 1.0, iters = 8)
+            val rwd = Array(n) { M3.mul(ba.cams[it].r, RDC) }        // RDC is its own inverse
+            // accelerometer clock against the frames: the offset that makes the inertial alignment fit best
+            fun aligned(td: Double): Triple<RotationSource, List<Preint>, Inertial.Alignment> {
+                val tt = DoubleArray(n) { times[it] + td }
+                val rs = RotationSource.fromFrames(tt, rwd)
+                // gravity in this world, as a fallback: the accelerometer's mean over the sweep, turned into the world
+                val g = DoubleArray(3); var c = 0
+                for (a in inp.acc) if (a.t in tt.first()..tt.last()) { val v = M3.mv(rs.at(a.t), a.v); for (k in 0 until 3) g[k] -= v[k]; c++ }
+                val gl = sqrt(g[0] * g[0] + g[1] * g[1] + g[2] * g[2])
+                val gk = if (c > 10 && gl > 0) DoubleArray(3) { g[it] / gl * Inertial.G } else null
+                val pr = Inertial.preintegrate(tt, rs, inp.acc)
+                // gravity solved with the rest (better on the synthetic sweeps); the mean only if that one is implausible
+                val free = Inertial.align(Array(n) { ba.cams[it].c }, pr, null)
+                val gl2 = sqrt(free.gravity.sumOf { it * it })
+                return Triple(rs, pr, if (gl2 in 9.3..10.3 || gk == null) free else Inertial.align(Array(n) { ba.cams[it].c }, pr, gk))
+            }
+            val tds = (0..24).map { -0.08 + 0.005 * it }
+            val tries = pool.map(tds) { td -> runCatching { aligned(td) }.getOrNull()?.takeIf { it.third.scale > 0 } }
+            val k = tries.indices.filter { tries[it] != null }.minByOrNull { tries[it]!!.third.rms } ?: throw EngineFailed("Skala tidak terbaca: HP kurang digeser")
+            bestTd = tds[k]
+            rot = tries[k]!!.first; pre = tries[k]!!.second; al = tries[k]!!.third; gKnown = al.gravity
+            trace?.invoke("visual: td ${bestTd}, BA err ${ba.medianErr}")
+        }
         val cam = Intrinsics(f, cx, cy)
-        trace?.invoke("tracks ${tracks.size}, used ${obs.size}, td ${bestTd}, f ${f}, search err ${bestE}")
-        // 4. structure, bundle adjustment, metric scale
-        progress("Menghitung posisi kamera", 0.45f)
-        val lin = Vision.linear(rwc(bestTd), obs, cam)
-        progress("Bundle adjustment", 0.55f)
-        trace?.invoke("linear: points ${lin.points.size}, median err ${lin.medianErr}")
-        val ba = Vision.bundleAdjust(lin, obs, cam)
         trace?.invoke("BA: points ${ba.points.size}, median worst-err ${ba.medianErr}, good ${ba.err.count { it.value < 1.5 }}")
-        val tAligned = DoubleArray(n) { times[it] + bestTd }
-        val pre = Inertial.preintegrate(tAligned, rot, inp.acc)
-        val al = Inertial.align(Array(n) { ba.cams[it].c }, pre, gKnown)
         if (al.scale <= 0) throw EngineFailed("Skala tidak terbaca: HP kurang digeser")
         val s = al.scale
         trace?.invoke("scale ${al.scale} sd ${al.scaleSd} bias ${al.accBias.toList()} rms ${al.rms}")
@@ -167,6 +209,7 @@ object Engine {
         if (method != "depth padat") conf -= 20
         if (tilt > 3) { conf -= 10; notes += "Bidang tumpu miring ${"%.1f".format(tilt)}° terhadap gravitasi." }
         if (!rot.fromRv) conf -= 10
+        if (rot.visual) conf -= 5
         conf = conf.coerceIn(0, 100)
         // 9. per frame: object outline and box, for the review screen
         // the outline from the points inside the measured box (+1 cm): the same object the size is of
@@ -185,7 +228,7 @@ object Engine {
             boxes.add(if (bc.any { it == null }) emptyList() else bc.flatMap { listOf((it!![0] / inp.w).toFloat(), (it[1] / inp.h).toFloat()) })
         }
         return SweepResult(bx.l * 100, bx.w * 100, bx.h * 100, conf, conf >= 75, method, n, pts.size, sparseObj.size, dense.size,
-            if (rot.fromRv) "rotation vector" else "gyroscope", bestTd * 1000, f, ba.medianErr, sdPct, accMotion, tilt,
+            if (rot.visual) "kamera (visual)" else if (rot.fromRv) "rotation vector" else "gyroscope", bestTd * 1000, f, ba.medianErr, sdPct, accMotion, tilt,
             (System.nanoTime() - t0) / 1e9, notes, outlines, boxes)
     }
 

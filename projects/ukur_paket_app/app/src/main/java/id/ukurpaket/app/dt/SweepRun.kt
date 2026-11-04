@@ -10,6 +10,7 @@ import id.ukurpaket.app.vio.Bits
 import id.ukurpaket.app.vio.Engine
 import id.ukurpaket.app.vio.Gray
 import id.ukurpaket.app.vio.RecordingIO
+import id.ukurpaket.app.vio.RecordingTracker
 import id.ukurpaket.app.vio.SweepResult
 import java.io.File
 
@@ -31,10 +32,11 @@ object SweepRun {
         return Bits(b.width, b.height, BooleanArray(px.size) { (px[it] and 255) > 127 })
     }
 
-    fun run(dir: File, progress: (String, Float) -> Unit): SweepResult {
+    /** [prepared]: the tracking done while recording, when this recording was just made (else it is redone here). */
+    fun run(dir: File, prepared: RecordingTracker.Prepared? = null, progress: (String, Float) -> Unit): SweepResult {
         val rot = ObjectPick.rotation(dir)
-        val loaded = RecordingIO.load(dir, decoderFor(rot), ::decodeMask)
-        val r = Engine.run(loaded.input, progress)
+        val loaded = RecordingIO.load(dir, decoderFor(rot), ::decodeMask, prepared = prepared)
+        val r = Engine.run(loaded.input, progress = progress)
         File(dir, "result.json").writeText(Diagnostics.json.encodeToString(SweepResult.serializer(), r) + "\n")
         evidence(dir, loaded.frameIndex[loaded.input.pickFrame], loaded.input.pickFrame, rot, r)
         return r

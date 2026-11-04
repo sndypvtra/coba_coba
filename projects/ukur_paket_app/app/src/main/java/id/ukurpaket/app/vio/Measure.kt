@@ -144,7 +144,7 @@ object Measure {
      * Returns world points.
      */
     fun planeSweep(ref: Gray, refCam: Cam, nbs: List<Pair<Gray, Cam>>, cam: Intrinsics, roi: Bits, zMin: Double, zMax: Double,
-                   planes: Int = 64, minScore: Float = 0.7f): List<DoubleArray> {
+                   planes: Int = 64, minScore: Float = 0.7f, pool: Par = Par.default): List<DoubleArray> {
         val w = ref.w; val h = ref.h
         var x0 = w; var y0 = h; var x1 = -1; var y1 = -1
         for (y in 0 until h) for (x in 0 until w) if (roi[x, y]) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y }
@@ -153,50 +153,58 @@ object Measure {
         x0 = max(r + 1, x0 - r); y0 = max(r + 1, y0 - r); x1 = min(w - r - 2, x1 + r); y1 = min(h - r - 2, y1 + r)
         val bw = x1 - x0 + 1; val bh = y1 - y0 + 1
         if (bw < 8 || bh < 8) return emptyList()
-        val best = FloatArray(bw * bh) { -2f }; val bestZ = FloatArray(bw * bh)
         val refP = FloatArray(bw * bh) { ref.p[(y0 + it / bw) * w + x0 + it % bw] }
         val iw = bw + 1
         val sr = integral(refP, bw, bh); val srr = integral(FloatArray(bw * bh) { refP[it] * refP[it] }, bw, bh)
-        val warped = FloatArray(bw * bh); val valid = BooleanArray(bw * bh)
-        val accS = FloatArray(bw * bh); val accN = IntArray(bw * bh)
         val rcwRef = refCam.r
-        for (pi in 0 until planes) {
-            val inv = 1 / zMax + (1 / zMin - 1 / zMax) * pi / (planes - 1)
-            val z = 1 / inv
-            java.util.Arrays.fill(accS, 0f); java.util.Arrays.fill(accN, 0)
-            for ((img, nc) in nbs) {
-                // homography of the plane z_ref = z: x_n ~ K (R_nr + t_nr n^T / z) K^-1 x_r
-                val rnr = M3.mul(M3.t(nc.r), rcwRef)
-                val tnr = M3.mtv(nc.r, doubleArrayOf(refCam.c[0] - nc.c[0], refCam.c[1] - nc.c[1], refCam.c[2] - nc.c[2]))
-                val hm = DoubleArray(9)
-                for (i in 0 until 3) for (j in 0 until 3) hm[3 * i + j] = rnr[3 * i + j] + if (j == 2) tnr[i] / z else 0.0
-                // in pixels: K H K^-1
-                val k = doubleArrayOf(cam.f, 0.0, cam.cx, 0.0, cam.f, cam.cy, 0.0, 0.0, 1.0)
-                val ki = doubleArrayOf(1 / cam.f, 0.0, -cam.cx / cam.f, 0.0, 1 / cam.f, -cam.cy / cam.f, 0.0, 0.0, 1.0)
-                val hp = M3.mul(k, M3.mul(hm, ki))
-                for (yy in 0 until bh) for (xx in 0 until bw) {
-                    val px = (x0 + xx).toDouble(); val py = (y0 + yy).toDouble()
-                    val q = hp[6] * px + hp[7] * py + hp[8]
-                    val u = (hp[0] * px + hp[1] * py + hp[2]) / q; val v = (hp[3] * px + hp[4] * py + hp[5]) / q
-                    val i = yy * bw + xx
-                    if (q > 0 && u >= 0 && v >= 0 && u < img.w - 1 && v < img.h - 1) { warped[i] = img.at(u.toFloat(), v.toFloat()); valid[i] = true }
-                    else { warped[i] = 0f; valid[i] = false }
+        // the planes in groups, one group per core; each keeps its own best depth, merged at the end
+        val groups = (0 until planes).toList().let { all -> all.chunked(max(1, (all.size + pool.threads - 1) / pool.threads)) }
+        val parts = pool.map(groups) { group ->
+            val best = FloatArray(bw * bh) { -2f }; val bestZ = FloatArray(bw * bh)
+            val warped = FloatArray(bw * bh); val valid = BooleanArray(bw * bh)
+            val accS = FloatArray(bw * bh); val accN = IntArray(bw * bh)
+            for (pi in group) {
+                val inv = 1 / zMax + (1 / zMin - 1 / zMax) * pi / (planes - 1)
+                val z = 1 / inv
+                java.util.Arrays.fill(accS, 0f); java.util.Arrays.fill(accN, 0)
+                for ((img, nc) in nbs) {
+                    // homography of the plane z_ref = z: x_n ~ K (R_nr + t_nr n^T / z) K^-1 x_r
+                    val rnr = M3.mul(M3.t(nc.r), rcwRef)
+                    val tnr = M3.mtv(nc.r, doubleArrayOf(refCam.c[0] - nc.c[0], refCam.c[1] - nc.c[1], refCam.c[2] - nc.c[2]))
+                    val hm = DoubleArray(9)
+                    for (i in 0 until 3) for (j in 0 until 3) hm[3 * i + j] = rnr[3 * i + j] + if (j == 2) tnr[i] / z else 0.0
+                    // in pixels: K H K^-1
+                    val k = doubleArrayOf(cam.f, 0.0, cam.cx, 0.0, cam.f, cam.cy, 0.0, 0.0, 1.0)
+                    val ki = doubleArrayOf(1 / cam.f, 0.0, -cam.cx / cam.f, 0.0, 1 / cam.f, -cam.cy / cam.f, 0.0, 0.0, 1.0)
+                    val hp = M3.mul(k, M3.mul(hm, ki))
+                    for (yy in 0 until bh) for (xx in 0 until bw) {
+                        val px = (x0 + xx).toDouble(); val py = (y0 + yy).toDouble()
+                        val q = hp[6] * px + hp[7] * py + hp[8]
+                        val u = (hp[0] * px + hp[1] * py + hp[2]) / q; val v = (hp[3] * px + hp[4] * py + hp[5]) / q
+                        val i = yy * bw + xx
+                        if (q > 0 && u >= 0 && v >= 0 && u < img.w - 1 && v < img.h - 1) { warped[i] = img.at(u.toFloat(), v.toFloat()); valid[i] = true }
+                        else { warped[i] = 0f; valid[i] = false }
+                    }
+                    val sw = integral(warped, bw, bh); val sww = integral(FloatArray(bw * bh) { warped[it] * warped[it] }, bw, bh)
+                    val srw = integral(FloatArray(bw * bh) { refP[it] * warped[it] }, bw, bh)
+                    val n = ((2 * r + 1) * (2 * r + 1)).toFloat()
+                    for (yy in r until bh - r) for (xx in r until bw - r) {
+                        val i = yy * bw + xx
+                        if (!valid[i] || !roi[x0 + xx, y0 + yy]) continue
+                        val a = boxSum(sr, iw, xx, yy, r) / n; val b = boxSum(sw, iw, xx, yy, r) / n
+                        val vr = boxSum(srr, iw, xx, yy, r) / n - a * a; val vw = boxSum(sww, iw, xx, yy, r) / n - b * b
+                        if (vr < 1f || vw < 1f) continue
+                        val cv = boxSum(srw, iw, xx, yy, r) / n - a * b
+                        accS[i] += (cv / sqrt(vr * vw)); accN[i]++
+                    }
                 }
-                val sw = integral(warped, bw, bh); val sww = integral(FloatArray(bw * bh) { warped[it] * warped[it] }, bw, bh)
-                val srw = integral(FloatArray(bw * bh) { refP[it] * warped[it] }, bw, bh)
-                val n = ((2 * r + 1) * (2 * r + 1)).toFloat()
-                for (yy in r until bh - r) for (xx in r until bw - r) {
-                    val i = yy * bw + xx
-                    if (!valid[i] || !roi[x0 + xx, y0 + yy]) continue
-                    val a = boxSum(sr, iw, xx, yy, r) / n; val b = boxSum(sw, iw, xx, yy, r) / n
-                    val vr = boxSum(srr, iw, xx, yy, r) / n - a * a; val vw = boxSum(sww, iw, xx, yy, r) / n - b * b
-                    if (vr < 1f || vw < 1f) continue
-                    val cv = boxSum(srw, iw, xx, yy, r) / n - a * b
-                    accS[i] += (cv / sqrt(vr * vw)); accN[i]++
-                }
+                for (i in 0 until bw * bh) if (accN[i] >= 2) { val sc = accS[i] / accN[i]; if (sc > best[i]) { best[i] = sc; bestZ[i] = z.toFloat() } }
             }
-            for (i in 0 until bw * bh) if (accN[i] >= 2) { val sc = accS[i] / accN[i]; if (sc > best[i]) { best[i] = sc; bestZ[i] = z.toFloat() } }
+            best to bestZ
         }
+        val best = FloatArray(bw * bh) { -2f }; val bestZ = FloatArray(bw * bh)
+        // ties go to the earlier plane group, as in one pass over the planes in order
+        for ((b, z) in parts) for (i in best.indices) if (b[i] > best[i]) { best[i] = b[i]; bestZ[i] = z[i] }
         val out = ArrayList<DoubleArray>()
         for (yy in r until bh - r) for (xx in r until bw - r) {
             val i = yy * bw + xx
