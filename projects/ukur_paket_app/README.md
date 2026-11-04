@@ -1,4 +1,4 @@
-# UkurPaket: Android app (v0.1.1, test build)
+# UkurPaket: Android app (v0.2.0, test build)
 
 Measures a parcel's length × width × height with the phone camera, the way the courier mockup
 (`../ukur_paket_mockup`) describes: method A, ARCore depth + floor detection, with the parcel picked by a tap or a
@@ -53,7 +53,7 @@ the hub instead of being typed in.
 
 JDK 17+ and the Android SDK (platform 35). AGP 8.7.3, Kotlin 2.1.0, Compose BOM 2024.12.01, ARCore 1.47.0,
 ONNX Runtime 1.20.0, minSdk 26, targetSdk 35, arm64-v8a + armeabi-v7a. The test APK is
-`release/UkurPaket-0.1.1-uji.apk` (29 MB; MobileSAM is 18,8 MB of it: encoder float16 13,8 MB + decoder with int8
+`release/UkurPaket-0.2.0-uji.apk` (29 MB; MobileSAM is 18,8 MB of it: encoder float16 13,8 MB + decoder with int8
 weights 4,6 MB, made by `tools/export_sam.py`; the int8 decoder's masks are within IoU 0,989 of float32). It installs directly (allow "install unknown apps"); for the Play Store use your own key.
 
 ## Urovo DT20 (and other Urovo PDAs)
@@ -72,6 +72,30 @@ Scanner settings on the DT20 (Settings → Scanner, the names vary a little by f
 
 `scan/HardwareScanner.kt` holds the receiver and the keyboard reader. The receiver is registered only while the app
 is in front.
+
+### DT20 test tools (v0.2.0): diagnosis and sweep recorder
+
+The groundwork for our own engine in place of ARCore on the DT20: camera + motion sensors (visual-inertial), solved
+after the sweep, then the same pick → points → `BoxFitter` → result as method A. This build records and checks; it
+does **not** compute a size yet. The recordings are what the solver is built and tested on, on a PC first.
+Entry: home card **Uji DT20** (phones without ARCore), the start screen, Settings, and the no-ARCore screen.
+
+| Screen | What it does |
+|---|---|
+| **Diagnostik HP** (`dt/Diagnostics.kt`) | Device, chip, RAM; each motion sensor with its rated and **measured** rate (3 s at the fastest rate); the back camera's Camera2 facts (hardware level, timestamp source, focus calibration and control, AE/AWB lock, OIS, YUV sizes and fps, factory intrinsics if any); MobileSAM speed test. Each requirement of the engine gets ✅ / ⚠️ / ❌ with the reason (no gyroscope = ❌; camera and sensor clocks not shared = ⚠️). Shared as JSON. |
+| **Perekam DT20** (`dt/SweepRecorder.kt`) | Camera2 preview + YUV frames (4:3 near 1280 × 960, falls back to 640 × 480) saved as JPEG at ~15/s, every accelerometer / gyroscope (+ uncalibrated, magnetometer, gravity, rotation vector) event at the fastest rate. Focus, exposure and white balance locked while recording; OIS and video stabilisation off (they move the image against the lens). Live: fps, sensor Hz, turn angle against a 60° target. |
+| **Rekaman DT20** (`dt/SweepQuality.kt`, `dt/ObjectPick.kt`) | Checks the files just written: length, frames/s and gaps, sensor rates, same clock and coverage, turn angle, **acceleration** (no acceleration = no metric scale), blurred frames. Then **any object** is picked in the sharpest frame (or another, slider): **Klik objek** or **Tarik kotak**, cut out by MobileSAM. Name and the tape-measure size (optional) are saved with it. Share the recording as ZIP. |
+
+One recording folder (`files/dt_sessions/<time>/`): `frames/NNNNN.jpg`, `frames.csv` (index, camera timestamp, sharpness),
+`capture.csv` (per-frame exposure, frame duration, rolling-shutter skew, focus distance, AF/AE state, ISO), `imu.csv`
+(sensor, timestamp, values), `session.json` (size, sensor orientation, clock), `diagnosis.json`, and after the pick
+`pick.json` + `mask.png` + `pick_overlay.jpg`. Frames are stored as the sensor sees them; `pick.json` coordinates are
+in the upright picture (rotated by the sensor orientation).
+
+Not tested on a DT20 yet: everything with the real camera and sensors (Camera2 session, locks, rates, files on
+the device). Tested here: the diagnosis rules, the quality check on synthetic sweeps and on the file format, the
+recorder's size choice and sharpness score, the navigation, and the screens (`18`–`20`; the diagnosis screenshot uses
+test values, not a DT20 reading; the pick screenshot runs the app's MobileSAM on the parcel photo with a box).
 
 ### Smoke test: the resi label as the ruler (no ARCore, no extra items)
 
@@ -103,9 +127,10 @@ Tested here, on the PC:
 | `ConveyorReplayTest` | the conveyor scene in 3D, each parcel measured from geometry alone and from the tap/box cut-out | geometry alone merges touching parcels; with the cut-out every parcel stays separate (README section below) |
 | `FlowTest` | the courier's path through the screens: first open with nothing but the scanner; measure → weight → save → next parcel in the same session → Selesai starts a new one; a second tap on Simpan; re-measuring replaces the old record; Ukur di Hub on a phone without ARCore; a late hub photo after the courier left; a scanned number opens its parcel (or its record if measured already), any content is taken as it is; a data file of an earlier test build still loads | 7 flows, records and screen stack as expected |
 | `HardwareScannerTest` | Urovo detection; the three broadcast formats (string, bytes + length, older `urovo.rcv.message`); a broadcast reaching the registered receiver; a scan key press on home opens the parcel, while measuring it does not, a QR link is ignored; keyboard output: fast keys + Enter is a scan, slow keys are not, Back/volume pass through | 5 tests pass |
+| `Dt20Test` | DT20 tools: diagnosis rules (no gyroscope, separate clocks, slow sensors, fixed focus), sweep quality on synthetic sweeps (good, still phone, too short, no motion sensors) and read back from the recorder's file format, size choice, sharpness, cm parsing, the scan key on the test screens, review navigation | 6 tests pass |
 | `BarcodeTest` | the barcode cut from a photo of a real AnterAja label (bars only, no personal data) read with ZXing | Code 128, `TSA-80745081104` |
 | `ScannerFormatsTest` | the scanner's barcode types | the 9 linear types; QR, Data Matrix, PDF417 and Aztec left out |
-| `ScreenshotTest` | every screen rendered on the JVM (`screenshots/`); camera screens on the mockup photo with the overlay the engine draws | 21 screens (`17_scan_resi_urovo`: home on a Urovo PDA without ARCore) |
+| `ScreenshotTest` | every screen rendered on the JVM (`screenshots/`); camera screens on the mockup photo with the overlay the engine draws | 24 screens (`17` home on a Urovo PDA without ARCore, `18`–`20` DT20 diagnosis, recorder, pick) |
 | Android lint | | no errors |
 
 **Not tested yet**: anything that needs a real phone, including the scan key on a real DT20: ARCore tracking, depth quality, how the cut-out lines up with
@@ -122,6 +147,7 @@ thresholds get tuned, ideally from recorded scans of 50–100 parcels with tape-
 | `ar/MeasureEngine.kt` | ARCore session, per-frame steps, tap/box pick, depth to 3D points, fence, other parcels, done marks, torch |
 | `ar/BackgroundRenderer.kt`, `ar/Snapshot.kt`, `ar/Recorder.kt` | camera image; evidence photo; raw scan recording |
 | `ar/ArCheck.kt` | ARCore availability, install request, Depth API check |
+| `dt/` | DT20 tools: `Diagnostics.kt`, `SweepRecorder.kt` (Camera2 + motion sensors), `SweepQuality.kt`, `ObjectPick.kt`; screens in `ui/DtScreens.kt` |
 | `scan/HardwareScanner.kt` | Urovo scan key: broadcast receiver and keyboard-output reader |
 | `data/Store.kt`, `data/Locator.kt` | records and settings in one JSON file; GPS |
 | `ui/` | Compose: `Screens.kt` (start, scan resi, prep, weight, saved, history, detail, settings, phone without ARCore), `MeasureScreen.kt` (camera) |

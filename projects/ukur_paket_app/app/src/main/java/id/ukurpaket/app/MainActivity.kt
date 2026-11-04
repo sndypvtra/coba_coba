@@ -1,5 +1,6 @@
 package id.ukurpaket.app
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
@@ -32,7 +33,11 @@ class MainActivity : ComponentActivity() {
         super.onPause()
     }
 
-    /** Urovo scan key in keyboard output, or a Bluetooth/USB scanner: read only where no text field is on screen. */
+    /**
+     * Urovo scan key in keyboard output, or a Bluetooth/USB scanner: read only where no text field is on screen.
+     * Overriding (not calling) this androidx-restricted method is the way to see the keys before any view does.
+     */
+    @SuppressLint("RestrictedApi")
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (model.takesHardwareScan &&
             wedge.onKey(event.action == KeyEvent.ACTION_DOWN, event.keyCode, event.unicodeChar, event.eventTime)) return true

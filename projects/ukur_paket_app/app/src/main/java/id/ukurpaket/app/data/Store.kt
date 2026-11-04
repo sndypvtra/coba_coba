@@ -78,6 +78,8 @@ class Store(private val ctx: Context) {
 
     val photosDir get() = File(ctx.filesDir, "photos").apply { mkdirs() }
     val recordingsDir get() = File(ctx.filesDir, "recordings").apply { mkdirs() }
+    /** DT20 sweep recordings (camera frames + motion sensors), one folder each. */
+    val dtDir get() = File(ctx.filesDir, "dt_sessions").apply { mkdirs() }
 
     fun measurementFor(resi: String) = measurementsFlow.value.lastOrNull { it.resi == resi }
 

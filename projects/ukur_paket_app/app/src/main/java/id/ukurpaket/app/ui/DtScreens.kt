@@ -1,0 +1,574 @@
+package id.ukurpaket.app.ui
+
+import android.app.Activity
+import android.graphics.Bitmap
+import android.graphics.SurfaceTexture
+import android.os.Handler
+import android.os.Looper
+import android.view.TextureView
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import id.ukurpaket.app.dt.Check
+import id.ukurpaket.app.dt.Diagnostics
+import id.ukurpaket.app.dt.Level
+import id.ukurpaket.app.dt.ObjectPick
+import id.ukurpaket.app.dt.Pick
+import id.ukurpaket.app.dt.SweepAnalysis
+import id.ukurpaket.app.dt.SweepQuality
+import id.ukurpaket.app.dt.SweepRecorder
+import id.ukurpaket.app.measure.Embedding
+import id.ukurpaket.app.measure.Mask
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
+
+private fun Double.f1() = "%.1f".format(this).replace('.', ',')
+
+@Composable
+private fun LevelIcon(l: Level) = when (l) {
+    Level.OK -> Sym("check_circle", 20.dp, C.green, filled = true)
+    Level.WARN -> Sym("warning", 20.dp, C.amber, filled = true)
+    Level.FAIL -> Sym("error", 20.dp, C.red, filled = true)
+    Level.INFO -> Sym("info", 20.dp, C.t3, filled = true)
+}
+
+@Composable
+private fun CheckLine(c: Check) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.Top) {
+        Box(Modifier.padding(top = 1.dp)) { LevelIcon(c.level) }
+        Column(Modifier.weight(1f).padding(start = 10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                T(c.label, 14.sp, color = C.t2, modifier = Modifier.weight(1f))
+                T(c.value, 14.sp, FontWeight.SemiBold)
+            }
+            if (c.note.isNotEmpty()) T(c.note, 12.sp, color = C.t3)
+        }
+    }
+}
+
+@Composable
+private fun VerdictCard(level: Level, title: String, text: String, onClick: (() -> Unit)? = null, open: Boolean? = null) {
+    val (bg, fg, icon) = when (level) {
+        Level.OK -> Triple(C.greenL, C.green, "check_circle")
+        Level.WARN -> Triple(C.amberL, C.amber, "warning")
+        Level.FAIL -> Triple(C.redL, C.red, "error")
+        Level.INFO -> Triple(Color(0xFFEEF1F5), C.t2, "info")
+    }
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(bg).let { if (onClick != null) it.clickable(onClick = onClick) else it }
+        .padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Sym(icon, 28.dp, fg, filled = true)
+        Column(Modifier.weight(1f).padding(start = 12.dp)) {
+            T(title, 15.sp, FontWeight.SemiBold, fg)
+            T(text, 13.sp, color = C.ink)
+        }
+        if (open != null) Sym(if (open) "expand_more" else "chevron_right", 24.dp, fg)
+    }
+}
+
+@Composable
+private fun Kv(k: String, v: String) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+        T(k, 13.sp, color = C.t2, modifier = Modifier.width(132.dp))
+        T(v, 13.sp, FontWeight.Medium, modifier = Modifier.weight(1f))
+    }
+}
+
+// ------------------------------------------------------------------ diagnostics
+/** What this phone offers for our own engine (the stand-in for ARCore on the DT20), checked one by one. */
+@Composable
+fun DiagScreen(model: AppModel, activity: Activity) {
+    LaunchedEffect(Unit) { if (model.diag == null) model.runDiagnosis() }
+    val d = model.diag
+    val checks = model.diagChecks()
+    Column(Modifier.fillMaxSize()) {
+        TopBar("Diagnostik HP", d?.device?.let { "${it.manufacturer} ${it.model} · Android ${it.android}" }, onBack = { model.back() })
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            model.diagBusy?.let { b ->
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(C.brandL).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = C.brand)
+                    T(b, 13.5.sp, FontWeight.SemiBold, C.brandD, modifier = Modifier.padding(start = 10.dp))
+                }
+            }
+            if (checks.isNotEmpty()) {
+                val (lv, txt) = Diagnostics.verdict(checks)
+                VerdictCard(lv, "Syarat engine DT20 (pengganti ARCore)", txt)
+                Card(padding = 10.dp) { checks.forEach { CheckLine(it) } }
+            }
+            if (d != null) {
+                Card {
+                    T("Perangkat", 15.sp, FontWeight.SemiBold)
+                    Spacer(Modifier.height(6.dp))
+                    Kv("Model", "${d.device.manufacturer} ${d.device.model} (${d.device.device})")
+                    Kv("Android", "${d.device.android} (API ${d.device.sdk})")
+                    Kv("Chip", d.device.hardware)
+                    Kv("CPU · RAM", "${d.device.cores} inti · ${(d.device.ramMb / 1024.0).f1()} GB")
+                    Kv("ABI", d.device.abis.joinToString())
+                    Kv("Kamera AR (ARCore)", d.arcore)
+                    Kv("Scanner Urovo", if (d.urovoScanner) "Ada" else "Tidak terdeteksi")
+                }
+                Card {
+                    T("Sensor gerak", 15.sp, FontWeight.SemiBold)
+                    T("Kecepatan maks dari spesifikasi sensor · terukur di HP ini", 12.sp, color = C.t3)
+                    Spacer(Modifier.height(6.dp))
+                    if (d.sensors.isEmpty()) T("Tidak ada sensor gerak.", 13.sp, color = C.red)
+                    d.sensors.forEach { s ->
+                        Kv(s.type.replace('_', ' '), "${s.maxHz.toInt()} Hz" + (s.measuredHz?.let { " · terukur ${it.toInt()} Hz" } ?: "") + "\n${s.name}")
+                    }
+                }
+                Diagnostics.mainCamera(d.cameras)?.let { c ->
+                    Card {
+                        T("Kamera belakang (id ${c.id})", 15.sp, FontWeight.SemiBold)
+                        Spacer(Modifier.height(6.dp))
+                        Kv("Level", c.hardwareLevel)
+                        Kv("Jam (timestamp)", c.timestampSource)
+                        Kv("Fokus", "${c.focusCalibration} · min ${c.minFocusDiopters} dioptri · ${c.afModes.joinToString()}")
+                        Kv("Lensa", c.focalLengthsMm.joinToString { "$it mm" } + " · sensor ${c.sensorSizeMm.joinToString(" × ") { "%.2f".format(it) }} mm")
+                        Kv("Piksel", c.pixelArray.joinToString(" × "))
+                        Kv("Orientasi sensor", "${c.sensorOrientation}°")
+                        Kv("Kalibrasi pabrik", c.intrinsics?.joinToString { "%.1f".format(it) } ?: "tidak ada")
+                        Kv("Kunci AE · AWB", "${if (c.aeLock) "ya" else "tidak"} · ${if (c.awbLock) "ya" else "tidak"}")
+                        Kv("Stabilisasi", "OIS ${if (c.ois) "ada" else "tidak"} · video ${if (c.videoStabilization) "ada" else "tidak"}")
+                        Kv("YUV", c.yuvSizes.take(6).joinToString())
+                        Kv("FPS", c.fpsRanges.joinToString())
+                        Kv("Kemampuan", c.capabilities.joinToString())
+                    }
+                }
+            }
+            Spacer(Modifier.height(4.dp))
+        }
+        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                SecondaryButton("Sensor", "refresh", Modifier.weight(1f)) { model.runDiagnosis() }
+                SecondaryButton("Uji SAM", "speed", Modifier.weight(1f)) { model.timeSam() }
+                SecondaryButton("JSON", "share", Modifier.weight(0.9f)) {
+                    if (model.diag == null) model.toast("Tunggu diagnostik selesai")
+                    else model.shareFile(activity, "application/json", "Bagikan diagnostik") { model.diagFile()!! }
+                }
+            }
+            PrimaryButton("Buka perekam DT20", "videocam", Modifier.fillMaxWidth()) { model.go(Screen.DtRecord) }
+        }
+    }
+}
+
+// ------------------------------------------------------------------ recorder
+private enum class RecPhase { READY, RECORDING, SAVING }
+
+/** Camera + motion sensors for one sweep around an object; then the review screen. */
+@Composable
+fun DtRecordScreen(model: AppModel, activity: Activity) {
+    CameraPermission(model, activity) { DtRecorder(model) }
+}
+
+@Composable
+private fun DtRecorder(model: AppModel) {
+    val ctx = LocalContext.current
+    var status by remember { mutableStateOf<SweepRecorder.LiveStatus?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var phase by remember { mutableStateOf(RecPhase.READY) }
+    val keep = remember { booleanArrayOf(false) }
+    val main = remember { Handler(Looper.getMainLooper()) }
+    val dir = remember { SweepRecorder.newDir(model.store.dtDir) }
+    val rec = remember {
+        SweepRecorder(ctx, dir, object : SweepRecorder.Callback {
+            override fun onStatus(s: SweepRecorder.LiveStatus) { main.post { status = s } }
+            override fun onError(msg: String) { main.post { error = msg } }
+        })
+    }
+    LaunchedEffect(Unit) { if (model.diag == null) model.runDiagnosis() }
+    DisposableEffect(Unit) { onDispose { rec.close(); if (!keep[0]) dir.deleteRecursively() } }
+    fun stop() {
+        if (phase != RecPhase.RECORDING) return
+        phase = RecPhase.SAVING
+        rec.stop { d -> main.post { keep[0] = true; runCatching { model.diagFile(d) }; model.openReview(d) } }
+    }
+    LaunchedEffect(status?.seconds) { if ((status?.seconds ?: 0.0) > 20) stop() }
+    DtRecordChrome(status, phase, error, onBack = { model.back() }, onStart = { phase = RecPhase.RECORDING; rec.start() }, onStop = { stop() }) {
+        AndroidView(factory = { c ->
+            TextureView(c).apply {
+                surfaceTextureListener = object : TextureView.SurfaceTextureListener {
+                    override fun onSurfaceTextureAvailable(st: SurfaceTexture, w: Int, h: Int) { rec.open(st) }
+                    override fun onSurfaceTextureSizeChanged(st: SurfaceTexture, w: Int, h: Int) {}
+                    override fun onSurfaceTextureDestroyed(st: SurfaceTexture) = true
+                    override fun onSurfaceTextureUpdated(st: SurfaceTexture) {}
+                }
+            }
+        }, modifier = Modifier.fillMaxSize())
+    }
+}
+
+@Composable
+private fun DtRecordChrome(status: SweepRecorder.LiveStatus?, phase: RecPhase, error: String?, onBack: () -> Unit,
+                           onStart: () -> Unit, onStop: () -> Unit, preview: @Composable () -> Unit) {
+    val turn = status?.turnDeg ?: 0.0
+    Column(Modifier.fillMaxSize()) {
+        TopBar("Perekam DT20", "Rekam sapuan objek · kamera + sensor gerak", onBack = if (phase == RecPhase.READY) onBack else null)
+        Box(Modifier.fillMaxWidth().aspectRatio(3f / 4f).background(Color.Black)) {
+            preview()
+            Row(Modifier.align(Alignment.TopStart).padding(10.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                if (phase == RecPhase.RECORDING) Chip("REC ${(status?.seconds ?: 0.0).f1()} s", Tone.RED, "fiber_manual_record")
+                Chip(status?.size ?: "kamera…", Tone.GREY, "photo_camera")
+            }
+            Column(Modifier.align(Alignment.BottomStart).padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Chip("kamera ${status?.cameraFps?.toInt() ?: 0} fps", Tone.GREY)
+                    Chip("acc ${status?.accelHz?.toInt() ?: 0} Hz", Tone.GREY)
+                    Chip("gyro ${status?.gyroHz?.toInt() ?: 0} Hz", if ((status?.gyroHz ?: 0.0) > 0) Tone.GREY else Tone.WARN)
+                }
+                if (phase != RecPhase.READY) Chip("${status?.savedFrames ?: 0} foto · ${status?.dropped ?: 0} terlewat", Tone.GREY)
+            }
+        }
+        Column(Modifier.weight(1f).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            if (error != null) Banner(error, C.redL, C.red, "error")
+            when (phase) {
+                RecPhase.READY -> T("Objek apa saja (paket, galon, kursi…) di lantai atau meja. Arahkan kamera dari ±50–80 cm sampai objek terlihat utuh, " +
+                    "tekan Mulai, lalu jalan pelan mengitari objek ±60–90° dalam 3–8 detik. Objek tetap di tengah layar.", 13.5.sp, color = C.t2)
+                RecPhase.RECORDING -> {
+                    T("Kelilingi objek pelan… putaran ${turn.toInt()}° dari target 60°", 14.sp, FontWeight.SemiBold)
+                    LinearProgressIndicator(progress = { min(1f, (turn / 60.0).toFloat()) }, modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
+                        color = if (turn >= 60) C.green else C.brand, trackColor = C.line)
+                }
+                RecPhase.SAVING -> Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = C.brand)
+                    T("Menyimpan rekaman…", 14.sp, modifier = Modifier.padding(start = 10.dp))
+                }
+            }
+            Spacer(Modifier.weight(1f))
+            when (phase) {
+                RecPhase.READY -> PrimaryButton("Mulai rekam", "fiber_manual_record", Modifier.fillMaxWidth(), enabled = status != null && error == null) { onStart() }
+                RecPhase.RECORDING -> PrimaryButton("Selesai", "stop_circle", Modifier.fillMaxWidth(), color = C.green, enabled = (status?.seconds ?: 0.0) >= 1.5) { onStop() }
+                RecPhase.SAVING -> Unit
+            }
+        }
+    }
+}
+
+/** For the screenshot test: the recorder's screen around a still picture. */
+@Composable
+internal fun DtRecordPreview(picture: Bitmap?, recording: Boolean) {
+    val st = SweepRecorder.LiveStatus(recording, if (recording) 3.4 else 0.0, if (recording) 48 else 0, 0, 29.8, 198.0, 199.0, if (recording) 38.0 else 0.0, "1280×960")
+    DtRecordChrome(st, if (recording) RecPhase.RECORDING else RecPhase.READY, null, {}, {}, {}) {
+        if (picture != null) Image(picture.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+    }
+}
+
+// ------------------------------------------------------------------ review + pick the object
+private enum class PickMode { TAP, BOX }
+
+private fun Double.cmText() = (if (this % 1.0 == 0.0) "%.0f" else "%.1f").format(this).replace('.', ',')
+
+/** Everything the review screen shows on opening a recording, read in one go. */
+private class ReviewLoad(val quality: SweepQuality, val frames: List<Int>, val frame: Int, val picture: Bitmap?, val pick: Pick?, val mask: Mask?) {
+    companion object {
+        fun load(dir: File, rotation: Int): ReviewLoad {
+            val q = SweepAnalysis.read(dir, ObjectPick.sameClock(dir))
+            val frames = ObjectPick.frames(dir)
+            val pick = ObjectPick.load(dir)?.takeIf { it.frame in frames }
+            val frame = pick?.frame ?: q.bestFrame.takeIf { it in frames } ?: frames.getOrElse(frames.size / 2) { -1 }
+            val pic = if (frame >= 0) ObjectPick.upright(dir, frame, rotation) else null
+            return ReviewLoad(q, frames, frame, pic, pick, pick?.let { ObjectPick.loadMask(dir, it) })
+        }
+    }
+}
+
+/** Set by the screenshot test (as LocalStill is): load at once instead of in the background. */
+internal object LocalStillValue {
+    @Volatile private var v = false
+    fun get() = v
+    fun set(b: Boolean) { v = b }
+}
+
+/** After a sweep: is it good enough, which object (tap it or drag a box), and the tape-measure size for the test. */
+@Composable
+fun DtReviewScreen(model: AppModel, activity: Activity, dirPath: String) {
+    val dir = remember(dirPath) { File(dirPath) }
+    val scope = rememberCoroutineScope()
+    val rotation = remember(dirPath) { ObjectPick.rotation(dir) }
+    // a reopened recording shows its saved pick; the screenshot test loads everything at once
+    val first = remember(dirPath) { if (LocalStillValue.get()) ReviewLoad.load(dir, rotation) else null }
+    var quality by remember { mutableStateOf(first?.quality) }
+    var frames by remember { mutableStateOf(first?.frames.orEmpty()) }
+    var frame by remember { mutableStateOf(first?.frame ?: -1) }
+    var picture by remember { mutableStateOf(first?.picture) }
+    var mode by remember { mutableStateOf(if (first?.pick?.mode == "box") PickMode.BOX else PickMode.TAP) }
+    var tap by remember { mutableStateOf(first?.pick?.tap?.let { Offset(it[0], it[1]) }) }
+    var box by remember { mutableStateOf(first?.pick?.box?.toFloatArray()) }
+    var drag by remember { mutableStateOf<FloatArray?>(null) }
+    var mask by remember { mutableStateOf(first?.mask) }
+    var tint by remember { mutableStateOf(first?.mask?.let { ObjectPick.tint(it) }) }
+    var busy by remember { mutableStateOf<String?>(null) }
+    var encMs by remember { mutableStateOf(first?.pick?.samEncodeMs) }
+    var decMs by remember { mutableStateOf(first?.pick?.samDecodeMs ?: 0L) }
+    var name by remember { mutableStateOf(first?.pick?.name.orEmpty()) }
+    var tape by remember { mutableStateOf(first?.pick?.tapeCm?.map { it?.cmText() ?: "" } ?: listOf("", "", "")) }
+    var saved by remember { mutableStateOf(first?.pick != null) }
+    val cache = remember { HashMap<Int, Embedding>() }
+    var loadedFrame by remember { mutableStateOf(first?.frame ?: -1) }
+    var detail by remember { mutableStateOf(false) }
+
+    LaunchedEffect(dirPath) {
+        if (first != null) return@LaunchedEffect
+        val l = withContext(Dispatchers.IO) { ReviewLoad.load(dir, rotation) }
+        quality = l.quality; frames = l.frames; picture = l.picture; loadedFrame = l.frame; frame = l.frame
+        l.pick?.let { p ->
+            name = p.name; tape = p.tapeCm.map { it?.cmText() ?: "" }; saved = true
+            mode = if (p.mode == "box") PickMode.BOX else PickMode.TAP
+            tap = p.tap?.let { Offset(it[0], it[1]) }; box = p.box?.toFloatArray(); encMs = p.samEncodeMs; decMs = p.samDecodeMs
+            mask = l.mask; tint = l.mask?.let { withContext(Dispatchers.Default) { ObjectPick.tint(it) } }
+        }
+    }
+    LaunchedEffect(frame) {
+        if (frame < 0 || frame == loadedFrame) return@LaunchedEffect
+        loadedFrame = frame
+        picture = withContext(Dispatchers.IO) { ObjectPick.upright(dir, frame, rotation) }
+        mask = null; tint = null; tap = null; box = null
+    }
+
+    fun cut(point: Offset?, rect: FloatArray?) {
+        val pic = picture ?: return
+        if (busy != null) return
+        scope.launch {
+            busy = "Memuat MobileSAM…"
+            val sam = model.samNow()
+            if (sam == null) { busy = null; model.toast("MobileSAM tidak bisa dimuat."); return@launch }
+            val e = cache[frame] ?: run {
+                busy = "Memotong objek… sekali per foto, bisa 10–30 detik di HP ini"
+                val t0 = System.nanoTime()
+                withContext(Dispatchers.Default) { sam.embed(ObjectPick.argb(pic), pic.width, pic.height) }.also {
+                    cache[frame] = it; encMs = (System.nanoTime() - t0) / 1_000_000
+                }
+            }
+            val t1 = System.nanoTime()
+            val m = withContext(Dispatchers.Default) {
+                (if (point != null) sam.tap(e, point.x, point.y) else sam.box(e, rect!![0], rect[1], rect[2], rect[3])).largestPart()
+            }
+            decMs = (System.nanoTime() - t1) / 1_000_000
+            mask = m; tint = withContext(Dispatchers.Default) { ObjectPick.tint(m) }; saved = false
+            busy = null
+        }
+    }
+
+    fun save(): Boolean {
+        val pic = picture ?: return false; val m = mask ?: return false
+        val b = m.bounds()
+        val p = Pick(frame, ObjectPick.frameFile(dir, frame).relativeTo(dir).path, rotation, pic.width, pic.height,
+            if (tap != null) "tap" else "box", tap?.let { listOf(it.x, it.y) }, box?.toList(), maskScore = m.score, maskAreaPx = m.area,
+            maskBox = b?.toList(), samEncodeMs = encMs, samDecodeMs = decMs, name = name.trim(), tapeCm = tape.map { ObjectPick.cm(it) })
+        ObjectPick.save(dir, p, pic, m)
+        saved = true
+        return true
+    }
+
+    Column(Modifier.fillMaxSize()) {
+        TopBar("Rekaman DT20", dir.name, onBack = { model.back() })
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            quality?.let { q ->
+                VerdictCard(q.level, "Kualitas rekaman", SweepAnalysis.verdict(q) + if (detail) "" else " Ketuk untuk detail.",
+                    onClick = { detail = !detail }, open = detail)
+                if (detail || q.level == Level.FAIL) Card(padding = 10.dp) { q.checks.forEach { CheckLine(it) } }
+            } ?: Row(verticalAlignment = Alignment.CenterVertically) {
+                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = C.brand)
+                T("Memeriksa rekaman…", 14.sp, modifier = Modifier.padding(start = 10.dp))
+            }
+            Card {
+                T("Pilih objek", 15.sp, FontWeight.SemiBold)
+                T("Klik objeknya, atau tarik kotak di sekelilingnya. Objek apa saja.", 12.5.sp, color = C.t2)
+                Spacer(Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Chip("Klik objek", if (mode == PickMode.TAP) Tone.BRAND else Tone.GREY, "touch_app") { mode = PickMode.TAP }
+                    Chip("Tarik kotak", if (mode == PickMode.BOX) Tone.BRAND else Tone.GREY, "highlight_alt") { mode = PickMode.BOX }
+                }
+                Spacer(Modifier.height(10.dp))
+                val pic = picture
+                if (pic != null) PickImage(pic, tint, mode, tap, box ?: drag,
+                    onTap = { p -> tap = p; box = null; cut(p, null) },
+                    onDrag = { r -> drag = r },
+                    onBox = { r -> drag = null; if (abs(r[2] - r[0]) > 12 && abs(r[3] - r[1]) > 12) { box = r; tap = null; cut(null, r) } })
+                else Box(Modifier.fillMaxWidth().aspectRatio(3f / 4f).background(Color(0xFFE5E9F0)), contentAlignment = Alignment.Center) {
+                    T(if (frames.isEmpty() && quality != null) "Tidak ada foto di rekaman ini" else "Memuat foto…", 13.sp, color = C.t2)
+                }
+                if (frames.size > 1) {
+                    val i = frames.indexOf(frame).coerceAtLeast(0)
+                    Slider(value = i.toFloat(), onValueChange = { v -> frames.getOrNull(v.toInt())?.let { if (it != frame && busy == null) frame = it } },
+                        valueRange = 0f..(frames.size - 1).toFloat())
+                    T("Foto ${i + 1} dari ${frames.size}" + if (frame == quality?.bestFrame) " · paling tajam" else "", 12.sp, color = C.t3)
+                }
+                busy?.let { b ->
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+                        CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = C.brand)
+                        T(b, 13.sp, FontWeight.SemiBold, C.brandD, modifier = Modifier.padding(start = 8.dp))
+                    }
+                }
+                mask?.let { m ->
+                    T("Objek terpilih · skor ${"%.2f".format(m.score)} · potong ${encMs?.let { (it / 1000.0).f1() + " s" } ?: "–"} + ${decMs} ms",
+                        12.5.sp, FontWeight.SemiBold, C.green, modifier = Modifier.padding(top = 6.dp))
+                }
+            }
+            Card {
+                T("Data uji", 15.sp, FontWeight.SemiBold)
+                T("Ukuran belum dihitung di versi ini: rekaman dipakai untuk membangun dan menguji engine DT20. Ukuran meteran jadi pembanding.",
+                    12.5.sp, color = C.t2)
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(name, { name = it.take(40); saved = false }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    label = { T("Nama objek (mis. kardus, galon)", 13.sp) })
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("P", "L", "T").forEachIndexed { i, l ->
+                        OutlinedTextField(tape[i], { v -> tape = tape.toMutableList().also { it[i] = v.filter { c -> c.isDigit() || c == ',' || c == '.' }.take(6) }; saved = false },
+                            singleLine = true, modifier = Modifier.weight(1f), label = { T("$l (cm)", 13.sp) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                    }
+                }
+                T("Ukuran meteran, boleh dikosongkan", 12.sp, color = C.t3)
+            }
+            Spacer(Modifier.height(2.dp))
+        }
+        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            PrimaryButton(if (saved) "Pilihan tersimpan" else "Simpan pilihan objek", "check", Modifier.fillMaxWidth(), enabled = mask != null && !saved && busy == null) {
+                if (save()) model.toast("Pilihan objek disimpan")
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                SecondaryButton("Bagikan ZIP", "folder_zip", Modifier.weight(1f)) {
+                    if (mask != null && !saved) save()
+                    val label = name.trim().ifEmpty { "objek" }.replace(Regex("[^A-Za-z0-9_-]+"), "_")
+                    model.shareFile(activity, "application/zip", "Bagikan rekaman DT20") { model.zip(listOf(dir), "dt20_${dir.name}_$label.zip") }
+                }
+                SecondaryButton("Rekam lagi", "videocam", Modifier.weight(1f)) { model.back(); model.go(Screen.DtRecord) }
+            }
+        }
+    }
+}
+
+/** The picture with the pick drawn on it; taps and drags come back in picture pixels. */
+@Composable
+private fun PickImage(pic: Bitmap, tint: Bitmap?, mode: PickMode, tap: Offset?, rect: FloatArray?,
+                      onTap: (Offset) -> Unit, onDrag: (FloatArray) -> Unit, onBox: (FloatArray) -> Unit) {
+    var view by remember { mutableStateOf(IntSize(1, 1)) }
+    val k = pic.width.toFloat() / max(1, view.width)          // view px -> picture px
+    Box(Modifier.fillMaxWidth().aspectRatio(pic.width.toFloat() / pic.height).clip(RoundedCornerShape(12.dp)).onSizeChanged { view = it }
+        .pointerInput(mode, k) {
+            if (mode == PickMode.TAP) detectTapGestures { o -> onTap(Offset(o.x * k, o.y * k)) }
+            else {
+                var a = Offset.Zero; var b = Offset.Zero
+                detectDragGestures(
+                    onDragStart = { o -> a = o; b = o },
+                    onDrag = { ch, _ -> b = ch.position; onDrag(floatArrayOf(min(a.x, b.x) * k, min(a.y, b.y) * k, max(a.x, b.x) * k, max(a.y, b.y) * k)) },
+                    onDragEnd = { onBox(floatArrayOf(min(a.x, b.x) * k, min(a.y, b.y) * k, max(a.x, b.x) * k, max(a.y, b.y) * k)) },
+                )
+            }
+        }) {
+        Image(pic.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.FillBounds)
+        if (tint != null) Image(tint.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.FillBounds)
+        Canvas(Modifier.fillMaxSize()) {
+            val s = size.width / pic.width
+            rect?.let { r -> drawRect(Color.White, Offset(r[0] * s, r[1] * s), Size((r[2] - r[0]) * s, (r[3] - r[1]) * s), style = Stroke(3.dp.toPx())) }
+            tap?.let { p -> drawCircle(Color.White, 9.dp.toPx(), Offset(p.x * s, p.y * s)); drawCircle(C.brand, 6.dp.toPx(), Offset(p.x * s, p.y * s)) }
+        }
+    }
+}
+
+/** Settings card: the DT20 test tools and their recordings. */
+@Composable
+fun DtSettingsCard(model: AppModel, activity: Activity) {
+    var ask by remember { mutableStateOf(false) }
+    var tick by remember { mutableStateOf(0) }
+    val dirs = remember(tick) { model.store.dtDir.listFiles()?.filter { it.isDirectory }.orEmpty() }
+    val mb = remember(tick) { dirs.sumOf { d -> d.walkTopDown().filter { it.isFile }.sumOf { it.length() } } / (1 shl 20) }
+    Card {
+        T("Uji DT20 (HP tanpa ARCore)", 15.sp, FontWeight.SemiBold)
+        T("Diagnostik sensor dan kamera, dan rekaman sapuan objek untuk membangun engine pengganti ARCore.", 12.5.sp, color = C.t2)
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            SecondaryButton("Diagnostik", "monitor_heart", Modifier.weight(1f)) { model.go(Screen.Diag) }
+            SecondaryButton("Perekam", "videocam", Modifier.weight(1f)) { model.go(Screen.DtRecord) }
+        }
+        Spacer(Modifier.height(8.dp))
+        T("${dirs.size} rekaman tersimpan · $mb MB", 12.5.sp, color = C.t3)
+        if (dirs.isNotEmpty()) {
+            Spacer(Modifier.height(6.dp))
+            SecondaryButton("Bagikan semua rekaman DT20 (ZIP)", "folder_zip", Modifier.fillMaxWidth()) {
+                model.shareFile(activity, "application/zip", "Bagikan rekaman DT20") { model.zip(dirs, "dt20_semua_rekaman.zip") }
+            }
+            TextButton(onClick = { ask = true }) { T("Hapus semua rekaman DT20", 13.sp, color = C.red) }
+        }
+    }
+    if (ask) AlertDialog(onDismissRequest = { ask = false },
+        title = { T("Hapus ${dirs.size} rekaman?", 18.sp, FontWeight.SemiBold) },
+        text = { T("Foto dan data sensor rekaman DT20 terhapus dari HP ini. Hasil ukur paket tidak ikut terhapus.", color = C.t2) },
+        confirmButton = { TextButton(onClick = { dirs.forEach { it.deleteRecursively() }; ask = false; tick++ }) { T("Hapus", weight = FontWeight.SemiBold, color = C.red) } },
+        dismissButton = { TextButton(onClick = { ask = false }) { T("Batal", color = C.t2) } })
+}
+
+/** Home card on a phone without ARCore: the way into the DT20 tests. */
+@Composable
+fun DtHomeCard(model: AppModel) {
+    Card {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconTile("biotech", C.brand, C.brandL)
+            Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                T("Uji DT20", 15.sp, FontWeight.SemiBold)
+                T("Diagnostik HP dan perekam sapuan objek (klik atau tarik kotak)", 12.5.sp, color = C.t2)
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            SecondaryButton("Diagnostik", "monitor_heart", Modifier.weight(1f)) { model.go(Screen.Diag) }
+            SecondaryButton("Perekam", "videocam", Modifier.weight(1f)) { model.go(Screen.DtRecord) }
+        }
+    }
+}

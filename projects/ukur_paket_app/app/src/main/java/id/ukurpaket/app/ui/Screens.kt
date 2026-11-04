@@ -120,6 +120,8 @@ fun StartScreen(model: AppModel, activity: Activity) {
         Spacer(Modifier.weight(1f))
         if (c.arcore == ArState.NEEDS_INSTALL || c.arcore == ArState.INSTALL_DECLINED)
             PrimaryButton("Pasang Komponen AR", "download", Modifier.fillMaxWidth()) { model.install(activity) }
+        if (c.mode == Mode.NONE && c.arcore != ArState.CHECKING)
+            SecondaryButton("Diagnostik HP (uji DT20)", "monitor_heart", Modifier.fillMaxWidth()) { model.go(Screen.Diag) }
         if (c.arcore != ArState.CHECKING)
             SecondaryButton(if (c.arcore == ArState.READY) "Lanjut" else "Lanjut tanpa AR", "arrow_forward", Modifier.fillMaxWidth()) { model.home() }
     }
@@ -198,6 +200,7 @@ fun HomeScreen(model: AppModel, activity: Activity) {
                     }
                 }
             }
+            if (model.caps.mode == Mode.NONE && model.caps.arcore != ArState.CHECKING) item { DtHomeCard(model) }
             item {
                 Spacer(Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.Bottom) {
@@ -544,6 +547,7 @@ fun SettingsScreen(model: AppModel, activity: Activity) {
                     Switch(s.record, { v -> model.store.update { it.copy(record = v) } })
                 }
             }
+            DtSettingsCard(model, activity)
             Card {
                 T("Data", 15.sp, FontWeight.SemiBold)
                 Spacer(Modifier.height(8.dp))
@@ -594,6 +598,7 @@ fun NoArScreen(model: AppModel, activity: Activity) {
             if (c.arcore == ArState.NEEDS_INSTALL || c.arcore == ArState.INSTALL_DECLINED)
                 PrimaryButton("Pasang Komponen AR", "download", Modifier.fillMaxWidth()) { model.install(activity) }
             SecondaryButton("Ukur di Hub", "warehouse", Modifier.fillMaxWidth()) { model.markHub("HP kurir belum mendukung kamera AR", null) }
+            SecondaryButton("Rekam untuk uji DT20", "videocam", Modifier.fillMaxWidth()) { model.go(Screen.DtRecord) }
         }
     }
 }

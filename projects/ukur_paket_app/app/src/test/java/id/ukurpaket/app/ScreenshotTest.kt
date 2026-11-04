@@ -54,6 +54,14 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.io.File
 import kotlin.math.hypot
+import android.graphics.Bitmap
+import android.graphics.Matrix
+import id.ukurpaket.app.dt.ObjectPick
+import id.ukurpaket.app.dt.Pick
+import id.ukurpaket.app.measure.Segmenter
+import id.ukurpaket.app.ui.C
+import id.ukurpaket.app.ui.DtRecordPreview
+import id.ukurpaket.app.ui.LocalStillValue
 
 /**
  * Renders every screen on the JVM, phone size 412 x 892 dp at 3x, into app/screenshots/.
@@ -148,6 +156,38 @@ class ScreenshotTest {
         m = model(Mode.NONE)
         m.hardwareScanner = true
         screen("17_scan_resi_urovo", m, Screen.Home)
+    }
+
+    /** The DT20 test screens. Device values are test data (TestMaker Test Phone), not a real DT20 reading. */
+    @Test fun dt20Screens() {
+        val m = model(Mode.NONE)
+        m.hardwareScanner = true
+        m.diag = Dt20Test.diagnosis().let { d -> d.copy(samEncodeMs = 21_400, sensors = d.sensors.map { it.copy(measuredHz = 198.0) }) }
+        m.diagRates = mapOf("accelerometer" to 198.0, "gyroscope" to 198.0)
+        screen("18_diagnostik_hp", m, Screen.Diag)
+
+        val photo = BitmapFactory.decodeFile(resource("paket.jpg"))
+        shot("19_perekam_dt20") { Box(Modifier.fillMaxSize().background(C.bg)) { DtRecordPreview(photo, recording = true) } }
+
+        // a recording as the recorder leaves it: frames stored sideways (sensor orientation 90), CSV tables, session.json
+        val dir = File(m.store.dtDir, "20261104_101010").apply { deleteRecursively(); mkdirs() }
+        File(dir, "frames").mkdirs()
+        val sideways = Bitmap.createBitmap(photo, 0, 0, photo.width, photo.height, Matrix().apply { postRotate(-90f) }, true)
+        for (i in 0 until 5) File(dir, "frames/%05d.jpg".format(i)).outputStream().use { sideways.compress(Bitmap.CompressFormat.JPEG, 90, it) }
+        val (f, imu) = Dt20Test.sweep()
+        File(dir, "frames.csv").writeText("index,t_ns,sharpness,width,height,bytes\n" + f.joinToString("") { "${it.index},${it.t},${it.sharpness},1599,899,1000\n" })
+        File(dir, "imu.csv").writeText("sensor,t_ns,v0,v1,v2\n" + imu.joinToString("") { "${it.sensor},${it.t},${it.x},${it.y},${it.z}\n" })
+        File(dir, "session.json").writeText("{\n  \"sensor_orientation\": 90,\n  \"timestamp_source\": \"REALTIME\"\n}\n")
+        // the object picked with a box, cut out by the app's own MobileSAM
+        val up = ObjectPick.upright(dir, 2, 90)!!
+        val mask = Segmenter(File("src/main/assets/sam/encoder.onnx").readBytes(), File("src/main/assets/sam/decoder.onnx").readBytes()).use { sam ->
+            sam.box(sam.embed(ObjectPick.argb(up), up.width, up.height), 185f, 345f, 815f, 1560f).largestPart()
+        }
+        ObjectPick.save(dir, Pick(2, "frames/00002.jpg", 90, up.width, up.height, "box", box = listOf(185f, 345f, 815f, 1560f),
+            maskScore = mask.score, maskAreaPx = mask.area, maskBox = mask.bounds()?.toList(), samEncodeMs = 21_400, samDecodeMs = 45,
+            name = "paket plastik", tapeCm = listOf(null, null, null)), up, mask)
+        LocalStillValue.set(true)
+        try { screen("20_rekaman_dt20_pilih_objek", m, Screen.DtReview(dir.path)) } finally { LocalStillValue.set(false) }
     }
 
     @Test fun cameraScreens() {

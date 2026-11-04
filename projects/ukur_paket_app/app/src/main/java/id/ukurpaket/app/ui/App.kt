@@ -36,11 +36,16 @@ import id.ukurpaket.app.data.Measurement
 import id.ukurpaket.app.data.Mode
 import id.ukurpaket.app.data.Status
 import id.ukurpaket.app.data.Store
+import id.ukurpaket.app.dt.Check
+import id.ukurpaket.app.dt.Diagnosis
+import id.ukurpaket.app.dt.Diagnostics
 import id.ukurpaket.app.measure.Segmenter
 import id.ukurpaket.app.scan.HardwareScanner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.UUID
@@ -59,6 +64,10 @@ sealed class Screen {
     object Weight : Screen()
     data class Saved(val id: String) : Screen()
     data class Detail(val id: String) : Screen()
+    /** Test screens for phones without ARCore (Urovo DT20): what the phone offers, and sweep recordings for our own engine. */
+    object Diag : Screen()
+    object DtRecord : Screen()
+    data class DtReview(val dir: String) : Screen()
 }
 
 /** What is being measured right now. */
@@ -93,16 +102,74 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
 
     init { if (checkDevice) viewModelScope.launch { check() } }
 
-    /** Only phones that can measure need the model: it takes ~100 MB of memory once loaded. */
+    /** Only phones that can measure need the model up front: it takes ~100 MB of memory once loaded. */
     private fun loadSamIfNeeded() {
-        if (caps.arcore != ArState.READY || segmenter != null || samLoading) return
-        samLoading = true
-        viewModelScope.launch {
+        if (caps.arcore != ArState.READY || segmenter != null) return
+        viewModelScope.launch { samNow() }
+    }
+    private val samLock = Mutex()
+
+    /** The model now, loading it if needed (the DT20 recorder picks objects with it although the phone has no ARCore). */
+    suspend fun samNow(): Segmenter? = samLock.withLock {
+        segmenter ?: run {
+            samState = SamState.LOADING
             samState = withContext(Dispatchers.Default) { loadSam() }
-            samLoading = false
+            segmenter
         }
     }
-    private var samLoading = false
+
+    // ---------------------------------------------------------- DT20 test screens
+    var diag by mutableStateOf<Diagnosis?>(null)
+        internal set
+    var diagRates by mutableStateOf<Map<String, Double>>(emptyMap())
+        internal set
+    var diagBusy by mutableStateOf<String?>(null)
+        internal set
+
+    fun diagChecks(): List<Check> = diag?.let { Diagnostics.checks(it, diagRates) }.orEmpty()
+
+    /** Reads the phone (instant), then measures the real sensor rates for 3 s. */
+    fun runDiagnosis() {
+        if (diagBusy != null) return
+        val ctx = getApplication<Application>()
+        viewModelScope.launch {
+            diagBusy = "Membaca HP…"
+            diag = withContext(Dispatchers.Default) {
+                Diagnosis(Diagnostics.device(ctx), caps.arcore.label, hardwareScanner, Diagnostics.sensors(ctx), Diagnostics.cameras(ctx),
+                    samEncodeMs = diag?.samEncodeMs)
+            }
+            diagBusy = "Mengukur kecepatan sensor (3 detik)…"
+            diagRates = runCatching { Diagnostics.measureRates(ctx) }.getOrDefault(emptyMap())
+            diag = diag?.let { d -> d.copy(sensors = d.sensors.map { it.copy(measuredHz = diagRates[it.type]) }) }
+            diagBusy = null
+        }
+    }
+
+    /** Times one MobileSAM picture encoding: the slow half of picking an object (the prompt itself takes milliseconds). */
+    fun timeSam() {
+        if (diagBusy != null) return
+        viewModelScope.launch {
+            diagBusy = "Memuat MobileSAM…"
+            val sam = samNow()
+            if (sam == null) { diagBusy = null; toast("MobileSAM tidak bisa dimuat."); return@launch }
+            diagBusy = "Menguji MobileSAM (bisa 10–30 detik di HP ini)…"
+            val ms = withContext(Dispatchers.Default) {
+                val w = 640; val h = 480
+                val px = IntArray(w * h) { i -> val v = ((i % w) * 255 / w); (0xFF shl 24) or (v shl 16) or (((i / w) * 255 / h) shl 8) or 128 }
+                val t0 = System.nanoTime(); sam.embed(px, w, h); (System.nanoTime() - t0) / 1_000_000
+            }
+            diag = diag?.copy(samEncodeMs = ms)
+            diagBusy = null
+        }
+    }
+
+    /** The diagnosis as a file, for sharing and for each recording. */
+    fun diagFile(dir: File = getApplication<Application>().cacheDir): File? {
+        val d = diag ?: return null
+        val f = File(dir, if (dir == getApplication<Application>().cacheDir) "diagnostik_${d.device.model.replace(' ', '_')}.json" else "diagnosis.json")
+        f.writeText(Diagnostics.json.encodeToString(Diagnosis.serializer(), d.copy(checks = diagChecks(), sensors = d.sensors)) + "\n")
+        return f
+    }
 
     private fun loadSam(): SamState =
         try {
@@ -167,6 +234,12 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
 
     fun toast(m: String) { message = m }
 
+    /** The recorder screen is done: its recording opens in its place. */
+    fun openReview(dir: File) {
+        if (screen == Screen.DtRecord) stack.removeAt(stack.size - 1)
+        go(Screen.DtReview(dir.path))
+    }
+
     // ---------------------------------------------------------- measuring
     fun startMeasure(resi: String, replaces: String? = null) {
         if (session == null) session = UUID.randomUUID().toString()
@@ -213,6 +286,7 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
             HardwareScanner.looksLikeQr(code) -> toast("Itu kode QR. Scan barcode garis (resi) di label.")
             takesHardwareScan -> openResi(code)
             screen == Screen.Start -> toast("Tunggu cek HP selesai, lalu scan lagi")
+            screen == Screen.Diag || screen == Screen.DtRecord || screen is Screen.DtReview -> toast("Scanner tidak dipakai di layar uji DT20")
             else -> toast("Selesaikan paket ${draft?.resi ?: "ini"} dulu, lalu scan berikutnya")
         }
     }
@@ -338,6 +412,9 @@ fun App(model: AppModel, activity: Activity) {
                     is Screen.Saved -> SavedScreen(model, activity, s.id)
                     is Screen.Detail -> DetailScreen(model, activity, s.id)
                     Screen.NoAr -> NoArScreen(model, activity)
+                    Screen.Diag -> DiagScreen(model, activity)
+                    Screen.DtRecord -> DtRecordScreen(model, activity)
+                    is Screen.DtReview -> DtReviewScreen(model, activity, s.dir)
                     Screen.Measure -> Unit
                 }
             }
