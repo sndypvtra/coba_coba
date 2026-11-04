@@ -50,6 +50,7 @@ object Engine {
         val tracks = inp.tracks ?: run {
             val tr = Tracker(levels = RecordingTracker.ENGINE_LEVELS, pool = pool)
             for (i in 0 until n) { tr.feed(inp.gray(i)); if (i % 5 == 0) progress("Melacak titik", 0.25f * i / n) }
+            trace?.invoke("tracker: ${tr.tracks.size} tracks, bridged ${tr.bridged} bad frames")
             tr.tracks
         }
         val obs = tracks.filter { it.n >= 3 }.map { t -> PointObs(t.id, t.f.copyOf(t.n), DoubleArray(t.n) { t.x[it].toDouble() }, DoubleArray(t.n) { t.y[it].toDouble() }) }
@@ -100,14 +101,25 @@ object Engine {
             // no gyroscope and no rotation vector (the DT50's sensor hub sends neither): the camera's own rotation
             progress("Menghitung putaran HP dari kamera", 0.3f)
             val cam0 = Intrinsics(f, cx, cy)
-            val rwcV = VisualRotation.estimate(obs, n, cam0, pool) ?: throw EngineFailed("Putaran HP tidak terbaca dari kamera: sapukan lebih pelan, objek tetap di layar")
+            val vr = VisualRotation.solve(obs, n, cam0, pool, trace)
+                ?: throw EngineFailed("Putaran HP tidak terbaca dari kamera: terlalu banyak foto blur/gelap. Tambah cahaya, sapukan lebih pelan.")
+            val rwcV = vr.rot
             notes += "Gyroscope dan rotation vector tidak mengirim data: putaran HP dihitung dari kamera."
+            if (vr.measuredCount < n) notes += "${n - vr.measuredCount} dari $n foto blur/kosong: putarannya diisi dari foto sebelah."
+            trace?.invoke("visual: measured ${vr.measuredCount} of $n frames")
             progress("Menghitung posisi kamera", 0.45f)
             val lin = Vision.linear(rwcV, obs, cam0)
             trace?.invoke("visual: linear points ${lin.points.size}, median err ${lin.medianErr}")
             progress("Bundle adjustment", 0.55f)
             ba = Vision.bundleAdjust(lin, obs, cam0, sigRotDeg = 1.0, iters = 8)
             val rwd = Array(n) { M3.mul(ba.cams[it].r, RDC) }        // RDC is its own inverse
+            // the scale only from frames whose position was measured: a blank or blurred frame's centre is a guess
+            // (the middle of its neighbours) and would spoil the inertial fit; the accelerometer is integrated past it
+            val seenBy = IntArray(n); for (p in obs) if ((ba.err[p.id] ?: 99.0) < 2.0) for (kk in p.k) if (kk in 0 until n) seenBy[kk]++
+            // and only frames inside the accelerometer's recording (its first and last sample)
+            val aT0 = inp.acc.firstOrNull()?.t ?: Double.NEGATIVE_INFINITY; val aT1 = inp.acc.lastOrNull()?.t ?: Double.POSITIVE_INFINITY
+            val gi = (0 until n).filter { vr.measured[it] && seenBy[it] >= 10 && times[it] in aT0 - 0.02..aT1 + 0.02 }.ifEmpty { (0 until n).toList() }
+            if (gi.size < n) trace?.invoke("visual: scale from ${gi.size} of $n frames")
             // accelerometer clock against the frames: the offset that makes the inertial alignment fit best
             fun aligned(td: Double): Triple<RotationSource, List<Preint>, Inertial.Alignment> {
                 val tt = DoubleArray(n) { times[it] + td }
@@ -117,11 +129,12 @@ object Engine {
                 for (a in inp.acc) if (a.t in tt.first()..tt.last()) { val v = M3.mv(rs.at(a.t), a.v); for (k in 0 until 3) g[k] -= v[k]; c++ }
                 val gl = sqrt(g[0] * g[0] + g[1] * g[1] + g[2] * g[2])
                 val gk = if (c > 10 && gl > 0) DoubleArray(3) { g[it] / gl * Inertial.G } else null
-                val pr = Inertial.preintegrate(tt, rs, inp.acc)
+                val pr = Inertial.preintegrate(DoubleArray(gi.size) { tt[gi[it]] }, rs, inp.acc)
+                val cs = Array(gi.size) { ba.cams[gi[it]].c }
                 // gravity solved with the rest (better on the synthetic sweeps); the mean only if that one is implausible
-                val free = Inertial.align(Array(n) { ba.cams[it].c }, pr, null)
+                val free = Inertial.align(cs, pr, null)
                 val gl2 = sqrt(free.gravity.sumOf { it * it })
-                return Triple(rs, pr, if (gl2 in 9.3..10.3 || gk == null) free else Inertial.align(Array(n) { ba.cams[it].c }, pr, gk))
+                return Triple(rs, pr, if (gl2 in 9.3..10.3 || gk == null) free else Inertial.align(cs, pr, gk))
             }
             val tds = (0..24).map { -0.08 + 0.005 * it }
             val tries = pool.map(tds) { td -> runCatching { aligned(td) }.getOrNull()?.takeIf { it.third.scale > 0 } }
@@ -148,7 +161,19 @@ object Engine {
         // 5. seeds: points seen in the picked frame inside its mask
         progress("Memisahkan objek", 0.65f)
         val mask = inp.pickMask.erode()
-        val seedIds = tracks.filter { t -> t.id in pts && t.at(inp.pickFrame).let { j -> j >= 0 && mask[t.x[j].toInt(), t.y[j].toInt()] } }.map { it.id }.toSet()
+        val seen = tracks.filter { t -> t.id in pts && t.at(inp.pickFrame).let { j -> j >= 0 && mask[t.x[j].toInt(), t.y[j].toInt()] } }.map { it.id }.toSet()
+        // few points seen on the picked frame itself (blurred just after the touch): the 3D points that fall inside its
+        // mask; those of the floor behind the object drop out below, as they stand at height 0
+        val seedIds = if (seen.size >= 12) seen else {
+            val pc = cams[inp.pickFrame]; val ic = Intrinsics(f, cx, cy)
+            val cand = pts.filter { (_, p) -> project(p, pc, ic)?.let { uv -> mask[uv[0].toInt(), uv[1].toInt()] } == true }
+            // the object's front is what is nearest inside the mask; the floor and anything behind it are further
+            val z = cand.mapValues { (_, p) -> M3.mtv(pc.r, DoubleArray(3) { p[it] - pc.c[it] })[2] }
+            val zs = z.values.sorted()
+            val zRef = if (zs.isEmpty()) 0.0 else zs[(zs.size * 0.3).toInt().coerceAtMost(zs.size - 1)]
+            seen + z.filter { it.value <= 1.3 * zRef }.keys
+        }
+        if (seedIds.size > seen.size) trace?.invoke("seeds: seen ${seen.size}, projected ${seedIds.size - seen.size}")
         if (seedIds.size < 8) throw EngineFailed("Objek pilihan hampir tidak punya titik terlacak (${seedIds.size}). Pilih objek yang lebih besar di layar atau lebih bertekstur.")
         val seedPts = seedIds.map { pts[it]!! }
         val sc = DoubleArray(2); for (p in seedPts) { sc[0] += p[0] / seedPts.size; sc[1] += p[1] / seedPts.size }

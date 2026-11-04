@@ -28,7 +28,8 @@ class RecordingTracker(pool: Par = Par.default) {
     private val grays = ArrayList<GrayBytes>()
     @Volatile private var failed = false
     val backlog get() = queue.size
-    private val thread = Thread({ loop() }, "sweep-track").apply { isDaemon = true; start() }
+    // above MobileSAM's threads: the engine needs every frame tracked, the live view only some re-cuts
+    private val thread = Thread({ loop() }, "sweep-track").apply { isDaemon = true; priority = Thread.MAX_PRIORITY - 1; start() }
 
     /** A saved frame (NV21, sensor orientation), in saving order. Converted here; tracked on the tracking thread. */
     fun offer(index: Int, nv21: ByteArray, sw: Int, sh: Int, rotation: Int) {

@@ -292,7 +292,7 @@ private fun DtRecorder(model: AppModel) {
             val w = (if (turned) sz.height else sz.width) / down; val h = (if (turned) sz.width else sz.height) / down
             val rot = rec.sensorOrientation
             val mode = if (p.box != null) "box" else "tap"
-            rec.live = LiveSegmenter({ model.samLight }, w, h, shared = rec.tracking.tracker,
+            rec.live = LiveSegmenter({ model.samLight }, w, h, shared = rec.tracking.tracker, minSamGapMs = 3000,
                 onUpdate = { u -> main.post { live = u } },
                 onFirstMask = { f, m, ms ->
                     if (pickState.compareAndSet(0, 1)) {
@@ -376,6 +376,8 @@ private fun DtRecordChrome(status: SweepRecorder.LiveStatus?, phase: RecPhase, e
                         Chip("acc ${status?.accelHz?.toInt() ?: 0} Hz", Tone.GREY)
                         Chip(if (gyroDead) "gyro diam" else "gyro ${status?.gyroHz?.toInt() ?: 0} Hz", if (gyroDead) Tone.WARN else Tone.GREY)
                     }
+                    // a dim room blurs every frame: say so before recording, not after
+                    if ((status?.brightness ?: 128.0) < 55) Chip("Terlalu gelap: tambah cahaya", Tone.RED, "light_mode")
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         if (gyroDead) Chip(if (status!!.rotationHz < 1) "putaran dari kamera" else "rotasi ${status.rotationHz.toInt()} Hz", Tone.WARN)
                         if (phase != RecPhase.READY) Chip("${status?.savedFrames ?: 0} foto · ${status?.dropped ?: 0} terlewat", Tone.GREY)
@@ -506,6 +508,7 @@ fun DtReviewScreen(model: AppModel, activity: Activity, dirPath: String) {
     val cache = remember { HashMap<Int, Embedding>() }
     var loadedFrame by remember { mutableStateOf(first?.frame ?: -1) }
     var detail by remember { mutableStateOf(false) }
+    var cutDone by remember { mutableStateOf(0) }
 
     LaunchedEffect(dirPath) {
         if (first != null) return@LaunchedEffect
@@ -533,6 +536,10 @@ fun DtReviewScreen(model: AppModel, activity: Activity, dirPath: String) {
         mode = if (p.mode == "box") PickMode.BOX else PickMode.TAP
         tap = p.tap?.let { Offset(it[0], it[1]) }; box = p.box?.toFloatArray(); encMs = p.samEncodeMs; decMs = p.samDecodeMs; saved = true
     }
+    // a recording with its object picked is measured without asking: on opening it, and after a new pick here
+    LaunchedEffect(saved, result, sj, job) {
+        if (saved && result == null && sj == null && job == null && !LocalStillValue.get()) model.runSweep(dir)
+    }
     LaunchedEffect(frame) {
         if (frame < 0 || frame == loadedFrame) return@LaunchedEffect
         loadedFrame = frame
@@ -548,7 +555,7 @@ fun DtReviewScreen(model: AppModel, activity: Activity, dirPath: String) {
             val sam = model.samLightNow()
             if (sam == null) { busy = null; model.toast("MobileSAM tidak bisa dimuat."); return@launch }
             val e = cache[frame] ?: run {
-                busy = "Memotong objek… sekali per foto, beberapa detik"
+                busy = "Memotong objek… beberapa detik"
                 val t0 = System.nanoTime()
                 withContext(Dispatchers.Default) { sam.embed(ObjectPick.argb(pic), pic.width, pic.height) }.also {
                     cache[frame] = it; encMs = (System.nanoTime() - t0) / 1_000_000
@@ -561,6 +568,7 @@ fun DtReviewScreen(model: AppModel, activity: Activity, dirPath: String) {
             decMs = (System.nanoTime() - t1) / 1_000_000
             mask = m; tint = withContext(Dispatchers.Default) { ObjectPick.tint(m) }; saved = false
             busy = null
+            cutDone++                                          // the new pick is measured at once (below)
         }
     }
 
@@ -574,6 +582,7 @@ fun DtReviewScreen(model: AppModel, activity: Activity, dirPath: String) {
         saved = true
         return true
     }
+    LaunchedEffect(cutDone) { if (cutDone > 0 && save()) model.runSweep(dir) }
 
     Column(Modifier.fillMaxSize()) {
         TopBar("Rekaman sapuan", dir.name, onBack = { model.back() })
@@ -635,7 +644,7 @@ fun DtReviewScreen(model: AppModel, activity: Activity, dirPath: String) {
                 }
                 if (job == "cutting") Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
                     CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = C.brand)
-                    T("Memotong objek yang disentuh di perekam… bisa 10–30 detik", 13.sp, FontWeight.SemiBold, C.brandD, modifier = Modifier.padding(start = 8.dp))
+                    T("Memotong objek yang disentuh di perekam… beberapa detik", 13.sp, FontWeight.SemiBold, C.brandD, modifier = Modifier.padding(start = 8.dp))
                 }
                 busy?.let { b ->
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
@@ -648,7 +657,8 @@ fun DtReviewScreen(model: AppModel, activity: Activity, dirPath: String) {
                         12.5.sp, FontWeight.SemiBold, C.green, modifier = Modifier.padding(top = 6.dp))
                 }
             }
-            Card {
+            // the tape-measure fields are for testing the engine; measuring a parcel (a resi open) needs none
+            if (model.draft == null) Card {
                 T("Data uji", 15.sp, FontWeight.SemiBold)
                 T("Ukuran dihitung otomatis. Isi ukuran meteran (boleh kosong) untuk membandingkan akurasinya.", 12.5.sp, color = C.t2)
                 Spacer(Modifier.height(8.dp))
@@ -728,7 +738,18 @@ private fun ResultCard(r: SweepResult, model: AppModel, tape: List<String>, onUs
             if (r.ok) Chip("Akurat · skor ${r.confidence}", Tone.OK, "check_circle") else Chip("Perlu Dicek · skor ${r.confidence}", Tone.WARN, "warning")
         }
         T("${r.lengthCm.cm()} × ${r.widthCm.cm()} × ${r.heightCm.cm()} cm", 28.sp, FontWeight.Bold)
-        T("Volume ${volL.id()} L · berat volumetrik ${volKg.id(2)} kg (÷ ${settings.divisor.toDouble().id(0)})", 13.sp, color = C.t2)
+        Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).background(C.brandL).padding(10.dp)) {
+                T("Berat volumetrik", 12.sp, color = C.brandD)
+                T("${volKg.id(2)} kg", 22.sp, FontWeight.Bold, C.brandD)
+                T("P × L × T ÷ ${settings.divisor.toDouble().id(0)}", 11.sp, color = C.brandD)
+            }
+            Column(Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).background(C.line).padding(10.dp)) {
+                T("Volume", 12.sp, color = C.t2)
+                T("${volL.id()} L", 22.sp, FontWeight.Bold)
+                T("${(volL / 1000).id(3)} m³", 11.sp, color = C.t2)
+            }
+        }
         val t = tape.map { ObjectPick.cm(it) }
         if (t.all { it != null }) {
             val e = listOf(r.lengthCm - t[0]!!, r.widthCm - t[1]!!, r.heightCm - t[2]!!)

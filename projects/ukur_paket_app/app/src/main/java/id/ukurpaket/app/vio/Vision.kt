@@ -72,6 +72,20 @@ object Vision {
                     }
                 }
             }
+            // a frame that sees (almost) nothing (blank, blurred) would leave its centre free and the system singular:
+            // it is tied to the middle of its neighbours (homogeneous, so the scale stays free)
+            val seen = IntArray(k); for ((pi, _, _) in keep) for (kk in use[pi].k) seen[kk]++
+            var md = 0.0; var nd = 0
+            for (i in 0 until nc) if (s[i * nc + i] > 0) { md += s[i * nc + i]; nd++ }
+            val tw = if (nd > 0) md / nd else 1.0
+            for (f in 1 until k) if (seen[f] < 6) {
+                val nb = listOf(f - 1, f + 1).filter { it in 0 until k }
+                val coef = HashMap<Int, Double>(); coef[f] = 1.0; for (q in nb) coef[q] = (coef[q] ?: 0.0) - 1.0 / nb.size
+                for ((ka, va) in coef) for ((kb, vb) in coef) {
+                    if (ka == 0 || kb == 0) continue
+                    for (a in 0 until 3) s[(3 * (ka - 1) + a) * nc + 3 * (kb - 1) + a] += tw * va * vb
+                }
+            }
             val x = Dense.smallestEigvec(s, nc)
             cs = Array(k) { if (it == 0) DoubleArray(3) else doubleArrayOf(x[3 * (it - 1)], x[3 * (it - 1) + 1], x[3 * (it - 1) + 2]) }
             xs = HashMap()

@@ -76,8 +76,10 @@ object SweepAnalysis {
         val std = if (mags.size > 1) sqrt(mags.sumOf { (it - mean) * (it - mean) } / (mags.size - 1)) else 0.0
         val med = frames.map { it.sharpness }.sorted().let { if (it.isEmpty()) 0.0 else it[it.size / 2] }
         val blurry = frames.count { it.sharpness < 0.4 * med }
-        val covers = (sameClock || mapped) && acc.isNotEmpty() && gyr.isNotEmpty() && frames.isNotEmpty() &&
-            acc.first().t <= frames.first().t && acc.last().t >= frames.last().t && gyr.first().t <= frames.first().t && gyr.last().t >= frames.last().t
+        // the motion sensors there are (the gyroscope may be silent) round every frame, to 0,15 s at either end
+        val slack = 150_000_000L
+        fun round(s: List<Imu>) = s.isNotEmpty() && s.first().t <= frames.first().t + slack && s.last().t >= frames.last().t - slack
+        val covers = (sameClock || mapped) && frames.isNotEmpty() && round(acc) && (gyr.isEmpty() || round(gyr))
         // the sharpest frame in the middle half: the view the object is picked in
         val mid = frames.drop(frames.size / 4).dropLast(frames.size / 4).ifEmpty { frames }
         val best = mid.maxByOrNull { it.sharpness }?.index ?: 0

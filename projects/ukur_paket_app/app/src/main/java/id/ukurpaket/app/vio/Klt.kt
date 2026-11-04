@@ -204,12 +204,20 @@ class Track(val id: Int) {
 /**
  * KLT tracker over a sweep: frames in order (upright grey), tracks kept while forward-backward consistent, new
  * corners topped up in empty places. Every observation is kept for the solver.
+ * A bad frame (blur, a hand over the lens) loses most tracks; then the tracks of the last good frame (up to
+ * [MAX_SKIP] frames back) are followed straight from it, so the sweep stays one piece across the bad frames.
  */
 class Tracker(val maxTracks: Int = 700, val minDist: Int = 9, val fbMax: Float = 0.7f, val levels: Int = 3, private val pool: Par? = null) {
     val tracks = ArrayList<Track>()
     private val live = ArrayList<Track>()
     private var prev: Pyramid? = null
+    // the last good frame: its pyramid, its frame number, its tracks with their positions there
+    private var anchorPyr: Pyramid? = null
+    private var anchorFrame = -1
+    private var anchorTracks: List<kotlin.Pair<Track, FloatArray>> = emptyList()
     var frames = 0; private set
+    /** Frames on which tracks were picked up again from an earlier good frame. */
+    var bridged = 0; private set
     var width = 0; private set
     var height = 0; private set
 
@@ -233,12 +241,36 @@ class Tracker(val maxTracks: Int = 700, val minDist: Int = 9, val fbMax: Float =
             } else live.map { follow(it) }
             val keep = live.filterIndexed { i, _ -> ok[i] }
             live.clear(); live.addAll(keep)
+            // most tracks lost: try from the last good frame, past the bad ones
+            val ap = anchorPyr
+            if (ap != null && k - anchorFrame in 2..MAX_SKIP && live.size < 0.4 * anchorTracks.size) {
+                val have = live.map { it.id }.toHashSet()
+                val cand = anchorTracks.filter { it.first.id !in have && it.first.f[it.first.n - 1] < k }
+                fun jump(c: kotlin.Pair<Track, FloatArray>): FloatArray? {
+                    val (x, y) = c.second[0] to c.second[1]
+                    val fw = Klt.track(ap, pyr, x, y) ?: return null
+                    val bw = Klt.track(pyr, ap, fw[0], fw[1]) ?: return null
+                    return if (abs(bw[0] - x) + abs(bw[1] - y) > 1.5f * fbMax) null else fw
+                }
+                val res = if (pool != null && pool.threads > 1 && cand.size > 64)
+                    pool.map(cand.chunked((cand.size + pool.threads - 1) / pool.threads)) { c -> c.map { jump(it) } }.flatten()
+                else cand.map { jump(it) }
+                var back = 0
+                for ((i, c) in cand.withIndex()) { val q = res[i] ?: continue; c.first.add(k, q[0], q[1]); live.add(c.first); back++ }
+                if (back > 0) bridged++
+            }
         }
+        val survived = if (pp == null) Int.MAX_VALUE else live.size        // followed from before (not new corners)
         if (live.size < maxTracks * 0.8) {
             val taken = live.map { floatArrayOf(it.lastX(), it.lastY()) }
             for (c in Klt.corners(pyr, maxTracks - live.size, minDist, taken)) {
                 val t = Track(tracks.size); t.add(k, c[0], c[1]); tracks.add(t); live.add(t)
             }
+        }
+        // a good frame becomes the one to fall back to
+        if (anchorPyr == null || survived >= 0.4 * anchorTracks.size || k - anchorFrame > MAX_SKIP) {
+            anchorPyr = pyr; anchorFrame = k
+            anchorTracks = live.map { it to floatArrayOf(it.lastX(), it.lastY()) }
         }
         prev = pyr
         frames++
@@ -261,6 +293,8 @@ class Tracker(val maxTracks: Int = 700, val minDist: Int = 9, val fbMax: Float =
     }
 
     companion object {
+        /** How many bad frames in a row can be bridged. */
+        const val MAX_SKIP = 5
         fun floorI(v: Float) = floor(v).toInt()
         fun clampI(v: Int, lo: Int, hi: Int) = min(max(v, lo), hi)
     }

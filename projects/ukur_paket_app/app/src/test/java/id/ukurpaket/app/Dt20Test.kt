@@ -71,14 +71,14 @@ class Dt20Test {
         assertEquals(Level.OK, good.first { it.key == "clock" }.level)
         assertEquals(Level.WARN, good.first { it.key == "focus" }.level)            // AF lock only, no manual focus
         assertEquals(Level.WARN, Diagnostics.verdict(good).first)
-        // no gyroscope: our engine cannot run, whatever else the phone has
+        // no gyroscope, or one listed but silent (the DT50, rotation vector silent too): usable with a warning, the
+        // turn comes from the camera and the scale from the accelerometer; without an accelerometer: not usable
         val noGyro = Diagnostics.checks(diagnosis(gyro = false), mapOf("accelerometer" to 198.0))
-        // listed but silent, with a working rotation vector: usable with a warning; with nothing: not usable
         val silent = Diagnostics.checks(diagnosis(), mapOf("accelerometer" to 200.0, "gyroscope" to 0.0, "game_rotation_vector" to 200.0))
         assertEquals(Level.WARN, silent.first { it.key == "gyro" }.level)
-        assertEquals(Level.FAIL, Diagnostics.checks(diagnosis(), mapOf("accelerometer" to 200.0, "gyroscope" to 0.0)).first { it.key == "gyro" }.level)
-        assertEquals(Level.FAIL, noGyro.first { it.key == "gyro" }.level)
-        assertEquals(Level.FAIL, Diagnostics.verdict(noGyro).first)
+        assertEquals(Level.WARN, Diagnostics.checks(diagnosis(), mapOf("accelerometer" to 200.0, "gyroscope" to 0.0)).first { it.key == "gyro" }.level)
+        assertEquals(Level.FAIL, Diagnostics.checks(diagnosis(), mapOf("accelerometer" to 0.0, "gyroscope" to 0.0)).first { it.key == "gyro" }.level)
+        assertEquals(Level.WARN, noGyro.first { it.key == "gyro" }.level)
         // separate clocks, slow sensors, a fixed-focus lens
         val other = Diagnostics.checks(diagnosis(cam = camera(ts = "UNKNOWN", minFocus = 0f)), mapOf("accelerometer" to 60.0, "gyroscope" to 100.0))
         assertEquals(Level.WARN, other.first { it.key == "clock" }.level)

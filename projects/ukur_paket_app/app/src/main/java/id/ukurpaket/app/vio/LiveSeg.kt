@@ -111,6 +111,8 @@ class LiveSegmenter(
     private val onFirstMask: (frame: Int, mask: Mask, samMs: Long) -> Unit = { _, _, _ -> },
     private val threads: Boolean = true, private val syncEvery: Int = 12, private val motion: Motion = Motion.SIMILARITY,
     shared: Tracker? = null,
+    /** At least this long between MobileSAM runs (phone: leaves the cores to the recording's tracking). */
+    private val minSamGapMs: Long = 0,
     private val refine: Refine = Refine.PER_FRAME,
 ) {
     enum class Motion { SHIFT, SHIFT_SCALE, SIMILARITY, AFFINE }
@@ -134,6 +136,7 @@ class LiveSegmenter(
     @Volatile var anchors = 0; private set
     @Volatile var lastSamMs: Long? = null; private set
     @Volatile private var samBusy = false
+    @Volatile private var lastSamEnd = 0L
     private class Answer(val frame: Int, val cands: List<Mask>, val colour: IntArray)
     @Volatile private var pending: Answer? = null
     private var colours: ColourModel? = null
@@ -228,10 +231,10 @@ class LiveSegmenter(
             val box = if (!firstTried) promptBox() else currentBox(live)
             if (box != null) {
                 if (threads) {
-                    if (!samBusy) {
+                    if (!samBusy && (!firstTried || System.currentTimeMillis() - lastSamEnd >= minSamGapMs)) {
                         samBusy = true; firstTried = true
                         val img = argb(); val f = frameNo
-                        samExec.execute { try { runCatching { anchor(f, img, box) } } finally { samBusy = false } }
+                        samExec.execute { try { runCatching { anchor(f, img, box) } } finally { lastSamEnd = System.currentTimeMillis(); samBusy = false } }
                     }
                 } else if (!firstTried || !segmented || frameNo % syncEvery == 0) { firstTried = true; anchor(frameNo, argb(), box) }
             }

@@ -51,7 +51,8 @@ class SweepRecorder(private val ctx: Context, val dir: File, private val cb: Cal
     }
 
     data class LiveStatus(val recording: Boolean, val seconds: Double, val savedFrames: Int, val dropped: Int, val cameraFps: Double,
-                          val accelHz: Double, val gyroHz: Double, val turnDeg: Double, val size: String, val rotationHz: Double = 0.0)
+                          val accelHz: Double, val gyroHz: Double, val turnDeg: Double, val size: String, val rotationHz: Double = 0.0,
+                          val brightness: Double = 128.0, val exposureMs: Double? = null)
 
     private val camThread = HandlerThread("sweep-cam").apply { start() }
     private val camHandler = Handler(camThread.looper)
@@ -85,6 +86,10 @@ class SweepRecorder(private val ctx: Context, val dir: File, private val cb: Cal
     private val captureRows = StringBuilder("t_ns,exposure_ns,frame_duration_ns,rolling_shutter_skew_ns,focus_diopters,af_state,ae_state,iso\n")
     private var imuOut: BufferedWriter? = null
     private var lastFocus: Float? = null
+    // the auto exposure's choice while previewing: recording keeps the same brightness with a shorter exposure
+    @Volatile private var lastExposureNs: Long? = null
+    @Volatile private var lastIso: Int? = null
+    @Volatile private var brightness = 128.0
 
     // live counters for the screen
     private var camFrames = 0; private var camT0 = 0L
@@ -172,7 +177,22 @@ class SweepRecorder(private val ctx: Context, val dir: File, private val cb: Cal
             } else if (CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_VIDEO in afModes) {
                 b.set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_VIDEO)
             }
-            if (locked) {
+            val exp = lastExposureNs; val iso = lastIso
+            val isoRange = c.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)
+            val expRange = c.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
+            if (locked && manual && exp != null && iso != null && isoRange != null && expRange != null && exp > MAX_EXPOSURE_NS) {
+                // a dim room: auto exposure picks long exposures, and a moving phone then blurs every frame (tracks are
+                // lost). Same brightness with at most 1/80 s: the gain makes up the rest (noise hurts tracking far less)
+                val target = maxOf(MAX_EXPOSURE_NS, expRange.lower)
+                var newIso = (iso.toDouble() * exp / target).toInt()
+                var newExp = target
+                if (newIso > isoRange.upper) { newIso = isoRange.upper; newExp = minOf(exp, (exp.toDouble() * iso / newIso).toLong()) }
+                b.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF)
+                b.set(CaptureRequest.SENSOR_EXPOSURE_TIME, newExp)
+                b.set(CaptureRequest.SENSOR_SENSITIVITY, newIso.coerceIn(isoRange.lower, isoRange.upper))
+                b.set(CaptureRequest.SENSOR_FRAME_DURATION, 33_333_333L)
+                if (c.get(CameraCharacteristics.CONTROL_AWB_LOCK_AVAILABLE) == true) b.set(CaptureRequest.CONTROL_AWB_LOCK, true)
+            } else if (locked) {
                 if (c.get(CameraCharacteristics.CONTROL_AE_LOCK_AVAILABLE) == true) b.set(CaptureRequest.CONTROL_AE_LOCK, true)
                 if (c.get(CameraCharacteristics.CONTROL_AWB_LOCK_AVAILABLE) == true) b.set(CaptureRequest.CONTROL_AWB_LOCK, true)
             }
@@ -189,6 +209,7 @@ class SweepRecorder(private val ctx: Context, val dir: File, private val cb: Cal
 
     private fun onResult(r: TotalCaptureResult) {
         r.get(CaptureResult.LENS_FOCUS_DISTANCE)?.let { lastFocus = it }
+        if (!recording) { r.get(CaptureResult.SENSOR_EXPOSURE_TIME)?.let { lastExposureNs = it }; r.get(CaptureResult.SENSOR_SENSITIVITY)?.let { lastIso = it } }
         if (!recording) return
         val t = r.get(CaptureResult.SENSOR_TIMESTAMP) ?: return
         synchronized(captureRows) {
@@ -206,6 +227,7 @@ class SweepRecorder(private val ctx: Context, val dir: File, private val cb: Cal
             val arrival = SystemClock.elapsedRealtimeNanos()
             if (camT0 == 0L) camT0 = arrival           // rate on the wall clock: the camera's own clock may be another one
             camFrames++
+            if (camFrames % 8 == 1) brightness = meanLuma(img)
             if (recording) synchronized(clockOffsets) { clockOffsets.add(arrival - now) }
             if (!recording || now < startNs || now - lastSavedNs < minFrameGapNs) return
             lastSavedNs = now
@@ -215,7 +237,8 @@ class SweepRecorder(private val ctx: Context, val dir: File, private val cb: Cal
             if (encoder.queue.remainingCapacity() == 0) { dropped.incrementAndGet(); saved.decrementAndGet(); return }
             encoder.execute {
                 val f = File(dir, "frames/%05d.jpg".format(idx))
-                f.outputStream().buffered().use { YuvImage(nv21, ImageFormat.NV21, w, h, null).compressToJpeg(Rect(0, 0, w, h), 92, it) }
+                // 85: the engine works on the greys kept in memory; the JPEG is for the review and re-runs
+                f.outputStream().buffered().use { YuvImage(nv21, ImageFormat.NV21, w, h, null).compressToJpeg(Rect(0, 0, w, h), 85, it) }
                 val sharp = sharpness(nv21, w, h)
                 tracking.offer(idx, nv21, w, h, sensorOrientation)
                 synchronized(frameRows) { frameRows.append(idx).append(',').append(now).append(',').append("%.2f".format(Locale.US, sharp)).append(',')
@@ -337,6 +360,9 @@ class SweepRecorder(private val ctx: Context, val dir: File, private val cb: Cal
   "frames_dropped": ${dropped.get()},
   "camera_to_sensor_clock_ns": ${synchronized(clockOffsets) { clockOffsets.sorted().let { if (it.isEmpty()) 0 else it[it.size / 2] } }},
   "gyroscope_events": $gyroTotal,
+  "preview_exposure_ns": ${lastExposureNs ?: 0},
+  "preview_iso": ${lastIso ?: 0},
+  "exposure_capped_ns": $MAX_EXPOSURE_NS,
   "gyroscope_used": "${gyroUsed?.let { key(it) } ?: ""}",
   "gyroscopes": {${synchronized(gyroSeen) { gyroSeen.entries.joinToString(", ") { "\"${it.key}\": ${it.value}" } }}},
   "min_frame_gap_ms": ${minFrameGapNs / 1_000_000},
@@ -369,7 +395,8 @@ class SweepRecorder(private val ctx: Context, val dir: File, private val cb: Cal
         cb.onStatus(LiveStatus(recording, if (recording) (SystemClock.elapsedRealtimeNanos() - recWallNs) / 1e9 else 0.0,
             saved.get(), dropped.get(), if (camSpan > 0.5) camFrames / camSpan else 0.0,
             if (imuSpan > 0.5) imuCount[0] / imuSpan else 0.0, if (imuSpan > 0.5) imuCount[1] / imuSpan else 0.0,
-            Math.toDegrees(turnRad), "${size.width}×${size.height}", if (imuSpan > 0.5) imuCount[2] / imuSpan else 0.0))
+            Math.toDegrees(turnRad), "${size.width}×${size.height}", if (imuSpan > 0.5) imuCount[2] / imuSpan else 0.0,
+            brightness, lastExposureNs?.let { it / 1e6 }))
         if (camSpan > 4) { camFrames = 0; camT0 = SystemClock.elapsedRealtimeNanos() }
         if (imuSpan > 4) { imuCount[0] = 0; imuCount[1] = 0; imuCount[2] = 0; imuT0 = SystemClock.elapsedRealtimeNanos() }
     }
@@ -421,6 +448,18 @@ class SweepRecorder(private val ctx: Context, val dir: File, private val cb: Cal
         }
 
         /** Variance of the Laplacian on the luma, every 4th pixel: higher is sharper (motion blur lowers it). */
+        /** Above this the recording takes over the exposure (1/80 s). */
+        const val MAX_EXPOSURE_NS = 12_500_000L
+
+        /** Mean luma of a camera image, every 16th pixel. */
+        fun meanLuma(img: Image): Double {
+            val pl = img.planes[0]; val buf = pl.buffer; val rs = pl.rowStride; val ps = pl.pixelStride
+            var sum = 0L; var n = 0
+            var y = 0
+            while (y < img.height) { var x = 0; while (x < img.width) { sum += buf.get(y * rs + x * ps).toInt() and 255; n++; x += 16 }; y += 16 }
+            return if (n == 0) 128.0 else sum.toDouble() / n
+        }
+
         fun sharpness(luma: ByteArray, w: Int, h: Int): Double {
             var sum = 0.0; var sq = 0.0; var n = 0
             var yy = 4

@@ -23,32 +23,74 @@ import kotlin.math.sqrt
 object VisualRotation {
     class Pair3(val i: Int, val j: Int, val r: DoubleArray, val w: Double)      // r: camera i -> camera j (x_j = r x_i + t)
 
-    fun estimate(obs: List<PointObs>, n: Int, cam: Intrinsics, pool: Par = Par.default): Array<DoubleArray>? {
+    /** Rotations per frame; [measured]: false where a frame had no usable pair and its rotation is interpolated. */
+    class Result(val rot: Array<DoubleArray>, val measured: BooleanArray) { val measuredCount get() = measured.count { it } }
+
+    fun estimate(obs: List<PointObs>, n: Int, cam: Intrinsics, pool: Par = Par.default): Array<DoubleArray>? = solve(obs, n, cam, pool)?.rot
+
+    /**
+     * As [estimate], tolerant of bad frames (blur, a hand over the lens, a hole in the recording): a frame without a
+     * pair is skipped and its rotation interpolated from its neighbours; it fails only when fewer than 60 % of the
+     * frames are measured. Pairs that fail at 1,5 px are tried again at 3 px (blurred, dim frames).
+     */
+    fun solve(obs: List<PointObs>, n: Int, cam: Intrinsics, pool: Par = Par.default, trace: ((String) -> Unit)? = null): Result? {
+        if (n < 2) return null
         // bearings per frame: point id -> normalised (x, y)
         val byFrame = Array(n) { HashMap<Int, DoubleArray>() }
         for (p in obs) for (j in p.k.indices) {
             val k = p.k[j]; if (k in 0 until n) byFrame[k][p.id] = doubleArrayOf((p.u[j] - cam.cx) / cam.f, (p.v[j] - cam.cy) / cam.f)
         }
         val jobs = ArrayList<IntArray>()
-        for (i in 0 until n) for (d in intArrayOf(1, 2, 4, 8)) if (i + d < n) jobs.add(intArrayOf(i, i + d))
+        for (i in 0 until n) for (d in intArrayOf(1, 2, 3, 4, 6, 8, 12)) if (i + d < n) jobs.add(intArrayOf(i, i + d))
         val tol = 1.5 / cam.f
-        val pairs = pool.map(jobs) { (i, j) -> relative(byFrame[i], byFrame[j], tol, 1000L * i + j)?.let { Pair3(i, j, it.first, it.second.toDouble()) } }.filterNotNull()
-        // chain for the start: each frame from the nearest earlier frame it has a pair with
-        val rot = arrayOfNulls<DoubleArray>(n); rot[0] = M3.eye()
-        val byJ = pairs.groupBy { it.j }
-        for (j in 1 until n) {
-            val p = byJ[j]?.filter { rot[it.i] != null }?.maxByOrNull { it.w / (j - it.i) } ?: return null
-            rot[j] = M3.mul(rot[p.i]!!, M3.t(p.r))
+        val pairs = pool.map(jobs) { (i, j) ->
+            (relative(byFrame[i], byFrame[j], tol, 1000L * i + j) ?: relative(byFrame[i], byFrame[j], 2 * tol, 7000L * i + j, minIds = 12, minIn = 10))
+                ?.let { Pair3(i, j, it.first, it.second.toDouble()) }
+        }.filterNotNull()
+        if (pairs.isEmpty()) return null
+        // the reference: frame 0 when it has pairs, else the frame with the most
+        val wByFrame = DoubleArray(n); for (p in pairs) { wByFrame[p.i] += p.w; wByFrame[p.j] += p.w }
+        val ref = if (wByFrame[0] > 0) 0 else wByFrame.indices.maxBy { wByFrame[it] }
+        // spread from the reference over the pairs, strongest first, both ways (x_j = r x_i: R_j = R_i r^T, R_i = R_j r)
+        val rot = arrayOfNulls<DoubleArray>(n); rot[ref] = M3.eye()
+        val ordered = pairs.sortedByDescending { it.w / (it.j - it.i) }
+        var changed = true
+        while (changed) {
+            changed = false
+            for (p in ordered) {
+                val ri = rot[p.i]; val rj = rot[p.j]
+                if (ri != null && rj == null) { rot[p.j] = M3.mul(ri, M3.t(p.r)); changed = true }
+                else if (rj != null && ri == null) { rot[p.i] = M3.mul(rj, p.r); changed = true }
+            }
+        }
+        val measured = BooleanArray(n) { rot[it] != null }
+        trace?.invoke("visual: ${pairs.size} pairs of ${jobs.size}, reached ${measured.count { it }} of $n frames from $ref; " +
+            "points per frame ${byFrame.map { it.size }}")
+        if (measured.count { it } < 0.6 * n) return null
+        // the rest from their neighbours: interpolated between the nearest measured frames (copied at the ends)
+        for (k in 0 until n) if (rot[k] == null) {
+            val a = (k - 1 downTo 0).firstOrNull { measured[it] }; val b = (k + 1 until n).firstOrNull { measured[it] }
+            rot[k] = when {
+                a != null && b != null -> {
+                    val d = M3.log(M3.mul(M3.t(rot[a]!!), rot[b]!!)); val t = (k - a).toDouble() / (b - a)
+                    M3.mul(rot[a]!!, M3.exp(d[0] * t, d[1] * t, d[2] * t))
+                }
+                a != null -> rot[a]!!.copyOf()
+                else -> rot[b!!]!!.copyOf()
+            }
         }
         val r = Array(n) { rot[it]!! }
-        average(r, pairs)
-        return r
+        average(r, pairs.filter { measured[it.i] && measured[it.j] }, ref)
+        // frame 0's camera as the world, as before
+        val r0t = M3.t(r[0])
+        return Result(Array(n) { M3.mul(r0t, r[it]) }, measured)
     }
 
     /** Gauss-Newton on R_k <- R_k exp(d_k): residual log(R_ij^T R_j^T R_i), d/dd_i = I, d/dd_j = -R_i^T R_j. */
-    private fun average(r: Array<DoubleArray>, pairs: List<Pair3>, iters: Int = 6) {
+    private fun average(r: Array<DoubleArray>, pairs: List<Pair3>, ref: Int = 0, iters: Int = 6) {
         val n = r.size; val m = 3 * (n - 1)
         if (m == 0) return
+        fun ix(k: Int) = if (k == ref) -1 else if (k < ref) k else k - 1
         for (it in 0 until iters) {
             val h = DoubleArray(m * m); val g = DoubleArray(m)
             var moved = 0.0
@@ -58,7 +100,7 @@ object VisualRotation {
                 val k = Math.toRadians(0.5)                                     // Huber at 0,5°
                 val w = p.w * (if (ang < k) 1.0 else k / ang)
                 val jj = M3.mul(M3.t(r[p.i]), r[p.j]).map { -it }.toDoubleArray()  // d/dd_j
-                val ii = p.i - 1; val ij = p.j - 1
+                val ii = ix(p.i); val ij = ix(p.j)
                 // blocks: J_i = I, J_j = jj
                 fun addBlock(a: Int, ja: DoubleArray?, b: Int, jb: DoubleArray?) {
                     for (x in 0 until 3) for (y in 0 until 3) {
@@ -76,8 +118,9 @@ object VisualRotation {
             }
             for (a in 0 until m) h[a * m + a] += 1e-6
             val d = runCatching { Dense.solve(h, g.map { -it }.toDoubleArray(), m) }.getOrNull() ?: return
-            for (k in 1 until n) {
-                val dk = doubleArrayOf(d[3 * (k - 1)], d[3 * (k - 1) + 1], d[3 * (k - 1) + 2])
+            for (k in 0 until n) {
+                val q = ix(k); if (q < 0) continue
+                val dk = doubleArrayOf(d[3 * q], d[3 * q + 1], d[3 * q + 2])
                 moved = max(moved, sqrt(dk[0] * dk[0] + dk[1] * dk[1] + dk[2] * dk[2]))
                 r[k] = M3.mul(r[k], M3.exp(dk[0], dk[1], dk[2]))
             }
@@ -86,9 +129,9 @@ object VisualRotation {
     }
 
     /** Rotation camera a -> camera b and its inlier count, from the points both see; null when too few. */
-    fun relative(a: Map<Int, DoubleArray>, b: Map<Int, DoubleArray>, tol: Double, seed: Long): kotlin.Pair<DoubleArray, Int>? {
+    fun relative(a: Map<Int, DoubleArray>, b: Map<Int, DoubleArray>, tol: Double, seed: Long, minIds: Int = 15, minIn: Int = 12): kotlin.Pair<DoubleArray, Int>? {
         val ids = a.keys.filter { it in b }
-        if (ids.size < 15) return null
+        if (ids.size < minIds) return null
         val x1 = ids.map { a[it]!! }; val x2 = ids.map { b[it]!! }
         // a pure turn first: when it explains the points, the baseline is too short for the essential matrix
         val pure = kabsch(x1, x2, ids.indices.toList())
@@ -102,8 +145,8 @@ object VisualRotation {
             if (c > bestIn) { bestIn = c; best = e }
         }
         val e0 = best
-        if (e0 == null || bestIn < 12 || pureIn.size >= 0.9 * bestIn) {
-            if (pureIn.size < 12) return null
+        if (e0 == null || bestIn < minIn || pureIn.size >= 0.9 * bestIn) {
+            if (pureIn.size < minIn) return null
             return kabsch(x1, x2, pureIn) to pureIn.size
         }
         val inl = ids.indices.filter { sampson(e0, x1[it], x2[it]) < tol * tol }

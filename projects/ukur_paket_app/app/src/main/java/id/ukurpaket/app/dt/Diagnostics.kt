@@ -227,9 +227,13 @@ object Diagnostics {
                 "Semua gyroscope sudah dicoba (${d.gyroProbes.count { it.registered }} diterima Android, 3 kecepatan): tidak ada data mentah. " +
                     "Hardware-nya hampir pasti bekerja: rotation vector (${rvHz!!.toInt()} Hz) dihitung dari gyroscope itu. Hanya data mentahnya " +
                     "yang tidak diteruskan firmware HP, jadi putaran HP diambil dari rotation vector.")
-            has["gyroscope"] == null -> Check("gyro", "Gyroscope", "Tidak ada", Level.FAIL, "Tanpa gyroscope, skala dari sensor gerak tidak bisa. Sisa cara: label resi sebagai penggaris.")
+            has["gyroscope"] == null && has["accelerometer"] != null -> Check("gyro", "Gyroscope", "Tidak ada", Level.WARN,
+                "Tanpa gyroscope: putaran HP dihitung dari kamera, skala dari accelerometer.")
+            has["gyroscope"] == null -> Check("gyro", "Gyroscope", "Tidak ada", Level.FAIL, "Tanpa gyroscope dan accelerometer, ukuran tidak bisa dihitung.")
             gyroHz == 0.0 && (rvHz ?: 0.0) > 0 -> Check("gyro", "Gyroscope", "terdaftar, tapi diam", Level.WARN,
                 "Gyroscope tidak mengirim data. Putaran HP diambil dari rotation vector (${rvHz!!.toInt()} Hz): bisa, kurang teliti.")
+            gyroHz == 0.0 && (rate("accelerometer") ?: 0.0) > 0 -> Check("gyro", "Gyroscope", "terdaftar, tapi diam", Level.WARN,
+                "Gyroscope dan rotation vector tidak mengirim data (firmware HP). Bisa: putaran HP dihitung dari kamera, skala dari accelerometer.")
             gyroHz == 0.0 -> Check("gyro", "Gyroscope", "terdaftar, tapi diam", Level.FAIL, "Gyroscope dan rotation vector tidak mengirim data.")
             else -> Check("gyro", "Gyroscope", has["gyroscope"]!!.name, Level.OK, "Ada: putaran HP terbaca langsung.")
         }
@@ -239,7 +243,8 @@ object Diagnostics {
             val r = rate(name)
             out += when {
                 r == null -> Check(key, label, "belum diukur", Level.INFO, "Tekan Sensor.")
-                r == 0.0 -> Check(key, label, "0 Hz", if (name == "gyroscope") Level.WARN else Level.FAIL, "Sensor terdaftar tetapi tidak mengirim data.")
+                r == 0.0 -> Check(key, label, "0 Hz", if (name == "gyroscope") Level.INFO else Level.FAIL,
+                    if (name == "gyroscope") "Tidak mengirim data: putaran dihitung dari kamera." else "Sensor terdaftar tetapi tidak mengirim data.")
                 r >= 150 -> Check(key, label, "${r.toInt()} Hz", Level.OK, "Cukup (≥ 150 Hz).")
                 r >= 90 -> Check(key, label, "${r.toInt()} Hz", Level.WARN, "Bisa dipakai, ideal ≥ 150 Hz.")
                 else -> Check(key, label, "${r.toInt()} Hz", Level.FAIL, "Terlalu pelan untuk mengikuti gerakan HP (perlu ≥ 90 Hz).")

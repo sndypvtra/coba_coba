@@ -103,6 +103,46 @@ class SweepEngineTest {
         }
     }
 
+    /**
+     * As the first real DT50 recording (20261104_171719): no rotation sensor, about 8 saved frames a second, one
+     * 0,3–0,4 s hole, some frames blurred, a dim room (dark, noisy). Here every second frame of the synthetic sweep,
+     * two of those dropped in the middle, every 4th blurred, two flat (nothing to track), all darkened with noise.
+     */
+    internal fun degraded(i: SweepInput, step: Int = 2, hole: Boolean = true, blur: Boolean = true, dark: Boolean = true, blank: Boolean = true): SweepInput {
+        val keep = (0 until i.tCam.size step step).toMutableList()
+        val mid = keep.size / 2; if (hole) { keep.removeAt(mid); keep.removeAt(mid) }
+        val rnd = java.util.Random(5)
+        val cache = HashMap<Int, Gray>()
+        fun dim(k: Int): Gray = synchronized(cache) { cache.getOrPut(k) {
+            val g = i.gray(keep[k])
+            var p = g.p
+            // two frames with nothing to track (a hand over the lens, a whip of the phone): flat grey
+            if (blank && (k == keep.size / 3 || k == keep.size / 3 + 1)) p = FloatArray(p.size) { 120f }
+            if (blur && k % 4 == 1) {                                     // motion blur: 9 px along x
+                p = FloatArray(p.size) { idx -> val x = idx % g.w; var s = 0f; var c = 0
+                    for (d in -4..4) { val xx = x + d; if (xx in 0 until g.w) { s += g.p[idx + d]; c++ } }; s / c }
+            }
+            if (!dark) Gray(g.w, g.h, p) else Gray(g.w, g.h, FloatArray(p.size) { (p[it] * 0.35f + rnd.nextGaussian().toFloat() * 4f).coerceIn(0f, 255f) })
+        } }
+        return SweepInput(DoubleArray(keep.size) { i.tCam[keep[it]] }, i.arrival?.let { a -> DoubleArray(keep.size) { a[keep[it]] } }, i.realtimeClock,
+            i.acc, emptyList(), emptyList(), i.focalPrior, i.w, i.h, { dim(it) }, 0, i.pickMask, null)
+    }
+
+    @Test fun dt50LikeRecordingSlowBlurredDim() {
+        for (name in listOf("box_dt50", "sack_dt50")) {
+            val dir = File(javaClass.getResource("/sweep/$name/session.json")!!.toURI()).parentFile
+            val inp = degraded(RecordingIO.load(dir, ::gray, ::mask).input)
+            Engine.trace = { println("  [$name degraded] $it") }
+            val r = Engine.run(inp)
+            val truth = Json.parseToJsonElement(File(dir, "truth.json").readText()).jsonObject["size_cm"]!!.jsonArray.map { it.jsonPrimitive.double }
+            println("$name degraded (${inp.tCam.size} frames): ${"%.1f x %.1f x %.1f".format(r.lengthCm, r.widthCm, r.heightCm)} cm (truth ${truth.joinToString(" x ") { "%.1f".format(it) }}), " +
+                "${r.method}, conf ${r.confidence}, ${"%.1f".format(r.seconds)} s, notes ${r.notes}")
+            val tol = if (name.startsWith("box")) 4.0 else 7.0
+            val got = doubleArrayOf(r.lengthCm, r.widthCm, r.heightCm)
+            for (k in 0 until 3) assertTrue("$name dimension $k: ${got[k]} vs ${truth[k]}", abs(got[k] - truth[k]) <= tol)
+        }
+    }
+
     @Test fun irregularSackOnTheDt50() {
         val (got, truth) = run("sack_dt50")
         for (i in 0 until 3) assertTrue("dimension $i: ${got[i]} vs ${truth[i]}", abs(got[i] - truth[i]) <= 6.0)

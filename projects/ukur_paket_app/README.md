@@ -1,4 +1,4 @@
-# UkurPaket: Android app (v0.3.2, test build)
+# UkurPaket: Android app (v0.3.3, test build)
 
 Measures a parcel's length × width × height with the phone camera, the way the courier mockup
 (`../ukur_paket_mockup`) describes: method A, ARCore depth + floor detection, with the parcel picked by a tap or a
@@ -53,7 +53,7 @@ the hub instead of being typed in.
 
 JDK 17+ and the Android SDK (platform 35). AGP 8.7.3, Kotlin 2.1.0, Compose BOM 2024.12.01, ARCore 1.47.0,
 ONNX Runtime 1.20.0, minSdk 26, targetSdk 35, arm64-v8a + armeabi-v7a. The test APK is
-`release/UkurPaket-0.3.2-uji.apk` (54 MB; MobileSAM is two models: the 1024 one for ARCore phones, encoder float16
+`release/UkurPaket-0.3.3-uji.apk` (54 MB; MobileSAM is two models: the 1024 one for ARCore phones, encoder float16
 13,8 MB + decoder with int8 weights 4,6 MB, made by `tools/export_sam.py`, the int8 decoder's masks within IoU 0,989 of
 float32; and the 512 one for PDAs, encoder float32 28 MB + decoder 4,7 MB, made by `tools/export_sam512.py`). It installs directly (allow "install unknown apps"); for the Play Store use your own key.
 
@@ -97,6 +97,33 @@ Not tested on a DT20 yet: everything with the real camera and sensors (Camera2 s
 the device). Tested here: the diagnosis rules, the quality check on synthetic sweeps and on the file format, the
 recorder's size choice and sharpness score, the navigation, and the screens (`18`–`20`; the diagnosis screenshot uses
 test values, not a DT20 reading; the pick screenshot runs the app's MobileSAM on the parcel photo with a box).
+
+### The first real DT50 recordings (v0.3.3)
+
+Recording 20261104_171719 (a plush toy on a dark blanket, dim room) failed with "Putaran HP tidak terbaca dari
+kamera". What it showed: 7,9 saved frames/s (the CPU shared by JPEG, tracking and MobileSAM), a 304 ms hole, a dim
+picture, no rotation sensor. MobileSAM-512 measured on the DT50 itself: **2,2 s** per picture (1024 float16: 13,7 s).
+The same conditions are now a test (`SweepEngineTest.dt50LikeRecordingSlowBlurredDim`: every 2nd frame, two frames
+dropped, every 4th blurred, two flat frames, everything darkened with noise), which failed with the same message.
+Fixed, in the order the test showed them:
+
+| Weakness | Fix |
+|---|---|
+| a bad frame kills every track, so the sweep falls apart in two | `Tracker`: when most tracks are lost, the last good frame's tracks (up to 5 frames back) are followed straight from it |
+| one frame without a pair stopped the camera-rotation chain | `VisualRotation.solve`: spread from a reference both ways; frames without pairs interpolated; pairs up to 12 frames apart; a 3 px retry for blurred pairs; fails only below 60 % of frames |
+| a frame that sees nothing left the linear system singular | `Vision.linear`: such a frame's centre tied to the middle of its neighbours |
+| that guessed centre spoilt the scale | the inertial fit uses only frames whose position was measured (and inside the accelerometer's recording); the accelerometer is integrated past the others |
+| the picked frame blurred just after the touch: no seed points | seeds also from the 3D points that project into the pick mask, the nearest ones (the object's front) |
+| long exposures in a dim room blur every frame | recording keeps the preview's brightness at ≤ 1/80 s (manual exposure, the gain makes up), a "Terlalu gelap" chip below a mean luma of 55 |
+| the CPU too busy for ≥ 10 frames/s | JPEG quality 85, the tracking thread above MobileSAM, MobileSAM re-cuts at most every 3 s |
+| "Data sensor tidak menutupi semua foto" on every DT50 recording | the check asked for a gyroscope; now the sensors there are, to 0,15 s |
+
+Degraded synthetic sweeps (36 frames, accelerometer only): box 40 × 30 × 20 → 40,3 × 30,9 × 21,2 cm; sack
+45,4 × 30,1 × 19 → 43,4 × 27,9 × 20,1 cm. The result card shows the size, the **volumetric weight** (P × L × T ÷ the
+divisor in Settings) and the volume without any input; a recording whose object is picked is measured on opening,
+and a new pick on the review screen is measured at once. Only the actual weight (a scale) is still typed in, on the
+weight screen, for the charged weight. The diagnosis no longer marks a silent gyroscope red: the engine runs on the
+camera and the accelerometer.
 
 ### No rotation sensor, and the size within seconds of Selesai (v0.3.2)
 
