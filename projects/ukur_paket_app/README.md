@@ -1,4 +1,4 @@
-# UkurPaket: Android app (v0.2.0, test build)
+# UkurPaket: Android app (v0.2.1, test build)
 
 Measures a parcel's length × width × height with the phone camera, the way the courier mockup
 (`../ukur_paket_mockup`) describes: method A, ARCore depth + floor detection, with the parcel picked by a tap or a
@@ -53,7 +53,7 @@ the hub instead of being typed in.
 
 JDK 17+ and the Android SDK (platform 35). AGP 8.7.3, Kotlin 2.1.0, Compose BOM 2024.12.01, ARCore 1.47.0,
 ONNX Runtime 1.20.0, minSdk 26, targetSdk 35, arm64-v8a + armeabi-v7a. The test APK is
-`release/UkurPaket-0.2.0-uji.apk` (29 MB; MobileSAM is 18,8 MB of it: encoder float16 13,8 MB + decoder with int8
+`release/UkurPaket-0.2.1-uji.apk` (29 MB; MobileSAM is 18,8 MB of it: encoder float16 13,8 MB + decoder with int8
 weights 4,6 MB, made by `tools/export_sam.py`; the int8 decoder's masks are within IoU 0,989 of float32). It installs directly (allow "install unknown apps"); for the Play Store use your own key.
 
 ## Urovo DT20 (and other Urovo PDAs)
@@ -96,6 +96,45 @@ Not tested on a DT20 yet: everything with the real camera and sensors (Camera2 s
 the device). Tested here: the diagnosis rules, the quality check on synthetic sweeps and on the file format, the
 recorder's size choice and sharpness score, the navigation, and the screens (`18`–`20`; the diagnosis screenshot uses
 test values, not a DT20 reading; the pick screenshot runs the app's MobileSAM on the parcel photo with a box).
+
+### Engine without ARCore: PC reference (`tools/dt20/`)
+
+What the recordings are for. `solve.py` turns one recording into L × W × H; it runs on a PC for now, so that the
+method can be measured on real DT20/DT50 sweeps before it is ported to the phone. Licences are not a constraint here
+(open source, GPL allowed); the parts used are COLMAP (BSD), SciPy and the app's MobileSAM.
+
+1. **Structure from motion** (COLMAP via pycolmap): camera poses and sparse 3D points, scale unknown.
+2. **Clock and axes**: IMU ↔ camera time offset (gyro vs visual turn rate), camera ← device rotation (Kabsch), gyro bias.
+3. **Visual-inertial alignment** (as in the VINS-Mono initialisation): with the rotations from vision, the accelerometer
+   integrated between frames must match the camera path. One linear system in scale, gravity, accelerometer bias and
+   velocities, each row weighted by its noise, then |g| = 9,81 m/s². Scale exists only when the phone accelerates.
+4. **Floor**: plane of sparse points perpendicular to gravity; the angle between them is reported.
+5. **Object**: masks in 9 keyframes (MobileSAM prompted from the pick, two rounds), points voted inside ≥ 80 % of the
+   masks that see them, mask outlines lifted to 3D; least-area rectangle + 97th-percentile height, as method A.
+
+`synth_sweep.py` makes test sweeps in the recorder's own format with a known object: textured floor and object, a
+walk of ~80° round it, accelerometer/gyroscope at 200 Hz with phone-grade noise and bias and a 12 ms clock offset; the
+`--dt50` variant has what the DT50 reported (gyroscope silent, only the game rotation vector; camera clock 3,2 s off,
+frames arriving 35 ± 5 ms late). `run_synth.py` runs the cases below (`docs/dt_engine_synthetic.jpg`, `…_summary.json`):
+
+| Case | Truth (cm) | Engine (cm) | Error (cm) | Scale error | Time offset (truth 12 ms) |
+|---|---|---|---|---|---|
+| box, seed 0 | 40 × 30 × 20 | 41,6 × 32,9 × 21,2 | +1,6 / +2,9 / +1,2 | +0,99 % | 11 ms |
+| cylinder (gallon) | 27 × 27 × 40 | 24,5 × 24,1 × 40,2 | −2,5 / −2,9 / +0,2 | −0,69 % | 13 ms |
+| sack (irregular) | 45,4 × 30,1 × 19 | 41,8 × 32,5 × 19,1 | −3,6 / +2,4 / +0,1 | −0,68 % | 13 ms |
+| box, seed 1 | 40 × 30 × 20 | 41,6 × 30,2 × 21,1 | +1,6 / +0,2 / +1,1 | +0,91 % | 10 ms |
+| cylinder, seed 1 | 27 × 27 × 40 | 25,4 × 24,8 × 40,4 | −1,6 / −2,2 / +0,4 | −0,38 % | 11 ms |
+| sack, seed 1 | 45,4 × 30,1 × 19 | 42,8 × 29,2 × 18,9 | −2,6 / −0,9 / −0,1 | −0,34 % | 11 ms |
+| box, DT50 mode | 40 × 30 × 20 | 41,3 × 32,5 × 21,1 | +1,3 / +2,5 / +1,1 | +0,18 % | (after arrival mapping) |
+| sack, DT50 mode | 45,4 × 30,1 × 19 | 42,9 × 29,3 × 18,9 | −2,5 / −0,8 / −0,1 | −0,16 % | (after arrival mapping) |
+| phone only turned, not moved | | refused: "HP harus digeser mengitari objek" | | | |
+
+Mean size error 1,5 cm, largest 3,6 cm; scale within ±1 % in every case, the DT50 variant included; ~80 s per sweep on
+this PC (4 cores). Pattern: boxes come out 1–3 cm large, round and soft objects 2–4 cm small (sparse points thin out at
+their edges). What the simulation leaves out: rolling shutter, motion blur, autofocus, lens distortion, the
+camera–IMU lever arm, plain untextured cardboard, real sensor quirks. So these numbers are an upper bound on what to
+expect; the real answer comes from DT20/DT50 recordings with tape-measured sizes. Next: run it on those, then choose
+how to put it on the phone (SfM on the device's CPU is the expensive part).
 
 ### Smoke test: the resi label as the ruler (no ARCore, no extra items)
 
