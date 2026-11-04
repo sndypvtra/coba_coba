@@ -1,4 +1,4 @@
-# UkurPaket: Android app (v0.1, test build)
+# UkurPaket: Android app (v0.1.1, test build)
 
 Measures a parcel's length × width × height with the phone camera, the way the courier mockup
 (`../ukur_paket_mockup`) describes: method A, ARCore depth + floor detection, with the parcel picked by a tap or a
@@ -18,6 +18,7 @@ mockup made from these very screens is `../ukur_paket_mockup/v2`.
 | Device check | First screen: phone model, ARCore installed or not, Depth API or not, and the state that follows (Siap Ukur / Mode Dasar / Tidak Didukung), in plain words. Asks Google Play to install *Google Play Services for AR* when it is missing. |
 | Scan Resi (home) | The app opens on **Scan Resi**: scan the label's barcode (Google code scanner, linear barcodes only) or type the number, and nothing else; no store names, addresses or order lists. Below it, the parcels measured today with their status (empty on first open: "Scan resi paket pertama"). |
 | Scan resi | Google's code scanner reads linear (1D) barcodes only, so the label's QR codes (and other 2D codes) are never picked up; the barcode's content is used as it is, with no rules on the number (on a real AnterAja label the long Code 128 barcode holds `TSA-80745081104`). **Ketik Resi** takes the number as typed. |
+| Hardware scanner (Urovo PDA) | On a Urovo PDA (DT20 and others) the scan key reads the resi: home says **Scanner HP siap · tekan tombol scan**, the camera scanner stays as **Scan pakai kamera**. Read from Urovo's broadcast (`android.intent.ACTION_DECODE_DATA`, `barcode_string`, or the raw `barcode` bytes; older firmware `urovo.rcv.message`) and from keyboard output (fast keys ending with Enter, which also covers Bluetooth/USB ring scanners). A scan opens its parcel on home, history, settings, saved and detail; while a parcel is being measured a stray press only says "Selesaikan paket … dulu". A link or multi-line text (a QR code read by mistake) is not taken as a resi. Setup below. |
 | Measuring (ARCore) | 1/3 find the floor (white dots), 2/3 pick the parcel, 3/3 scan (move the phone round toward the corner, animated arc arrow, depth dots, progress), result (3D box drawn on the parcel, size labels, confidence, Save locked 2 s when the result is doubtful). Flashlight button (ARCore torch). |
 | Picking among many parcels | Tap the parcel, or **Pilih Area** and drag a box around it (the fix when a tap picks only part). MobileSAM cuts it out of the camera image; only depth points inside that cut-out and its footprint are measured. Other parcels in view get a dashed outline labelled **Paket lain**; tapping one picks it. **Mulai Scan** without a tap uses the crosshair as the tap. |
 | Measuring session | **Paket berikutnya** on the saved screen opens the scanner again and keeps the AR session: no floor search again, the parcels already measured carry a ✓ with their tracking number. **Selesai** closes the session. |
@@ -52,8 +53,25 @@ the hub instead of being typed in.
 
 JDK 17+ and the Android SDK (platform 35). AGP 8.7.3, Kotlin 2.1.0, Compose BOM 2024.12.01, ARCore 1.47.0,
 ONNX Runtime 1.20.0, minSdk 26, targetSdk 35, arm64-v8a + armeabi-v7a. The test APK is
-`release/UkurPaket-0.1.0-uji.apk` (29 MB; MobileSAM is 18,8 MB of it: encoder float16 13,8 MB + decoder with int8
+`release/UkurPaket-0.1.1-uji.apk` (29 MB; MobileSAM is 18,8 MB of it: encoder float16 13,8 MB + decoder with int8
 weights 4,6 MB, made by `tools/export_sam.py`; the int8 decoder's masks are within IoU 0,989 of float32). It installs directly (allow "install unknown apps"); for the Play Store use your own key.
+
+## Urovo DT20 (and other Urovo PDAs)
+
+The DT20 (Android 11, MediaTek Helio P22) is **not on Google's ARCore device list**, so on it the app can scan,
+type and mark parcels **Ukur di Hub**, but it cannot measure. The device check shows *Tidak Didukung*. The setup
+used in the field: the DT20 scans, an ARCore phone (for example a Galaxy A35 5G / A55 5G) measures.
+
+Scanner settings on the DT20 (Settings → Scanner, the names vary a little by firmware):
+
+1. **Output mode: Intent output** (recommended). Keep the default action `android.intent.ACTION_DECODE_DATA` and
+   the string label `barcode_string`. Keyboard output also works, but only on screens without a text field.
+2. **Symbologies**: switch off QR Code, Data Matrix, PDF417 and Aztec, so the QR codes on the label are never read
+   (the app also ignores links, but a QR holding plain text would pass).
+3. Leave "Add Enter/suffix" as it is: the app trims spaces and line ends.
+
+`scan/HardwareScanner.kt` holds the receiver and the keyboard reader. The receiver is registered only while the app
+is in front.
 
 ## What has and has not been tested
 
@@ -65,12 +83,13 @@ Tested here, on the PC:
 | `SegmenterTest` | the app's own MobileSAM code on the conveyor frame (7 parcels, some touching), one tap and one box each, vs the Python reference from the same ONNX files | mask IoU ≥ 0,985 for every tap and box (references made with the float32 decoder) |
 | `ConveyorReplayTest` | the conveyor scene in 3D, each parcel measured from geometry alone and from the tap/box cut-out | geometry alone merges touching parcels; with the cut-out every parcel stays separate (README section below) |
 | `FlowTest` | the courier's path through the screens: first open with nothing but the scanner; measure → weight → save → next parcel in the same session → Selesai starts a new one; a second tap on Simpan; re-measuring replaces the old record; Ukur di Hub on a phone without ARCore; a late hub photo after the courier left; a scanned number opens its parcel (or its record if measured already), any content is taken as it is; a data file of an earlier test build still loads | 7 flows, records and screen stack as expected |
+| `HardwareScannerTest` | Urovo detection; the three broadcast formats (string, bytes + length, older `urovo.rcv.message`); a broadcast reaching the registered receiver; a scan key press on home opens the parcel, while measuring it does not, a QR link is ignored; keyboard output: fast keys + Enter is a scan, slow keys are not, Back/volume pass through | 5 tests pass |
 | `BarcodeTest` | the barcode cut from a photo of a real AnterAja label (bars only, no personal data) read with ZXing | Code 128, `TSA-80745081104` |
 | `ScannerFormatsTest` | the scanner's barcode types | the 9 linear types; QR, Data Matrix, PDF417 and Aztec left out |
-| `ScreenshotTest` | every screen rendered on the JVM (`screenshots/`); camera screens on the mockup photo with the overlay the engine draws | 20 screens |
+| `ScreenshotTest` | every screen rendered on the JVM (`screenshots/`); camera screens on the mockup photo with the overlay the engine draws | 21 screens (`17_scan_resi_urovo`: home on a Urovo PDA without ARCore) |
 | Android lint | | no errors |
 
-**Not tested yet**: anything that needs a real phone: ARCore tracking, depth quality, how the cut-out lines up with
+**Not tested yet**: anything that needs a real phone, including the scan key on a real DT20: ARCore tracking, depth quality, how the cut-out lines up with
 depth on a moving phone, MobileSAM speed on a phone CPU (about 3–5 s per tap on this PC's CPU in the tests; a phone
 may be similar or slower), heat, battery. The first test on an ARCore phone (for example a Galaxy A35 5G / A55 5G) is where the
 thresholds get tuned, ideally from recorded scans of 50–100 parcels with tape-measure sizes.
@@ -84,6 +103,7 @@ thresholds get tuned, ideally from recorded scans of 50–100 parcels with tape-
 | `ar/MeasureEngine.kt` | ARCore session, per-frame steps, tap/box pick, depth to 3D points, fence, other parcels, done marks, torch |
 | `ar/BackgroundRenderer.kt`, `ar/Snapshot.kt`, `ar/Recorder.kt` | camera image; evidence photo; raw scan recording |
 | `ar/ArCheck.kt` | ARCore availability, install request, Depth API check |
+| `scan/HardwareScanner.kt` | Urovo scan key: broadcast receiver and keyboard-output reader |
 | `data/Store.kt`, `data/Locator.kt` | records and settings in one JSON file; GPS |
 | `ui/` | Compose: `Screens.kt` (start, scan resi, prep, weight, saved, history, detail, settings, phone without ARCore), `MeasureScreen.kt` (camera) |
 | `tools/` | `export_sam.py`, `check_sam_onnx.py` (model export and check), `fetch_icons.py`, conveyor replay scripts |

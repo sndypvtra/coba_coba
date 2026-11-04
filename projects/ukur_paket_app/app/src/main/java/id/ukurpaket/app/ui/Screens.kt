@@ -171,11 +171,21 @@ fun HomeScreen(model: AppModel, activity: Activity) {
                         IconTile("barcode_scanner", Color.White, C.brand, 52.dp)
                         Column(Modifier.weight(1f).padding(start = 12.dp)) {
                             T("Scan Resi", 20.sp, FontWeight.Bold)
-                            T("Arahkan kamera ke barcode di label paket", 13.sp, color = C.t2)
+                            T(if (model.hardwareScanner) "Tekan tombol scan di samping HP, arahkan ke barcode resi"
+                              else "Arahkan kamera ke barcode di label paket", 13.sp, color = C.t2)
                         }
                     }
                     Spacer(Modifier.height(14.dp))
-                    PrimaryButton("Scan resi", "barcode_scanner", Modifier.fillMaxWidth()) { model.scanResi(activity) }
+                    if (model.hardwareScanner) {
+                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(C.brandL).padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically) {
+                            Sym("barcode_scanner", 22.dp, C.brand, filled = true)
+                            T("Scanner HP siap · tekan tombol scan", 14.sp, FontWeight.SemiBold, C.brandD, modifier = Modifier.padding(start = 10.dp))
+                        }
+                        Spacer(Modifier.height(10.dp))
+                    }
+                    PrimaryButton(if (model.hardwareScanner) "Scan pakai kamera" else "Scan resi", if (model.hardwareScanner) "photo_camera" else "barcode_scanner",
+                        Modifier.fillMaxWidth()) { model.scanResi(activity) }
                     Spacer(Modifier.height(10.dp))
                     SecondaryButton("Ketik Resi", "keyboard", Modifier.fillMaxWidth()) { typing = true }
                     if (inSession > 0) {
@@ -384,6 +394,7 @@ fun SavedScreen(model: AppModel, activity: Activity, id: String) {
           else "Foto, kotak 3D, ukuran, waktu, dan lokasi disimpan sebagai bukti. Angka ukur tidak bisa diedit.", 12.5.sp, color = C.t2)
         Spacer(Modifier.weight(1f))
         if (!m.atHub && model.caps.mode != Mode.NONE) T("Lantai sudah dikenali: paket berikutnya langsung bisa diukur.", 12.5.sp, color = C.t3)
+        if (model.hardwareScanner) T("Atau tekan tombol scan di samping HP untuk paket berikutnya.", 12.5.sp, color = C.t3)
         PrimaryButton("Paket berikutnya", "barcode_scanner", Modifier.fillMaxWidth()) { model.scanResi(activity) }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             SecondaryButton("Ketik Resi", "keyboard", Modifier.weight(1f)) { typing = true }

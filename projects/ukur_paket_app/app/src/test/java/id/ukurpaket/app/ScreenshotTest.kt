@@ -143,6 +143,11 @@ class ScreenshotTest {
         screen("12_cek_hp_tanpa_arcore", m, Screen.Start)
         m.draft = Draft("TSA-90100000104")
         screen("13_hp_tanpa_arcore_ukur", m, Screen.NoAr)
+
+        // Urovo PDA (built-in scan key), here the DT20 without ARCore
+        m = model(Mode.NONE)
+        m.hardwareScanner = true
+        screen("17_scan_resi_urovo", m, Screen.Home)
     }
 
     @Test fun cameraScreens() {

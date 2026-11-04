@@ -3,6 +3,7 @@ package id.ukurpaket.app.ui
 import android.app.Activity
 import android.app.Application
 import android.content.Intent
+import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -36,6 +37,7 @@ import id.ukurpaket.app.data.Mode
 import id.ukurpaket.app.data.Status
 import id.ukurpaket.app.data.Store
 import id.ukurpaket.app.measure.Segmenter
+import id.ukurpaket.app.scan.HardwareScanner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -190,6 +192,29 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
         GmsBarcodeScanning.getClient(activity, options).startScan()
             .addOnSuccessListener { b -> b.rawValue?.let { openResi(it) } }
             .addOnFailureListener { toast("Scan tidak bisa dibuka. Ketik nomor resi.") }
+    }
+
+    /** A built-in scanner key (Urovo PDA): shown on the home screen; also switched on by the first hardware scan. */
+    var hardwareScanner by mutableStateOf(HardwareScanner.builtIn(Build.MANUFACTURER, Build.BRAND))
+        internal set
+
+    /** Screens where a hardware scan opens a parcel; they have no text field, so keyboard-output scans can be read too. */
+    val takesHardwareScan get() = screen.let { it == Screen.Home || it == Screen.History || it == Screen.Settings || it is Screen.Saved || it is Screen.Detail }
+
+    /**
+     * The scan key (Urovo broadcast or keyboard output). On the measuring screens a stray press must not drop the
+     * parcel being measured, so it only says so.
+     */
+    fun onHardwareScan(raw: String) {
+        hardwareScanner = true
+        val code = raw.trim()
+        when {
+            code.isEmpty() -> Unit
+            HardwareScanner.looksLikeQr(code) -> toast("Itu kode QR. Scan barcode garis (resi) di label.")
+            takesHardwareScan -> openResi(code)
+            screen == Screen.Start -> toast("Tunggu cek HP selesai, lalu scan lagi")
+            else -> toast("Selesaikan paket ${draft?.resi ?: "ini"} dulu, lalu scan berikutnya")
+        }
     }
 
     /**
