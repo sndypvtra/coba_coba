@@ -1,4 +1,4 @@
-# UkurPaket: Android app (v0.4.0, test build)
+# UkurPaket: Android app (v0.4.1, test build)
 
 Measures a parcel's length × width × height with the phone camera, the way the courier mockup
 (`../ukur_paket_mockup`) describes: method A, ARCore depth + floor detection, with the parcel picked by a tap or a
@@ -76,6 +76,22 @@ which says more about the pictures than about the model): that is the phone test
 own figures for the released model: NYU AbsRel 0,109; with its built-in scale, 4–46 % off on other cameras, which is
 why the per-phone calibration exists.
 
+**Flat objects (v0.4.1).** The first DT50 test, a phone lying on a bed, read 32,3 × 16,8 × 12,3 cm: the phone's long
+edge happened to point "up" in the picture and was taken for a vertical edge 12 cm tall (and, uncalibrated, the AI put
+the camera at 0,83 m where it was about 0,35 m: everything about 2× too large). Now every outline is also read as an
+object lying flat (split at its leftmost and rightmost points, the lower part on the floor, the upper part at a
+thickness of 0,5–8 cm), and the reading whose box fits the outline best wins. Synthetic photos, true camera height:
+
+| | Truth (cm) | Before | 0.4.1 |
+|---|---|---|---|
+| Phone lying flat, close up (0,35–0,6 m), 4 photos | 15 × 7,2 × 0,8 | up to 12 cm thick | 14,4–15,4 × 6,8–7,6 × 0,5–1,7 |
+| Mailer bag 3 cm thick, 2 photos | 32 × 24 × 3 | | 33,5–34 × 25–26 × 1,0 |
+| Cartons, gallon, sack | | | unchanged |
+
+A flat object's length and width are read as well as a carton's, its thickness only roughly (here 1 cm for 3 cm):
+such results say "Benda pipih" and are never "Akurat". The edge check is wider too: an object closer than 1,2 % of the
+picture to its edge is "terpotong atau terlalu mepet tepi foto".
+
 **Limits.** Estimation class, not a certified (legal-for-trade) dimensioner. Built for cartons; round, soft and
 bulging parcels get a rough outer box and "Perlu Dicek". The camera must be above the parcel's top (standing), the
 parcel whole in the picture with some floor round it, on the floor or a table (not on another parcel).
@@ -106,7 +122,7 @@ pick, timings, the result, the tape size when typed), `evidence.jpg` once used. 
 
 JDK 17+ and the Android SDK (platform 35). AGP 8.7.3, Kotlin 2.1.0, Compose BOM 2024.12.01, ARCore 1.47.0,
 ONNX Runtime 1.20.0, minSdk 26, targetSdk 35, arm64-v8a + armeabi-v7a. The test APK is
-`release/UkurPaket-0.4.0-uji.apk` (72 MB; the photo mode's depth model is 20 MB of it; MobileSAM is two models: the 1024 one for ARCore phones, encoder float16
+`release/UkurPaket-0.4.1-uji.apk` (72 MB; the photo mode's depth model is 20 MB of it; MobileSAM is two models: the 1024 one for ARCore phones, encoder float16
 13,8 MB + decoder with int8 weights 4,6 MB, made by `tools/export_sam.py`, the int8 decoder's masks within IoU 0,989 of
 float32; and the 512 one for PDAs, encoder float32 28 MB + decoder 4,7 MB, made by `tools/export_sam512.py`). It installs directly (allow "install unknown apps"); for the Play Store use your own key.
 
@@ -348,7 +364,7 @@ Tested here, on the PC:
 | `GeometryTest` | box turned 30°, 40 × 30 × 20 cm, 2 mm noise, a taller box 8 cm away; 30 × 20 × 10 cm on a floor with 0,8 cm depth noise | within 1,2 cm, neighbour left out; within 2 cm |
 | `SegmenterTest` | the app's own MobileSAM code on the conveyor frame (7 parcels, some touching), one tap and one box each, vs the Python reference from the same ONNX files | mask IoU ≥ 0,985 for every tap and box (references made with the float32 decoder) |
 | `ConveyorReplayTest` | the conveyor scene in 3D, each parcel measured from geometry alone and from the tap/box cut-out | geometry alone merges touching parcels; with the cut-out every parcel stays separate (README section below) |
-| `PhotoMeasureTest` | the photo mode's engine on synthetic photos (carton, gallon, sack; 2 photos each, two cartons): sizes from the outline with the true camera height; every size scales with the camera height; the camera height from a floor depth map; a 20 % depth-scale error and the calibration that removes it; an object cut by the edge, a phone held upright; Camera2 lens facts turned upright; combining photos; the calibration factor; then the real MobileSAM-512 and YOLO26n-depth on the photos | cartons within 1 cm (true outline) / 1,8 cm (MobileSAM's); 7 tests pass |
+| `PhotoMeasureTest` | the photo mode's engine on synthetic photos (carton, gallon, sack, phone lying flat, mailer bag; 2 photos each, two cartons and two phones): sizes from the outline with the true camera height; every size scales with the camera height; the camera height from a floor depth map; a 20 % depth-scale error and the calibration that removes it; an object cut by the edge, a phone held upright; Camera2 lens facts turned upright; combining photos; the calibration factor; then the real MobileSAM-512 and YOLO26n-depth on the photos | cartons within 1 cm (true outline) / 1,8 cm (MobileSAM's); 7 tests pass |
 | `FlowTest` | the courier's path through the screens: first open with nothing but the scanner; measure → weight → save → next parcel in the same session → Selesai starts a new one; a second tap on Simpan; re-measuring replaces the old record; Ukur di Hub on a phone without ARCore; a late hub photo after the courier left; a scanned number opens its parcel (or its record if measured already), any content is taken as it is; a data file of an earlier test build still loads; the photo mode: no-AR screen → photo → weight → saved as "Foto", then a calibration sample | 8 flows, records and screen stack as expected |
 | `HardwareScannerTest` | Urovo detection; the three broadcast formats (string, bytes + length, older `urovo.rcv.message`); a broadcast reaching the registered receiver; a scan key press on home opens the parcel, while measuring it does not, a QR link is ignored; keyboard output: fast keys + Enter is a scan, slow keys are not, Back/volume pass through | 5 tests pass |
 | `Dt20Test` | DT20 tools: diagnosis rules (no gyroscope, separate clocks, slow sensors, fixed focus), sweep quality on synthetic sweeps (good, still phone, too short, no motion sensors) and read back from the recorder's file format, size choice, sharpness, cm parsing, the scan key on the test screens, review navigation | 6 tests pass |

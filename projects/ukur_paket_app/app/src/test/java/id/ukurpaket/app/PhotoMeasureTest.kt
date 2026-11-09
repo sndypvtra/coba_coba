@@ -53,7 +53,7 @@ class PhotoMeasureTest {
         return Set(t["kind"]!!.jsonPrimitive.content, t["size_cm"]!!.jsonArray.map { it.jsonPrimitive.double }, k, shots)
     }
 
-    private val sets = listOf("box_3", "box_7", "cylinder_3", "sack_3")
+    private val sets = listOf("box_3", "box_7", "cylinder_3", "sack_3", "phone_3", "phone_7", "mailer_3")
 
     /** A depth map that is exactly the floor at [camH] below the camera (object pixels: anything, they are skipped). */
     private fun floorDepth(k: Intrinsics, up: V3, camH: Float, mask: Mask): DepthMap {
@@ -69,14 +69,23 @@ class PhotoMeasureTest {
         for (name in sets) {
             val s = load(name)
             for (sh in s.shots) {
-                val m = PhotoMeasure.metrology(sh.mask, s.k, sh.up, sh.camH)
+                val trace = ArrayList<String>()
+                val m = PhotoMeasure.metrology(sh.mask, s.k, sh.up, sh.camH, trace = { trace += it })
                 val got = listOf(m.lengthM * 100.0, m.widthM * 100.0, m.heightM * 100.0)
-                println(String.format(Locale.US, "%-26s truth %s -> %.1f x %.1f x %.1f cm, outline IoU %.3f", sh.name,
-                    s.truth.joinToString(" x ") { "%.1f".format(Locale.US, it) }, got[0], got[1], got[2], m.iou))
+                println(String.format(Locale.US, "%-26s truth %s -> %.1f x %.1f x %.1f cm, outline IoU %.3f%s", sh.name,
+                    s.truth.joinToString(" x ") { "%.1f".format(Locale.US, it) }, got[0], got[1], got[2], m.iou, if (m.flat) " (flat)" else ""))
+                if (System.getProperty("ukur.trace") != null || s.kind in setOf("phone", "mailer")) trace.forEach { println("      $it") }
                 when (s.kind) {
                     "box" -> {
                         for (i in 0..2) assertEquals("${sh.name} side $i", s.truth[i], got[i], 1.0)
                         assertTrue("${sh.name} box-like", m.iou >= PhotoMeasure.BOX_IOU)
+                    }
+                    "phone", "mailer" -> {
+                        // lying flat: length and width as a box's; the thickness is read roughly (a few cm at most)
+                        val tol = if (s.kind == "phone") 1.5 else 2.5
+                        for (i in 0..1) assertEquals("${sh.name} side $i", s.truth[i], got[i], tol)
+                        assertTrue("${sh.name} thickness ${got[2]}", got[2] <= s.truth[2] + 2.5)
+                        assertTrue("${sh.name} read as flat", m.flat)
                     }
                     "cylinder" -> {
                         // a round object: rough (its lid's curve hides where the side ends), and flagged as not a box
@@ -135,6 +144,12 @@ class PhotoMeasureTest {
         val rc = runCatching { PhotoMeasure.measure(cut, s.k, sh.up, floorDepth(s.k, sh.up, sh.camH, cut), 1f, calibrated = true) }
         rc.onSuccess { r -> assertFalse(r.ok); assertTrue(r.notes.toString(), r.notes.any { it.startsWith("Paket terpotong") }) }
             .onFailure { assertTrue(it.message.orEmpty().isNotBlank()) }
+        // a phone lying flat (the case seen on the DT50: read 12 cm thick before 0.4.1): flat, and never "Akurat"
+        val p = load("phone_7"); val ps = p.shots[0]
+        val flat = PhotoMeasure.measure(ps.mask, p.k, ps.up, floorDepth(p.k, ps.up, ps.camH, ps.mask), 1f, calibrated = true)
+        assertTrue("${flat.heightCm}", flat.heightCm < 3.0)
+        assertFalse(flat.ok)
+        assertTrue(flat.notes.toString(), flat.notes.any { it.startsWith("Benda pipih") })
         // a phone held upright (no floor below the horizon in view): refused with advice
         val level = V3(0f, -1f, 0f)
         val e = runCatching { PhotoMeasure.measure(sh.mask, s.k, level, floorDepth(s.k, sh.up, sh.camH, sh.mask), 1f, true) }.exceptionOrNull()

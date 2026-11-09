@@ -204,9 +204,14 @@ object PhotoMeasure {
      * The object's box from its outline, given the camera height [hM] above the floor. Returns the size (metres), the
      * box's 8 corners in camera axes, and the IoU of the box drawn with the outline.
      */
-    class Metrology(val lengthM: Float, val widthM: Float, val heightM: Float, val corners: List<V3>, val iou: Float, val sideAlign: Float)
+    class Metrology(val lengthM: Float, val widthM: Float, val heightM: Float, val corners: List<V3>, val iou: Float, val sideAlign: Float,
+                    /** Read as an object lying flat (a phone, a mailer bag): its thickness is the uncertain part. */
+                    val flat: Boolean = false)
 
-    fun metrology(mask: Mask, k: Intrinsics, up: V3, hM: Float, forceH: Float? = null): Metrology {
+    /** Thicknesses tried for an object lying flat (metres). */
+    private val FLAT_H = floatArrayOf(0.005f, 0.01f, 0.015f, 0.02f, 0.03f, 0.04f, 0.05f, 0.06f, 0.08f)
+
+    fun metrology(mask: Mask, k: Intrinsics, up: V3, hM: Float, forceH: Float? = null, trace: ((String) -> Unit)? = null): Metrology {
         // the outline: convex hull of the mask's pixel corners
         val pts = ArrayList<P2>()
         for (y in 0 until mask.h) {
@@ -247,16 +252,23 @@ object PhotoMeasure {
         val bl = nearest(sl?.bot ?: simp[il]); val tl = nearest(sl?.top ?: simp[il])
         val br = nearest(sr?.bot ?: simp[ir]); val tr = nearest(sr?.top ?: simp[ir])
         val p1 = path(bl, br); val p2 = path(br, bl)
-        val lower = if (p1.map { dense[it].b }.average() > p2.map { dense[it].b }.average()) p1 else p2
+        val sideLower = if (p1.map { dense[it].b }.average() > p2.map { dense[it].b }.average()) p1 else p2
         val q1 = path(tl, tr); val q2 = path(tr, tl)
-        val upper = if (q1.map { dense[it].b }.average() < q2.map { dense[it].b }.average()) q1 else q2
+        val sideUpper = if (q1.map { dense[it].b }.average() < q2.map { dense[it].b }.average()) q1 else q2
 
         // plane axes for the footprint
         val ax = (up cross (if (abs(up.x) < 0.9f) V3(1f, 0f, 0f) else V3(0f, 0f, 1f))).unit()
         val ay = (up cross ax).unit()
         val origin = up * -hM
 
-        fun footprint(H: Float): Pair<FloatArray, List<P2>>? {
+        // an object lying flat has no tall sides: what looked like a side is an edge of its top. Its outline splits at its
+        // leftmost and rightmost points instead, the lower part on the floor, the upper part at its (small) thickness
+        val fl0 = dense.indices.minBy { dense[it].a }; val fr0 = dense.indices.maxBy { dense[it].a }
+        val f1 = path(fl0, fr0); val f2 = path(fr0, fl0)
+        val flatLower = if (f1.map { dense[it].b }.average() > f2.map { dense[it].b }.average()) f1 else f2
+        val flatUpper = if (flatLower === f1) f2 else f1
+
+        fun footprint(H: Float, lower: List<Int> = sideLower, upper: List<Int> = sideUpper): Pair<FloatArray, List<P2>>? {
             val q = ArrayList<P2>()
             for (i in lower) onPlane(k, up, dense[i].a, dense[i].b, hM)?.let { p -> val d = p - origin; q += P2(d dot ax, d dot ay) }
             if (hM - H > 0.02f) for (i in upper) onPlane(k, up, dense[i].a, dense[i].b, hM - H)?.let { p ->
@@ -280,16 +292,28 @@ object PhotoMeasure {
         for (s in listOf(sl, sr)) if (s != null && s.hM > 0.005f) cands += s.hM
         if (cands.size == 2) cands += cands.average().toFloat()
         if (forceH != null) { cands.clear(); cands += forceH }
-        if (cands.isEmpty()) throw PhotoFailed("Tinggi objek tidak terbaca: foto dari pojok paket, agak dari atas")
+        if (cands.isEmpty() && forceH != null) throw PhotoFailed("Tinggi objek tidak terbaca: foto dari pojok paket, agak dari atas")
+        val align = listOfNotNull(sl?.align, sr?.align).minOrNull() ?: 0f
         var best: Metrology? = null
         for (H in cands) {
             val f = footprint(H) ?: continue
             val cs = corners(f.second, H)
             val iou = silhouetteIou(cs, k, mask)
-            if (best == null || iou > best.iou) best = Metrology(max(f.first[0], f.first[1]), min(f.first[0], f.first[1]), H, cs, iou,
-                listOfNotNull(sl?.align, sr?.align).minOrNull() ?: 0f)
+            trace?.invoke("upright H %.1f cm -> %.1f x %.1f, IoU %.3f".format(java.util.Locale.US, H * 100, f.first.max() * 100, f.first.min() * 100, iou))
+            if (best == null || iou > best.iou) best = Metrology(max(f.first[0], f.first[1]), min(f.first[0], f.first[1]), H, cs, iou, align)
         }
-        return best ?: throw PhotoFailed("Ukuran tidak terbaca dari foto ini: ulangi dari sudut lain")
+        // the same outline read as an object lying flat: kept when its box fits the outline better
+        if (forceH == null) for (H in FLAT_H) {
+            if (H > hM - 0.1f) break
+            val f = footprint(H, flatLower, flatUpper) ?: continue
+            val cs = corners(f.second, H)
+            val iou = silhouetteIou(cs, k, mask)
+            trace?.invoke("flat H %.1f cm -> %.1f x %.1f, IoU %.3f".format(java.util.Locale.US, H * 100, f.first.max() * 100, f.first.min() * 100, iou))
+            if (best == null || iou > best.iou) best = Metrology(max(f.first[0], f.first[1]), min(f.first[0], f.first[1]), H, cs, iou, align, flat = true)
+        }
+        val b = best ?: throw PhotoFailed("Ukuran tidak terbaca dari foto ini: ulangi dari sudut lain")
+        // a few centimetres high, whichever reading won: a thickness the outline only hints at
+        return if (b.heightM < 0.04f && !b.flat) Metrology(b.lengthM, b.widthM, b.heightM, b.corners, b.iou, b.sideAlign, flat = true) else b
     }
 
     /**
@@ -308,8 +332,11 @@ object PhotoMeasure {
         val met = metrology(mask, k, up, h)
         val notes = ArrayList<String>()
         var conf = 100.0
-        val touches = b[0] <= 1 || b[1] <= 1 || b[2] >= mask.w - 2 || b[3] >= mask.h - 2
-        if (touches) { notes += "Paket terpotong di tepi foto: mundur sedikit supaya paket utuh"; conf -= 35 }
+        // touching (or nearly touching) the picture's edge: part of the parcel may be outside it
+        val margin = max(2, (0.012f * max(mask.w, mask.h)).toInt())
+        val touches = b[0] < margin || b[1] < margin || b[2] >= mask.w - margin || b[3] >= mask.h - margin
+        if (touches) { notes += "Paket terpotong atau terlalu mepet tepi foto: mundur sedikit supaya paket utuh dengan lantai di sekelilingnya"; conf -= 35 }
+        if (met.flat) { notes += "Benda pipih: panjang × lebar terbaca, tebalnya hanya perkiraan (bisa meleset 1–3 cm)"; conf -= 15 }
         val boxLike = met.iou >= BOX_IOU
         if (!boxLike) { notes += "Bentuk tidak seperti kotak: ukuran perkiraan kasar (kotak terluar)"; conf -= 25 }
         conf -= (0.99 - met.iou).coerceAtLeast(0.0) * 150
@@ -323,7 +350,7 @@ object PhotoMeasure {
         val raw = listOf(met.lengthM / scale, met.widthM / scale, met.heightM / scale).map { it * 100.0 }
         val proj = met.corners.flatMap { p -> if (p.z > 0.01f) k.project(p).let { listOf(it.a / k.w, it.b / k.h) } else listOf(-1f, -1f) }
         return PhotoResult(met.lengthM * 100.0, met.widthM * 100.0, met.heightM * 100.0, raw, scale.toDouble(), h.toDouble(), downDeg,
-            met.iou.toDouble(), boxLike, proj, c, ok = calibrated && boxLike && !touches && c >= 75, notes = notes,
+            met.iou.toDouble(), boxLike, proj, c, ok = calibrated && boxLike && !touches && !met.flat && c >= 75, notes = notes,
             floorInliers = fl.inliers, floorTiltDeg = fl.tiltDeg.toDouble())
     }
 

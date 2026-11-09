@@ -1,6 +1,6 @@
 """Synthetic hand-held photos of one object on a floor, for testing the photo mode (UkurPaket 0.4.0).
 
-    python tools/photo/synth_photo.py <out_dir> [box|sack|cylinder] [--seed N] [--n 3]
+    python tools/photo/synth_photo.py <out_dir> [box|sack|cylinder|phone|mailer] [--seed N] [--n 3]
 
 Each photo is what the photo mode receives on the phone: an upright 480 x 640 picture, the camera's intrinsics, and the
 'up' direction in camera axes (from the accelerometer while the phone is still), plus what only a test knows: the true
@@ -79,14 +79,24 @@ def render(sc, wall, p, r_wc, rng):
 def main(out, kind="box", seed=0, n=3):
     rng = np.random.default_rng(seed)
     out = Path(out); out.mkdir(parents=True, exist_ok=True)
-    sc = ss.Scene(kind, rng)
+    # flat objects (0.4.1): a phone lying on the floor, photographed close; a plastic mailer bag 3 cm thick
+    flat = {"phone": ((0.15, 0.072, 0.008), (40, 40, 45), (0.35, 0.6)), "mailer": ((0.32, 0.24, 0.03), (150, 150, 155), (0.6, 1.1))}
+    sc = ss.Scene("box" if kind in flat else kind, rng)
+    cam_range = (0.75, 1.15)
+    if kind in flat:
+        size, colour, cam_range = flat[kind]
+        sc.size = np.array(size)
+        noise = cv2.GaussianBlur(rng.normal(0, 1, (1024, 1024)).astype(np.float32), (0, 0), 3) * 10
+        sc.tex = np.clip(np.array(colour, np.float32) + noise[..., None], 0, 255).astype(np.uint8)
+        if kind == "mailer":                                             # its shipping label
+            cv2.rectangle(sc.tex, (380, 380), (640, 640), (245, 245, 245), -1)
     wall = wall_texture(rng)
     truth = sc.truth()
-    centre = np.array([0.02, -0.01, 0.08])
+    centre = np.array([0.02, -0.01, min(0.08, sc.size[2] / 2) if kind in flat else 0.08])
     shots = []
     for i in range(n):
         az = np.radians(-130 + 80 * i / max(1, n - 1) + rng.normal(0, 6))   # round the object, near its corners
-        cam_h = rng.uniform(0.75, 1.15)
+        cam_h = rng.uniform(*cam_range)
         down = np.radians(rng.uniform(38, 62))
         dist = (cam_h - centre[2]) / np.tan(down)
         p = np.array([dist * np.cos(az), dist * np.sin(az), cam_h])
