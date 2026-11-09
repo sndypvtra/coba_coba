@@ -106,7 +106,7 @@ pick, timings, the result, the tape size when typed), `evidence.jpg` once used. 
 
 JDK 17+ and the Android SDK (platform 35). AGP 8.7.3, Kotlin 2.1.0, Compose BOM 2024.12.01, ARCore 1.47.0,
 ONNX Runtime 1.20.0, minSdk 26, targetSdk 35, arm64-v8a + armeabi-v7a. The test APK is
-`release/UkurPaket-0.4.0-uji.apk` (about 75 MB; the photo mode's depth model is 20 MB of it; MobileSAM is two models: the 1024 one for ARCore phones, encoder float16
+`release/UkurPaket-0.4.0-uji.apk` (72 MB; the photo mode's depth model is 20 MB of it; MobileSAM is two models: the 1024 one for ARCore phones, encoder float16
 13,8 MB + decoder with int8 weights 4,6 MB, made by `tools/export_sam.py`, the int8 decoder's masks within IoU 0,989 of
 float32; and the 512 one for PDAs, encoder float32 28 MB + decoder 4,7 MB, made by `tools/export_sam512.py`). It installs directly (allow "install unknown apps"); for the Play Store use your own key.
 
