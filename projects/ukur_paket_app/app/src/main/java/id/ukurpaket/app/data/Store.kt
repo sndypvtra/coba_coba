@@ -17,6 +17,8 @@ enum class Mode(val label: String, val method: String) {
     NONE("Tidak Didukung", "Tidak diukur"),
     /** Phones without ARCore: a sweep round the object, camera + motion sensors, solved on the phone. */
     SWEEP("Sapuan", "Sapuan kamera + sensor gerak"),
+    /** Phones without ARCore (0.4.0): one or more photos, the object's outline + the camera height from an AI depth model. */
+    PHOTO("Foto", "Foto kamera + AI depth"),
 }
 enum class Status(val label: String) { OK("Akurat"), CHECK("Perlu Dicek"), HUB("Ukur di Hub") }
 
@@ -62,6 +64,8 @@ data class Settings(
     val courier: String = "Andi",
     /** MobileSAM-512 through XNNPACK: set by the diagnostics' timing when it is faster on this phone. */
     val samXnnpack: Boolean = false,
+    /** The photo mode's calibration on this phone: photos of cartons with their tape-measure size. */
+    val photoCal: List<id.ukurpaket.app.photo.CalSample> = emptyList(),
 )
 
 @Serializable
@@ -82,6 +86,8 @@ class Store(private val ctx: Context) {
 
     val photosDir get() = File(ctx.filesDir, "photos").apply { mkdirs() }
     val recordingsDir get() = File(ctx.filesDir, "recordings").apply { mkdirs() }
+    /** Photo-mode measurements (photos, masks, depth maps, records), one folder per object. */
+    val photoSessionsDir get() = File(ctx.filesDir, "photo_sessions").apply { mkdirs() }
     /** DT20 sweep recordings (camera frames + motion sensors), one folder each. */
     val dtDir get() = File(ctx.filesDir, "dt_sessions").apply { mkdirs() }
 

@@ -807,10 +807,12 @@ fun DtHomeCard(model: AppModel) {
             IconTile("biotech", C.brand, C.brandL)
             Column(Modifier.weight(1f).padding(start = 12.dp)) {
                 T("Uji tanpa ARCore", 15.sp, FontWeight.SemiBold)
-                T("Diagnostik HP dan perekam sapuan objek (klik atau tarik kotak)", 12.5.sp, color = C.t2)
+                T("Uji mode foto dengan kardus yang sudah diukur meteran, diagnostik HP, dan perekam sapuan", 12.5.sp, color = C.t2)
             }
         }
         Spacer(Modifier.height(10.dp))
+        PrimaryButton("Uji mode foto", "photo_camera", Modifier.fillMaxWidth()) { model.startPhoto(PhotoPurpose.TEST) }
+        Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             SecondaryButton("Diagnostik", "monitor_heart", Modifier.weight(1f)) { model.go(Screen.Diag) }
             SecondaryButton("Perekam", "videocam", Modifier.weight(1f)) { model.go(Screen.DtRecord) }

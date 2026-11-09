@@ -35,6 +35,48 @@ class FlowTest {
 
     private val result = ResultData(27.0, 15.0, 6.0, 92, Status.OK, 8.0, null, null, Mode.AR_FULL)
 
+    /** The photo mode on a phone without ARCore: no-AR screen -> photo -> weight -> saved as "Foto"; then the calibration. */
+    @Test fun photoModeThenCalibration() {
+        val m = model(ArState.UNSUPPORTED)
+        m.openResi("TSA-90100000201")
+        assertEquals(Screen.NoAr, m.screen)
+        m.startPhoto(id.ukurpaket.app.ui.PhotoPurpose.PARCEL)
+        assertEquals(Screen.Photo, m.screen)
+        val dir = m.photo.dir!!
+        assertTrue(dir.isDirectory)
+        val pic = android.graphics.Bitmap.createBitmap(480, 640, android.graphics.Bitmap.Config.ARGB_8888)
+        val r = id.ukurpaket.app.photo.PhotoResult(40.2, 30.1, 20.3, listOf(46.2, 34.6, 23.3), 0.87, 1.1, 46.0, 0.97, true,
+            List(16) { 0.5f }, 88, true, emptyList())
+        m.photo.shots.add(id.ukurpaket.app.ui.PhotoShotUi(0, pic, id.ukurpaket.app.photo.Intrinsics(420f, 420f, 240f, 320f, 480, 640),
+            id.ukurpaket.app.measure.V3(0f, -0.7f, -0.7f), 46f, true, result = r))
+        m.photo.current = 0
+        assertEquals(40.2, m.photo.combined!!.lengthCm, 1e-9)
+        m.photo.use()
+        val t0 = System.currentTimeMillis()
+        while (m.screen != Screen.Weight && System.currentTimeMillis() - t0 < 10_000) {
+            org.robolectric.shadows.ShadowLooper.idleMainLooper(); Thread.sleep(20)
+        }
+        assertEquals(Screen.Weight, m.screen)
+        assertEquals(listOf(Screen.Home, Screen.Weight), m.stack.toList())     // the no-AR and photo screens are left
+        assertEquals(Mode.PHOTO, m.draft!!.result!!.mode)
+        m.save(2.0)
+        val saved = m.store.measurements.value.single()
+        assertEquals(Mode.PHOTO, saved.mode)
+        assertEquals(Status.OK, saved.status)
+        assertEquals(dir.path, saved.recording)
+        assertEquals(40.2 * 30.1 * 20.3 / 6000, saved.volumetricKg, 1e-9)
+
+        // calibration: the size read before calibration against the tape size
+        m.startPhoto(id.ukurpaket.app.ui.PhotoPurpose.CALIBRATE)
+        m.photo.shots.add(id.ukurpaket.app.ui.PhotoShotUi(0, pic, id.ukurpaket.app.photo.Intrinsics(420f, 420f, 240f, 320f, 480, 640),
+            id.ukurpaket.app.measure.V3(0f, -0.7f, -0.7f), 46f, true, result = r.copy(lengthCm = 46.2, widthCm = 34.6, heightCm = 23.3, scale = 1.0)))
+        m.photo.tape = listOf("30", "40", "20")                                // long and short sides in any order
+        assertTrue(m.photo.saveCalibration())
+        val f = id.ukurpaket.app.photo.Calibration.factor(m.store.settings.value.photoCal)!!
+        assertEquals(listOf(40 / 46.2, 30 / 34.6, 20 / 23.3).sorted()[1], f, 1e-9)
+        assertEquals(1, m.store.settings.value.photoCal.size)
+    }
+
     @Test fun firstOpenHasNothingButTheScanner() {
         val m = model()
         assertTrue(m.store.measurements.value.isEmpty())

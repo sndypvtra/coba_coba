@@ -74,6 +74,7 @@ private fun ModeChip(mode: Mode) = when (mode) {
     Mode.AR_BASIC -> Chip(mode.label, Tone.BRAND, "view_in_ar")
     Mode.NONE -> Chip(mode.label, Tone.WARN, "error")
     Mode.SWEEP -> Chip(mode.label, Tone.BRAND, "videocam")
+    Mode.PHOTO -> Chip(mode.label, Tone.BRAND, "photo_camera")
 }
 
 @Composable
@@ -117,7 +118,7 @@ fun StartScreen(model: AppModel, activity: Activity) {
             T(when (c.mode) {
                 Mode.AR_FULL -> "HP ini siap mengukur: lantai, paket, dan jarak dibaca langsung oleh kamera."
                 Mode.AR_BASIC -> "HP ini bisa mengukur tanpa sensor jarak. Hasilnya lebih sering Perlu Dicek."
-                Mode.NONE, Mode.SWEEP -> noArText(c.arcore)
+                Mode.NONE, Mode.SWEEP, Mode.PHOTO -> noArText(c.arcore)
             }, 13.5.sp, color = C.t2)
         }
         Spacer(Modifier.height(4.dp))
@@ -547,7 +548,9 @@ fun SettingsScreen(model: AppModel, activity: Activity) {
                     }
                 }
             }
-            Card {
+            // a phone without ARCore measures with photos: their calibration first; the AR scan recording does not apply
+            if (c.mode == Mode.NONE && c.arcore != ArState.CHECKING) PhotoSettingsCard(model, activity)
+            if (c.mode != Mode.NONE) Card {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         T("Rekam Data Scan (uji coba)", 15.sp, FontWeight.SemiBold)
@@ -557,6 +560,7 @@ fun SettingsScreen(model: AppModel, activity: Activity) {
                     Switch(s.record, { v -> model.store.update { it.copy(record = v) } })
                 }
             }
+            if (c.mode != Mode.NONE || c.arcore == ArState.CHECKING) PhotoSettingsCard(model, activity)
             DtSettingsCard(model, activity)
             Card {
                 T("Data", 15.sp, FontWeight.SemiBold)
@@ -581,7 +585,7 @@ fun SettingsScreen(model: AppModel, activity: Activity) {
 private fun noArText(st: ArState) = when (st) {
     ArState.NEEDS_INSTALL -> "Komponen AR dari Google belum terpasang. Pasang sekali lewat Play Store, lalu kembali ke sini."
     ArState.INSTALL_DECLINED -> "Pemasangan komponen AR dibatalkan. Tanpa komponen itu, HP ini belum bisa mengukur paket."
-    else -> "HP ini tidak punya kamera AR. Paket diukur dengan sapuan: pilih paket di layar, kelilingi pelan, ukuran dihitung di HP. Atau tandai Ukur di Hub."
+    else -> "HP ini tidak punya kamera AR. Paket diukur dengan foto: foto dari pojok paket, ketuk paketnya, ukuran dan berat volumetrik dihitung di HP. Atau tandai Ukur di Hub."
 }
 
 // ------------------------------------------------------------------ phone without ARCore
@@ -606,7 +610,8 @@ fun NoArScreen(model: AppModel, activity: Activity) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (c.arcore == ArState.NEEDS_INSTALL || c.arcore == ArState.INSTALL_DECLINED)
                 PrimaryButton("Pasang Komponen AR", "download", Modifier.fillMaxWidth()) { model.install(activity) }
-            PrimaryButton("Ukur dengan sapuan", "videocam", Modifier.fillMaxWidth()) { model.go(Screen.DtRecord) }
+            PrimaryButton("Ukur dengan foto", "photo_camera", Modifier.fillMaxWidth()) { model.startPhoto(PhotoPurpose.PARCEL) }
+            SecondaryButton("Ukur dengan sapuan (rekaman)", "videocam", Modifier.fillMaxWidth()) { model.go(Screen.DtRecord) }
             SecondaryButton("Ukur di Hub", "warehouse", Modifier.fillMaxWidth()) { model.markHub("HP kurir belum mendukung kamera AR", null) }
         }
     }

@@ -75,6 +75,8 @@ sealed class Screen {
     object Diag : Screen()
     object DtRecord : Screen()
     data class DtReview(val dir: String) : Screen()
+    /** The photo mode (0.4.0): photos of the object, picked and measured on the phone; its purpose is in [AppModel.photo]. */
+    object Photo : Screen()
 }
 
 /** What is being measured right now. */
@@ -108,6 +110,12 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
     private var engineSession: String? = null
 
     init { if (checkDevice) viewModelScope.launch { check() } }
+
+    /** The photo mode's photos and work. */
+    val photo = PhotoFlow(this)
+
+    /** Opens the photo mode: for the parcel being measured, a test against a tape measure, or the calibration. */
+    fun startPhoto(p: PhotoPurpose) { photo.start(p); go(Screen.Photo) }
 
     /**
      * The model a phone uses, up front so the first touch is answered at once: the 1024 one with ARCore (~100 MB of
@@ -252,6 +260,7 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
         segmenter = null
         if (sam != null) Thread { e?.awaitWorker(); sam.close() }.start()
         samLight?.let { l -> samLight = null; Thread { Thread.sleep(3000); l.close() }.start() }   // after a live run still in progress
+        photo.close()
     }
 
     private suspend fun check() {
@@ -408,7 +417,8 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
             HardwareScanner.looksLikeQr(code) -> toast("Itu kode QR. Scan barcode garis (resi) di label.")
             takesHardwareScan -> openResi(code)
             screen == Screen.Start -> toast("Tunggu cek HP selesai, lalu scan lagi")
-            screen == Screen.Diag || screen == Screen.DtRecord || screen is Screen.DtReview -> toast("Scanner tidak dipakai di layar uji")
+            screen == Screen.Diag || screen == Screen.DtRecord || screen is Screen.DtReview || (screen == Screen.Photo && draft == null) ->
+                toast("Scanner tidak dipakai di layar uji")
             else -> toast("Selesaikan paket ${draft?.resi ?: "ini"} dulu, lalu scan berikutnya")
         }
     }
@@ -452,9 +462,9 @@ class AppModel @JvmOverloads constructor(app: Application, checkDevice: Boolean 
     }
 
     /** Drops the measuring screens (camera / no-AR / weight, and the prep page under them) from the stack. */
-    private fun leaveMeasuring() {
+    internal fun leaveMeasuring() {
         while (stack.size > 1 && stack.last().let { it == Screen.Measure || it == Screen.NoAr || it == Screen.Weight || it == Screen.Prep ||
-                it == Screen.DtRecord || it is Screen.DtReview })
+                it == Screen.DtRecord || it is Screen.DtReview || it == Screen.Photo })
             stack.removeAt(stack.size - 1)
     }
 
@@ -538,6 +548,7 @@ fun App(model: AppModel, activity: Activity) {
                     Screen.Diag -> DiagScreen(model, activity)
                     Screen.DtRecord -> DtRecordScreen(model, activity)
                     is Screen.DtReview -> DtReviewScreen(model, activity, s.dir)
+                    Screen.Photo -> PhotoScreen(model, activity)
                     Screen.Measure -> Unit
                 }
             }

@@ -94,7 +94,7 @@ class ScreenshotTest {
         m.caps = when (mode) {
             Mode.AR_FULL -> DeviceCaps(ArState.READY, true, "samsung SM-A356E")
             Mode.AR_BASIC -> DeviceCaps(ArState.READY, false, "samsung SM-A245F")
-            Mode.NONE, Mode.SWEEP -> DeviceCaps(ArState.UNSUPPORTED, false, "samsung SM-A055F")
+            Mode.NONE, Mode.SWEEP, Mode.PHOTO -> DeviceCaps(ArState.UNSUPPORTED, false, "samsung SM-A055F")
         }
         m.samState = SamState.READY
         return m
@@ -181,6 +181,57 @@ class ScreenshotTest {
         val saved = measured("TSA-90100000104", 27.0, 15.0, 6.0, 0.10)
         m.store.save(saved)
         screen("26_tersimpan_layar_dt50", m, Screen.Saved(saved.id))
+    }
+
+    /**
+     * The photo mode (0.4.0) on the DT50's screen: the camera with its angle and stillness chips, a photo waiting for the
+     * tap, and the result of the real engine on a synthetic photo (true mask, the floor at the true camera height, a
+     * calibrated phone): as a parcel, as a test with the tape size, and as a calibration photo; then the settings card.
+     */
+    @Test @Config(sdk = [35], qualifiers = "w360dp-h720dp-xhdpi") fun photoModeOnSmallScreen() {
+        val dir = File("src/test/resources/photo/box_3")
+        val pic = BitmapFactory.decodeFile(File(dir, "photo_00.jpg").path)
+        val t = Json.parseToJsonElement(File(dir, "truth.json").readText()).jsonObject
+        val p0 = t["photos"]!!.jsonArray[0].jsonObject
+        val upL = p0["up"]!!.jsonArray.map { it.jsonPrimitive.float }; val up = V3(upL[0], upL[1], upL[2])
+        val camH = p0["camera_height_m"]!!.jsonPrimitive.float
+        val k = id.ukurpaket.app.photo.Intrinsics(420f, 420f, 240f, 320f, 480, 640)
+        val mb = BitmapFactory.decodeFile(File(dir, "mask_00.png").path)
+        val mpx = IntArray(480 * 640).also { mb.getPixels(it, 0, 480, 0, 0, 480, 640) }
+        val mask = id.ukurpaket.app.measure.Mask(480, 640, BooleanArray(mpx.size) { (mpx[it] and 255) > 127 })
+        val depth = id.ukurpaket.app.photo.DepthMap(480, 640, FloatArray(480 * 640) { i ->
+            val den = -(k.ray(i % 480 + 0.5f, i / 480 + 0.5f) dot up); if (den > 1e-3f) camH / den else 40f })
+        val r = id.ukurpaket.app.photo.PhotoMeasure.measure(mask, k, up, depth, 1f, calibrated = true)
+        println("photo mode screenshot: ${r.lengthCm} x ${r.widthCm} x ${r.heightCm}, ok ${r.ok}, ${r.notes}")
+        val tint = ObjectPick.tint(mask)
+        val outline = mask.outline().flatMap { listOf(it.a / 480f, it.b / 640f) }
+        val live = id.ukurpaket.app.photo.PhotoCamera.Live(46f, true, 120.0, "1280×960")
+        shot("40_foto_kamera_dt50") { Box(Modifier.fillMaxSize().background(C.bg)) {
+            id.ukurpaket.app.ui.PhotoCameraChrome("Ukur dengan foto", "Resi TSA-90100000104 · foto dari pojok paket", live, false, null, emptyList(), {}, {}, {}) {
+                Image(pic.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) } } }
+        shot("41_foto_kamera_miring_dt50") { Box(Modifier.fillMaxSize().background(C.bg)) {
+            id.ukurpaket.app.ui.PhotoCameraChrome("Ukur dengan foto", "Resi TSA-90100000104 · 1 foto", live.copy(downDeg = 14f, still = false), true, null,
+                listOf(id.ukurpaket.app.ui.previewShot(pic, r, tint = tint, outline = outline)), {}, {}, {}) {
+                Image(pic.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) } } }
+        fun view(name: String, purpose: id.ukurpaket.app.ui.PhotoPurpose, shotUi: id.ukurpaket.app.ui.PhotoShotUi, combined: id.ukurpaket.app.photo.PhotoResult?,
+                 tape: List<String> = listOf("", "", ""), calibrated: Boolean = true) =
+            shot(name) { Box(Modifier.fillMaxSize().background(C.bg)) {
+                id.ukurpaket.app.ui.PhotoShotView(purpose, shotUi, listOf(shotUi), combined, "Resi TSA-90100000104 · 1 foto", 6000, calibrated,
+                    if (calibrated) 0.87 else null, if (calibrated) 3 else 0, tape, isParcel = purpose == id.ukurpaket.app.ui.PhotoPurpose.PARCEL,
+                    {}, { _, _ -> }, {}, {}, {}, {}, {}, {}, {}) } }
+        view("42_foto_pilih_paket_dt50", id.ukurpaket.app.ui.PhotoPurpose.PARCEL, id.ukurpaket.app.ui.previewShot(pic, stage = "Membaca foto…"), null)
+        view("43_foto_hasil_dt50", id.ukurpaket.app.ui.PhotoPurpose.PARCEL, id.ukurpaket.app.ui.previewShot(pic, r, tint = tint, outline = outline), r)
+        val raw = r.copy(lengthCm = r.rawCm[0], widthCm = r.rawCm[1], heightCm = r.rawCm[2], ok = false, notes = listOf("Mode foto belum dikalibrasi di HP ini: angka bisa meleset jauh"))
+        view("44_foto_uji_meteran_dt50", id.ukurpaket.app.ui.PhotoPurpose.TEST, id.ukurpaket.app.ui.previewShot(pic, raw, tint = tint, outline = outline), raw,
+            listOf("40", "30", "20"), calibrated = false)
+        view("45_foto_kalibrasi_dt50", id.ukurpaket.app.ui.PhotoPurpose.CALIBRATE, id.ukurpaket.app.ui.previewShot(pic, raw, tint = tint, outline = outline), raw,
+            listOf("40", "30", ""), calibrated = false)
+        val m = model(Mode.NONE)
+        m.store.update { it.copy(photoCal = listOf(id.ukurpaket.app.photo.CalSample(listOf(46.0, 34.5, 23.0), listOf(40.0, 30.0, 20.0)),
+            id.ukurpaket.app.photo.CalSample(listOf(36.0, 28.0, 17.0), listOf(31.0, 24.5, 15.0)))) }
+        screen("46_pengaturan_kalibrasi_foto_dt50", m, Screen.Settings)
+        m.draft = Draft("TSA-90100000104", ResultData(r.lengthCm, r.widthCm, r.heightCm, r.confidence, Status.OK, 0.0, null, null, Mode.PHOTO))
+        screen("47_berat_dari_foto_dt50", m, Screen.Weight)
     }
 
     /** The sweep measured on the phone path (Android decoding, the Kotlin engine), the result screen, then weight and save. */
