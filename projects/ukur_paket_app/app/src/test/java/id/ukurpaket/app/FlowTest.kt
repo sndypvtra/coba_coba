@@ -70,11 +70,26 @@ class FlowTest {
         m.startPhoto(id.ukurpaket.app.ui.PhotoPurpose.CALIBRATE)
         m.photo.shots.add(id.ukurpaket.app.ui.PhotoShotUi(0, pic, id.ukurpaket.app.photo.Intrinsics(420f, 420f, 240f, 320f, 480, 640),
             id.ukurpaket.app.measure.V3(0f, -0.7f, -0.7f), 46f, true, result = r.copy(lengthCm = 46.2, widthCm = 34.6, heightCm = 23.3, scale = 1.0)))
+        val save = id.ukurpaket.app.ui.PhotoFlow.CalSave.SAVED
+        m.photo.tape = listOf("30", "40", "")
+        assertEquals(id.ukurpaket.app.ui.PhotoFlow.CalSave.INCOMPLETE, m.photo.saveCalibration())
+        // a tape size the photo's shape does not match (here the height): asked first, saved only when confirmed
+        m.photo.tape = listOf("30", "40", "40")
+        assertEquals(id.ukurpaket.app.ui.PhotoFlow.CalSave.MISMATCH, m.photo.saveCalibration())
+        assertTrue(m.store.settings.value.photoCal.isEmpty())
         m.photo.tape = listOf("30", "40", "20")                                // long and short sides in any order
-        assertTrue(m.photo.saveCalibration())
-        val f = id.ukurpaket.app.photo.Calibration.factor(m.store.settings.value.photoCal)!!
+        assertEquals(save, m.photo.saveCalibration())
+        val f = id.ukurpaket.app.photo.Calibration.factor(m.photo.samples)!!
         assertEquals(listOf(40 / 46.2, 30 / 34.6, 20 / 23.3).sorted()[1], f, 1e-9)
         assertEquals(1, m.store.settings.value.photoCal.size)
+        assertEquals(id.ukurpaket.app.photo.DepthModel.ID, m.store.settings.value.photoCal[0].model)
+        m.photo.tape = listOf("30", "40", "40")
+        assertEquals(save, m.photo.saveCalibration(force = true))
+        assertEquals(2, m.photo.samples.size)
+        // the parcel photos now use this phone's factor; before any calibration, the model's default
+        m.startPhoto(id.ukurpaket.app.ui.PhotoPurpose.PARCEL)
+        assertEquals(id.ukurpaket.app.photo.Calibration.factor(m.photo.samples)!!, m.photo.scale, 1e-9)
+        assertTrue(m.photo.calibrated)
     }
 
     @Test fun firstOpenHasNothingButTheScanner() {

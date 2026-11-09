@@ -90,13 +90,16 @@ object PhotoFiles {
             }
             c.drawPath(p, Paint().apply { color = 0x55ED0677; style = Paint.Style.FILL; isAntiAlias = true })
         }
-        if (corners.size == 16 && corners.none { it < -0.5f }) {
+        if (corners.size == 16) {
             val paint = Paint().apply { color = 0xFF3CDC3C.toInt(); strokeWidth = 3.5f * s; isAntiAlias = true; strokeCap = Paint.Cap.ROUND }
             fun pt(i: Int) = floatArrayOf(corners[2 * i] * w, corners[2 * i + 1] * h)
-            for ((a, e) in EDGES) { val p = pt(a); val q = pt(e); c.drawLine(p[0], p[1], q[0], q[1], paint) }
+            for ((a, e) in EDGES) { if (!drawable(corners, a) || !drawable(corners, e)) continue; val p = pt(a); val q = pt(e); c.drawLine(p[0], p[1], q[0], q[1], paint) }
         }
         saveJpeg(b, out, 85)
     }
+
+    /** Corner [i] of PhotoResult.corners is in front of the camera (outside the picture is fine: the drawing clips). */
+    fun drawable(corners: List<Float>, i: Int) = corners[2 * i] > PhotoMeasure.BEHIND / 2 && corners[2 * i + 1] > PhotoMeasure.BEHIND / 2
 
     /** The 12 edges of the box, as indices into its 8 corners (floor 0-3, top 4-7). */
     val EDGES = listOf(0 to 1, 1 to 2, 2 to 3, 3 to 0, 4 to 5, 5 to 6, 6 to 7, 7 to 4, 0 to 4, 1 to 5, 2 to 6, 3 to 7)

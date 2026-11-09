@@ -8,10 +8,11 @@ import java.nio.FloatBuffer
 import kotlin.math.min
 
 /**
- * YOLO26n-depth (Ultralytics, AGPL-3.0) through ONNX Runtime: a picture -> metres along the optical axis per pixel.
- * Preprocessing as Ultralytics' depth predictor: the picture stretched to the model's input (here 480 x 640, the
- * upright phone picture's own shape), RGB / 255, no mean or std. Android-free (the PC tests run it too).
- * Model: tools/export_depth.py.
+ * Depth Anything V2 Small, metric indoor (Apache-2.0), int8, through ONNX Runtime: an upright picture -> metres along
+ * the optical axis per pixel. Preprocessing as the model's own: the picture resized to the input (280 x 378, the
+ * upright 3:4 picture's shape), RGB / 255, then ImageNet mean and std. Android-free (the PC tests run it too).
+ * Model and why this one: tools/export_depth.py (0.4.0-0.4.1 used YOLO26n-depth: 11,7 % median camera-height error
+ * after calibration on real photos, against 7,7 % for this one).
  */
 class DepthModel(model: ByteArray, threads: Int = 4) : AutoCloseable {
     private val env = OrtEnvironment.getEnvironment()
@@ -38,7 +39,7 @@ class DepthModel(model: ByteArray, threads: Int = 4) : AutoCloseable {
                     val sh = 16 - 8 * c
                     val v = ((p00 shr sh) and 255) * (1 - ax) * (1 - ay) + ((p01 shr sh) and 255) * ax * (1 - ay) +
                         ((p10 shr sh) and 255) * (1 - ax) * ay + ((p11 shr sh) and 255) * ax * ay
-                    buf[c * plane + y * inW + x] = v / 255f
+                    buf[c * plane + y * inW + x] = (v / 255f - MEAN[c]) / STD[c]
                 }
             }
         }
@@ -56,5 +57,16 @@ class DepthModel(model: ByteArray, threads: Int = 4) : AutoCloseable {
 
     override fun close() { session.close(); opts.close() }
 
-    companion object { const val ASSET = "depth/yolo26n-depth-640x480.onnx" }
+    companion object {
+        const val ASSET = "depth/dav2s-metric-indoor-378x280-int8.onnx"
+        /** Calibration samples belong to the model they were made with. */
+        const val ID = "dav2s-metric-indoor-378x280-int8"
+        /**
+         * Scale used until the phone is calibrated: on real upright photos (NYUv2 test, tools/photo/bench_depth_nyu.py)
+         * this model reads the camera 1,21x too high above the floor.
+         */
+        const val DEFAULT_SCALE = 1f / 1.21f
+        private val MEAN = floatArrayOf(0.485f, 0.456f, 0.406f)
+        private val STD = floatArrayOf(0.229f, 0.224f, 0.225f)
+    }
 }

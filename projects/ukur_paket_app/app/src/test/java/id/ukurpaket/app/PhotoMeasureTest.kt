@@ -191,20 +191,27 @@ class PhotoMeasureTest {
         assertEquals(1 / 1.1, Calibration.factor(s)!!, 1e-9)
         assertEquals(0.0, Calibration.spread(s), 1e-9)
         assertEquals(null, Calibration.factor(emptyList()))
+        assertEquals(1.0, Calibration.mismatch(s[0]), 1e-9)
+
+        // the 90 x 30 x 16 box read 263 x 130 x 5: the three ratios disagree, so the photo read the shape wrong
+        val wrong = CalSample(listOf(263.0, 130.0, 5.0), listOf(90.0, 30.0, 16.0), model = DepthModel.ID)
+        assertTrue(Calibration.mismatch(wrong) > Calibration.MISMATCH)
+        // a sample made with another depth model is not used with this one
+        assertEquals(listOf(wrong), Calibration.current(s + wrong))
     }
 
-    /** The real models on the synthetic photos: MobileSAM-512 cuts the object from its box, YOLO26n-depth gives the height. */
+    /** The real models on the synthetic photos: MobileSAM-512 cuts the object from its box, Depth Anything V2 gives the height. */
     @Test fun withTheRealModels() {
         val sam = Segmenter(File("src/main/assets/sam/encoder512.onnx").readBytes(), File("src/main/assets/sam/decoder512.onnx").readBytes())
         val depth = DepthModel(File("src/main/assets/${DepthModel.ASSET}").readBytes())
-        assertEquals(480, depth.inW); assertEquals(640, depth.inH)
+        assertEquals(280, depth.inW); assertEquals(378, depth.inH)
         sam.use { depth.use {
             for (name in sets) {
                 val s = load(name)
                 for (sh in s.shots) {
                     val img = sh.argb
                     val t0 = System.nanoTime(); val d = depth.run(img.px, img.w, img.h); val ms = (System.nanoTime() - t0) / 1_000_000
-                    assertEquals(480, d.w); assertEquals(640, d.h)
+                    assertEquals(280, d.w); assertEquals(378, d.h)
                     assertTrue(d.z.all { it.isFinite() && it > 0f })
                     val b = sh.box
                     val pad = 6f

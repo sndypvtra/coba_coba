@@ -32,8 +32,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
@@ -64,7 +66,9 @@ import androidx.compose.ui.viewinterop.AndroidView
 import id.ukurpaket.app.data.cm
 import id.ukurpaket.app.data.id
 import id.ukurpaket.app.dt.ObjectPick
+import id.ukurpaket.app.photo.CalSample
 import id.ukurpaket.app.photo.Calibration
+import id.ukurpaket.app.photo.DepthModel
 import id.ukurpaket.app.photo.PhotoCamera
 import id.ukurpaket.app.photo.PhotoFiles
 import id.ukurpaket.app.photo.PhotoResult
@@ -182,8 +186,15 @@ internal fun PhotoCameraChrome(title: String, subtitle: String, live: PhotoCamer
 @Composable
 private fun PhotoShotChrome(model: AppModel, f: PhotoFlow, shot: PhotoShotUi, subtitle: String, activity: Activity) {
     val settings by model.store.settings.collectAsState()
+    val samples = Calibration.current(settings.photoCal)
+    var mismatch by remember { mutableStateOf<CalSample?>(null) }
+    fun save(force: Boolean) = when (f.saveCalibration(force)) {
+        PhotoFlow.CalSave.SAVED -> model.back()
+        PhotoFlow.CalSave.MISMATCH -> mismatch = f.pendingSample()
+        PhotoFlow.CalSave.INCOMPLETE -> model.toast("Isi P × L × T meteran dulu")
+    }
     PhotoShotView(f.purpose, shot, f.shots, f.combined, subtitle, settings.divisor, f.calibrated,
-        Calibration.factor(settings.photoCal), settings.photoCal.size, f.tape,
+        Calibration.factor(samples), samples.size, f.tape,
         isParcel = model.draft != null && f.purpose == PhotoPurpose.PARCEL,
         onBack = { model.back() },
         onPick = { t, b -> f.pick(shot.index, t, b) },
@@ -192,12 +203,22 @@ private fun PhotoShotChrome(model: AppModel, f: PhotoFlow, shot: PhotoShotUi, su
         onRetake = { f.remove(shot.index); f.current = null },
         onTape = { f.tape = it },
         onUse = { f.use() },
-        onSaveCal = { if (f.saveCalibration()) model.back() },
+        onSaveCal = { save(force = false) },
         onShare = {
             f.saveTape()
             val d = f.dir
             if (d != null) model.shareFile(activity, "application/zip", "Bagikan data mode foto") { model.zip(listOf(d), "foto_${d.name}.zip") }
         })
+    mismatch?.let { s ->
+        val r = s.ratios()
+        AlertDialog(onDismissRequest = { mismatch = null },
+            title = { T("Bentuk terbaca beda dengan meteran", 18.sp, FontWeight.SemiBold) },
+            text = { T("Meteran ÷ terbaca: " + listOf("P", "L", "T").zip(r).joinToString(" · ") { (l, v) -> "$l ×${v.id(2)}" } +
+                ". Kalau fotonya benar, ketiganya hampir sama. Beda sejauh ini artinya foto ini salah membaca bentuk kardus, " +
+                "jadi faktornya ikut salah. Lebih baik foto ulang: kardus utuh di foto, dari pojoknya, agak dari atas.", color = C.t2) },
+            confirmButton = { TextButton(onClick = { mismatch = null; f.remove(shot.index); f.current = null }) { T("Foto ulang", weight = FontWeight.SemiBold, color = C.brandD) } },
+            dismissButton = { TextButton(onClick = { mismatch = null; save(force = true) }) { T("Simpan tetap", color = C.t2) } })
+    }
 }
 
 internal enum class PhotoPick { TAP, BOX }
@@ -217,6 +238,8 @@ internal fun PhotoShotView(
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             // with a size, the size comes first (a small screen shows it without scrolling) and the photo below it
             if (combined != null) PhotoResultCard(purpose, combined, shots.mapNotNull { it.result }, divisor, calibrated, factor, samples)
+            // the tape size right under it: the calibration's ratios and the test's error show without scrolling
+            if (purpose != PhotoPurpose.PARCEL && combined != null) TapeCard(purpose, tape, combined, onTape)
             Box(Modifier.fillMaxWidth().heightIn(max = if (combined != null) 300.dp else 2000.dp), contentAlignment = Alignment.Center) {
                 ShotImage(shot, mode, drag, enabled = !busy,
                     onTap = { x, y -> drag = null; onPick(listOf(x, y), null) },
@@ -239,14 +262,14 @@ internal fun PhotoShotView(
                 Chip("Tarik kotak", if (mode == PhotoPick.BOX) Tone.BRAND else Tone.GREY, "highlight_alt") { mode = PhotoPick.BOX }
             }
             if (shots.size > 1 || combined != null) ShotStrip(shots, shot.index, onOpen, onAdd)
-            if (purpose != PhotoPurpose.PARCEL) TapeCard(purpose, tape, combined, onTape)
+            if (purpose != PhotoPurpose.PARCEL && combined == null) TapeCard(purpose, tape, null, onTape)
             Spacer(Modifier.height(2.dp))
         }
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             when {
                 purpose == PhotoPurpose.CALIBRATE && combined != null -> {
                     val ok = tape.all { ObjectPick.cm(it) != null }
-                    PrimaryButton("Simpan kalibrasi", "tune", Modifier.fillMaxWidth(), enabled = ok && combined.boxLike) { onSaveCal() }
+                    PrimaryButton("Simpan kalibrasi", "tune", Modifier.fillMaxWidth(), enabled = ok) { onSaveCal() }
                 }
                 isParcel && combined != null -> PrimaryButton("Pakai ukuran ini", "arrow_forward", Modifier.fillMaxWidth()) { onUse() }
             }
@@ -317,9 +340,10 @@ private fun DrawScope.drawOutlineFr(o: List<Float>, w: Float, h: Float) {
 }
 
 private fun DrawScope.drawBoxFr(c: List<Float>, w: Float, h: Float) {
-    if (c.size != 16 || c.any { it < -0.5f }) return
+    if (c.size != 16) return
     fun p(i: Int) = Offset(c[2 * i] * w, c[2 * i + 1] * h)
-    for ((a, e) in PhotoFiles.EDGES) drawLine(Color(0xFF3CDC3C), p(a), p(e), strokeWidth = 2.5f * density)
+    // corners outside the photo still draw (the photo clips the lines); only a corner behind the camera is left out
+    for ((a, e) in PhotoFiles.EDGES) if (PhotoFiles.drawable(c, a) && PhotoFiles.drawable(c, e)) drawLine(Color(0xFF3CDC3C), p(a), p(e), strokeWidth = 2.5f * density)
 }
 
 /** The photos taken so far, the one shown outlined; the last tile takes another. */
@@ -375,7 +399,8 @@ internal fun PhotoResultCard(purpose: PhotoPurpose, r: PhotoResult, each: List<P
         if (each.size > 1) each.forEachIndexed { i, e ->
             T("Foto ${i + 1}: ${e.lengthCm.cm()} × ${e.widthCm.cm()} × ${e.heightCm.cm()} cm" + if (!e.boxLike) " · bukan kotak" else "", 12.5.sp, color = C.t2)
         }
-        r.notes.forEach { T("• $it", 12.sp, color = C.amber) }
+        // a calibration photo is read before calibration on purpose: its "not calibrated" note says nothing there
+        r.notes.filter { purpose != PhotoPurpose.CALIBRATE || !it.startsWith("Mode foto belum dikalibrasi") }.forEach { T("• $it", 12.sp, color = C.amber) }
         if (!calibrated && purpose != PhotoPurpose.CALIBRATE)
             T("Kalibrasi sekali di Pengaturan → Kalibrasi mode foto, dengan kardus yang sudah diukur meteran.", 12.sp, FontWeight.SemiBold, C.brandD)
     }
@@ -404,8 +429,17 @@ private fun TapeCard(purpose: PhotoPurpose, tape: List<String>, r: PhotoResult?,
             T("Selisih " + e.joinToString(" / ") { (if (it >= 0) "+" else "") + it.id() } + " cm · " +
                 e.indices.joinToString(" / ") { i -> (if (e[i] >= 0) "+" else "") + (e[i] / tt[i] * 100).id(0) + "%" }, 12.5.sp, FontWeight.SemiBold, C.brandD)
         }
-        if (purpose == PhotoPurpose.CALIBRATE && r != null && !r.boxLike)
-            T("Foto ini tidak terbaca sebagai kotak: kalibrasi butuh kardus, foto dari pojoknya.", 12.5.sp, FontWeight.SemiBold, C.red)
+        if (purpose == PhotoPurpose.CALIBRATE && r != null && t.all { it != null }) {
+            // what this box's calibration would be: the three sides' tape / measured ratios, alike when the photo read it right
+            val sample = CalSample(r.rawCm, t.map { it!! }, model = DepthModel.ID)
+            val ratios = sample.ratios()
+            val bad = Calibration.mismatch(sample) > Calibration.MISMATCH
+            Spacer(Modifier.height(6.dp))
+            T("Meteran ÷ terbaca: " + listOf("P", "L", "T").zip(ratios).joinToString(" · ") { (l, v) -> "$l ×${v.id(2)}" } +
+                (Calibration.factor(listOf(sample))?.let { " → faktor ×${it.id(2)}" } ?: ""), 12.5.sp, FontWeight.SemiBold, if (bad) C.amber else C.brandD)
+            if (bad) T("Ketiga angka beda jauh: foto ini salah membaca bentuk kardus. Foto ulang dari pojok kardus (kardus utuh, agak dari atas) " +
+                "supaya faktornya benar. Tetap bisa disimpan.", 12.5.sp, color = C.amber)
+        }
     }
 }
 
@@ -415,17 +449,20 @@ fun PhotoSettingsCard(model: AppModel, activity: Activity) {
     val s by model.store.settings.collectAsState()
     var tick by remember { mutableStateOf(0) }
     val dirs = remember(tick) { model.store.photoSessionsDir.listFiles()?.filter { it.isDirectory }.orEmpty() }
-    val f = Calibration.factor(s.photoCal)
+    val cal = Calibration.current(s.photoCal)
+    val f = Calibration.factor(cal)
     Card {
         T("Kalibrasi mode foto", 15.sp, FontWeight.SemiBold)
         T("Mode foto menebak tinggi kamera dari lantai dengan AI; kalibrasi sekali per HP memperbaiki skalanya. Foto 3 kardus yang sudah diukur meteran.",
             12.5.sp, color = C.t2)
         Spacer(Modifier.height(8.dp))
-        if (f == null) Chip("Belum dikalibrasi", Tone.WARN, "warning")
-        else {
-            val sp = Calibration.spread(s.photoCal)
-            Chip("Faktor ×${f.id(2)} · ${s.photoCal.size} kardus · sebaran ${(sp * 100).toInt()}%", if (sp > 0.15 || s.photoCal.size < 3) Tone.WARN else Tone.OK, "tune")
-            if (s.photoCal.size < 3) T("Tambah sampai 3 kardus supaya faktornya stabil.", 12.sp, color = C.t3)
+        if (f == null) {
+            Chip("Belum dikalibrasi · faktor bawaan ×${DepthModel.DEFAULT_SCALE.toDouble().id(2)}", Tone.WARN, "warning")
+            if (s.photoCal.isNotEmpty()) T("${s.photoCal.size} sampel lama dibuat dengan model AI sebelumnya dan tidak dipakai lagi: kalibrasi ulang.", 12.sp, color = C.amber)
+        } else {
+            val sp = Calibration.spread(cal)
+            Chip("Faktor ×${f.id(2)} · ${cal.size} kardus · sebaran ${(sp * 100).toInt()}%", if (sp > 0.15 || cal.size < 3) Tone.WARN else Tone.OK, "tune")
+            if (cal.size < 3) T("Tambah sampai 3 kardus supaya faktornya stabil.", 12.sp, color = C.t3)
             if (sp > 0.15) T("Sampel tidak konsisten: hapus kalibrasi dan ulangi dengan foto dari pojok kardus.", 12.sp, color = C.amber)
         }
         Spacer(Modifier.height(10.dp))

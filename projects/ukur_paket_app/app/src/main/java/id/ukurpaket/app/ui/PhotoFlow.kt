@@ -98,8 +98,10 @@ class PhotoFlow(private val model: AppModel) {
         }.also { depthModel = it; depthState = if (it != null) SamState.READY else SamState.FAILED }
     }
 
-    val scale: Double get() = if (purpose == PhotoPurpose.CALIBRATE) 1.0 else Calibration.factor(model.store.settings.value.photoCal) ?: 1.0
-    val calibrated: Boolean get() = purpose != PhotoPurpose.CALIBRATE && model.store.settings.value.photoCal.isNotEmpty()
+    /** This phone's calibration samples made with the current depth model. */
+    val samples: List<CalSample> get() = Calibration.current(model.store.settings.value.photoCal)
+    val scale: Double get() = if (purpose == PhotoPurpose.CALIBRATE) 1.0 else Calibration.factor(samples) ?: DepthModel.DEFAULT_SCALE.toDouble()
+    val calibrated: Boolean get() = purpose != PhotoPurpose.CALIBRATE && samples.isNotEmpty()
 
     /** All photos with a size, combined. */
     val combined: PhotoResult? get() = shots.mapNotNull { it.result }.takeIf { it.isNotEmpty() }?.let { PhotoMeasure.combine(it) }
@@ -239,16 +241,27 @@ class PhotoFlow(private val model: AppModel) {
         }
     }
 
-    /** This photo's size against the typed tape size becomes one calibration sample of the phone. */
-    fun saveCalibration(): Boolean {
-        val r = combined ?: return false
-        val t = tapeCm() ?: return false
-        if (!r.boxLike) { model.toast("Kalibrasi butuh kardus (bentuk kotak)"); return false }
-        model.store.update { it.copy(photoCal = it.photoCal + CalSample(r.rawCm, t)) }
+    enum class CalSave { SAVED, MISMATCH, INCOMPLETE }
+
+    /** The sample the typed tape size would make with the photos so far (null without a size or a full tape size). */
+    fun pendingSample(): CalSample? {
+        val r = combined ?: return null
+        val t = tapeCm() ?: return null
+        return CalSample(r.rawCm, t, model = DepthModel.ID)
+    }
+
+    /**
+     * This photo's size against the typed tape size becomes one calibration sample of the phone. A photo whose shape does
+     * not match the tape (the sides' ratios over 1,35 apart) is saved only when [force]: the screen asks first.
+     */
+    fun saveCalibration(force: Boolean = false): CalSave {
+        val s = pendingSample() ?: return CalSave.INCOMPLETE
+        if (!force && Calibration.mismatch(s) > Calibration.MISMATCH) return CalSave.MISMATCH
+        model.store.update { it.copy(photoCal = it.photoCal + s) }
         saveTape()
-        val f = Calibration.factor(model.store.settings.value.photoCal) ?: 1.0
-        model.toast("Kalibrasi tersimpan · faktor ${"%.2f".format(f).replace('.', ',')}")
-        return true
+        val f = Calibration.factor(samples) ?: 1.0
+        model.toast("Kalibrasi tersimpan · faktor ×${"%.2f".format(f).replace('.', ',')} · ${samples.size} kardus")
+        return CalSave.SAVED
     }
 
     fun close() { depthModel?.let { m -> depthModel = null; Thread { Thread.sleep(3000); m.close() }.start() } }

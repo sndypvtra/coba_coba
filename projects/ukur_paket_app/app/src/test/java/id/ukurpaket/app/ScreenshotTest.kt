@@ -184,7 +184,7 @@ class ScreenshotTest {
     }
 
     /**
-     * The photo mode (0.4.0) on the DT50's screen: the camera with its angle and stillness chips, a photo waiting for the
+     * The photo mode (0.4.0, calibration 0.4.2) on the DT50's screen: the camera with its angle and stillness chips, a photo waiting for the
      * tap, and the result of the real engine on a synthetic photo (true mask, the floor at the true camera height, a
      * calibrated phone): as a parcel, as a test with the tape size, and as a calibration photo; then the settings card.
      */
@@ -225,10 +225,14 @@ class ScreenshotTest {
         view("44_foto_uji_meteran_dt50", id.ukurpaket.app.ui.PhotoPurpose.TEST, id.ukurpaket.app.ui.previewShot(pic, raw, tint = tint, outline = outline), raw,
             listOf("40", "30", "20"), calibrated = false)
         view("45_foto_kalibrasi_dt50", id.ukurpaket.app.ui.PhotoPurpose.CALIBRATE, id.ukurpaket.app.ui.previewShot(pic, raw, tint = tint, outline = outline), raw,
-            listOf("40", "30", ""), calibrated = false)
+            listOf("40", "30", "20"), calibrated = false)
+        // a tape size the photo's shape does not match: the warning, saving still possible (it asks first)
+        view("48_foto_kalibrasi_beda_bentuk_dt50", id.ukurpaket.app.ui.PhotoPurpose.CALIBRATE, id.ukurpaket.app.ui.previewShot(pic, raw, tint = tint, outline = outline), raw,
+            listOf("40", "30", "45"), calibrated = false)
         val m = model(Mode.NONE)
-        m.store.update { it.copy(photoCal = listOf(id.ukurpaket.app.photo.CalSample(listOf(46.0, 34.5, 23.0), listOf(40.0, 30.0, 20.0)),
-            id.ukurpaket.app.photo.CalSample(listOf(36.0, 28.0, 17.0), listOf(31.0, 24.5, 15.0)))) }
+        val dm = id.ukurpaket.app.photo.DepthModel.ID
+        m.store.update { it.copy(photoCal = listOf(id.ukurpaket.app.photo.CalSample(listOf(46.0, 34.5, 23.0), listOf(40.0, 30.0, 20.0), model = dm),
+            id.ukurpaket.app.photo.CalSample(listOf(36.0, 28.0, 17.0), listOf(31.0, 24.5, 15.0), model = dm))) }
         screen("46_pengaturan_kalibrasi_foto_dt50", m, Screen.Settings)
         m.draft = Draft("TSA-90100000104", ResultData(r.lengthCm, r.widthCm, r.heightCm, r.confidence, Status.OK, 0.0, null, null, Mode.PHOTO))
         screen("47_berat_dari_foto_dt50", m, Screen.Weight)

@@ -1,4 +1,4 @@
-# UkurPaket: Android app (v0.4.1, test build)
+# UkurPaket: Android app (v0.4.2, test build)
 
 Measures a parcel's length × width × height with the phone camera, the way the courier mockup
 (`../ukur_paket_mockup`) describes: method A, ARCore depth + floor detection, with the parcel picked by a tap or a
@@ -50,14 +50,15 @@ and a spread above 10 % is flagged. **Pakai ukuran ini** → weight → saved wi
 | Lens | Camera2: factory calibration when it agrees with the focal length, else focal (mm) / sensor width (mm); turned upright with the sensor orientation |
 | Up | the accelerometer averaged over the 0,4 s before the photo (a still phone reads gravity only: reliable, unlike integrating it) |
 | Outline | MobileSAM-512 on a 480 × 640 picture, tap or box (2,2 s on the DT50) |
-| Camera height | **YOLO26n-depth** (Ultralytics, ONNX 640 × 480, 20 MB; ~1,3 s on the DT50, estimated from the PC/DT50 ratio): a level plane (within 20° of the accelerometer's) is found among the floor pixels round the object; the camera height is the median, over thousands of them, of how far below the camera each lies. This is the **only** number taken from the AI |
+| Camera height | **Depth Anything V2 Small, metric indoor** (Apache-2.0, ONNX 280 × 378, int8 weights, 36 MB; 0,14 s on the PC, ~3–4 s estimated on the DT50, run while the courier taps; YOLO26n-depth in 0.4.0–0.4.1, see v0.4.2 below): a level plane (within 20° of the accelerometer's) is found among the floor pixels round the object; the camera height is the median, over thousands of them, of how far below the camera each lies. This is the **only** number taken from the AI |
 | Geometry | single-view metrology with that height: the outline's lower edge on the floor (near half of the footprint), its left and right sides as vertical edges (bottom on the floor, top at H), its upper edge on the plane at H (far half); footprint = smallest rectangle round both halves; the box drawn from it is compared with the outline (IoU) |
 | Score | box-like when IoU ≥ 0,92 (a carton ~0,98, a gallon or sack ~0,8); notes for an object cut by the picture's edge, a bad angle, an implausible camera height, little floor, an uncalibrated phone. "Akurat" needs a calibrated phone, a box-like object, a whole object and a score ≥ 75 |
 
 Every size scales with the camera height, so the AI's scale error scales the whole result and nothing else. That is
 what **Kalibrasi mode foto** (Settings) removes: photos of cartons whose size is typed from a tape measure; the
 phone's factor is the median of tape / measured over every side of every carton (3 cartons recommended; the card shows
-the spread). Without calibration the result is never "Akurat" and says so.
+the spread). Without calibration the result is never "Akurat" and says so; it uses the model's own factor (×0,83, from
+the benchmark below).
 
 **Tested on the PC** (`PhotoMeasureTest`, synthetic photos from `tools/photo/synth_photo.py`: 480 × 640, f 420 px,
 camera 0,75–1,15 m above the floor, 38–62° down):
@@ -71,10 +72,8 @@ camera 0,75–1,15 m above the floor, 38–62° down):
 
 Also: a depth map 20 % off in scale gives sizes 20 % off, and the calibration factor brings them back to ±1 cm; an
 object cut by the edge is never "Akurat"; a phone held upright is refused with advice. **What the synthetic photos
-cannot test is the depth model's scale on real photos** (on these artificial pictures it is off by a factor 0,3–1,3,
-which says more about the pictures than about the model): that is the phone test, with calibration. Ultralytics'
-own figures for the released model: NYU AbsRel 0,109; with its built-in scale, 4–46 % off on other cameras, which is
-why the per-phone calibration exists.
+cannot test is the depth model's scale on real photos**: the benchmark on real photos below (v0.4.2) is the stand-in
+for that, and the phone test with calibration the real check.
 
 **Flat objects (v0.4.1).** The first DT50 test, a phone lying on a bed, read 32,3 × 16,8 × 12,3 cm: the phone's long
 edge happened to point "up" in the picture and was taken for a vertical edge 12 cm tall (and, uncalibrated, the AI put
@@ -91,6 +90,36 @@ thickness of 0,5–8 cm), and the reading whose box fits the outline best wins. 
 A flat object's length and width are read as well as a carton's, its thickness only roughly (here 1 cm for 3 cm):
 such results say "Benda pipih" and are never "Akurat". The edge check is wider too: an object closer than 1,2 % of the
 picture to its edge is "terpotong atau terlalu mepet tepi foto".
+
+**v0.4.2: a better depth model and a calibration that always saves.** On the DT50 a real 90 × 30 × 16 cm carton read
+263 × 130 × 5 cm, and the calibration could not be saved: it was refused because the photo's shape was not box-like.
+Two changes.
+
+*The model*, chosen on real photos rather than synthetic ones (`tools/photo/bench_depth_nyu.py`): the camera height
+above the floor, the one AI number, on 93 upright portrait crops (360 × 480, like the phone's picture) of NYUv2 test
+photos, Kinect depth as truth, each model with its own best calibration factor:
+
+| Model | Median error | p90 | PC ms | Size |
+|---|---|---|---|---|
+| YOLO26n-depth (0.4.0–0.4.1) | 11,7 % | 27 % | 67 | 20 MB |
+| YOLO26l-depth | 7,5 % | 17 % | 215 | 106 MB |
+| **Depth Anything V2 Small metric indoor, int8 (0.4.2)** | **7,7 %** | 21 % | 141 | 36 MB |
+| Depth Anything V2 Small metric indoor, float32 | 8,1 % | 20 % | 160 | 99 MB |
+| MoGe-2 ViT-S | | | 3 400 | too slow for the DT50 |
+
+Uncalibrated, Depth Anything reads the camera 1,21× too high on those photos (also on the synthetic ones: 1,13–1,45×),
+hence the default factor 1 / 1,21. After calibration, about ±8 % per photo (median), less with 2–3 photos from
+different corners: on a 40 cm side, about ±3 cm. 1–2 cm needs a known size in the picture (or a depth sensor); a
+picture alone cannot give it. Calibration samples remember the model they were made with: those made with
+YOLO26n-depth are no longer used ("kalibrasi ulang").
+
+*The calibration*: P × L × T from the tape can always be saved. The card under the result shows tape ÷ read for each
+side and the factor this carton gives; when the three disagree by more than 1,35× the photo read the shape wrong (the
+90 × 30 × 16 carton above: ×0,34, ×0,23, ×3,2), it says so, and saving asks first (**Foto ulang** or **Simpan
+tetap**). A shape read wrong is a geometry problem, not a scale one: scaling cannot fix it, so its factor is suspect.
+
+The green box is also drawn when some of its corners fall outside the photo (0.4.1 drew nothing then); only a corner
+behind the camera leaves its edges out.
 
 **Limits.** Estimation class, not a certified (legal-for-trade) dimensioner. Built for cartons; round, soft and
 bulging parcels get a rough outer box and "Perlu Dicek". The camera must be above the parcel's top (standing), the
@@ -122,7 +151,7 @@ pick, timings, the result, the tape size when typed), `evidence.jpg` once used. 
 
 JDK 17+ and the Android SDK (platform 35). AGP 8.7.3, Kotlin 2.1.0, Compose BOM 2024.12.01, ARCore 1.47.0,
 ONNX Runtime 1.20.0, minSdk 26, targetSdk 35, arm64-v8a + armeabi-v7a. The test APK is
-`release/UkurPaket-0.4.1-uji.apk` (72 MB; the photo mode's depth model is 20 MB of it; MobileSAM is two models: the 1024 one for ARCore phones, encoder float16
+`release/UkurPaket-0.4.2-uji.apk` (82 MB; the photo mode's depth model is 36 MB of it; MobileSAM is two models: the 1024 one for ARCore phones, encoder float16
 13,8 MB + decoder with int8 weights 4,6 MB, made by `tools/export_sam.py`, the int8 decoder's masks within IoU 0,989 of
 float32; and the 512 one for PDAs, encoder float32 28 MB + decoder 4,7 MB, made by `tools/export_sam512.py`). It installs directly (allow "install unknown apps"); for the Play Store use your own key.
 
@@ -364,19 +393,20 @@ Tested here, on the PC:
 | `GeometryTest` | box turned 30°, 40 × 30 × 20 cm, 2 mm noise, a taller box 8 cm away; 30 × 20 × 10 cm on a floor with 0,8 cm depth noise | within 1,2 cm, neighbour left out; within 2 cm |
 | `SegmenterTest` | the app's own MobileSAM code on the conveyor frame (7 parcels, some touching), one tap and one box each, vs the Python reference from the same ONNX files | mask IoU ≥ 0,985 for every tap and box (references made with the float32 decoder) |
 | `ConveyorReplayTest` | the conveyor scene in 3D, each parcel measured from geometry alone and from the tap/box cut-out | geometry alone merges touching parcels; with the cut-out every parcel stays separate (README section below) |
-| `PhotoMeasureTest` | the photo mode's engine on synthetic photos (carton, gallon, sack, phone lying flat, mailer bag; 2 photos each, two cartons and two phones): sizes from the outline with the true camera height; every size scales with the camera height; the camera height from a floor depth map; a 20 % depth-scale error and the calibration that removes it; an object cut by the edge, a phone held upright; Camera2 lens facts turned upright; combining photos; the calibration factor; then the real MobileSAM-512 and YOLO26n-depth on the photos | cartons within 1 cm (true outline) / 1,8 cm (MobileSAM's); 7 tests pass |
-| `FlowTest` | the courier's path through the screens: first open with nothing but the scanner; measure → weight → save → next parcel in the same session → Selesai starts a new one; a second tap on Simpan; re-measuring replaces the old record; Ukur di Hub on a phone without ARCore; a late hub photo after the courier left; a scanned number opens its parcel (or its record if measured already), any content is taken as it is; a data file of an earlier test build still loads; the photo mode: no-AR screen → photo → weight → saved as "Foto", then a calibration sample | 8 flows, records and screen stack as expected |
+| `PhotoMeasureTest` | the photo mode's engine on synthetic photos (carton, gallon, sack, phone lying flat, mailer bag; 2 photos each, two cartons and two phones): sizes from the outline with the true camera height; every size scales with the camera height; the camera height from a floor depth map; a 20 % depth-scale error and the calibration that removes it; an object cut by the edge, a phone held upright; Camera2 lens facts turned upright; combining photos; the calibration factor, a sample whose shape disagrees with the tape, samples of another depth model; then the real MobileSAM-512 and Depth Anything V2 on the photos | cartons within 1 cm (true outline) / 1,8 cm (MobileSAM's); 7 tests pass |
+| `FlowTest` | the courier's path through the screens: first open with nothing but the scanner; measure → weight → save → next parcel in the same session → Selesai starts a new one; a second tap on Simpan; re-measuring replaces the old record; Ukur di Hub on a phone without ARCore; a late hub photo after the courier left; a scanned number opens its parcel (or its record if measured already), any content is taken as it is; a data file of an earlier test build still loads; the photo mode: no-AR screen → photo → weight → saved as "Foto", then calibration: an incomplete tape size, a shape that disagrees (asked first, saved when confirmed), the factor used for the next parcel | 8 flows, records and screen stack as expected |
 | `HardwareScannerTest` | Urovo detection; the three broadcast formats (string, bytes + length, older `urovo.rcv.message`); a broadcast reaching the registered receiver; a scan key press on home opens the parcel, while measuring it does not, a QR link is ignored; keyboard output: fast keys + Enter is a scan, slow keys are not, Back/volume pass through | 5 tests pass |
 | `Dt20Test` | DT20 tools: diagnosis rules (no gyroscope, separate clocks, slow sensors, fixed focus), sweep quality on synthetic sweeps (good, still phone, too short, no motion sensors) and read back from the recorder's file format, size choice, sharpness, cm parsing, the scan key on the test screens, review navigation | 6 tests pass |
 | `BarcodeTest` | the barcode cut from a photo of a real AnterAja label (bars only, no personal data) read with ZXing | Code 128, `TSA-80745081104` |
 | `ScannerFormatsTest` | the scanner's barcode types | the 9 linear types; QR, Data Matrix, PDF417 and Aztec left out |
-| `ScreenshotTest` | every screen rendered on the JVM (`screenshots/`); camera screens on the mockup photo with the overlay the engine draws | 24 screens (`17` home on a Urovo PDA without ARCore, `18`–`20` DT20 diagnosis, recorder, pick); the photo mode on the DT50's screen size `40`–`47` (camera, angle warning, pick, result, test, calibration, settings, weight) |
+| `ScreenshotTest` | every screen rendered on the JVM (`screenshots/`); camera screens on the mockup photo with the overlay the engine draws | 24 screens (`17` home on a Urovo PDA without ARCore, `18`–`20` DT20 diagnosis, recorder, pick); the photo mode on the DT50's screen size `40`–`48` (camera, angle warning, pick, result, test, calibration, settings, weight, a calibration whose shape disagrees with the tape) |
 | Android lint | | no errors |
 
 **Photo mode, not tested yet** (needs a DT50): the Camera2 still and the accelerometer's axes on the phone (the
 mapping follows Android's documented axes and is unit-tested, not seen on the device), the lens facts the DT50 reports,
-the depth model's speed there (~1,3 s estimated) and, above all, its camera-height scale on real photos, i.e. how much
-the calibration has to correct and how much it varies from photo to photo. The first test: calibrate with 3 cartons,
+the depth model's speed there (~3–4 s estimated) and its camera-height scale on the DT50's own photos (on NYUv2's
+real photos: ×1,21 before calibration, ±7,7 % median after), and why the 90 × 30 × 16 cm carton's shape was read
+wrong (its ZIP from Settings is needed). The first test: calibrate with 3 cartons,
 then measure 5–10 others against a tape measure (the result screen shows the difference when the tape size is typed).
 
 **Not tested yet**: anything that needs a real phone, including the scan key on a real DT20: ARCore tracking, depth quality, how the cut-out lines up with
@@ -394,11 +424,11 @@ thresholds get tuned, ideally from recorded scans of 50–100 parcels with tape-
 | `ar/BackgroundRenderer.kt`, `ar/Snapshot.kt`, `ar/Recorder.kt` | camera image; evidence photo; raw scan recording |
 | `ar/ArCheck.kt` | ARCore availability, install request, Depth API check |
 | `dt/` | DT20 tools: `Diagnostics.kt`, `SweepRecorder.kt` (Camera2 + motion sensors), `SweepQuality.kt`, `ObjectPick.kt`; screens in `ui/DtScreens.kt` |
-| `photo/` | the photo mode (0.4.0): `PhotoMeasure.kt` (camera height, single-view metrology, combining photos, calibration; Android-free), `DepthModel.kt` (YOLO26n-depth through ONNX Runtime), `PhotoCamera.kt` (Camera2 still + accelerometer + lens), `PhotoFiles.kt`; state in `ui/PhotoFlow.kt`, screens in `ui/PhotoScreen.kt` |
+| `photo/` | the photo mode (0.4.0): `PhotoMeasure.kt` (camera height, single-view metrology, combining photos, calibration; Android-free), `DepthModel.kt` (Depth Anything V2 Small metric indoor through ONNX Runtime), `PhotoCamera.kt` (Camera2 still + accelerometer + lens), `PhotoFiles.kt`; state in `ui/PhotoFlow.kt`, screens in `ui/PhotoScreen.kt` |
 | `scan/HardwareScanner.kt` | Urovo scan key: broadcast receiver and keyboard-output reader |
 | `data/Store.kt`, `data/Locator.kt` | records and settings in one JSON file; GPS |
 | `ui/` | Compose: `Screens.kt` (start, scan resi, prep, weight, saved, history, detail, settings, phone without ARCore), `MeasureScreen.kt` (camera) |
-| `tools/` | `export_sam.py`, `check_sam_onnx.py` (model export and check), `export_depth.py` (YOLO26n-depth), `photo/synth_photo.py` (synthetic photos with truth), `fetch_icons.py`, conveyor replay scripts |
+| `tools/` | `export_sam.py`, `check_sam_onnx.py` (model export and check), `export_depth.py` (Depth Anything V2 Small metric indoor, int8), `photo/bench_depth_nyu.py` (depth models on NYUv2 photos), `photo/synth_photo.py` (synthetic photos with truth), `fetch_icons.py`, conveyor replay scripts |
 
 Fonts: Inter (SIL OFL 1.1). Icons: Material Symbols Rounded (Apache 2.0), bundled subset. Model: MobileSAM (Apache 2.0).
 Runtime: ONNX Runtime (MIT).

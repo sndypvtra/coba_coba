@@ -208,6 +208,9 @@ object PhotoMeasure {
                     /** Read as an object lying flat (a phone, a mailer bag): its thickness is the uncertain part. */
                     val flat: Boolean = false)
 
+    /** A projected corner behind the camera (PhotoResult.corners): its edges are not drawn. */
+    const val BEHIND = -100f
+
     /** Thicknesses tried for an object lying flat (metres). */
     private val FLAT_H = floatArrayOf(0.005f, 0.01f, 0.015f, 0.02f, 0.03f, 0.04f, 0.05f, 0.06f, 0.08f)
 
@@ -348,7 +351,10 @@ object PhotoMeasure {
         if (!calibrated) { notes += "Mode foto belum dikalibrasi di HP ini: angka bisa meleset jauh"; conf = min(conf, 60.0) }
         val c = conf.toInt().coerceIn(0, 100)
         val raw = listOf(met.lengthM / scale, met.widthM / scale, met.heightM / scale).map { it * 100.0 }
-        val proj = met.corners.flatMap { p -> if (p.z > 0.01f) k.project(p).let { listOf(it.a / k.w, it.b / k.h) } else listOf(-1f, -1f) }
+        // fractions of the picture, kept even far outside it (the drawing clips); a corner behind the camera is BEHIND
+        val proj = met.corners.flatMap { p ->
+            if (p.z > 0.01f) k.project(p).let { listOf((it.a / k.w).coerceIn(-20f, 20f), (it.b / k.h).coerceIn(-20f, 20f)) } else listOf(BEHIND, BEHIND)
+        }
         return PhotoResult(met.lengthM * 100.0, met.widthM * 100.0, met.heightM * 100.0, raw, scale.toDouble(), h.toDouble(), downDeg,
             met.iou.toDouble(), boxLike, proj, c, ok = calibrated && boxLike && !touches && !met.flat && c >= 75, notes = notes,
             floorInliers = fl.inliers, floorTiltDeg = fl.tiltDeg.toDouble())
@@ -436,7 +442,9 @@ object PhotoMeasure {
 
 /** One calibration photo: what the photo mode measured (before calibration) and what the tape says, cm. */
 @Serializable
-data class CalSample(val rawCm: List<Double>, val tapeCm: List<Double>, val at: Long = System.currentTimeMillis()) {
+data class CalSample(val rawCm: List<Double>, val tapeCm: List<Double>, val at: Long = System.currentTimeMillis(),
+                     /** The depth model the sample was measured with: a new model needs a new calibration. */
+                     val model: String = "") {
     /** tape / measured for each side: length with length, width with width (both sorted long-short), height with height. */
     fun ratios(): List<Double> {
         val r = rawCm.take(2).sortedDescending() + rawCm[2]
@@ -446,6 +454,15 @@ data class CalSample(val rawCm: List<Double>, val tapeCm: List<Double>, val at: 
 }
 
 object Calibration {
+    /** The samples made with the depth model in use (one made with another model does not apply to this one). */
+    fun current(all: List<CalSample>): List<CalSample> = all.filter { it.model == DepthModel.ID }
+
+    /** Above this [mismatch] the photo read the box's shape wrong: saving it asks first. */
+    const val MISMATCH = 1.35
+
+    /** How far apart the three sides' ratios are (largest / smallest): over 1,35 the photo's shape does not match the tape. */
+    fun mismatch(s: CalSample): Double { val r = s.ratios(); return if (r.size < 2) 1.0 else r.max() / r.min() }
+
     /** This phone's scale: the median of every side's tape / measured ratio over the samples; null without samples. */
     fun factor(samples: List<CalSample>): Double? {
         val r = samples.flatMap { it.ratios() }.sorted()
