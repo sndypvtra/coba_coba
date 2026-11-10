@@ -1,0 +1,105 @@
+{
+    "index": 0,
+    "created": 1794285506536,
+    "stream": [
+        1280,
+        960
+    ],
+    "rotationDeg": 90,
+    "lens": {
+        "fx": 965.3602,
+        "fy": 965.3602,
+        "cx": 480.0,
+        "cy": 640.0,
+        "w": 960,
+        "h": 1280
+    },
+    "lensModel": {
+        "fx": 482.6801,
+        "fy": 482.6801,
+        "cx": 240.0,
+        "cy": 320.0,
+        "w": 480,
+        "h": 640
+    },
+    "accel": [
+        5.860665,
+        4.5071006,
+        6.484815
+    ],
+    "accelSpread": 0.12686937,
+    "still": true,
+    "downDeg": 41.254547,
+    "pickMode": "box",
+    "tap": null,
+    "box": [
+        87.39453,
+        115.967415,
+        461.0345,
+        430.58716
+    ],
+    "maskScore": 1.0156789,
+    "samMs": 2547,
+    "depthMs": 2397,
+    "depthSize": [
+        280,
+        378
+    ],
+    "result": {
+        "lengthCm": 51.72368288040161,
+        "widthCm": 31.08837604522705,
+        "heightCm": 13.921017944812775,
+        "rawCm": [
+            62.585657835006714,
+            37.61693835258484,
+            16.844432055950165
+        ],
+        "scale": 0.8264462351799011,
+        "cameraHeightM": 0.5422529578208923,
+        "downDeg": 41.25454629674943,
+        "iou": 0.9742650389671326,
+        "boxLike": true,
+        "corners": [
+            0.35541394,
+            0.59336823,
+            0.77506244,
+            0.55078757,
+            0.659258,
+            0.36159524,
+            0.24064381,
+            0.31280285,
+            0.47543907,
+            0.5257063,
+            0.8910868,
+            0.50439286,
+            0.75391823,
+            0.30287153,
+            0.32785696,
+            0.21727273
+        ],
+        "confidence": 60,
+        "ok": false,
+        "notes": [
+            "Foto terlalu dekat: AI kurang akurat dari dekat. Mundur, foto sambil berdiri",
+            "Mode foto belum dikalibrasi di HP ini: angka bisa meleset jauh"
+        ],
+        "floorInliers": 42545,
+        "floorTiltDeg": 9.032048225402832,
+        "aiCameraM": 0.5422529578208923,
+        "standingM": 0.0
+    },
+    "error": null,
+    "tapeCm": [
+        8.0,
+        4.0,
+        1.5
+    ],
+    "focus": {
+        "diopters": 3.9744778,
+        "calibration": "uncalibrated",
+        "minFocusDiopters": 20.0,
+        "hyperfocalDiopters": 0.33333334,
+        "afState": 2
+    },
+    "app": "0.4.3-uji"
+}

@@ -10,6 +10,7 @@ import kotlinx.serialization.json.Json
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
+import kotlin.math.max
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -112,7 +113,13 @@ object PhotoFiles {
  */
 @Serializable
 data class FocusInfo(val diopters: Float, val calibration: String, val minFocusDiopters: Float? = null, val hyperfocalDiopters: Float? = null,
-                     val afState: Int? = null)
+                     val afState: Int? = null) {
+    /**
+     * Settled (passive or locked focus, or no state reported) and nearer than the hyperfocal distance with a margin:
+     * beyond it everything is sharp and the lens hardly moves, so the distance says little.
+     */
+    fun usable() = (afState == null || afState == 2 || afState == 4) && diopters > max(0.05f, 1.2f * (hyperfocalDiopters ?: 0f))
+}
 
 /** What shot_N.json holds. */
 @Serializable

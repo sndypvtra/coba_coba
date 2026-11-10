@@ -55,6 +55,20 @@ class RealPhotoProbe {
                 val fl = PhotoMeasure.floor(d, mask, k, up)
                 println(String.format(Locale.US, "  %-16s camera %.3f m (inliers %d/%d, tilt %.1f, wide %b)", name, fl.heightM, fl.inliers, fl.tried, fl.tiltDeg, fl.wide))
             }
+            // the distance the autofocus reports, against the one the tape size implies (geometry at h = 1, then scaled)
+            val unit = PhotoMeasure.metrology(mask, k, up, 1f)
+            val zUnit = PhotoMeasure.focusDepth(unit.corners, up, 1f, k)
+            val fd = j["focus"]?.let { runCatching { it.jsonObject["diopters"]!!.jsonPrimitive.float }.getOrNull() }
+            val tape = j["tapeCm"]?.let { runCatching { it.jsonArray.map { v -> v.jsonPrimitive.float } }.getOrNull() }
+            println(String.format(Locale.US, "  at h = 1 m: %.1f x %.1f x %.1f cm; autofocus point %.3f m away; focus %s D (%s m)",
+                unit.lengthM * 100, unit.widthM * 100, unit.heightM * 100, zUnit ?: -1f, fd?.toString() ?: "-", fd?.let { "%.3f".format(Locale.US, 1 / it) } ?: "-"))
+            if (tape != null && zUnit != null) {
+                val t = tape.take(2).sortedDescending() + tape[2]
+                val rs = listOf(t[0] / (unit.lengthM * 100), t[1] / (unit.widthM * 100), t[2] / (unit.heightM * 100))
+                val hTrue = rs.sorted()[1]
+                println(String.format(Locale.US, "  tape %s: ratios %s -> camera %.3f m, focus point %.3f m (%.1f D)%s", tape, rs.map { "%.3f".format(Locale.US, it) },
+                    hTrue, hTrue * zUnit, 1 / (hTrue * zUnit), fd?.let { "; true / reported diopters %.2f".format(Locale.US, (1 / (hTrue * zUnit)) / it) } ?: ""))
+            }
             val hs = (System.getProperty("ukur.h") ?: "").split(',').mapNotNull { it.toFloatOrNull() }
             val fl = PhotoMeasure.floor(new, mask, k, up)
             for (h in listOf(fl.heightM / 1.21f) + hs) {

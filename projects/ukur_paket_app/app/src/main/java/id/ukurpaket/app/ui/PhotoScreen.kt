@@ -145,8 +145,15 @@ internal fun PhotoCameraChrome(title: String, subtitle: String, live: PhotoCamer
             val pw = min(maxWidth.value, maxHeight.value * 3f / 4f).dp
             Box(Modifier.size(pw, (pw.value * 4f / 3f).dp)) {
                 preview()
-                // a light guide: the parcel in the middle, whole, with floor round it
+                // a light guide: the parcel in the middle, whole, with floor round it; the centre mark is where the
+                // autofocus measures the distance (best on the parcel)
                 Canvas(Modifier.fillMaxSize()) {
+                    val cx = size.width / 2; val cy = size.height / 2; val r = size.width * 0.035f
+                    drawCircle(Color.White.copy(alpha = 0.8f), r, Offset(cx, cy), style = Stroke(2.dp.toPx()))
+                    drawLine(Color.White.copy(alpha = 0.8f), Offset(cx - 2 * r, cy), Offset(cx - r, cy), 2.dp.toPx())
+                    drawLine(Color.White.copy(alpha = 0.8f), Offset(cx + r, cy), Offset(cx + 2 * r, cy), 2.dp.toPx())
+                    drawLine(Color.White.copy(alpha = 0.8f), Offset(cx, cy - 2 * r), Offset(cx, cy - r), 2.dp.toPx())
+                    drawLine(Color.White.copy(alpha = 0.8f), Offset(cx, cy + r), Offset(cx, cy + 2 * r), 2.dp.toPx())
                     val m = size.width * 0.12f
                     val c = Color.White.copy(alpha = 0.55f); val l = size.width * 0.07f; val sw = 2.5.dp.toPx()
                     for ((x, y, dx, dy) in listOf(listOf(m, m * 1.4f, 1f, 1f), listOf(size.width - m, m * 1.4f, -1f, 1f),
@@ -168,7 +175,7 @@ internal fun PhotoCameraChrome(title: String, subtitle: String, live: PhotoCamer
                     if ((live?.brightness ?: 128.0) < 55) Chip("Terlalu gelap: tambah cahaya", Tone.RED, "light_mode")
                 }
                 Box(Modifier.align(Alignment.BottomCenter).padding(10.dp).clip(RoundedCornerShape(12.dp)).background(C.glass).padding(horizontal = 12.dp, vertical = 8.dp)) {
-                    T("Berdiri di pojok paket, HP setinggi dada · miring 30–60° ke bawah · paket utuh, lantai kelihatan di sekeliling", 12.5.sp, color = Color.White)
+                    T("Lingkaran tengah tepat di paket · berdiri di pojok paket, HP setinggi dada · miring 30–60° ke bawah · paket utuh, lantai kelihatan", 12.5.sp, color = Color.White)
                 }
             }
         }
@@ -395,7 +402,11 @@ internal fun PhotoResultCard(purpose: PhotoPurpose, r: PhotoResult, each: List<P
         }
         Spacer(Modifier.height(6.dp))
         T("${each.size} foto · kamera ${r.cameraHeightM.id(2)} m di atas lantai" +
-            (if (r.standingM > 0) " (AI ${r.aiCameraM.id(2)} m, tinggi berdiri ${r.standingM.id(2)} m)" else "") +
+            listOfNotNull(
+                if (r.focusCameraM > 0) "fokus ${r.focusDistanceM.id(2)} m ke paket" else null,
+                "AI ${r.aiCameraM.id(2)} m",
+                if (r.standingM > 0) "tinggi berdiri ${r.standingM.id(2)} m" else null,
+            ).takeIf { it.size > 1 }?.joinToString(", ", " (", ")").orEmpty() +
             " · sudut ${r.downDeg.toInt()}° · cocok siluet ${(r.iou * 100).toInt()}%" +
             if (purpose != PhotoPurpose.CALIBRATE && factor != null) " · kalibrasi ×${factor.id(2)} ($samples sampel)" else "", 12.sp, color = C.t3)
         if (each.size > 1) each.forEachIndexed { i, e ->
@@ -413,7 +424,8 @@ internal fun PhotoResultCard(purpose: PhotoPurpose, r: PhotoResult, each: List<P
 private fun TapeCard(purpose: PhotoPurpose, tape: List<String>, r: PhotoResult?, onTape: (List<String>) -> Unit) {
     Card {
         T(if (purpose == PhotoPurpose.CALIBRATE) "Ukuran meteran kardus ini" else "Data uji", 15.sp, FontWeight.SemiBold)
-        T(if (purpose == PhotoPurpose.CALIBRATE) "Ukur kardus dengan meteran, isi P × L × T, lalu Simpan kalibrasi. Ulangi dengan 3 kardus berbeda ukuran supaya angkanya stabil."
+        T(if (purpose == PhotoPurpose.CALIBRATE) "Ukur kardus dengan meteran, isi P × L × T, lalu Simpan kalibrasi. Ulangi dengan 3 kardus berbeda ukuran supaya angkanya stabil; " +
+            "satu di antaranya kardus kecil difoto dekat (30–60 cm) untuk melatih fokus kamera."
           else "Isi ukuran meteran (boleh kosong) untuk melihat selisihnya. ZIP berisi foto, mask, dan depth untuk dianalisis di PC.", 12.5.sp, color = C.t2)
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -443,6 +455,7 @@ private fun TapeCard(purpose: PhotoPurpose, tape: List<String>, r: PhotoResult?,
             CalSample(r.rawCm, t.map { it!! }, aiCameraM = r.aiCameraM).cameraM()?.let {
                 T("Berarti kamera ${it.id(2)} m di atas lantai saat foto (AI menebak ${r.aiCameraM.id(2)} m).", 12.5.sp, color = C.t2)
             }
+            Calibration.focusFactor(r, t.map { it!! })?.let { T("Fokus kamera: faktor ×${it.id(2)} dari foto ini.", 12.5.sp, color = C.t2) }
             if (bad) T("Ketiga angka beda jauh: foto ini salah membaca bentuk kardus. Foto ulang dari pojok kardus (kardus utuh, agak dari atas) " +
                 "supaya faktornya benar. Tetap bisa disimpan.", 12.5.sp, color = C.amber)
         }
@@ -469,6 +482,9 @@ fun PhotoSettingsCard(model: AppModel, activity: Activity) {
             val sp = Calibration.spread(cal)
             Chip("Faktor ×${f.id(2)} · ${cal.size} kardus · sebaran ${(sp * 100).toInt()}%", if (sp > 0.15 || cal.size < 3) Tone.WARN else Tone.OK, "tune")
             if (cal.size < 3) T("Tambah sampai 3 kardus supaya faktornya stabil.", 12.sp, color = C.t3)
+            Calibration.focus(cal, null)?.let { fc ->
+                T("Fokus kamera: faktor ×${fc.factor.id(2)} (${fc.samples} foto dekat). Benda yang difoto dekat diukur dari jarak fokus.", 12.sp, color = C.t2)
+            }
             Calibration.standing(cal)?.let { st ->
                 T("Tinggi kamera saat berdiri: ${st.heightM.id(2)} m (${st.samples} foto, sebaran ${(st.spread * 100).toInt()}%). Dipakai bersama AI: foto paket sambil berdiri seperti saat kalibrasi.",
                     12.sp, color = C.t2)

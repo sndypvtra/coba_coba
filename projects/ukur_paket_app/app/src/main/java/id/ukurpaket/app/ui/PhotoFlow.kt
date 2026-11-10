@@ -24,6 +24,8 @@ import id.ukurpaket.app.photo.PhotoCamera
 import id.ukurpaket.app.photo.PhotoFailed
 import id.ukurpaket.app.photo.PhotoFiles
 import id.ukurpaket.app.photo.PhotoMeasure
+import id.ukurpaket.app.photo.FocusCal
+import id.ukurpaket.app.photo.FocusInfo
 import id.ukurpaket.app.photo.Standing
 import id.ukurpaket.app.photo.PhotoResult
 import id.ukurpaket.app.photo.ShotRecord
@@ -59,11 +61,13 @@ data class PhotoShotUi(
     val outline: List<Float>? = null,
     val result: PhotoResult? = null,
     val error: String? = null,
+    /** The autofocus when the photo was taken: a physical clue to the distance. */
+    val focus: FocusInfo? = null,
 )
 
 /**
  * The photo mode's state and work (0.4.0): photos of one object, each cut out by MobileSAM-512 and measured with the
- * camera height from YOLO26n-depth; several photos are combined (median). Lives in the [AppModel], so a turn of the
+ * camera height from Depth Anything V2, the autofocus and the standing height; several photos are combined (median). Lives in the [AppModel], so a turn of the
  * screen or a trip to the weight screen keeps it.
  */
 class PhotoFlow(private val model: AppModel) {
@@ -103,6 +107,9 @@ class PhotoFlow(private val model: AppModel) {
     val samples: List<CalSample> get() = Calibration.current(model.store.settings.value.photoCal)
     val scale: Double get() = if (purpose == PhotoPurpose.CALIBRATE) 1.0 else Calibration.factor(samples) ?: DepthModel.DEFAULT_SCALE.toDouble()
     val calibrated: Boolean get() = purpose != PhotoPurpose.CALIBRATE && samples.isNotEmpty()
+    /** How the autofocus turns into a distance on this phone (not used while calibrating: the photos teach it then). */
+    fun focusCal(lens: FocusInfo?): FocusCal? = if (purpose == PhotoPurpose.CALIBRATE) null else Calibration.focus(samples, lens)
+
     /** The courier's standing camera height from the calibration photos (not used while calibrating). */
     val standing: Standing? get() = if (purpose == PhotoPurpose.CALIBRATE) null else Calibration.standing(samples)
 
@@ -139,7 +146,7 @@ class PhotoFlow(private val model: AppModel) {
             val kSmall = s.k.scaled(ow, oh)
             val up = Intrinsics.upFromAccel(s.accel[0], s.accel[1], s.accel[2])
             val down = PhotoCamera.downDeg(s.accel)
-            shots.add(PhotoShotUi(index, pic, kSmall, up, down, s.still, stage = "Membaca foto…"))
+            shots.add(PhotoShotUi(index, pic, kSmall, up, down, s.still, stage = "Membaca foto…", focus = s.focus))
             current = index; capturing = false
             records[index] = ShotRecord(index, s.timeMs, listOf(s.sw, s.sh), s.rotation, s.k, kSmall, s.accel.toList(), s.accelSpread, s.still, down,
                 focus = s.focus, app = id.ukurpaket.app.BuildConfigInfo.VERSION)
@@ -192,7 +199,7 @@ class PhotoFlow(private val model: AppModel) {
             if (dep == null) { update(index) { it.copy(stage = null, error = "Kedalaman tidak terbaca: ulangi foto") }; return@launch }
             rec(index) { it.copy(depthMs = dep.second, depthSize = listOf(dep.first.w, dep.first.h)) }
             val r = withContext(Dispatchers.Default) {
-                runCatching { PhotoMeasure.measure(m, shot.k, shot.up, dep.first, scale.toFloat(), calibrated, standing) }
+                runCatching { PhotoMeasure.measure(m, shot.k, shot.up, dep.first, scale.toFloat(), calibrated, standing, shot.focus, focusCal(shot.focus)) }
             }
             r.onSuccess { res -> update(index) { it.copy(stage = null, result = res) }; rec(index) { it.copy(result = res, error = null) } }
                 .onFailure { t ->
@@ -251,7 +258,8 @@ class PhotoFlow(private val model: AppModel) {
     fun pendingSample(): CalSample? {
         val r = combined ?: return null
         val t = tapeCm() ?: return null
-        return CalSample(r.rawCm, t, model = DepthModel.ID, aiCameraM = r.aiCameraM)
+        return CalSample(r.rawCm, t, model = DepthModel.ID, aiCameraM = r.aiCameraM,
+            focusFactors = shots.mapNotNull { it.result }.mapNotNull { Calibration.focusFactor(it, t) })
     }
 
     /**

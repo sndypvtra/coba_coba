@@ -11,6 +11,8 @@ import id.ukurpaket.app.photo.Intrinsics
 import id.ukurpaket.app.photo.PhotoMeasure
 import id.ukurpaket.app.photo.PhotoResult
 import id.ukurpaket.app.photo.Standing
+import id.ukurpaket.app.photo.ShotRecord
+import id.ukurpaket.app.photo.FocusInfo
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.double
 import kotlinx.serialization.json.float
@@ -193,11 +195,60 @@ class PhotoMeasureTest {
         assertEquals(2, st.samples)                                                       // the third has no height
         assertEquals((1.45 / 1.1 + 1.40 * 0.92) / 2, st.heightM, 0.01)
         // the AI 8 % high: pulled most of the way to the standing height; the AI far off (crouching, a table): left alone
-        val (h, used) = PhotoMeasure.cameraHeight(1.40f, Standing(1.30, 0.04, 3))
-        assertTrue(used); assertTrue(h in 1.30f..1.33f)
-        val (h2, used2) = PhotoMeasure.cameraHeight(0.70f, Standing(1.30, 0.04, 3))
-        assertFalse(used2); assertEquals(0.70f, h2, 1e-6f)
-        assertEquals(1.10f, PhotoMeasure.cameraHeight(1.10f, null).first, 1e-6f)
+        val p1 = PhotoMeasure.cameraHeight(1.40f, Standing(1.30, 0.04, 3))
+        assertTrue(p1.standing); assertTrue(p1.heightM in 1.30f..1.33f)
+        val p2 = PhotoMeasure.cameraHeight(0.70f, Standing(1.30, 0.04, 3))
+        assertFalse(p2.standing); assertEquals(0.70f, p2.heightM, 1e-6f)
+        assertEquals(1.10f, PhotoMeasure.cameraHeight(1.10f, null).heightM, 1e-6f)
+        // close up, the autofocus (3 %) outweighs the depth model (50 %); far off from it, the model is dropped
+        val p3 = PhotoMeasure.cameraHeight(0.54f, null, 0.07f, 0.03)
+        assertTrue(p3.focus); assertFalse(p3.ai); assertEquals(0.07f, p3.heightM, 1e-4f)
+        val p4 = PhotoMeasure.cameraHeight(1.30f, null, 1.20f, 0.20)                    // far: both kept, the model weighs more
+        assertTrue(p4.ai && p4.focus); assertTrue(p4.heightM in 1.25f..1.30f)
+    }
+
+    /**
+     * A cigarette pack shot close up on the DT50 (0.4.3, tape 8 x 4 x 1,5 cm, photos rolled 52 and 80 deg): the depth model
+     * put the camera 0,64 and 0,74 m above the table, 9x and 14x too high and not by the same factor (the two photos read
+     * 52 and 77 cm long). The autofocus said 3,97 and 5,84 "diopters" (uncalibrated: no physical unit), and against the
+     * tape both are 3,1x too few, within 2 % of each other: one factor learnt from one photo puts the other within 3 %.
+     */
+    @Test fun theAutofocusGivesTheDistanceCloseUp() {
+        class Shot(val mask: Mask, val k: Intrinsics, val up: V3, val focus: FocusInfo, val depth: DepthMap, val tape: List<Double>)
+        val dir = File(javaClass.getResource("/photo_real/20261110_113804")!!.toURI())
+        val json = Json { ignoreUnknownKeys = true }
+        val shots = (0..1).map { i ->
+            val rec = json.decodeFromString(ShotRecord.serializer(), File(dir, "shot_$i.json").readText())
+            val img = TestImages.read(File(dir, "mask_$i.png").inputStream())
+            val bs = File(dir, "depth_$i.u16").readBytes(); val ds = rec.depthSize!!
+            Shot(Mask(img.w, img.h, BooleanArray(img.w * img.h) { (img.px[it] and 255) > 127 }), rec.lensModel,
+                Intrinsics.upFromAccel(rec.accel[0], rec.accel[1], rec.accel[2]), rec.focus!!,
+                DepthMap(ds[0], ds[1], FloatArray(ds[0] * ds[1]) { q -> ((bs[2 * q].toInt() and 255) or ((bs[2 * q + 1].toInt() and 255) shl 8)) / 1000f }), rec.tapeCm!!)
+        }
+        // the factor each photo gives (the real camera height from the tape, the focus point's depth from the box)
+        val f = shots.map { s ->
+            val m = PhotoMeasure.metrology(s.mask, s.k, s.up, 1f)
+            val zUnit = PhotoMeasure.focusDepth(m.corners, s.up, 1f, s.k)!!
+            val q = listOf(s.tape[0] / (m.lengthM * 100), s.tape[1] / (m.widthM * 100), s.tape[2] / (m.heightM * 100)).sorted()[1]
+            1 / (zUnit * q) / s.focus.diopters
+        }
+        println(String.format(Locale.US, "real / reported diopters: %.3f, %.3f", f[0], f[1]))
+        assertEquals(f[0], f[1], 0.03 * f[0])
+        assertEquals(Calibration.DT50_FOCUS, f.average(), 0.1)
+        // the lens is recognised as the DT50's; the whole measurement then takes its distance from the focus
+        val cal = Calibration.builtIn(shots[0].focus)!!
+        assertEquals(Calibration.DT50_FOCUS, cal.factor, 1e-9)
+        val rs = shots.map { s -> PhotoMeasure.measure(s.mask, s.k, s.up, s.depth, DepthModel.DEFAULT_SCALE, false, null, s.focus, cal) }
+        rs.forEachIndexed { i, r -> println(String.format(Locale.US, "photo %d: %.1f x %.1f x %.1f cm (0.4.3 read it %s), camera %.3f m, AI %.3f m, notes %s", i,
+            r.lengthCm, r.widthCm, r.heightCm, listOf("51.7 x 31.1 x 13.9", "76.6 x 45.3 x 19.6")[i], r.cameraHeightM, r.aiCameraM, r.notes)) }
+        for (r in rs) {
+            assertTrue(r.focusCameraM > 0); assertEquals(r.focusCameraM, r.cameraHeightM, 1e-6)
+            assertEquals(8.0, r.lengthCm, 2.0); assertEquals(4.0, r.widthCm, 1.0); assertEquals(1.5, r.heightCm, 0.6)
+        }
+        // the two photos now agree: within 3 % (0.4.3: 48 % apart)
+        assertEquals(rs[0].lengthCm, rs[1].lengthCm, 0.03 * rs[0].lengthCm)
+        // calibration learns it from its own photos: the factor of each shot
+        assertEquals(f[0], Calibration.focusFactor(PhotoMeasure.measure(shots[0].mask, shots[0].k, shots[0].up, shots[0].depth, 1f, false, null, shots[0].focus, null), shots[0].tape)!!, 0.03 * f[0])
     }
 
     @Test fun everySizeScalesWithTheCameraHeight() {

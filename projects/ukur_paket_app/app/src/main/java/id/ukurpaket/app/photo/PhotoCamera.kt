@@ -16,6 +16,7 @@ import android.hardware.camera2.CameraMetadata
 import android.hardware.camera2.TotalCaptureResult
 import android.hardware.camera2.CaptureResult
 import android.hardware.camera2.CaptureRequest
+import android.hardware.camera2.params.MeteringRectangle
 import android.media.ImageReader
 import android.os.Build
 import android.os.Handler
@@ -113,6 +114,12 @@ class PhotoCamera(private val ctx: Context, private val cb: Callback) {
                     b.addTarget(surface!!); b.addTarget(reader!!.surface)
                     val af = chars?.get(CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES)?.toList().orEmpty()
                     if (CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE in af) b.set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
+                    // the autofocus measures the middle of the picture (its distance is a clue to the scale: PhotoMeasure)
+                    val act = chars?.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)
+                    if (act != null && (chars?.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AF) ?: 0) > 0) {
+                        val w = act.width() / 8; val h = act.height() / 8
+                        b.set(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(MeteringRectangle(act.centerX() - w, act.centerY() - h, 2 * w, 2 * h, MeteringRectangle.METERING_WEIGHT_MAX)))
+                    }
                     // the lens must not move against the sensor: the measurement uses the factory focal length
                     b.set(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE, CameraMetadata.CONTROL_VIDEO_STABILIZATION_MODE_OFF)
                     s.setRepeatingRequest(b.build(), frameCb, handler)
@@ -167,7 +174,10 @@ class PhotoCamera(private val ctx: Context, private val cb: Callback) {
             val p = pending ?: return
             val (m, sp) = accelNow()
             val still = m != null && isStill(m, sp)
-            if (!still && SystemClock.elapsedRealtime() - pendingSince < maxWait) return
+            // also wait for the autofocus to settle: a lens still searching says nothing about the distance
+            val focused = afState.let { it == null || it == CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED || it == CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED ||
+                it == CaptureResult.CONTROL_AF_STATE_INACTIVE }
+            if (!(still && focused) && SystemClock.elapsedRealtime() - pendingSince < maxWait) return
             pending = null
             val nv = SweepRecorder.toNv21(img)
             val shot = Shot(nv, img.width, img.height, rotation, lens(img.width, img.height), m ?: floatArrayOf(0f, 9.81f, 0f), sp, still,

@@ -134,6 +134,13 @@ data class PhotoResult(
     val aiCameraM: Double = 0.0,
     /** The courier's standing camera height it was combined with (0 = not used), metres. */
     val standingM: Double = 0.0,
+    /** The camera height the autofocus gave (0 = not used), metres, and the distance it focused at. */
+    val focusCameraM: Double = 0.0,
+    val focusDistanceM: Double = 0.0,
+    /** What calibration needs from the photo: the diopters the camera reported, and the depth of the autofocus point per
+     *  metre of camera height (from the box's geometry); 0 = none. */
+    val focusDiopters: Double = 0.0,
+    val focusDepthUnit: Double = 0.0,
 )
 
 class PhotoFailed(message: String) : Exception(message)
@@ -233,8 +240,14 @@ object PhotoMeasure {
     /** A projected corner behind the camera (PhotoResult.corners): its edges are not drawn. */
     const val BEHIND = -100f
 
-    /** Thicknesses tried for an object lying flat (metres). */
+    /** Thicknesses tried for an object lying flat (metres, for a camera 0,6 m up; scaled with the camera's height). */
     private val FLAT_H = floatArrayOf(0.005f, 0.01f, 0.015f, 0.02f, 0.03f, 0.04f, 0.05f, 0.06f, 0.08f)
+
+    /**
+     * Thinner than this reads as lying flat (its thickness only roughly known): 4 cm, less close up, where one view
+     * resolves thickness better (a cigarette pack 1,5 cm thick shot from 7 cm is a box, not a flat thing).
+     */
+    fun flatBelow(hM: Float) = min(0.04f, 0.05f * hM)
 
     /** Below this roll (degrees) the picture is measured as it is. */
     private const val ROLL_MIN_DEG = 1.5
@@ -343,7 +356,7 @@ object PhotoMeasure {
         fun footprint(H: Float, lower: List<Int> = sideLower, upper: List<Int> = sideUpper): Pair<FloatArray, List<P2>>? {
             val q = ArrayList<P2>()
             for (i in lower) onPlane(k, up, dense[i].a, dense[i].b, hM)?.let { p -> val d = p - origin; q += P2(d dot ax, d dot ay) }
-            if (hM - H > 0.02f) for (i in upper) onPlane(k, up, dense[i].a, dense[i].b, hM - H)?.let { p ->
+            if (hM - H > 0.03f * hM) for (i in upper) onPlane(k, up, dense[i].a, dense[i].b, hM - H)?.let { p ->
                 val d = p - origin; q += P2(d dot ax, d dot ay) }
             if (q.size < 3) return null
             val hq = convexHull(q); if (hq.size < 3) return null
@@ -376,8 +389,9 @@ object PhotoMeasure {
         }
         // the same outline read as an object lying flat
         var flat: Metrology? = null
-        if (forceH == null) for (H in FLAT_H) {
-            if (H > hM - 0.1f) break
+        if (forceH == null) for (H0 in FLAT_H) {
+            val H = H0 * hM / 0.6f
+            if (H > 0.8f * hM) break
             val f = footprint(H, flatLower, flatUpper) ?: continue
             val cs = corners(f.second, H)
             val iou = silhouetteIou(cs, k, mask)
@@ -429,32 +443,58 @@ object PhotoMeasure {
             box = o; iou = oi
         }
         return Metrology(max(box.l, box.w), min(box.l, box.w), box.hgt, box.corners(ax, ay, up, hM), iou, bestAlign,
-            flat = box.hgt < 0.04f, boxLike = boxLike, outlineCorners = simp.size, round = round)
+            flat = box.hgt < flatBelow(hM), boxLike = boxLike, outlineCorners = simp.size, round = round)
     }
 
     /**
      * One photo: floor -> camera height -> metrology -> checks. [scale]: this phone's calibration (1 = none yet).
      * [mask] and [k] at the same resolution.
      */
-    /** How much the depth model's camera height is trusted after calibration (relative standard deviation). */
+    /** How much the depth model's camera height is trusted after calibration (relative standard deviation)... */
     const val SIGMA_AI = 0.12
 
+    /** ...and close up (camera under 0,6 m), where the depth models read far too much (4-14x on the first close-ups). */
+    const val SIGMA_AI_CLOSE = 0.5
+
+    /** How precisely the autofocus finds a distance, in real diopters (1 / metres): 0,15 D is 1,5 % at 10 cm, 15 % at 1 m. */
+    const val FOCUS_SIGMA_D = 0.15
+
+    /** Which clues the camera height came from. */
+    data class HeightPick(val heightM: Float, val ai: Boolean, val standing: Boolean, val focus: Boolean)
+
     /**
-     * The camera height for the measurement: the depth model's [hAi], combined with the courier's standing camera height
-     * [standing] (learnt from the calibration photos) when both agree within a factor 1,43, weighted by how much each
-     * is trusted (in log space: both are scale errors). Returns the height and whether [standing] was used.
+     * The camera height for the measurement from up to three clues, each a scale error of its own, combined in log space
+     * weighted by how much each is trusted: the depth model's [hAi]; the autofocus's [hFocus] (relative error
+     * [sigmaFocus]: small close up, large far away); the courier's standing camera height [standing] learnt from the
+     * calibration photos. The lens is a physical measurement and the depth model a guess: when the two disagree beyond
+     * what both allow, the guess is dropped. The standing height joins only within a factor 1,43 of the others (not when
+     * crouching or with the parcel on a table).
      */
-    fun cameraHeight(hAi: Float, standing: Standing?): Pair<Float, Boolean> {
-        if (standing == null) return hAi to false
-        val r = hAi / standing.heightM
-        if (r < 0.7 || r > 1.43) return hAi to false
-        val sp = max(0.05, standing.spread / 2)
-        val wa = 1 / (SIGMA_AI * SIGMA_AI); val wp = 1 / (sp * sp)
-        val ln = (wa * kotlin.math.ln(hAi.toDouble()) + wp * kotlin.math.ln(standing.heightM)) / (wa + wp)
-        return kotlin.math.exp(ln).toFloat() to true
+    fun cameraHeight(hAi: Float, standing: Standing?, hFocus: Float? = null, sigmaFocus: Double = 0.0): HeightPick {
+        val sAi = if (hAi < 0.6f) SIGMA_AI_CLOSE else SIGMA_AI
+        val clues = ArrayList<Pair<Double, Double>>()                // ln height, sigma
+        var useAi = true
+        if (hFocus != null && hFocus > 0f) {
+            val sf = max(0.01, sigmaFocus)
+            if (abs(kotlin.math.ln(hAi.toDouble() / hFocus)) > 3 * kotlin.math.sqrt(sAi * sAi + sf * sf)) useAi = false
+            clues += kotlin.math.ln(hFocus.toDouble()) to sf
+        }
+        if (useAi) clues += kotlin.math.ln(hAi.toDouble()) to sAi
+        fun mean() = clues.sumOf { it.first / (it.second * it.second) } / clues.sumOf { 1 / (it.second * it.second) }
+        var m = mean()
+        var useSt = false
+        if (standing != null && abs(kotlin.math.ln(standing.heightM) - m) < kotlin.math.ln(1.43)) {
+            clues += kotlin.math.ln(standing.heightM) to max(0.05, standing.spread / 2); useSt = true; m = mean()
+        }
+        return HeightPick(kotlin.math.exp(m).toFloat(), useAi, useSt, hFocus != null && hFocus > 0f)
     }
 
-    fun measure(mask: Mask, k: Intrinsics, up: V3, depth: DepthMap, scale: Float, calibrated: Boolean, standing: Standing? = null): PhotoResult {
+    /**
+     * One photo: floor -> camera height (depth model, autofocus, standing height) -> metrology -> checks.
+     * [focus]: the autofocus when the photo was taken; [focusCal]: how its diopters turn into real ones (null: not used).
+     */
+    fun measure(mask: Mask, k: Intrinsics, up: V3, depth: DepthMap, scale: Float, calibrated: Boolean, standing: Standing? = null,
+                focus: FocusInfo? = null, focusCal: FocusCal? = null): PhotoResult {
         require(mask.w == k.w && mask.h == k.h) { "mask and intrinsics differ in size" }
         val b = mask.bounds() ?: throw PhotoFailed("Objek belum dipilih")
         val area = mask.bits.count { it }
@@ -463,15 +503,27 @@ object PhotoMeasure {
         if (downDeg < 8) throw PhotoFailed("HP terlalu tegak: arahkan kamera miring ke bawah (30–60°)")
         val fl = floor(depth, mask, k, up)
         val hAi = fl.heightM * scale
-        val (h, usedStanding) = cameraHeight(hAi, standing)
-        val met = metrology(mask, k, up, h)
+        var met = metrology(mask, k, up, hAi)
+        // the autofocus: how far the lens says the middle of the picture is; the box's geometry says how far that is
+        // per metre of camera height, so the two give the camera height. The shape does not depend on the height.
+        val zUnit = focusDepth(met.corners, up, hAi, k)?.div(hAi)
+        val focusOk = focus != null && focus.usable()
+        var hFocus: Float? = null; var sFocus = 0.0; var dTrue = 0.0
+        if (zUnit != null && focusOk && focusCal != null) {
+            dTrue = focusCal.factor * focus!!.diopters
+            hFocus = (1.0 / dTrue / zUnit).toFloat(); sFocus = kotlin.math.sqrt((FOCUS_SIGMA_D / dTrue).let { it * it } + focusCal.sigma * focusCal.sigma)
+        }
+        val pick = cameraHeight(hAi, standing, hFocus, sFocus)
+        val h = pick.heightM
+        if (abs(kotlin.math.ln(h / hAi)) > 0.03f) met = metrology(mask, k, up, h)
         val notes = ArrayList<String>()
         var conf = 100.0
-        if (standing != null && !usedStanding) {
-            notes += "Tinggi kamera tidak seperti saat kalibrasi (AI ${"%.2f".format(hAi)} m, biasanya ${"%.2f".format(standing.heightM)} m): foto sambil berdiri, HP setinggi dada"
+        if (pick.focus && !pick.ai) notes += "Jarak dari fokus kamera (${"%.2f".format(1 / dTrue)} m); tebakan AI (kamera ${"%.2f".format(hAi)} m) beda jauh, tidak dipakai"
+        if (standing != null && !pick.standing) {
+            notes += "Tinggi kamera tidak seperti saat kalibrasi (${"%.2f".format(h)} m, biasanya ${"%.2f".format(standing.heightM)} m): foto sambil berdiri, HP setinggi dada"
             conf -= 15
         }
-        if (hAi < 0.6f) { notes += "Foto terlalu dekat: AI kurang akurat dari dekat. Mundur, foto sambil berdiri"; conf -= 15 }
+        if (!pick.focus && hAi < 0.6f) { notes += "Foto terlalu dekat: AI kurang akurat dari dekat. Mundur, foto sambil berdiri"; conf -= 15 }
         // touching (or nearly touching) the picture's edge: part of the parcel may be outside it
         val margin = max(2, (0.012f * max(mask.w, mask.h)).toInt())
         val touches = b[0] < margin || b[1] < margin || b[2] >= mask.w - margin || b[3] >= mask.h - margin
@@ -482,13 +534,15 @@ object PhotoMeasure {
         else if (!boxLike) { notes += "Bentuk tidak seperti kotak: ukuran kotak terluarnya (dipakai untuk berat volumetrik)"; conf -= 25 }
         else conf -= (0.97 - met.iou).coerceAtLeast(0.0) * 150
         if (downDeg < 25 || downDeg > 72) { notes += "Sudut foto ${downDeg.toInt()}°: paling pas 30–60° ke bawah"; conf -= 10 }
-        if (h < 0.25f || h > 2.2f) { notes += "Jarak kamera ke lantai tidak wajar (${"%.2f".format(h)} m): ulangi foto"; conf -= 30 }
-        if (met.heightM > h - 0.08f) { notes += "Kamera kurang tinggi dari paket: foto dari lebih atas"; conf -= 20 }
+        // a camera a few centimetres up is real close up when the focus says so; from the depth model alone it is not
+        if (h < (if (pick.focus) 0.03f else 0.25f) || h > 2.2f) { notes += "Jarak kamera ke lantai tidak wajar (${"%.2f".format(h)} m): ulangi foto"; conf -= 30 }
+        if (met.heightM > h - max(0.01f, 0.06f * h)) { notes += "Kamera kurang tinggi dari paket: foto dari lebih atas"; conf -= 20 }
         if (fl.wide || fl.inliers < 300) { notes += "Lantai di sekitar paket kurang terlihat"; conf -= 15 }
         if (fl.tiltDeg > 15) { notes += "Lantai tidak terbaca rata"; conf -= 15 }
         if (!calibrated) { notes += "Mode foto belum dikalibrasi di HP ini: angka bisa meleset jauh"; conf = min(conf, 60.0) }
         val c = conf.toInt().coerceIn(0, 100)
-        val raw = listOf(met.lengthM / scale, met.widthM / scale, met.heightM / scale).map { it * 100.0 }
+        // the same sizes at the depth model's own height (no factor, no other clue): what calibration compares with
+        val raw = listOf(met.lengthM, met.widthM, met.heightM).map { it * 100.0 * fl.heightM / h }
         // fractions of the picture, kept even far outside it (the drawing clips); a corner behind the camera is BEHIND
         val proj = met.corners.flatMap { p ->
             if (p.z > 0.01f) k.project(p).let { listOf((it.a / k.w).coerceIn(-20f, 20f), (it.b / k.h).coerceIn(-20f, 20f)) } else listOf(BEHIND, BEHIND)
@@ -496,7 +550,9 @@ object PhotoMeasure {
         return PhotoResult(met.lengthM * 100.0, met.widthM * 100.0, met.heightM * 100.0, raw, scale.toDouble(), h.toDouble(), downDeg,
             met.iou.toDouble(), boxLike, proj, c, ok = calibrated && boxLike && !touches && !met.flat && c >= 75, notes = notes,
             floorInliers = fl.inliers, floorTiltDeg = fl.tiltDeg.toDouble(), aiCameraM = hAi.toDouble(),
-            standingM = if (usedStanding) standing!!.heightM else 0.0)
+            standingM = if (pick.standing) standing!!.heightM else 0.0,
+            focusCameraM = if (pick.focus) hFocus!!.toDouble() else 0.0, focusDistanceM = if (pick.focus) 1 / dTrue else 0.0,
+            focusDiopters = if (focusOk) focus!!.diopters.toDouble() else 0.0, focusDepthUnit = zUnit?.toDouble() ?: 0.0)
     }
 
     /** Several photos of one object: the median of each side; a spread over 10 % is flagged. */
@@ -535,6 +591,44 @@ object PhotoMeasure {
         val det = rr * uu - ru * ru
         if (abs(det) < 1e-9f) return 0f
         return (rr * -ub + ru * rb) / det
+    }
+
+    /**
+     * Depth (metres along the optical axis) of what the picture shows at pixel ([x], [y]): the box [corners] (camera
+     * axes, floor 0-3 and top 4-7) where the ray meets it, else the floor `up . X = -hM`; null if it meets neither.
+     */
+    fun depthAt(corners: List<V3>, up: V3, hM: Float, k: Intrinsics, x: Float, y: Float): Float? {
+        val r = k.ray(x, y)
+        var best = Float.MAX_VALUE
+        // the box by slabs along its three edges from corner 0 (the ray starts at the camera, the origin)
+        val o = corners[0]
+        var t0 = 0f; var t1 = Float.MAX_VALUE; var hit = true
+        for (e in listOf(corners[1] - o, corners[3] - o, corners[4] - o)) {
+            val l2 = e dot e
+            if (l2 < 1e-12f) { hit = false; break }
+            val ro = -(o dot e) / l2; val rd = (r dot e) / l2
+            if (abs(rd) < 1e-12f) { if (ro < 0f || ro > 1f) { hit = false; break }; continue }
+            var ta = -ro / rd; var tb = (1f - ro) / rd
+            if (ta > tb) { val t = ta; ta = tb; tb = t }
+            t0 = max(t0, ta); t1 = min(t1, tb)
+            if (t0 > t1) { hit = false; break }
+        }
+        if (hit && t0 > 0f) best = t0
+        val den = -(r dot up)
+        if (den > 1e-4f) { val tf = hM / den; if (tf < best) best = tf }
+        return if (best == Float.MAX_VALUE) null else best * r.z
+    }
+
+    /**
+     * Depth of what the autofocus looks at: the median over the middle of the picture (±6 % of its width round the
+     * centre, where continuous autofocus measures), of the box or the floor there.
+     */
+    fun focusDepth(corners: List<V3>, up: V3, hM: Float, k: Intrinsics): Float? {
+        val d = ArrayList<Float>()
+        val half = 0.06f * k.w
+        for (i in -2..2) for (j in -2..2) depthAt(corners, up, hM, k, k.w / 2f + i * half / 2, k.h / 2f + j * half / 2)?.let { d += it }
+        if (d.size < 5) return null
+        d.sort(); return d[d.size / 2]
     }
 
     /** IoU of the convex hull of the projected corners with the mask. */
@@ -585,7 +679,9 @@ data class CalSample(val rawCm: List<Double>, val tapeCm: List<Double>, val at: 
                      /** The depth model the sample was measured with: a new model needs a new calibration. */
                      val model: String = "",
                      /** The camera height the depth model gave for the photo (no factor), metres; 0 = not recorded. */
-                     val aiCameraM: Double = 0.0) {
+                     val aiCameraM: Double = 0.0,
+                     /** Real / reported autofocus diopters from this carton's photos taken close (see Calibration.focusFactor). */
+                     val focusFactors: List<Double> = emptyList()) {
     /** How high the camera really was: the model's height times this carton's tape / measured; null if unknown. */
     fun cameraM(): Double? {
         val r = ratios().sorted(); if (aiCameraM <= 0 || r.isEmpty()) return null
@@ -628,6 +724,48 @@ object Calibration {
         return Standing(m, (hs.last() - hs.first()) / m, hs.size)
     }
 
+    /**
+     * How the autofocus's diopters turn into real ones on this phone: from the calibration photos taken close
+     * (median of their factors), else what the camera itself says about its focus, else the DT50's (see [DT50_FOCUS]).
+     */
+    fun focus(samples: List<CalSample>, lens: FocusInfo?): FocusCal? {
+        val fs = samples.flatMap { it.focusFactors }.sorted()
+        if (fs.isNotEmpty()) {
+            val m = if (fs.size % 2 == 1) fs[fs.size / 2] else (fs[fs.size / 2 - 1] + fs[fs.size / 2]) / 2
+            return FocusCal(m, if (fs.size == 1) 0.05 else max(0.02, (fs.last() - fs.first()) / m / 2), fs.size)
+        }
+        return builtIn(lens)
+    }
+
+    /**
+     * Real / reported autofocus diopters for one calibration photo [r] of a carton of tape size [tapeCm]: its real camera
+     * height is the depth model's times tape / read, the autofocus point's real distance its depth per metre of camera
+     * height times that. Only within 0,8 m, where the lens moves enough to tell; null otherwise or without a focus.
+     */
+    fun focusFactor(r: PhotoResult, tapeCm: List<Double>): Double? {
+        if (r.focusDiopters <= 0 || r.focusDepthUnit <= 0 || r.aiCameraM <= 0) return null
+        val q = CalSample(r.rawCm, tapeCm).ratios().sorted(); if (q.isEmpty()) return null
+        val z = r.focusDepthUnit * r.aiCameraM * q[q.size / 2]
+        if (z > 0.8) return null
+        return 1 / z / r.focusDiopters
+    }
+
+    /**
+     * Real / reported diopters of the Urovo DT50's camera, whose focus Android calls "uncalibrated": 3,13 and 3,08 on the
+     * first two photos measured with a tape (a cigarette pack 8 x 4 x 1,5 cm at 6-8 cm, 0.4.3), while the depth model
+     * was 9x and 14x off on them. Recognised by its lens facts (closest focus 20, hyperfocal 1/3 in its own units).
+     */
+    const val DT50_FOCUS = 3.1
+
+    /** The focus factor before the phone has its own: the camera's word for a calibrated focus, the DT50's, or none. */
+    fun builtIn(lens: FocusInfo?): FocusCal? = when {
+        lens == null -> null
+        lens.calibration == "calibrated" -> FocusCal(1.0, 0.04, 0, builtIn = true)
+        lens.calibration == "approximate" -> FocusCal(1.0, 0.15, 0, builtIn = true)
+        lens.minFocusDiopters == 20f && abs((lens.hyperfocalDiopters ?: 0f) - 1f / 3) < 0.01f -> FocusCal(DT50_FOCUS, 0.06, 0, builtIn = true)
+        else -> null
+    }
+
     /** How much the samples disagree: (largest - smallest ratio) / factor, 0 for one sample. */
     fun spread(samples: List<CalSample>): Double {
         val r = samples.flatMap { it.ratios() }
@@ -638,3 +776,9 @@ object Calibration {
 
 /** The courier's camera height when standing, metres, from [samples] calibration photos. */
 data class Standing(val heightM: Double, val spread: Double, val samples: Int)
+
+/**
+ * How the autofocus's reported diopters turn into real ones ([factor]), how far that is trusted ([sigma], relative), from
+ * how many calibration photos ([samples]; 0 with [builtIn] = the camera's own word or the DT50's known factor).
+ */
+data class FocusCal(val factor: Double, val sigma: Double, val samples: Int, val builtIn: Boolean = false)

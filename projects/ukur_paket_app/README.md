@@ -1,4 +1,4 @@
-# UkurPaket: Android app (v0.4.3, test build)
+# UkurPaket: Android app (v0.4.4, test build)
 
 Measures a parcel's length × width × height with the phone camera, the way the courier mockup
 (`../ukur_paket_mockup`) describes: method A, ARCore depth + floor detection, with the parcel picked by a tap or a
@@ -50,7 +50,7 @@ and a spread above 10 % is flagged. **Pakai ukuran ini** → weight → saved wi
 | Lens | Camera2: factory calibration when it agrees with the focal length, else focal (mm) / sensor width (mm); turned upright with the sensor orientation |
 | Up | the accelerometer averaged over the 0,4 s before the photo (a still phone reads gravity only: reliable, unlike integrating it) |
 | Outline | MobileSAM-512 on a 480 × 640 picture, tap or box (2,2 s on the DT50) |
-| Camera height | **Depth Anything V2 Small, metric indoor** (Apache-2.0, ONNX 280 × 378, int8 weights, 36 MB; 0,14 s on the PC, ~3–4 s estimated on the DT50, run while the courier taps; YOLO26n-depth in 0.4.0–0.4.1, see v0.4.2 below): a level plane (within 20° of the accelerometer's) is found among the floor pixels round the object; the camera height is the median, over thousands of them, of how far below the camera each lies. This is the **only** number taken from the AI |
+| Camera height | **Depth Anything V2 Small, metric indoor** (Apache-2.0, ONNX 280 × 378, int8 weights, 36 MB; 0,14 s on the PC, ~3–4 s estimated on the DT50, run while the courier taps; YOLO26n-depth in 0.4.0–0.4.1, see v0.4.2 below): a level plane (within 20° of the accelerometer's) is found among the floor pixels round the object; the camera height is the median, over thousands of them, of how far below the camera each lies. Combined with the **autofocus** distance (close up) and the courier's **standing height** (from calibration): see v0.4.3 and v0.4.4 below |
 | Level | a phone held tilted sideways (even landscape) is turned level first: the mask is redrawn as a camera rolled about its optical axis would see it, so 'up' points up in it (0.4.3) |
 | Geometry | single-view metrology with that height gives the starting box: the outline's lower edge on the floor (near half of the footprint), its left and right sides as vertical edges (bottom on the floor, top at H), its upper edge on the plane at H (far half); footprint = smallest rectangle round both halves; also read as an object lying flat |
 | Box fit | the box is then fitted to the whole silhouette (`photo/BoxFit.kt`, 0.4.3): position, turn, length, width and height moved (Nelder-Mead, several starts) until the box drawn into the picture covers the mask best (IoU, one pass over the rows per try); a standing cylinder is fitted too and kept when it fits clearly better (gallon, bottle: diameter × diameter × height); a soft or irregular object gets its outer box |
@@ -156,6 +156,37 @@ Next, if the shape is still off on real cartons: align the box's inner edges (th
 edges) with the photo's own edges, not just its outline; one view leaves the box's height and depth trading off along
 the line of sight when the outline is imperfect.
 
+**v0.4.4: the distance from the autofocus.** A cigarette pack shot close up (tape 8 × 4 × 1,5 cm; the phone rolled
+52° and 80°) read 51,7 × 31,1 × 13,9 and 76,6 × 45,3 × 19,6 cm, 48 % apart. The 3D box itself was right: it fits the
+silhouette at IoU 0,97 on both photos and has the same proportions on both (1 : 0,60 : 0,26). Everything wrong was the one
+number the box is scaled with, the distance: the depth model put the camera 0,64 and 0,74 m above the table where the
+tape says 7 and 5 cm (9× and 14× off, and not by the same factor, which is why the photos disagreed). Depth models
+learnt rooms; a hand's length away they have no scale.
+
+The camera has a physical clue for exactly that distance: where its autofocus put the lens. 0.4.3 recorded it with every
+photo: 3,97 and 5,84 "diopters" (1 / metres). The DT50 calls its focus "uncalibrated" (Android: no physical unit), and
+indeed against the tape both are 3,1× too few, but **by the same factor within 2 %** (3,13 and 3,08). So 0.4.4 reads the
+distance from the focus:
+- the box's geometry gives the depth of whatever is in the middle of the picture (where the autofocus measures: box or
+  floor) per metre of camera height; the focus distance divided by it is the camera height (`PhotoMeasure.focusDepth`);
+- the focus's factor comes from the calibration photos (a carton shot within 0,8 m: real camera height from the tape,
+  hence the real focus distance); until then the DT50's 3,1 (recognised by its lens facts), 1 for a camera that says
+  its focus is calibrated, none otherwise;
+- it is combined with the depth model and the standing height by how precise each is: the focus to ~0,15 real dioptres,
+  i.e. 1,5 % at 10 cm, 7 % at 0,5 m, 15 % at 1 m, and nothing beyond about 1 m (past the hyperfocal distance the lens
+  barely moves); the depth model ±12 % at room scale, ±50 % under 0,6 m. When the depth model disagrees with the focus
+  beyond both, it is dropped. So close up the focus decides, standing up the depth model and the standing height;
+- the camera waits for the focus to settle (and for stillness) before the photo, focuses on the middle (a circle marks
+  it: "lingkaran tengah tepat di paket"), and the thresholds that were in centimetres (lying flat below 4 cm, the
+  thicknesses tried, the camera's plausible height) now scale with the camera's height.
+
+Result on the two photos: 6,7 × 4,0 × 1,8 and 6,7 × 4,0 × 1,7 cm (0.4.3: 51,7 × 31,1 × 13,9 and 76,6 × 45,3 × 19,6), the
+two photos within 1 % of each other; a factor learnt from either photo puts the other within 2 %. The length and
+thickness differ from the tape (8 and 1,5) by about 17 % on both photos alike, with the fit as tight as a carton's and
+the proportions unchanged by the lens's focal length (tried 0,9-1,3×): most likely the tape size (a pack of this kind is
+about 8,5 × 5,5 × 2,2) — to be measured again. If so the DT50's focus factor becomes about 2,3 instead of 3,1; the
+phone's own calibration replaces it in any case.
+
 **Limits.** Estimation class, not a certified (legal-for-trade) dimensioner. Built for cartons; round, soft and
 bulging parcels get a rough outer box and "Perlu Dicek". The camera must be above the parcel's top (standing), the
 parcel whole in the picture with some floor round it, on the floor or a table (not on another parcel).
@@ -186,7 +217,7 @@ pick, timings, the result, the tape size when typed), `evidence.jpg` once used. 
 
 JDK 17+ and the Android SDK (platform 35). AGP 8.7.3, Kotlin 2.1.0, Compose BOM 2024.12.01, ARCore 1.47.0,
 ONNX Runtime 1.20.0, minSdk 26, targetSdk 35, arm64-v8a + armeabi-v7a. The test APK is
-`release/UkurPaket-0.4.3-uji.apk` (82 MB; the photo mode's depth model is 36 MB of it; MobileSAM is two models: the 1024 one for ARCore phones, encoder float16
+`release/UkurPaket-0.4.4-uji.apk` (82 MB; the photo mode's depth model is 36 MB of it; MobileSAM is two models: the 1024 one for ARCore phones, encoder float16
 13,8 MB + decoder with int8 weights 4,6 MB, made by `tools/export_sam.py`, the int8 decoder's masks within IoU 0,989 of
 float32; and the 512 one for PDAs, encoder float32 28 MB + decoder 4,7 MB, made by `tools/export_sam512.py`). It installs directly (allow "install unknown apps"); for the Play Store use your own key.
 
@@ -428,7 +459,7 @@ Tested here, on the PC:
 | `GeometryTest` | box turned 30°, 40 × 30 × 20 cm, 2 mm noise, a taller box 8 cm away; 30 × 20 × 10 cm on a floor with 0,8 cm depth noise | within 1,2 cm, neighbour left out; within 2 cm |
 | `SegmenterTest` | the app's own MobileSAM code on the conveyor frame (7 parcels, some touching), one tap and one box each, vs the Python reference from the same ONNX files | mask IoU ≥ 0,985 for every tap and box (references made with the float32 decoder) |
 | `ConveyorReplayTest` | the conveyor scene in 3D, each parcel measured from geometry alone and from the tap/box cut-out | geometry alone merges touching parcels; with the cut-out every parcel stays separate (README section below) |
-| `PhotoMeasureTest` | the photo mode's engine on synthetic photos (carton, gallon, sack, phone lying flat, mailer bag; 2 photos each, two cartons and two phones): sizes from the outline with the true camera height; the phone rolled 12–79° sideways; tape sticking out and a shadow; every size scales with the camera height; the camera height from a floor depth map; a 20 % depth-scale error and the calibration that removes it; the standing camera height combined with the AI's; an object cut by the edge, a phone held upright; Camera2 lens facts turned upright; combining photos; the calibration factor, a sample whose shape disagrees with the tape, samples of another depth model; the first real DT50 photos (masks and records only); then the real MobileSAM-512 and Depth Anything V2 on the photos | cartons within 0,1 cm (true outline), 1,3 cm with tape and shadow, any roll; gallon within 0,1 cm; phone and mailer within 0,1 cm; sack within 22 % (height 25 %); 11 tests pass |
+| `PhotoMeasureTest` | the photo mode's engine on synthetic photos (carton, gallon, sack, phone lying flat, mailer bag; 2 photos each, two cartons and two phones): sizes from the outline with the true camera height; the phone rolled 12–79° sideways; tape sticking out and a shadow; every size scales with the camera height; the camera height from a floor depth map; a 20 % depth-scale error and the calibration that removes it; the standing camera height combined with the AI's; an object cut by the edge, a phone held upright; Camera2 lens facts turned upright; combining photos; the calibration factor, a sample whose shape disagrees with the tape, samples of another depth model; the first real DT50 photos (masks and records only); the autofocus distance on the cigarette-pack photos (factor from one photo predicts the other, the whole measurement with the DT50's factor); the clues combined (focus, depth model, standing height); then the real MobileSAM-512 and Depth Anything V2 on the photos | cartons within 0,1 cm (true outline), 1,3 cm with tape and shadow, any roll; gallon within 0,1 cm; phone and mailer within 0,1 cm; sack within 22 % (height 25 %); pack photos within 3 % of each other; 12 tests pass |
 | `FlowTest` | the courier's path through the screens: first open with nothing but the scanner; measure → weight → save → next parcel in the same session → Selesai starts a new one; a second tap on Simpan; re-measuring replaces the old record; Ukur di Hub on a phone without ARCore; a late hub photo after the courier left; a scanned number opens its parcel (or its record if measured already), any content is taken as it is; a data file of an earlier test build still loads; the version shown is the one built; the photo mode: no-AR screen → photo → weight → saved as "Foto", then calibration: an incomplete tape size, a shape that disagrees (asked first, saved when confirmed), the factor used for the next parcel | 9 tests, records and screen stack as expected |
 | `HardwareScannerTest` | Urovo detection; the three broadcast formats (string, bytes + length, older `urovo.rcv.message`); a broadcast reaching the registered receiver; a scan key press on home opens the parcel, while measuring it does not, a QR link is ignored; keyboard output: fast keys + Enter is a scan, slow keys are not, Back/volume pass through | 5 tests pass |
 | `Dt20Test` | DT20 tools: diagnosis rules (no gyroscope, separate clocks, slow sensors, fixed focus), sweep quality on synthetic sweeps (good, still phone, too short, no motion sensors) and read back from the recorder's file format, size choice, sharpness, cm parsing, the scan key on the test screens, review navigation | 6 tests pass |
@@ -437,13 +468,13 @@ Tested here, on the PC:
 | `ScreenshotTest` | every screen rendered on the JVM (`screenshots/`); camera screens on the mockup photo with the overlay the engine draws | 24 screens (`17` home on a Urovo PDA without ARCore, `18`–`20` DT20 diagnosis, recorder, pick); the photo mode on the DT50's screen size `40`–`48` (camera, angle warning, pick, result, test, calibration, settings, weight, a calibration whose shape disagrees with the tape) |
 | Android lint | | no errors |
 
-**Photo mode, seen on the DT50** (the first ZIP): the accelerometer's axes are right (the book shot in landscape reads
-79° of roll, the others 2–8°, and the angles down match the pictures); the lens it reports is f = 965 px on the 960 px
-wide upright picture (53° × 67°); MobileSAM-512 takes 2,1–2,8 s and YOLO26n-depth took 1,8–2,1 s there. **Not seen
-yet**: Depth Anything's time on the DT50 (~3–4 s estimated) and its camera height on the DT50's own photos against a
-tape measure, the standing-height combination in use, and whether the DT50's autofocus distance is calibrated. The
-next test: calibrate with 3 cartons standing, then measure 5–10 others against a tape measure (the result screen shows
-the difference when the tape size is typed), and share the ZIP.
+**Photo mode, seen on the DT50** (the first two ZIPs): the accelerometer's axes are right (the book shot in landscape
+reads 79° of roll, the others 2–8°, and the angles down match the pictures); the lens it reports is f = 965 px on the
+960 px wide upright picture (53° × 67°); MobileSAM-512 takes 2,1–2,8 s, YOLO26n-depth took 1,8–2,1 s and Depth
+Anything V2 2,2–2,4 s; the autofocus reports "uncalibrated" diopters (closest focus 20, hyperfocal 1/3 in its units),
+consistent between photos (above). **Not seen yet**: the focus factor at 0,3–0,8 m and with a carton, the depth model and
+the standing height against a tape at standing distance. The next test: calibrate with 3 cartons standing plus one
+small carton close (30–60 cm), then measure 5–10 others against a tape measure, and share the ZIP.
 
 **Not tested yet**: anything that needs a real phone, including the scan key on a real DT20: ARCore tracking, depth quality, how the cut-out lines up with
 depth on a moving phone, MobileSAM speed on a phone CPU (about 3–5 s per tap on this PC's CPU in the tests; a phone
