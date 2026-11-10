@@ -26,6 +26,7 @@ import android.util.Size
 import android.view.Surface
 import id.ukurpaket.app.dt.SweepRecorder
 import kotlin.math.asin
+import kotlin.math.min
 import kotlin.math.sqrt
 
 /**
@@ -46,7 +47,9 @@ class PhotoCamera(private val ctx: Context, private val cb: Callback) {
     class Shot(val nv21: ByteArray, val sw: Int, val sh: Int, val rotation: Int, val k: Intrinsics,
                val accel: FloatArray, val accelSpread: Float, val still: Boolean, val timeMs: Long,
                /** Where the autofocus stood (recorded for the PC: a second, physical clue to the distance). */
-               val focus: FocusInfo? = null)
+               val focus: FocusInfo? = null,
+               /** Frames through a series of lens positions taken right after (FocusSweep), or null. */
+               val sweep: SweepData? = null)
 
     private val thread = HandlerThread("photo-cam").apply { start() }
     private val handler = Handler(thread.looper)
@@ -71,11 +74,34 @@ class PhotoCamera(private val ctx: Context, private val cb: Callback) {
     // the autofocus of the last preview frame
     @Volatile private var focusDiopters: Float? = null
     @Volatile private var afState: Int? = null
+
+    /**
+     * Each frame's own lens and autofocus, by its sensor timestamp: an image is judged by what the lens did for it, not by
+     * the latest result (images come a few frames behind their results: 0.4.5 could take a frame the lens was still
+     * moving in). Results and images both arrive on [handler].
+     */
+    private class FrameMeta(val focus: Float?, val af: Int?, val lens: Int?)
+    private val meta = object : LinkedHashMap<Long, FrameMeta>() {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Long, FrameMeta>?) = size > 40
+    }
     private val frameCb = object : CameraCaptureSession.CaptureCallback() {
         override fun onCaptureCompleted(s: CameraCaptureSession, r: CaptureRequest, res: TotalCaptureResult) {
-            focusDiopters = res.get(CaptureResult.LENS_FOCUS_DISTANCE); afState = res.get(CaptureResult.CONTROL_AF_STATE)
+            val fm = FrameMeta(res.get(CaptureResult.LENS_FOCUS_DISTANCE), res.get(CaptureResult.CONTROL_AF_STATE), res.get(CaptureResult.LENS_STATE))
+            res.get(CaptureResult.SENSOR_TIMESTAMP)?.let { meta[it] = fm }
+            focusDiopters = fm.focus; afState = fm.af
+            if (pending != null) process()
         }
     }
+
+    // the capture: the photo first, then (when the lens can be moved by hand) the focus sweep
+    private enum class Phase { IDLE, SHOT, SWEEP }
+    private var phase = Phase.IDLE
+    private var base: Shot? = null
+    private val swept = ArrayList<SweepFrame>()
+    private var targets = FloatArray(0)
+    private var target = 0
+    private var stepSince = 0L
+    private var sweepSince = 0L
 
     // the preview request, kept to send the autofocus trigger; whether a lock was asked for this photo
     private var request: CaptureRequest.Builder? = null
@@ -119,9 +145,11 @@ class PhotoCamera(private val ctx: Context, private val cb: Callback) {
                     val af = chars?.get(CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES)?.toList().orEmpty()
                     if (CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE in af) b.set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
                     // the autofocus measures the middle of the picture (its distance is a clue to the scale: PhotoMeasure)
+                    // a wide middle (half the picture each way): it then holds the object's outline too, whose contrast a plain
+                    // or glossy object's surface lacks
                     val act = chars?.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)
                     if (act != null && (chars?.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AF) ?: 0) > 0) {
-                        val w = act.width() / 8; val h = act.height() / 8
+                        val w = act.width() / 4; val h = act.height() / 4
                         b.set(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(MeteringRectangle(act.centerX() - w, act.centerY() - h, 2 * w, 2 * h, MeteringRectangle.METERING_WEIGHT_MAX)))
                     }
                     // the lens must not move against the sensor: the measurement uses the factory focal length
@@ -167,8 +195,65 @@ class PhotoCamera(private val ctx: Context, private val cb: Callback) {
 
     /** Takes the next frame once the phone is still (at most [maxWaitMs] of waiting; then as it is). */
     fun capture(maxWaitMs: Long = 2500, onShot: (Shot) -> Unit) {
-        handler.post { pending = onShot; pendingSince = SystemClock.elapsedRealtime(); locking = afTrigger(CameraMetadata.CONTROL_AF_TRIGGER_START) }
+        handler.post {
+            pending = onShot; pendingSince = SystemClock.elapsedRealtime(); phase = Phase.SHOT
+            locking = afTrigger(CameraMetadata.CONTROL_AF_TRIGGER_START)
+        }
         this.maxWait = maxWaitMs
+    }
+
+    /** The lens can be set by hand: autofocus off is offered and the camera has a focus range. */
+    private fun canSweep(): Boolean {
+        val c = chars ?: return false
+        val af = c.get(CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES)?.toList().orEmpty()
+        return CameraMetadata.CONTROL_AF_MODE_OFF in af && (c.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE) ?: 0f) > 0f
+    }
+
+    /**
+     * Starts the focus sweep: the lens set by hand to 16 positions from far to near (spaced evenly in the log of the
+     * camera's dioptres, up to 70 % of its closest focus), a frame kept at each once the lens has settled there.
+     */
+    private fun startSweep(): Boolean {
+        if (!canSweep()) return false
+        val b = request ?: return false; val s = session ?: return false
+        val near = min(14f, 0.7f * (chars?.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE) ?: 14f)); val far = 0.3f
+        targets = FloatArray(SWEEP_STEPS) { far * Math.pow((near / far).toDouble(), it / (SWEEP_STEPS - 1.0)).toFloat() }
+        target = 0; swept.clear()
+        return try {
+            b.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_IDLE)
+            b.set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_OFF)
+            b.set(CaptureRequest.LENS_FOCUS_DISTANCE, targets[0])
+            s.setRepeatingRequest(b.build(), frameCb, handler)
+            stepSince = SystemClock.elapsedRealtime(); sweepSince = stepSince; true
+        } catch (e: Exception) { restoreAf(); false }
+    }
+
+    private fun nextTarget() {
+        target++
+        stepSince = SystemClock.elapsedRealtime()
+        if (target >= targets.size) return
+        try { request?.let { b -> b.set(CaptureRequest.LENS_FOCUS_DISTANCE, targets[target]); session?.setRepeatingRequest(b.build(), frameCb, handler) } }
+        catch (e: Exception) { target = targets.size }
+    }
+
+    /** The continuous autofocus back on. */
+    private fun restoreAf() {
+        val b = request ?: return
+        try {
+            val af = chars?.get(CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES)?.toList().orEmpty()
+            if (CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE in af) b.set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
+            b.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_IDLE)
+            session?.setRepeatingRequest(b.build(), frameCb, handler)
+        } catch (e: Exception) { }
+    }
+
+    /** The luma plane of a YUV image, tightly packed (width x height). */
+    private fun yPlane(img: android.media.Image): ByteArray {
+        val pl = img.planes[0]; val buf = pl.buffer; val w = img.width; val h = img.height
+        val out = ByteArray(w * h)
+        if (pl.pixelStride == 1 && pl.rowStride == w) { buf.rewind(); buf.get(out, 0, w * h); return out }
+        for (y in 0 until h) for (x in 0 until w) out[y * w + x] = buf.get(y * pl.rowStride + x * pl.pixelStride)
+        return out
     }
 
     /**
@@ -186,40 +271,102 @@ class PhotoCamera(private val ctx: Context, private val cb: Callback) {
     }
     @Volatile private var maxWait = 2000L
 
+    /**
+     * Frames waiting for their capture result (by sensor timestamp; the result may come before or after the image):
+     * while taking the photo the whole NV21 frame, during the sweep its luma. At most a few, the oldest dropped.
+     */
+    private class Held(val data: ByteArray, val w: Int, val h: Int)
+    private val held = object : LinkedHashMap<Long, Held>() {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Long, Held>?) = size > 4
+    }
+
     private fun onImage(r: ImageReader) {
         val img = try { r.acquireNextImage() } catch (e: Exception) { null } ?: return
         try {
             if (++frames % 8 == 1) brightness = SweepRecorder.meanLuma(img)
-            val p = pending ?: return
-            val (m, sp) = accelNow()
-            val still = m != null && isStill(m, sp)
-            // also wait for the autofocus: locked after the trigger (focused, or the camera saying it could not), else
-            // settled; a lens still searching says nothing about the distance
-            val focused = afState.let {
-                if (locking) it == CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED || it == CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED
-                else it == null || it == CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED || it == CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED ||
-                    it == CaptureResult.CONTROL_AF_STATE_INACTIVE
+            if (pending == null) return
+            when (phase) {
+                Phase.SHOT -> held[img.timestamp] = Held(SweepRecorder.toNv21(img), img.width, img.height)
+                Phase.SWEEP -> held[img.timestamp] = Held(yPlane(img), img.width, img.height)
+                Phase.IDLE -> return
             }
-            if (!(still && focused) && SystemClock.elapsedRealtime() - pendingSince < maxWait) return
-            pending = null
-            if (locking) { locking = false; afTrigger(CameraMetadata.CONTROL_AF_TRIGGER_CANCEL) }
-            val nv = SweepRecorder.toNv21(img)
-            val shot = Shot(nv, img.width, img.height, rotation, lens(img.width, img.height), m ?: floatArrayOf(0f, 9.81f, 0f), sp, still,
-                System.currentTimeMillis(), focus())
-            p(shot)
         } finally { img.close() }
+        process()
     }
 
-    /** The autofocus now, with how far the camera says its focus distances can be trusted. */
-    private fun focus(): FocusInfo? {
-        val d = focusDiopters ?: return null
+    /** Matches held frames with their results and moves the capture on; called on every image and every result. */
+    private fun process() {
+        val p = pending ?: return
+        val now = SystemClock.elapsedRealtime()
+        when (phase) {
+            Phase.SHOT -> {
+                val (m, sp) = accelNow()
+                val still = m != null && isStill(m, sp)
+                // a frame whose own autofocus is locked after the trigger (focused, or the camera saying it could not),
+                // else settled, with its lens not moving; a lens still searching says nothing about the distance
+                var pick: Long? = null
+                for ((ts, _) in held) {
+                    val fm = meta[ts] ?: continue
+                    val lensStill = fm.lens == null || fm.lens == CaptureResult.LENS_STATE_STATIONARY
+                    val focused = fm.af.let {
+                        if (locking) it == CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED || it == CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED
+                        else it == null || it == CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED || it == CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED ||
+                            it == CaptureResult.CONTROL_AF_STATE_INACTIVE
+                    }
+                    if (still && focused && lensStill) pick = ts
+                }
+                if (pick == null && now - pendingSince >= maxWait) pick = held.keys.lastOrNull()      // waited enough: as it is
+                val ts = pick ?: return
+                val f = held[ts]!!
+                held.clear()
+                val shot = Shot(f.data, f.w, f.h, rotation, lens(f.w, f.h), m ?: floatArrayOf(0f, 9.81f, 0f), sp, still, System.currentTimeMillis(), focus(meta[ts]))
+                locking = false
+                if (startSweep()) { base = shot; phase = Phase.SWEEP }
+                else { afTrigger(CameraMetadata.CONTROL_AF_TRIGGER_CANCEL); pending = null; phase = Phase.IDLE; p(shot) }
+            }
+            Phase.SWEEP -> {
+                val t = targets.getOrNull(target)
+                if (t != null) {
+                    // the first held frame at this position with the lens settled there
+                    val ts = held.keys.firstOrNull { k ->
+                        val fm = meta[k]
+                        fm?.focus != null && (fm.lens == null || fm.lens == CaptureResult.LENS_STATE_STATIONARY) && kotlin.math.abs(fm.focus - t) <= 0.05f * t + 0.03f
+                    }
+                    if (ts != null) {
+                        val f = held[ts]!!
+                        swept += SweepFrame(meta[ts]!!.focus!!, PhotoFiles.uprightLuma(f.data, f.w, f.h, rotation))
+                        held.clear(); nextTarget()
+                    } else if (now - stepSince > 600) { held.clear(); nextTarget() }     // this position never settled: skip it
+                }
+                if (target >= targets.size || now - sweepSince > 6000) {
+                    restoreAf()
+                    val b = base ?: return
+                    val (m, sp) = accelNow()
+                    // the phone moved during the sweep: its frames no longer line up with the photo
+                    val steady = m != null && sp < 0.35f
+                    val rot = ((rotation % 360) + 360) % 360
+                    val uw = if (rot == 90 || rot == 270) b.sh else b.sw; val uh = if (rot == 90 || rot == 270) b.sw else b.sh
+                    val shot = Shot(b.nv21, b.sw, b.sh, b.rotation, b.k, b.accel, b.accelSpread, b.still, b.timeMs, b.focus,
+                        if (steady && swept.size >= 5) SweepData(swept.toList(), uw, uh) else null)
+                    base = null; swept.clear(); held.clear(); pending = null; phase = Phase.IDLE
+                    p(shot)
+                }
+            }
+            Phase.IDLE -> {}
+        }
+    }
+
+    /** The autofocus of frame [fm] (or the latest), with how far the camera says its focus distances can be trusted. */
+    private fun focus(fm: FrameMeta? = null): FocusInfo? {
+        val d = fm?.focus ?: focusDiopters ?: return null
+        val af = if (fm != null) fm.af else afState
         val c = chars ?: return null
         val cal = when (c.get(CameraCharacteristics.LENS_INFO_FOCUS_DISTANCE_CALIBRATION)) {
             CameraMetadata.LENS_INFO_FOCUS_DISTANCE_CALIBRATION_CALIBRATED -> "calibrated"
             CameraMetadata.LENS_INFO_FOCUS_DISTANCE_CALIBRATION_APPROXIMATE -> "approximate"
             else -> "uncalibrated"
         }
-        return FocusInfo(d, cal, c.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE), c.get(CameraCharacteristics.LENS_INFO_HYPERFOCAL_DISTANCE), afState)
+        return FocusInfo(d, cal, c.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE), c.get(CameraCharacteristics.LENS_INFO_HYPERFOCAL_DISTANCE), af)
     }
 
     /** The lens of the upright full picture for a [sw] x [sh] stream. */
@@ -250,6 +397,9 @@ class PhotoCamera(private val ctx: Context, private val cb: Callback) {
     }
 
     companion object {
+        /** Lens positions in the focus sweep. */
+        const val SWEEP_STEPS = 16
+
         /** Still: the acceleration wandered less than 0,25 m/s² rms over 0,4 s and is close to g (no swing). */
         fun isStill(m: FloatArray, spread: Float): Boolean {
             val g = sqrt(m[0] * m[0] + m[1] * m[1] + m[2] * m[2])

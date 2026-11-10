@@ -1,4 +1,4 @@
-# UkurPaket: Android app (v0.4.5, test build)
+# UkurPaket: Android app (v0.4.6, test build)
 
 Measures a parcel's length × width × height with the phone camera, the way the courier mockup
 (`../ukur_paket_mockup`) describes: method A, ARCore depth + floor detection, with the parcel picked by a tap or a
@@ -212,6 +212,39 @@ The same parameters for every photo: `RealPhotoBenchTest` measures every real ph
 does and prints the table; each ZIP with tape sizes becomes one more line, and a change has to hold on all of them.
 The iPhone's thickness at the true distance (2,6 cm for ~1,1) shows what blur does to a thin side; it is flagged anyway.
 
+**v0.4.6: why the pack worked and the iPhone did not, and the distance from the object's own outline.** The same
+iPhone turned over (back up, a plain dark case) read 38,7 × 17,8 × 5,3 cm: blurred again (0,39), so the focus was not
+used and the depth model's 0,26 m (2,5× the real ~0,10 m) made the size. At the true distance its box is again
+15,3 × 7,0 cm: the shape is right on every real photo so far; the distance is what fails. Why it worked on the pack:
+
+- **What the autofocus measures.** Contrast autofocus looks for texture in the middle of the picture. The pack's middle
+  is print: it locked right, the photo was sharp, the distance came out within 2 % between photos. The iPhone's middle is
+  a black glossy screen (it locked on a reflection) or a plain dark case (nothing to lock on). Nothing in the method was
+  tuned to the pack; the clue it used was simply absent on the iPhone.
+- **A timing fault (0.4.5).** The photo was taken when the latest capture result said "locked", but images come a few
+  frames behind their results: the frame taken could be one the lens was still moving in. Each image is now matched to
+  its own frame's result by its sensor timestamp, and taken only when that frame's lens was stationary and its focus
+  settled.
+
+What every object has is an outline: SAM could only cut it out because it differs from what is behind it. So after the
+photo the camera now runs a **focus sweep** (`photo/FocusSweep.kt`): autofocus off, the lens set to 16 positions from far
+to near (even steps in the log of the camera's dioptres, up to 70 % of its closest focus; a frame kept at each once the
+lens is stationary; about 2 s, the phone held still, else the sweep is dropped). Once the object is picked, each point
+of its outline is followed through the frames: its edge is sharpest where the lens focused at its distance. A defocused
+edge's width grows with the focus error and adds to the lens's own in quadrature, so 1 / sharpness² is a parabola in
+dioptres whose vertex is that point's focus; the box's geometry gives the point's depth per metre of camera height, so
+each point gives a camera height, and the median over the outline is the answer (its spread the check). This is depth
+from focus on the object's edges: it needs no texture on the object and does not care where the autofocus settled. On
+synthetic frames blurred by each pixel's own defocus it finds the camera height within 2 % for a phone at 0,4 m and 6 %
+for a carton at 1,1 m (the coarse steps far away), with the depth model 3× off and the photo itself blurred. It takes
+the place of the autofocus lock when it answers; the factor turning the camera's dioptres into real ones is the same one
+calibration learns (it now learns it from the sweep too). Every sweep's frames go into the ZIP (`sweep_N.u8`, half
+size, their dioptres in the record), so the next test shows how the DT50's lens behaves through it.
+
+The autofocus also measures a wider middle (half the picture each way), which takes in the object's outline. And when no
+distance can be trusted (the object blurred and no sweep answer) the result no longer headlines a size: "Jarak belum
+terbaca", the depth model's guess shown small as not used.
+
 **Limits.** Estimation class, not a certified (legal-for-trade) dimensioner. Built for cartons; round, soft and
 bulging parcels get a rough outer box and "Perlu Dicek". The camera must be above the parcel's top (standing), the
 parcel whole in the picture with some floor round it, on the floor or a table (not on another parcel).
@@ -242,7 +275,7 @@ pick, timings, the result, the tape size when typed), `evidence.jpg` once used. 
 
 JDK 17+ and the Android SDK (platform 35). AGP 8.7.3, Kotlin 2.1.0, Compose BOM 2024.12.01, ARCore 1.47.0,
 ONNX Runtime 1.20.0, minSdk 26, targetSdk 35, arm64-v8a + armeabi-v7a. The test APK is
-`release/UkurPaket-0.4.5-uji.apk` (82 MB; the photo mode's depth model is 36 MB of it; MobileSAM is two models: the 1024 one for ARCore phones, encoder float16
+`release/UkurPaket-0.4.6-uji.apk` (82 MB; the photo mode's depth model is 36 MB of it; MobileSAM is two models: the 1024 one for ARCore phones, encoder float16
 13,8 MB + decoder with int8 weights 4,6 MB, made by `tools/export_sam.py`, the int8 decoder's masks within IoU 0,989 of
 float32; and the 512 one for PDAs, encoder float32 28 MB + decoder 4,7 MB, made by `tools/export_sam512.py`). It installs directly (allow "install unknown apps"); for the Play Store use your own key.
 
@@ -484,8 +517,8 @@ Tested here, on the PC:
 | `GeometryTest` | box turned 30°, 40 × 30 × 20 cm, 2 mm noise, a taller box 8 cm away; 30 × 20 × 10 cm on a floor with 0,8 cm depth noise | within 1,2 cm, neighbour left out; within 2 cm |
 | `SegmenterTest` | the app's own MobileSAM code on the conveyor frame (7 parcels, some touching), one tap and one box each, vs the Python reference from the same ONNX files | mask IoU ≥ 0,985 for every tap and box (references made with the float32 decoder) |
 | `ConveyorReplayTest` | the conveyor scene in 3D, each parcel measured from geometry alone and from the tap/box cut-out | geometry alone merges touching parcels; with the cut-out every parcel stays separate (README section below) |
-| `PhotoMeasureTest` | the photo mode's engine on synthetic photos (carton, gallon, sack, phone lying flat, mailer bag; 2 photos each, two cartons and two phones): sizes from the outline with the true camera height; the phone rolled 12–79° sideways; tape sticking out and a shadow; every size scales with the camera height; the camera height from a floor depth map; a 20 % depth-scale error and the calibration that removes it; the standing camera height combined with the AI's; an object cut by the edge, a phone held upright; Camera2 lens facts turned upright; combining photos; the calibration factor, a sample whose shape disagrees with the tape, samples of another depth model; the first real DT50 photos (masks and records only); the autofocus distance on the cigarette-pack photos (factor from one photo predicts the other, the whole measurement with the DT50's factor); the clues combined (focus, depth model, standing height); then the real MobileSAM-512 and Depth Anything V2 on the photos | cartons within 0,1 cm (true outline), 1,3 cm with tape and shadow, any roll; gallon within 0,1 cm; phone and mailer within 0,1 cm; sack within 22 % (height 25 %); pack photos within 3 % of each other; a blurred photo told from the photo and its focus distance not used; 13 tests pass |
-| `RealPhotoBenchTest` | every real DT50 photo with a known size (masks, records and the phone's depth maps; never the photos), measured as the phone does with the parameters all share: the cigarette pack (tape), the iPhone 17 (specification + case) | the table of errors; in focus within 25 %; blurred: focus not used, said first, not "Akurat" |
+| `PhotoMeasureTest` | the photo mode's engine on synthetic photos (carton, gallon, sack, phone lying flat, mailer bag; 2 photos each, two cartons and two phones): sizes from the outline with the true camera height; the phone rolled 12–79° sideways; tape sticking out and a shadow; every size scales with the camera height; the camera height from a floor depth map; a 20 % depth-scale error and the calibration that removes it; the standing camera height combined with the AI's; an object cut by the edge, a phone held upright; Camera2 lens facts turned upright; combining photos; the calibration factor, a sample whose shape disagrees with the tape, samples of another depth model; the first real DT50 photos (masks and records only); the autofocus distance on the cigarette-pack photos (factor from one photo predicts the other, the whole measurement with the DT50's factor); the clues combined (focus, depth model, standing height); then the real MobileSAM-512 and Depth Anything V2 on the photos | cartons within 0,1 cm (true outline), 1,3 cm with tape and shadow, any roll; gallon within 0,1 cm; phone and mailer within 0,1 cm; sack within 22 % (height 25 %); pack photos within 3 % of each other; a blurred photo told from the photo and its focus distance not used; the focus sweep on synthetic frames defocused pixel by pixel (camera height within 2 % close up, 6 % at 1,1 m; the whole measurement from a blurred photo with a sweep); 14 tests pass |
+| `RealPhotoBenchTest` | every real DT50 photo with a known size (masks, records and the phone's depth maps; never the photos), measured as the phone does with the parameters all share: the cigarette pack (tape), the iPhone 17 face up and back up (specification + case) | the table of errors; in focus within 25 %; blurred: focus not used, said first, not "Akurat" |
 | `FlowTest` | the courier's path through the screens: first open with nothing but the scanner; measure → weight → save → next parcel in the same session → Selesai starts a new one; a second tap on Simpan; re-measuring replaces the old record; Ukur di Hub on a phone without ARCore; a late hub photo after the courier left; a scanned number opens its parcel (or its record if measured already), any content is taken as it is; a data file of an earlier test build still loads; the version shown is the one built; the photo mode: no-AR screen → photo → weight → saved as "Foto", then calibration: an incomplete tape size, a shape that disagrees (asked first, saved when confirmed), the factor used for the next parcel | 9 tests, records and screen stack as expected |
 | `HardwareScannerTest` | Urovo detection; the three broadcast formats (string, bytes + length, older `urovo.rcv.message`); a broadcast reaching the registered receiver; a scan key press on home opens the parcel, while measuring it does not, a QR link is ignored; keyboard output: fast keys + Enter is a scan, slow keys are not, Back/volume pass through | 5 tests pass |
 | `Dt20Test` | DT20 tools: diagnosis rules (no gyroscope, separate clocks, slow sensors, fixed focus), sweep quality on synthetic sweeps (good, still phone, too short, no motion sensors) and read back from the recorder's file format, size choice, sharpness, cm parsing, the scan key on the test screens, review navigation | 6 tests pass |
@@ -517,7 +550,7 @@ thresholds get tuned, ideally from recorded scans of 50–100 parcels with tape-
 | `ar/BackgroundRenderer.kt`, `ar/Snapshot.kt`, `ar/Recorder.kt` | camera image; evidence photo; raw scan recording |
 | `ar/ArCheck.kt` | ARCore availability, install request, Depth API check |
 | `dt/` | DT20 tools: `Diagnostics.kt`, `SweepRecorder.kt` (Camera2 + motion sensors), `SweepQuality.kt`, `ObjectPick.kt`; screens in `ui/DtScreens.kt` |
-| `photo/` | the photo mode (0.4.0): `PhotoMeasure.kt` (camera height, levelling, single-view metrology, combining photos, calibration, standing height; Android-free), `BoxFit.kt` (box and cylinder fitted to the silhouette, outer box; Android-free), `Sharpness.kt` (is the object in focus; Android-free), `DepthModel.kt` (Depth Anything V2 Small metric indoor through ONNX Runtime), `PhotoCamera.kt` (Camera2 still + accelerometer + lens), `PhotoFiles.kt`; state in `ui/PhotoFlow.kt`, screens in `ui/PhotoScreen.kt` |
+| `photo/` | the photo mode (0.4.0): `PhotoMeasure.kt` (camera height, levelling, single-view metrology, combining photos, calibration, standing height; Android-free), `BoxFit.kt` (box and cylinder fitted to the silhouette, outer box; Android-free), `Sharpness.kt` (is the object in focus; Android-free), `FocusSweep.kt` (the distance from the outline through a focus sweep; Android-free), `DepthModel.kt` (Depth Anything V2 Small metric indoor through ONNX Runtime), `PhotoCamera.kt` (Camera2 still + accelerometer + lens), `PhotoFiles.kt`; state in `ui/PhotoFlow.kt`, screens in `ui/PhotoScreen.kt` |
 | `scan/HardwareScanner.kt` | Urovo scan key: broadcast receiver and keyboard-output reader |
 | `data/Store.kt`, `data/Locator.kt` | records and settings in one JSON file; GPS |
 | `ui/` | Compose: `Screens.kt` (start, scan resi, prep, weight, saved, history, detail, settings, phone without ARCore), `MeasureScreen.kt` (camera) |

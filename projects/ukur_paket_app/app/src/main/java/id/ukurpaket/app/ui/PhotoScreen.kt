@@ -182,7 +182,7 @@ internal fun PhotoCameraChrome(title: String, subtitle: String, live: PhotoCamer
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (error != null) Banner(error, C.redL, C.red, "error")
             if (shots.isNotEmpty()) ShotStrip(shots, null, onOpen, onAdd = null)
-            PrimaryButton(if (capturing) "Tahan diam, memfokuskan…" else "Ambil foto", if (capturing) "timer" else "photo_camera", Modifier.fillMaxWidth(),
+            PrimaryButton(if (capturing) "Tahan diam, mengukur jarak…" else "Ambil foto", if (capturing) "timer" else "photo_camera", Modifier.fillMaxWidth(),
                 enabled = !capturing && error == null) { onShutter() }
             if (shots.isNotEmpty()) SecondaryButton("Kembali ke hasil", "arrow_back", Modifier.fillMaxWidth()) { onOpen(shots.last().index) }
         }
@@ -390,8 +390,13 @@ internal fun PhotoResultCard(purpose: PhotoPurpose, r: PhotoResult, each: List<P
                 else -> Chip("Perlu Dicek · skor ${r.confidence}", Tone.WARN, "warning")
             }
         }
-        T("${r.lengthCm.cm()} × ${r.widthCm.cm()} × ${r.heightCm.cm()} cm", 28.sp, FontWeight.Bold)
-        if (purpose != PhotoPurpose.CALIBRATE) Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        // without a distance it can stand on (blurred, no focus clue: the depth model alone close up) the size is not
+        // headlined: it would read as a measurement
+        if (r.blurred()) {
+            T("Jarak belum terbaca", 26.sp, FontWeight.Bold, C.red)
+            T("Perkiraan AI saja: ${r.lengthCm.cm()} × ${r.widthCm.cm()} × ${r.heightCm.cm()} cm (tidak dipakai)", 13.sp, color = C.t2)
+        } else T("${r.lengthCm.cm()} × ${r.widthCm.cm()} × ${r.heightCm.cm()} cm", 28.sp, FontWeight.Bold)
+        if (purpose != PhotoPurpose.CALIBRATE && !r.blurred()) Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Column(Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).background(C.brandL).padding(10.dp)) {
                 T("Berat volumetrik", 12.sp, color = C.brandD)
                 T("${volKg.id(2)} kg", 22.sp, FontWeight.Bold, C.brandD)
@@ -406,7 +411,7 @@ internal fun PhotoResultCard(purpose: PhotoPurpose, r: PhotoResult, each: List<P
         Spacer(Modifier.height(6.dp))
         T("${each.size} foto · kamera ${r.cameraHeightM.id(2)} m di atas lantai" +
             listOfNotNull(
-                if (r.focusCameraM > 0) "fokus ${r.focusDistanceM.id(2)} m ke paket" else null,
+                if (r.focusCameraM > 0) (if (r.sweepPoints > 0) "sapuan fokus ${r.focusDistanceM.id(2)} m, ${r.sweepPoints} titik tepi" else "fokus ${r.focusDistanceM.id(2)} m ke paket") else null,
                 "AI ${r.aiCameraM.id(2)} m",
                 if (r.standingM > 0) "tinggi berdiri ${r.standingM.id(2)} m" else null,
             ).takeIf { it.size > 1 }?.joinToString(", ", " (", ")").orEmpty() +

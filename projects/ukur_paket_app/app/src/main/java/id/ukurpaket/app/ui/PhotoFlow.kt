@@ -30,6 +30,7 @@ import id.ukurpaket.app.photo.Standing
 import id.ukurpaket.app.photo.PhotoResult
 import id.ukurpaket.app.photo.ShotRecord
 import id.ukurpaket.app.photo.Sharpness
+import id.ukurpaket.app.photo.SweepData
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -68,6 +69,8 @@ data class PhotoShotUi(
     val luma: ByteArray? = null,
     val lumaW: Int = 0,
     val lumaH: Int = 0,
+    /** The focus sweep taken right after the photo (FocusSweep), or null. */
+    val sweep: SweepData? = null,
 )
 
 /**
@@ -152,10 +155,13 @@ class PhotoFlow(private val model: AppModel) {
             val kSmall = s.k.scaled(ow, oh)
             val up = Intrinsics.upFromAccel(s.accel[0], s.accel[1], s.accel[2])
             val down = PhotoCamera.downDeg(s.accel)
-            shots.add(PhotoShotUi(index, pic, kSmall, up, down, s.still, stage = "Membaca foto…", focus = s.focus, luma = luma, lumaW = uw, lumaH = uh))
+            shots.add(PhotoShotUi(index, pic, kSmall, up, down, s.still, stage = "Membaca foto…", focus = s.focus, luma = luma, lumaW = uw, lumaH = uh, sweep = s.sweep))
             current = index; capturing = false
             records[index] = ShotRecord(index, s.timeMs, listOf(s.sw, s.sh), s.rotation, s.k, kSmall, s.accel.toList(), s.accelSpread, s.still, down,
-                focus = s.focus, app = id.ukurpaket.app.BuildConfigInfo.VERSION)
+                focus = s.focus, app = id.ukurpaket.app.BuildConfigInfo.VERSION,
+                sweepDiopters = s.sweep?.frames?.map { it.diopters }, sweepSize = s.sweep?.let { listOf(it.w / 2, it.h / 2) })
+            // the sweep's frames at half size, for the PC (how the focus behaves on this phone)
+            s.sweep?.let { sw -> launch(Dispatchers.IO) { runCatching { PhotoFiles.saveSweep(sw, PhotoFiles.sweep(d, index)) } } }
             val depthDone = CompletableDeferred<Pair<DepthMap, Long>?>()
             depths[index] = depthDone
             // the full photo is the record's evidence; written while the models work
@@ -207,7 +213,7 @@ class PhotoFlow(private val model: AppModel) {
             val r = withContext(Dispatchers.Default) {
                 val sharp = shot.luma?.let { Sharpness.atOutline(it, shot.lumaW, shot.lumaH, m) }
                 rec(index) { it.copy(sharpness = sharp) }
-                runCatching { PhotoMeasure.measure(m, shot.k, shot.up, dep.first, scale.toFloat(), calibrated, standing, shot.focus, focusCal(shot.focus), sharp) }
+                runCatching { PhotoMeasure.measure(m, shot.k, shot.up, dep.first, scale.toFloat(), calibrated, standing, shot.focus, focusCal(shot.focus), sharp, shot.sweep) }
             }
             r.onSuccess { res -> update(index) { it.copy(stage = null, result = res) }; rec(index) { it.copy(result = res, error = null) } }
                 .onFailure { t ->
@@ -222,7 +228,7 @@ class PhotoFlow(private val model: AppModel) {
     fun remove(index: Int) {
         shots.removeAll { it.index == index }
         embeddings.remove(index); depths.remove(index); records.remove(index); pendingPick.remove(index)
-        dir?.let { d -> listOf(PhotoFiles.photo(d, index), PhotoFiles.mask(d, index), PhotoFiles.depth(d, index), PhotoFiles.record(d, index)).forEach { it.delete() } }
+        dir?.let { d -> listOf(PhotoFiles.photo(d, index), PhotoFiles.mask(d, index), PhotoFiles.depth(d, index), PhotoFiles.record(d, index), PhotoFiles.sweep(d, index)).forEach { it.delete() } }
         current = shots.lastOrNull()?.index
     }
 

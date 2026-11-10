@@ -143,9 +143,16 @@ data class PhotoResult(
     val focusDepthUnit: Double = 0.0,
     /** How sharp the object's outline is in the photo (Sharpness.atOutline; 0 = not measured): below 0,6 out of focus. */
     val sharpness: Double = 0.0,
+    /** The focus sweep's camera height for a focus factor of 1 (0 = no sweep answer): divided by the factor it is the
+     *  sweep's height; calibration learns the factor from it. And how many outline points had a clear focus peak. */
+    val sweepHeightUnit: Double = 0.0,
+    val sweepPoints: Int = 0,
 ) {
-    /** The object out of focus in the photo (its sharpness measured and under Sharpness.MIN). */
-    fun blurred() = sharpness > 0 && sharpness < Sharpness.MIN
+    /**
+     * The object out of focus in the photo (its sharpness measured and under Sharpness.MIN) with no distance from the
+     * focus for it: its size rests on the depth model alone.
+     */
+    fun blurred() = sharpness > 0 && sharpness < Sharpness.MIN && focusCameraM <= 0
 }
 
 class PhotoFailed(message: String) : Exception(message)
@@ -501,7 +508,7 @@ object PhotoMeasure {
      * its distance (the lens settled on something else: a reflection on a glossy screen), so it is not used.
      */
     fun measure(mask: Mask, k: Intrinsics, up: V3, depth: DepthMap, scale: Float, calibrated: Boolean, standing: Standing? = null,
-                focus: FocusInfo? = null, focusCal: FocusCal? = null, sharpness: Float? = null): PhotoResult {
+                focus: FocusInfo? = null, focusCal: FocusCal? = null, sharpness: Float? = null, sweep: SweepData? = null): PhotoResult {
         require(mask.w == k.w && mask.h == k.h) { "mask and intrinsics differ in size" }
         val b = mask.bounds() ?: throw PhotoFailed("Objek belum dipilih")
         val area = mask.bits.count { it }
@@ -516,8 +523,14 @@ object PhotoMeasure {
         val zUnit = focusDepth(met.corners, up, hAi, k)?.div(hAi)
         val blurred = sharpness != null && sharpness < Sharpness.MIN
         val focusOk = focus != null && focus.usable() && !blurred
+        // the focus sweep: each outline point's sharpest lens position, wherever the autofocus settled (at a factor of 1)
+        val sw = sweep?.let { FocusSweep.estimate(it, mask, 1.0, { fx, fy -> depthAt(met.corners, up, hAi, k, fx * k.w, fy * k.h)?.div(hAi) }) }
         var hFocus: Float? = null; var sFocus = 0.0; var dTrue = 0.0
-        if (zUnit != null && focusOk && focusCal != null) {
+        if (sw != null && focusCal != null) {
+            dTrue = focusCal.factor * sw.medianDiopters
+            hFocus = (sw.heightM / focusCal.factor).toFloat()
+            sFocus = kotlin.math.sqrt((FOCUS_SIGMA_D / dTrue).let { it * it } + focusCal.sigma * focusCal.sigma + (sw.spread / 4.0).let { it * it })
+        } else if (zUnit != null && focusOk && focusCal != null) {
             dTrue = focusCal.factor * focus!!.diopters
             hFocus = (1.0 / dTrue / zUnit).toFloat(); sFocus = kotlin.math.sqrt((FOCUS_SIGMA_D / dTrue).let { it * it } + focusCal.sigma * focusCal.sigma)
         }
@@ -526,7 +539,8 @@ object PhotoMeasure {
         if (abs(kotlin.math.ln(h / hAi)) > 0.03f) met = metrology(mask, k, up, h)
         val notes = ArrayList<String>()
         var conf = 100.0
-        if (blurred) notes += "Foto buram: kamera tidak fokus ke paket, jaraknya tidak bisa dipastikan. Ulangi foto: lingkaran tengah di paket, tahan diam sampai gambar tajam"
+        if (blurred && sw == null) notes += "Foto buram: kamera tidak fokus ke paket, jaraknya tidak bisa dipastikan. Ulangi foto: lingkaran tengah di paket, tahan diam sampai gambar tajam"
+        if (blurred && sw != null) { notes += "Foto agak buram; jaraknya tetap terbaca dari sapuan fokus di tepi paket"; conf -= 20 }
         if (pick.focus && !pick.ai) notes += "Jarak dari fokus kamera (${"%.2f".format(1 / dTrue)} m); tebakan AI (kamera ${"%.2f".format(hAi)} m) beda jauh, tidak dipakai"
         if (standing != null && !pick.standing) {
             notes += "Tinggi kamera tidak seperti saat kalibrasi (${"%.2f".format(h)} m, biasanya ${"%.2f".format(standing.heightM)} m): foto sambil berdiri, HP setinggi dada"
@@ -549,7 +563,7 @@ object PhotoMeasure {
         if (fl.wide || fl.inliers < 300) { notes += "Lantai di sekitar paket kurang terlihat"; conf -= 15 }
         if (fl.tiltDeg > 15) { notes += "Lantai tidak terbaca rata"; conf -= 15 }
         if (!calibrated) { notes += "Mode foto belum dikalibrasi di HP ini: angka bisa meleset jauh"; conf = min(conf, 60.0) }
-        if (blurred) conf = min(conf, 30.0)
+        if (blurred && !pick.focus) conf = min(conf, 30.0)
         val c = conf.toInt().coerceIn(0, 100)
         // the same sizes at the depth model's own height (no factor, no other clue): what calibration compares with
         val raw = listOf(met.lengthM, met.widthM, met.heightM).map { it * 100.0 * fl.heightM / h }
@@ -563,7 +577,7 @@ object PhotoMeasure {
             standingM = if (pick.standing) standing!!.heightM else 0.0,
             focusCameraM = if (pick.focus) hFocus!!.toDouble() else 0.0, focusDistanceM = if (pick.focus) 1 / dTrue else 0.0,
             focusDiopters = if (focusOk) focus!!.diopters.toDouble() else 0.0, focusDepthUnit = zUnit?.toDouble() ?: 0.0,
-            sharpness = sharpness?.toDouble() ?: 0.0)
+            sharpness = sharpness?.toDouble() ?: 0.0, sweepHeightUnit = sw?.heightM?.toDouble() ?: 0.0, sweepPoints = sw?.points ?: 0)
     }
 
     /** Several photos of one object: the median of each side; a spread over 10 % is flagged. */
@@ -756,9 +770,13 @@ object Calibration {
      * height times that. Only within 0,8 m, where the lens moves enough to tell; null otherwise or without a focus.
      */
     fun focusFactor(r: PhotoResult, tapeCm: List<Double>): Double? {
-        if (r.focusDiopters <= 0 || r.focusDepthUnit <= 0 || r.aiCameraM <= 0) return null
+        if (r.aiCameraM <= 0) return null
         val q = CalSample(r.rawCm, tapeCm).ratios().sorted(); if (q.isEmpty()) return null
-        val z = r.focusDepthUnit * r.aiCameraM * q[q.size / 2]
+        val hTrue = r.aiCameraM * q[q.size / 2]
+        // the focus sweep when it answered: its height at a factor of 1 over the real height is the factor
+        if (r.sweepHeightUnit > 0 && r.focusDepthUnit > 0 && r.focusDepthUnit * hTrue <= 0.8) return r.sweepHeightUnit / hTrue
+        if (r.focusDiopters <= 0 || r.focusDepthUnit <= 0) return null
+        val z = r.focusDepthUnit * hTrue
         if (z > 0.8) return null
         return 1 / z / r.focusDiopters
     }

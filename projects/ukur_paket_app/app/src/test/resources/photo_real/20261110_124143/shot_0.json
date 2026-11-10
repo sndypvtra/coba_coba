@@ -1,0 +1,106 @@
+{
+    "index": 0,
+    "created": 1794289313719,
+    "stream": [
+        1280,
+        960
+    ],
+    "rotationDeg": 90,
+    "lens": {
+        "fx": 965.3602,
+        "fy": 965.3602,
+        "cx": 480.0,
+        "cy": 640.0,
+        "w": 960,
+        "h": 1280
+    },
+    "lensModel": {
+        "fx": 482.6801,
+        "fy": 482.6801,
+        "cx": 240.0,
+        "cy": 320.0,
+        "w": 480,
+        "h": 640
+    },
+    "accel": [
+        8.144138,
+        -0.32892752,
+        5.4885454
+    ],
+    "accelSpread": 0.093802385,
+    "still": true,
+    "downDeg": 33.955414,
+    "pickMode": "tap",
+    "tap": [
+        234.51982,
+        342.11203
+    ],
+    "box": null,
+    "maskScore": 1.0129914,
+    "samMs": 2344,
+    "depthMs": 2262,
+    "depthSize": [
+        280,
+        378
+    ],
+    "result": {
+        "lengthCm": 38.67451548576355,
+        "widthCm": 17.792654037475586,
+        "heightCm": 5.251269415020943,
+        "rawCm": [
+            46.79616378164285,
+            21.529111405527875,
+            6.354035998131917
+        ],
+        "scale": 0.8264462351799011,
+        "cameraHeightM": 0.26273486018180847,
+        "downDeg": 33.95541510658537,
+        "iou": 0.9692921042442322,
+        "boxLike": true,
+        "corners": [
+            0.24680133,
+            0.5427397,
+            0.6564372,
+            0.7476881,
+            0.71670926,
+            0.5546235,
+            0.41671413,
+            0.25034577,
+            0.3625438,
+            0.550955,
+            0.73725706,
+            0.7620467,
+            0.79189557,
+            0.5590155,
+            0.5248023,
+            0.23465964
+        ],
+        "confidence": 30,
+        "ok": false,
+        "notes": [
+            "Foto buram: kamera tidak fokus ke paket, jaraknya tidak bisa dipastikan. Ulangi foto: lingkaran tengah di paket, tahan diam sampai gambar tajam",
+            "Foto terlalu dekat: AI kurang akurat dari dekat. Mundur, foto sambil berdiri",
+            "Mode foto belum dikalibrasi di HP ini: angka bisa meleset jauh"
+        ],
+        "floorInliers": 39594,
+        "floorTiltDeg": 5.520237922668457,
+        "aiCameraM": 0.26273486018180847,
+        "standingM": 0.0,
+        "focusCameraM": 0.0,
+        "focusDistanceM": 0.0,
+        "focusDiopters": 0.0,
+        "focusDepthUnit": 1.432519555091858,
+        "sharpness": 0.3920868933200836
+    },
+    "error": null,
+    "tapeCm": null,
+    "focus": {
+        "diopters": 3.8153133,
+        "calibration": "uncalibrated",
+        "minFocusDiopters": 20.0,
+        "hyperfocalDiopters": 0.33333334,
+        "afState": 4
+    },
+    "sharpness": 0.3920869,
+    "app": "0.4.5-uji"
+}

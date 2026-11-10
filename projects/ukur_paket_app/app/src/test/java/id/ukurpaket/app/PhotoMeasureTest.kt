@@ -11,6 +11,9 @@ import id.ukurpaket.app.photo.Intrinsics
 import id.ukurpaket.app.photo.PhotoMeasure
 import id.ukurpaket.app.photo.PhotoResult
 import id.ukurpaket.app.photo.Standing
+import id.ukurpaket.app.photo.FocusSweep
+import id.ukurpaket.app.photo.SweepData
+import id.ukurpaket.app.photo.SweepFrame
 import id.ukurpaket.app.photo.ShotRecord
 import id.ukurpaket.app.photo.FocusInfo
 import kotlinx.serialization.json.Json
@@ -277,6 +280,56 @@ class PhotoMeasureTest {
         val focus = FocusInfo(1 / (3.0f * 0.9f), "calibrated", 20f, 0.2f, 4)
         val r = PhotoMeasure.measure(sh.mask, k, up, depth, 1f, true, null, focus, Calibration.builtIn(focus), soft)
         assertEquals(0.0, r.focusCameraM, 0.0); assertTrue(r.notes.first().startsWith("Foto buram")); assertFalse(r.ok)
+    }
+
+    /**
+     * The focus sweep (0.4.6) on synthetic frames: each pixel blurred by how far its own depth is from the lens's focus
+     * (blur width growing with the dioptre error, as a lens does), 16 lens positions from far to near. The outline's
+     * points find their own focus and, with the box's geometry, the camera height: on a carton from 1,1 m and a phone
+     * from 0,4 m. Then the whole measurement on a blurred photo with a sweep: the distance comes from the sweep, the
+     * size is right, and the photo is not refused.
+     */
+    @Test fun theFocusSweepFindsTheDistanceFromTheOutline() {
+        for ((name, gain) in listOf("box_3" to 8.0, "phone_3" to 3.0)) {
+            val s = load(name); val sh = s.shots[0]; val k = s.k
+            val w = sh.argb.w; val h = sh.argb.h
+            val luma = ByteArray(w * h) { q -> val c = sh.argb.px[q]; (((c shr 16) and 255) * 0.299 + ((c shr 8) and 255) * 0.587 + (c and 255) * 0.114).toInt().toByte() }
+            // the true depth of every pixel: the box (fitted with the true camera height: within 1 mm) or the floor
+            val met = PhotoMeasure.metrology(sh.mask, k, sh.up, sh.camH)
+            val z = FloatArray(w * h) { i -> PhotoMeasure.depthAt(met.corners, sh.up, sh.camH, k, i % w + 0.5f, i / w + 0.5f) ?: 50f }
+            // the photo blurred at a few widths; each frame takes, per pixel, the width its defocus calls for
+            val sig = doubleArrayOf(0.0, 0.5, 0.8, 1.2, 1.7, 2.4, 3.3, 4.5)
+            fun blur(src: ByteArray, sigma: Double): ByteArray {
+                if (sigma == 0.0) return src
+                val r = (3 * sigma).toInt().coerceAtLeast(1); val kk = DoubleArray(2 * r + 1) { Math.exp(-((it - r) * (it - r)) / (2 * sigma * sigma)) }.let { v -> val t = v.sum(); DoubleArray(v.size) { v[it] / t } }
+                val a = DoubleArray(w * h); val out = ByteArray(w * h)
+                for (y in 0 until h) for (x in 0 until w) { var v = 0.0; for (i in -r..r) v += kk[i + r] * (src[y * w + (x + i).coerceIn(0, w - 1)].toInt() and 255); a[y * w + x] = v }
+                for (y in 0 until h) for (x in 0 until w) { var v = 0.0; for (i in -r..r) v += kk[i + r] * a[(y + i).coerceIn(0, h - 1) * w + x]; out[y * w + x] = v.toInt().toByte() }
+                return out
+            }
+            val levels = sig.map { blur(luma, it) }
+            val ds = FloatArray(16) { (0.3 * Math.pow(14 / 0.3, it / 15.0)).toFloat() }
+            val frames = ds.map { d ->
+                SweepFrame(d, ByteArray(w * h) { i ->
+                    val want = 0.3 + gain * abs(d - 1 / z[i])                // blur width (px) for this pixel at this focus
+                    var best = 0; for (l in sig.indices) if (abs(sig[l] - want) < abs(sig[best] - want)) best = l
+                    levels[best][i]
+                })
+            }
+            val sweep = SweepData(frames, w, h)
+            val r = FocusSweep.estimate(sweep, sh.mask, 1.0, { fx, fy -> PhotoMeasure.depthAt(met.corners, sh.up, sh.camH, k, fx * w, fy * h)?.div(sh.camH) })!!
+            println(String.format(Locale.US, "%s: sweep says camera %.3f m (truth %.3f), %d of %d outline points, spread %.2f", name, r.heightM, sh.camH, r.points, r.outline, r.spread))
+            assertEquals("$name camera height", sh.camH.toDouble(), r.heightM.toDouble(), 0.06 * sh.camH)
+
+            // the measurement: a photo blurred all over (sharpness under the limit), but a sweep: the distance from it
+            val depth = DepthMap(k.w, k.h, FloatArray(k.w * k.h) { i -> 3f * (z[i].coerceAtMost(10f)) })        // the depth model 3x off
+            val focus = FocusInfo(1f, "calibrated", 20f, 0.2f, 4)
+            val res = PhotoMeasure.measure(sh.mask, k, sh.up, depth, 1f, true, null, focus, Calibration.builtIn(focus), 0.3f, sweep)
+            println(String.format(Locale.US, "   measured %.1f x %.1f x %.1f cm (truth %s), camera %.3f m, notes %s", res.lengthCm, res.widthCm, res.heightCm,
+                s.truth.joinToString(" x "), res.cameraHeightM, res.notes))
+            assertTrue(res.focusCameraM > 0); assertFalse(res.blurred())
+            assertEquals(s.truth[0], res.lengthCm, 0.08 * s.truth[0])
+        }
     }
 
     @Test fun everySizeScalesWithTheCameraHeight() {

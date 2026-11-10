@@ -71,6 +71,25 @@ class RealPhotoProbe {
                 println(String.format(Locale.US, "  tape %s: ratios %s -> camera %.3f m, focus point %.3f m (%.1f D)%s", tape, rs.map { "%.3f".format(Locale.US, it) },
                     hTrue, hTrue * zUnit, 1 / (hTrue * zUnit), fd?.let { "; true / reported diopters %.2f".format(Locale.US, (1 / (hTrue * zUnit)) / it) } ?: ""))
             }
+            // the focus sweep (0.4.6), when the phone made one: each frame's outline sharpness, and the camera height at a
+            // focus factor of 1 (over the tape's camera height: this phone's factor)
+            val sd = j["sweepDiopters"]?.let { runCatching { it.jsonArray.map { v -> v.jsonPrimitive.float } }.getOrNull() }
+            val ss = j["sweepSize"]?.let { runCatching { it.jsonArray.map { v -> v.jsonPrimitive.int } }.getOrNull() }
+            val sf = File(dir, "sweep_$i.u8")
+            if (sd != null && ss != null && sf.exists()) {
+                val raw = sf.readBytes(); val n = ss[0] * ss[1]
+                val frames = sd.indices.filter { (it + 1) * n <= raw.size }.map { q -> id.ukurpaket.app.photo.SweepFrame(sd[q], raw.copyOfRange(q * n, (q + 1) * n)) }
+                val sweep = id.ukurpaket.app.photo.SweepData(frames, ss[0], ss[1])
+                frames.forEach { fr -> println(String.format(Locale.US, "  sweep %.2f D: outline sharpness %s", fr.diopters,
+                    id.ukurpaket.app.photo.Sharpness.atOutline(fr.luma, ss[0], ss[1], mask)?.let { "%.2f".format(Locale.US, it) } ?: "-")) }
+                val r = id.ukurpaket.app.photo.FocusSweep.estimate(sweep, mask, 1.0, { fx, fy -> PhotoMeasure.depthAt(unit.corners, up, 1f, k, fx * k.w, fy * k.h) }) { println("  $it") }
+                println("  sweep: " + (r?.let { String.format(Locale.US, "camera %.3f m at factor 1, %d points, spread %.2f, median %.2f D", it.heightM, it.points, it.spread, it.medianDiopters) } ?: "no answer"))
+                if (r != null && tape != null) {
+                    val t = tape.take(2).sortedDescending() + tape[2]
+                    val hTrue = listOf(t[0] / (unit.lengthM * 100), t[1] / (unit.widthM * 100), t[2] / (unit.heightM * 100)).sorted()[1]
+                    println(String.format(Locale.US, "  sweep factor for this phone: %.3f", r.heightM / hTrue))
+                }
+            }
             val hs = (System.getProperty("ukur.h") ?: "").split(',').mapNotNull { it.toFloatOrNull() }
             val fl = PhotoMeasure.floor(new, mask, k, up)
             for (h in listOf(fl.heightM / 1.21f) + hs) {

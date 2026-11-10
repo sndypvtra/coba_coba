@@ -29,6 +29,22 @@ object PhotoFiles {
     fun depth(dir: File, i: Int) = File(dir, "depth_$i.u16")
     fun record(dir: File, i: Int) = File(dir, "shot_$i.json")
     fun evidence(dir: File) = File(dir, "evidence.jpg")
+    fun sweep(dir: File, i: Int) = File(dir, "sweep_$i.u8")
+
+    /** The sweep's frames at half size (2 x 2 means), one after another, for the PC; their dioptres are in the record. */
+    fun saveSweep(s: SweepData, f: File) {
+        val w2 = s.w / 2; val h2 = s.h / 2
+        f.outputStream().buffered().use { out ->
+            val row = ByteArray(w2 * h2)
+            for (fr in s.frames) {
+                for (y in 0 until h2) for (x in 0 until w2) {
+                    val i = 2 * y * s.w + 2 * x
+                    row[y * w2 + x] = (((fr.luma[i].toInt() and 255) + (fr.luma[i + 1].toInt() and 255) + (fr.luma[i + s.w].toInt() and 255) + (fr.luma[i + s.w + 1].toInt() and 255)) / 4).toByte()
+                }
+                out.write(row)
+            }
+        }
+    }
 
     /**
      * NV21 (sensor orientation) -> upright ARGB of [ow] x [oh]: each output pixel is the mean of the block of camera
@@ -163,6 +179,9 @@ data class ShotRecord(
     val focus: FocusInfo? = null,
     /** How sharp the object's outline is (Sharpness.atOutline): below 0,6 out of focus. */
     val sharpness: Float? = null,
+    /** The focus sweep: the camera's dioptres of each kept frame, and the frames' size in sweep_N.u8 (half the photo's). */
+    val sweepDiopters: List<Float>? = null,
+    val sweepSize: List<Int>? = null,
     /** App version that took the photo. */
     val app: String? = null,
 )
