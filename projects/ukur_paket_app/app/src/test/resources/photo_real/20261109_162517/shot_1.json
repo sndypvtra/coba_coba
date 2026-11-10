@@ -1,0 +1,93 @@
+{
+    "index": 1,
+    "created": 1794216360147,
+    "stream": [
+        1280,
+        960
+    ],
+    "rotationDeg": 90,
+    "lens": {
+        "fx": 965.3602,
+        "fy": 965.3602,
+        "cx": 480.0,
+        "cy": 640.0,
+        "w": 960,
+        "h": 1280
+    },
+    "lensModel": {
+        "fx": 482.6801,
+        "fy": 482.6801,
+        "cx": 240.0,
+        "cy": 320.0,
+        "w": 480,
+        "h": 640
+    },
+    "accel": [
+        0.147165,
+        3.3361878,
+        9.289507
+    ],
+    "accelSpread": 0.1988386,
+    "still": true,
+    "downDeg": 70.22729,
+    "pickMode": "box",
+    "tap": null,
+    "box": [
+        91.09602,
+        209.79095,
+        364.14038,
+        411.57596
+    ],
+    "maskScore": 0.9615761,
+    "samMs": 2141,
+    "depthMs": 1811,
+    "depthSize": [
+        480,
+        640
+    ],
+    "result": {
+        "lengthCm": 223.66392612457275,
+        "widthCm": 141.25232696533203,
+        "heightCm": 116.14055633544922,
+        "rawCm": [
+            223.66392612457275,
+            141.25232696533203,
+            116.14055633544922
+        ],
+        "scale": 1.0,
+        "cameraHeightM": 6.802467346191406,
+        "downDeg": 70.22729047453223,
+        "iou": 0.8488516211509705,
+        "boxLike": false,
+        "corners": [
+            0.57762855,
+            0.36204433,
+            0.30357188,
+            0.4412198,
+            0.37358698,
+            0.5692588,
+            0.66050816,
+            0.47960314,
+            0.5929956,
+            0.29489765,
+            0.27235946,
+            0.3842178,
+            0.35309124,
+            0.5318605,
+            0.6914842,
+            0.4284702
+        ],
+        "confidence": 8,
+        "ok": false,
+        "notes": [
+            "Bentuk tidak seperti kotak: ukuran perkiraan kasar (kotak terluar)",
+            "Jarak kamera ke lantai tidak wajar (6.80 m): ulangi foto",
+            "Lantai tidak terbaca rata",
+            "Mode foto belum dikalibrasi di HP ini: angka bisa meleset jauh"
+        ],
+        "floorInliers": 14229,
+        "floorTiltDeg": 19.059925079345703
+    },
+    "error": null,
+    "tapeCm": null
+}

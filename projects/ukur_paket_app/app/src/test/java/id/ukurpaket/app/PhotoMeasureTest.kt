@@ -10,6 +10,7 @@ import id.ukurpaket.app.photo.DepthModel
 import id.ukurpaket.app.photo.Intrinsics
 import id.ukurpaket.app.photo.PhotoMeasure
 import id.ukurpaket.app.photo.PhotoResult
+import id.ukurpaket.app.photo.Standing
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.double
 import kotlinx.serialization.json.float
@@ -78,7 +79,7 @@ class PhotoMeasureTest {
                 when (s.kind) {
                     "box" -> {
                         for (i in 0..2) assertEquals("${sh.name} side $i", s.truth[i], got[i], 1.0)
-                        assertTrue("${sh.name} box-like", m.iou >= PhotoMeasure.BOX_IOU)
+                        assertTrue("${sh.name} box-like", m.boxLike)
                     }
                     "phone", "mailer" -> {
                         // lying flat: length and width as a box's; the thickness is read roughly (a few cm at most)
@@ -88,18 +89,115 @@ class PhotoMeasureTest {
                         assertTrue("${sh.name} read as flat", m.flat)
                     }
                     "cylinder" -> {
-                        // a round object: rough (its lid's curve hides where the side ends), and flagged as not a box
-                        for (i in 0..2) assertEquals("${sh.name} side $i", s.truth[i], got[i], 0.35 * s.truth[i])
-                        assertTrue("${sh.name} not box-like", m.iou < PhotoMeasure.BOX_IOU)
+                        // a standing cylinder fits better than any box: its outer box, diameter x diameter x height
+                        for (i in 0..2) assertEquals("${sh.name} side $i", s.truth[i], got[i], 1.0)
+                        assertFalse("${sh.name} not box-like", m.boxLike)
+                        assertTrue("${sh.name} round", m.round)
                     }
                     else -> {
-                        // a sack: its footprint is fair, its height (bulging sides) is under: flagged, never "Akurat"
-                        assertEquals("${sh.name} length", s.truth[0], got[0], 0.15 * s.truth[0])
-                        assertTrue("${sh.name} not box-like", m.iou < PhotoMeasure.BOX_IOU)
+                        // a sack: rough outer box (one view cannot see how far it bulges behind), flagged, never "Akurat"
+                        for (i in 0..2) assertEquals("${sh.name} side $i", s.truth[i], got[i], (if (i == 2) 0.25 else 0.22) * s.truth[i])
+                        assertFalse("${sh.name} not box-like", m.boxLike)
+                        assertFalse("${sh.name} not round", m.round)
                     }
                 }
             }
         }
+    }
+
+    /**
+     * The phone held tilted sideways (up to landscape): the picture is turned level before the geometry, so the carton
+     * reads the same. The rolled view is made from the upright one (mask turned about the lens centre, 'up' with it).
+     */
+    @Test fun aPhoneHeldTiltedSidewaysReadsTheSame() {
+        val s = load("box_3"); val sh = s.shots[0]
+        for (deg in listOf(12f, 35f, 79f, -60f)) {
+            val a = Math.toRadians(-deg.toDouble())
+            // a fake 'up' with roll -deg: level() then turns the picture by +deg, which is the phone rolled by deg
+            val fake = V3((sh.up.x * Math.cos(a) - sh.up.y * Math.sin(a)).toFloat(), (sh.up.x * Math.sin(a) + sh.up.y * Math.cos(a)).toFloat(), sh.up.z)
+            val lv = PhotoMeasure.level(sh.mask, s.k, fake)!!
+            val r = kotlin.math.atan2(fake.x, -fake.y); val c = kotlin.math.cos(r); val sn = kotlin.math.sin(r)
+            val up = V3(c * sh.up.x + sn * sh.up.y, -sn * sh.up.x + c * sh.up.y, sh.up.z)
+            assertEquals(deg.toDouble(), Math.toDegrees(kotlin.math.atan2(up.x, -up.y).toDouble()), 0.5)
+            val m = PhotoMeasure.metrology(lv.mask, lv.k, up, sh.camH)
+            val got = listOf(m.lengthM * 100.0, m.widthM * 100.0, m.heightM * 100.0)
+            println(String.format(Locale.US, "rolled %.0f deg: %.1f x %.1f x %.1f cm, IoU %.3f", deg, got[0], got[1], got[2], m.iou))
+            for (i in 0..2) assertEquals("roll $deg side $i", s.truth[i], got[i], 1.2)
+            assertTrue(m.boxLike)
+        }
+    }
+
+    /**
+     * What the first real carton photo had: a strip of tape sticking out of the top and the shadow under the box cut in
+     * with it along the floor. The box fitted to the whole silhouette gives way to them only by the area they add.
+     */
+    @Test fun tapeStickingOutAndAShadowBarelyMoveTheFit() {
+        val s = load("box_7"); val sh = s.shots[0]
+        val bits = sh.mask.bits.copyOf(); val w = sh.mask.w
+        val b = sh.mask.bounds()!!
+        val top = (0 until sh.mask.h).first { y -> (0 until w).any { bits[y * w + it] } }
+        val cx = (0 until w).filter { bits[top * w + it] }.average().toInt()
+        for (y in top - 10 until top) for (x in cx - 12..cx + 12) bits[y * w + x] = true          // tape: 25 x 10 px
+        for (x in b[0] until b[0] + (b[2] - b[0]) * 2 / 5) {                                       // shadow: 6 px under the left part
+            val low = (sh.mask.h - 1 downTo 0).firstOrNull { bits[it * w + x] } ?: continue
+            for (y in low + 1..low + 6) bits[y * w + x] = true
+        }
+        val tr = ArrayList<String>()
+        val m = PhotoMeasure.metrology(Mask(w, sh.mask.h, bits), s.k, sh.up, sh.camH, trace = { tr += it })
+        val got = listOf(m.lengthM * 100.0, m.widthM * 100.0, m.heightM * 100.0)
+        println(String.format(Locale.US, "tape + shadow: %.1f x %.1f x %.1f cm, IoU %.3f", got[0], got[1], got[2], m.iou))
+        tr.filter { it.startsWith("fit") }.forEach { println("      $it") }
+        for (i in 0..2) assertEquals("side $i", s.truth[i], got[i], 2.0)
+        assertTrue(m.boxLike)
+    }
+
+    /**
+     * The first real DT50 photos (masks and records only, no picture is kept), at the camera height
+     * Depth Anything gave. No tape size was typed for them, so this checks what can be checked without it: the carton
+     * and the parcel fit a box closely (0.4.2 read the carton at IoU 0,86 with a box twice too long), the book shot in
+     * landscape is levelled and reads as a book (about 1,4 : 1), the bottle is not taken for a box.
+     */
+    @Test fun firstRealPhotos() {
+        fun run(name: String, hM: Float): PhotoMeasure.Metrology {
+            val dir = File(javaClass.getResource("/photo_real/$name")!!.toURI())
+            val rec = dir.listFiles()!!.first { it.name.startsWith("shot_") }
+            val j = Json.parseToJsonElement(rec.readText()).jsonObject
+            val lm = j["lensModel"]!!.jsonObject
+            val k = Intrinsics(lm["fx"]!!.jsonPrimitive.float, lm["fy"]!!.jsonPrimitive.float, lm["cx"]!!.jsonPrimitive.float, lm["cy"]!!.jsonPrimitive.float,
+                lm["w"]!!.jsonPrimitive.int, lm["h"]!!.jsonPrimitive.int)
+            val a = j["accel"]!!.jsonArray.map { it.jsonPrimitive.float }
+            val img = TestImages.read(File(dir, rec.name.replace("shot_", "mask_").replace(".json", ".png")).inputStream())
+            val mask = Mask(img.w, img.h, BooleanArray(img.w * img.h) { (img.px[it] and 255) > 127 })
+            val m = PhotoMeasure.metrology(mask, k, Intrinsics.upFromAccel(a[0], a[1], a[2]), hM)
+            println(String.format(Locale.US, "%s: %.1f x %.1f x %.1f cm, IoU %.3f, box %b, round %b, %d corners", name,
+                m.lengthM * 100, m.widthM * 100, m.heightM * 100, m.iou, m.boxLike, m.round, m.outlineCorners))
+            return m
+        }
+        val carton = run("20261109_154822", 1.094f)
+        assertTrue(carton.boxLike); assertTrue(carton.iou > 0.93f)
+        assertEquals(0.63, (carton.widthM / carton.lengthM).toDouble(), 0.06)              // the hand-measured corners: 0,67
+        val parcel = run("20261109_162517", 1.471f)
+        assertTrue(parcel.boxLike); assertTrue(parcel.iou > 0.93f); assertFalse(parcel.flat)
+        val book = run("20261109_154658", 0.376f)                                          // landscape: rolled 79 deg
+        assertTrue(book.iou > 0.93f)
+        assertEquals(1.4, (book.lengthM / book.widthM).toDouble(), 0.12)
+        val bottle = run("20261109_162622", 1.121f)
+        assertFalse(bottle.boxLike)
+    }
+
+    @Test fun theStandingCameraHeightSteadiesTheAi() {
+        // three calibration photos taken standing: the courier's camera height is learnt from them
+        val cal = listOf(CalSample(listOf(44.0, 33.0, 22.0), listOf(40.0, 30.0, 20.0), aiCameraM = 1.45),
+            CalSample(listOf(50.0, 40.0, 25.0), listOf(46.0, 36.0, 23.0), aiCameraM = 1.40), CalSample(listOf(30.0, 20.0, 10.0), listOf(30.0, 20.0, 10.0)))
+        val st = Calibration.standing(cal)!!
+        assertEquals(2, st.samples)                                                       // the third has no height
+        assertEquals((1.45 / 1.1 + 1.40 * 0.92) / 2, st.heightM, 0.01)
+        // the AI 8 % high: pulled most of the way to the standing height; the AI far off (crouching, a table): left alone
+        val (h, used) = PhotoMeasure.cameraHeight(1.40f, Standing(1.30, 0.04, 3))
+        assertTrue(used); assertTrue(h in 1.30f..1.33f)
+        val (h2, used2) = PhotoMeasure.cameraHeight(0.70f, Standing(1.30, 0.04, 3))
+        assertFalse(used2); assertEquals(0.70f, h2, 1e-6f)
+        assertEquals(1.10f, PhotoMeasure.cameraHeight(1.10f, null).first, 1e-6f)
     }
 
     @Test fun everySizeScalesWithTheCameraHeight() {

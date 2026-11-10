@@ -168,7 +168,7 @@ internal fun PhotoCameraChrome(title: String, subtitle: String, live: PhotoCamer
                     if ((live?.brightness ?: 128.0) < 55) Chip("Terlalu gelap: tambah cahaya", Tone.RED, "light_mode")
                 }
                 Box(Modifier.align(Alignment.BottomCenter).padding(10.dp).clip(RoundedCornerShape(12.dp)).background(C.glass).padding(horizontal = 12.dp, vertical = 8.dp)) {
-                    T("Berdiri di pojok paket · HP miring 30–60° ke bawah · paket utuh, lantai kelihatan di sekeliling", 12.5.sp, color = Color.White)
+                    T("Berdiri di pojok paket, HP setinggi dada · miring 30–60° ke bawah · paket utuh, lantai kelihatan di sekeliling", 12.5.sp, color = Color.White)
                 }
             }
         }
@@ -394,7 +394,9 @@ internal fun PhotoResultCard(purpose: PhotoPurpose, r: PhotoResult, each: List<P
             }
         }
         Spacer(Modifier.height(6.dp))
-        T("${each.size} foto · kamera ${r.cameraHeightM.id(2)} m di atas lantai · sudut ${r.downDeg.toInt()}° · cocok siluet ${(r.iou * 100).toInt()}%" +
+        T("${each.size} foto · kamera ${r.cameraHeightM.id(2)} m di atas lantai" +
+            (if (r.standingM > 0) " (AI ${r.aiCameraM.id(2)} m, tinggi berdiri ${r.standingM.id(2)} m)" else "") +
+            " · sudut ${r.downDeg.toInt()}° · cocok siluet ${(r.iou * 100).toInt()}%" +
             if (purpose != PhotoPurpose.CALIBRATE && factor != null) " · kalibrasi ×${factor.id(2)} ($samples sampel)" else "", 12.sp, color = C.t3)
         if (each.size > 1) each.forEachIndexed { i, e ->
             T("Foto ${i + 1}: ${e.lengthCm.cm()} × ${e.widthCm.cm()} × ${e.heightCm.cm()} cm" + if (!e.boxLike) " · bukan kotak" else "", 12.5.sp, color = C.t2)
@@ -437,6 +439,10 @@ private fun TapeCard(purpose: PhotoPurpose, tape: List<String>, r: PhotoResult?,
             Spacer(Modifier.height(6.dp))
             T("Meteran ÷ terbaca: " + listOf("P", "L", "T").zip(ratios).joinToString(" · ") { (l, v) -> "$l ×${v.id(2)}" } +
                 (Calibration.factor(listOf(sample))?.let { " → faktor ×${it.id(2)}" } ?: ""), 12.5.sp, FontWeight.SemiBold, if (bad) C.amber else C.brandD)
+            // a figure the courier can check by eye: about chest height when standing
+            CalSample(r.rawCm, t.map { it!! }, aiCameraM = r.aiCameraM).cameraM()?.let {
+                T("Berarti kamera ${it.id(2)} m di atas lantai saat foto (AI menebak ${r.aiCameraM.id(2)} m).", 12.5.sp, color = C.t2)
+            }
             if (bad) T("Ketiga angka beda jauh: foto ini salah membaca bentuk kardus. Foto ulang dari pojok kardus (kardus utuh, agak dari atas) " +
                 "supaya faktornya benar. Tetap bisa disimpan.", 12.5.sp, color = C.amber)
         }
@@ -453,7 +459,7 @@ fun PhotoSettingsCard(model: AppModel, activity: Activity) {
     val f = Calibration.factor(cal)
     Card {
         T("Kalibrasi mode foto", 15.sp, FontWeight.SemiBold)
-        T("Mode foto menebak tinggi kamera dari lantai dengan AI; kalibrasi sekali per HP memperbaiki skalanya. Foto 3 kardus yang sudah diukur meteran.",
+        T("Mode foto menebak tinggi kamera dari lantai dengan AI; kalibrasi sekali per HP memperbaiki skalanya dan mencatat tinggi kamera Anda saat berdiri. Foto 3 kardus yang sudah diukur meteran, sambil berdiri, HP setinggi dada.",
             12.5.sp, color = C.t2)
         Spacer(Modifier.height(8.dp))
         if (f == null) {
@@ -463,6 +469,10 @@ fun PhotoSettingsCard(model: AppModel, activity: Activity) {
             val sp = Calibration.spread(cal)
             Chip("Faktor ×${f.id(2)} · ${cal.size} kardus · sebaran ${(sp * 100).toInt()}%", if (sp > 0.15 || cal.size < 3) Tone.WARN else Tone.OK, "tune")
             if (cal.size < 3) T("Tambah sampai 3 kardus supaya faktornya stabil.", 12.sp, color = C.t3)
+            Calibration.standing(cal)?.let { st ->
+                T("Tinggi kamera saat berdiri: ${st.heightM.id(2)} m (${st.samples} foto, sebaran ${(st.spread * 100).toInt()}%). Dipakai bersama AI: foto paket sambil berdiri seperti saat kalibrasi.",
+                    12.sp, color = C.t2)
+            }
             if (sp > 0.15) T("Sampel tidak konsisten: hapus kalibrasi dan ulangi dengan foto dari pojok kardus.", 12.sp, color = C.amber)
         }
         Spacer(Modifier.height(10.dp))

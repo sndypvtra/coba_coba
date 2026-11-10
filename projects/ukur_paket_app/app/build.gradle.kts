@@ -13,8 +13,8 @@ android {
         applicationId = "id.ukurpaket.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 18
-        versionName = "0.4.2-uji"
+        versionCode = 19
+        versionName = "0.4.3-uji"
         // 32-bit kept too, so the app still installs (and can mark parcels for the hub) on older phones.
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
     }
@@ -43,7 +43,8 @@ android {
             all { t ->
                 t.systemProperty("roborazzi.test.record", "true"); t.maxHeapSize = "3g"
                 // a real video for LiveSegVideoTest, given on the command line (never committed: it shows people)
-                for (k in listOf("ukur.video", "ukur.videoRef", "ukur.videoOut", "ukur.videoBox", "ukur.videoRefine", "ukur.videoTrace"))
+                // and real photo-mode sessions for RealPhotoProbe (never committed: they show the courier's surroundings)
+                for (k in listOf("ukur.video", "ukur.videoRef", "ukur.videoOut", "ukur.videoBox", "ukur.videoRefine", "ukur.videoTrace", "ukur.real", "ukur.h", "ukur.trace"))
                     project.findProperty(k)?.let { t.systemProperty(k, it.toString()) }
             }
         }

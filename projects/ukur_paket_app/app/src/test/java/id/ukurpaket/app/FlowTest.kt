@@ -92,6 +92,13 @@ class FlowTest {
         assertTrue(m.photo.calibrated)
     }
 
+    /** The version shown in Settings is the one built (it once stayed at 0.3.3 for three releases). */
+    @Test fun shownVersionIsTheBuiltOne() {
+        val gradle = java.io.File("build.gradle.kts").readText()
+        val name = Regex("versionName = \"([^\"]+)\"").find(gradle)!!.groupValues[1]
+        assertEquals(name, id.ukurpaket.app.BuildConfigInfo.VERSION)
+    }
+
     @Test fun firstOpenHasNothingButTheScanner() {
         val m = model()
         assertTrue(m.store.measurements.value.isEmpty())

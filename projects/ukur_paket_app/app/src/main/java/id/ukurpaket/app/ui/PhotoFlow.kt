@@ -24,6 +24,7 @@ import id.ukurpaket.app.photo.PhotoCamera
 import id.ukurpaket.app.photo.PhotoFailed
 import id.ukurpaket.app.photo.PhotoFiles
 import id.ukurpaket.app.photo.PhotoMeasure
+import id.ukurpaket.app.photo.Standing
 import id.ukurpaket.app.photo.PhotoResult
 import id.ukurpaket.app.photo.ShotRecord
 import kotlinx.coroutines.CompletableDeferred
@@ -102,6 +103,8 @@ class PhotoFlow(private val model: AppModel) {
     val samples: List<CalSample> get() = Calibration.current(model.store.settings.value.photoCal)
     val scale: Double get() = if (purpose == PhotoPurpose.CALIBRATE) 1.0 else Calibration.factor(samples) ?: DepthModel.DEFAULT_SCALE.toDouble()
     val calibrated: Boolean get() = purpose != PhotoPurpose.CALIBRATE && samples.isNotEmpty()
+    /** The courier's standing camera height from the calibration photos (not used while calibrating). */
+    val standing: Standing? get() = if (purpose == PhotoPurpose.CALIBRATE) null else Calibration.standing(samples)
 
     /** All photos with a size, combined. */
     val combined: PhotoResult? get() = shots.mapNotNull { it.result }.takeIf { it.isNotEmpty() }?.let { PhotoMeasure.combine(it) }
@@ -138,7 +141,8 @@ class PhotoFlow(private val model: AppModel) {
             val down = PhotoCamera.downDeg(s.accel)
             shots.add(PhotoShotUi(index, pic, kSmall, up, down, s.still, stage = "Membaca foto…"))
             current = index; capturing = false
-            records[index] = ShotRecord(index, s.timeMs, listOf(s.sw, s.sh), s.rotation, s.k, kSmall, s.accel.toList(), s.accelSpread, s.still, down)
+            records[index] = ShotRecord(index, s.timeMs, listOf(s.sw, s.sh), s.rotation, s.k, kSmall, s.accel.toList(), s.accelSpread, s.still, down,
+                focus = s.focus, app = id.ukurpaket.app.BuildConfigInfo.VERSION)
             val depthDone = CompletableDeferred<Pair<DepthMap, Long>?>()
             depths[index] = depthDone
             // the full photo is the record's evidence; written while the models work
@@ -188,7 +192,7 @@ class PhotoFlow(private val model: AppModel) {
             if (dep == null) { update(index) { it.copy(stage = null, error = "Kedalaman tidak terbaca: ulangi foto") }; return@launch }
             rec(index) { it.copy(depthMs = dep.second, depthSize = listOf(dep.first.w, dep.first.h)) }
             val r = withContext(Dispatchers.Default) {
-                runCatching { PhotoMeasure.measure(m, shot.k, shot.up, dep.first, scale.toFloat(), calibrated) }
+                runCatching { PhotoMeasure.measure(m, shot.k, shot.up, dep.first, scale.toFloat(), calibrated, standing) }
             }
             r.onSuccess { res -> update(index) { it.copy(stage = null, result = res) }; rec(index) { it.copy(result = res, error = null) } }
                 .onFailure { t ->
@@ -247,7 +251,7 @@ class PhotoFlow(private val model: AppModel) {
     fun pendingSample(): CalSample? {
         val r = combined ?: return null
         val t = tapeCm() ?: return null
-        return CalSample(r.rawCm, t, model = DepthModel.ID)
+        return CalSample(r.rawCm, t, model = DepthModel.ID, aiCameraM = r.aiCameraM)
     }
 
     /**

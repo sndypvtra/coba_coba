@@ -1,0 +1,90 @@
+{
+    "index": 0,
+    "created": 1794214041991,
+    "stream": [
+        1280,
+        960
+    ],
+    "rotationDeg": 90,
+    "lens": {
+        "fx": 965.3602,
+        "fy": 965.3602,
+        "cx": 480.0,
+        "cy": 640.0,
+        "w": 960,
+        "h": 1280
+    },
+    "lensModel": {
+        "fx": 482.6801,
+        "fy": 482.6801,
+        "cx": 240.0,
+        "cy": 320.0,
+        "w": 480,
+        "h": 640
+    },
+    "accel": [
+        7.237793,
+        1.438095,
+        6.40599
+    ],
+    "accelSpread": 0.1427939,
+    "still": true,
+    "downDeg": 40.961414,
+    "pickMode": "tap",
+    "tap": [
+        283.47623,
+        306.28326
+    ],
+    "box": null,
+    "maskScore": 1.0060116,
+    "samMs": 2752,
+    "depthMs": 2109,
+    "depthSize": [
+        480,
+        640
+    ],
+    "result": {
+        "lengthCm": 75.08050203323364,
+        "widthCm": 28.898316621780396,
+        "heightCm": 23.177100718021393,
+        "rawCm": [
+            75.08050203323364,
+            28.898316621780396,
+            23.177100718021393
+        ],
+        "scale": 1.0,
+        "cameraHeightM": 0.3959791362285614,
+        "downDeg": 40.96141248875133,
+        "iou": 0.5287039875984192,
+        "boxLike": false,
+        "corners": [
+            0.01959629,
+            0.47158456,
+            0.8370257,
+            0.8265211,
+            0.86299574,
+            0.59133637,
+            0.2754695,
+            0.12837072,
+            0.43041864,
+            0.34771204,
+            1.1620145,
+            0.86120254,
+            1.139637,
+            0.57694787,
+            0.6427213,
+            -0.08954835
+        ],
+        "confidence": 0,
+        "ok": false,
+        "notes": [
+            "Bentuk tidak seperti kotak: ukuran perkiraan kasar (kotak terluar)",
+            "Lantai tidak terbaca rata",
+            "Mode foto belum dikalibrasi di HP ini: angka bisa meleset jauh"
+        ],
+        "floorInliers": 10778,
+        "floorTiltDeg": 17.421972274780273
+    },
+    "error": null,
+    "tapeCm": null
+}

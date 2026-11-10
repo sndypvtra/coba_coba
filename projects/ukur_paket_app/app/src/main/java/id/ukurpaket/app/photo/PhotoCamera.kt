@@ -13,6 +13,8 @@ import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CameraMetadata
+import android.hardware.camera2.TotalCaptureResult
+import android.hardware.camera2.CaptureResult
 import android.hardware.camera2.CaptureRequest
 import android.media.ImageReader
 import android.os.Build
@@ -41,7 +43,9 @@ class PhotoCamera(private val ctx: Context, private val cb: Callback) {
 
     /** One still: the NV21 frame (sensor orientation), the lens of the upright full picture, the mean acceleration. */
     class Shot(val nv21: ByteArray, val sw: Int, val sh: Int, val rotation: Int, val k: Intrinsics,
-               val accel: FloatArray, val accelSpread: Float, val still: Boolean, val timeMs: Long)
+               val accel: FloatArray, val accelSpread: Float, val still: Boolean, val timeMs: Long,
+               /** Where the autofocus stood (recorded for the PC: a second, physical clue to the distance). */
+               val focus: FocusInfo? = null)
 
     private val thread = HandlerThread("photo-cam").apply { start() }
     private val handler = Handler(thread.looper)
@@ -62,6 +66,15 @@ class PhotoCamera(private val ctx: Context, private val cb: Callback) {
     @Volatile private var brightness = 128.0
     private var frames = 0
     private var lastLive = 0L
+
+    // the autofocus of the last preview frame
+    @Volatile private var focusDiopters: Float? = null
+    @Volatile private var afState: Int? = null
+    private val frameCb = object : CameraCaptureSession.CaptureCallback() {
+        override fun onCaptureCompleted(s: CameraCaptureSession, r: CaptureRequest, res: TotalCaptureResult) {
+            focusDiopters = res.get(CaptureResult.LENS_FOCUS_DISTANCE); afState = res.get(CaptureResult.CONTROL_AF_STATE)
+        }
+    }
 
     @Volatile private var pending: ((Shot) -> Unit)? = null
     @Volatile private var pendingSince = 0L
@@ -102,7 +115,7 @@ class PhotoCamera(private val ctx: Context, private val cb: Callback) {
                     if (CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE in af) b.set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
                     // the lens must not move against the sensor: the measurement uses the factory focal length
                     b.set(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE, CameraMetadata.CONTROL_VIDEO_STABILIZATION_MODE_OFF)
-                    s.setRepeatingRequest(b.build(), null, handler)
+                    s.setRepeatingRequest(b.build(), frameCb, handler)
                 } catch (e: Exception) { cb.onError("Kamera berhenti: ${e.message}") }
             }
             override fun onConfigureFailed(s: CameraCaptureSession) {
@@ -157,9 +170,22 @@ class PhotoCamera(private val ctx: Context, private val cb: Callback) {
             if (!still && SystemClock.elapsedRealtime() - pendingSince < maxWait) return
             pending = null
             val nv = SweepRecorder.toNv21(img)
-            val shot = Shot(nv, img.width, img.height, rotation, lens(img.width, img.height), m ?: floatArrayOf(0f, 9.81f, 0f), sp, still, System.currentTimeMillis())
+            val shot = Shot(nv, img.width, img.height, rotation, lens(img.width, img.height), m ?: floatArrayOf(0f, 9.81f, 0f), sp, still,
+                System.currentTimeMillis(), focus())
             p(shot)
         } finally { img.close() }
+    }
+
+    /** The autofocus now, with how far the camera says its focus distances can be trusted. */
+    private fun focus(): FocusInfo? {
+        val d = focusDiopters ?: return null
+        val c = chars ?: return null
+        val cal = when (c.get(CameraCharacteristics.LENS_INFO_FOCUS_DISTANCE_CALIBRATION)) {
+            CameraMetadata.LENS_INFO_FOCUS_DISTANCE_CALIBRATION_CALIBRATED -> "calibrated"
+            CameraMetadata.LENS_INFO_FOCUS_DISTANCE_CALIBRATION_APPROXIMATE -> "approximate"
+            else -> "uncalibrated"
+        }
+        return FocusInfo(d, cal, c.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE), c.get(CameraCharacteristics.LENS_INFO_HYPERFOCAL_DISTANCE), afState)
     }
 
     /** The lens of the upright full picture for a [sw] x [sh] stream. */

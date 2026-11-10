@@ -201,7 +201,8 @@ class ScreenshotTest {
         val mask = id.ukurpaket.app.measure.Mask(480, 640, BooleanArray(mpx.size) { (mpx[it] and 255) > 127 })
         val depth = id.ukurpaket.app.photo.DepthMap(480, 640, FloatArray(480 * 640) { i ->
             val den = -(k.ray(i % 480 + 0.5f, i / 480 + 0.5f) dot up); if (den > 1e-3f) camH / den else 40f })
-        val r = id.ukurpaket.app.photo.PhotoMeasure.measure(mask, k, up, depth, 1f, calibrated = true)
+        // a calibrated phone that also knows the courier's standing camera height (0.4.3)
+        val r = id.ukurpaket.app.photo.PhotoMeasure.measure(mask, k, up, depth, 1f, calibrated = true, standing = id.ukurpaket.app.photo.Standing(1.15, 0.03, 3))
         println("photo mode screenshot: ${r.lengthCm} x ${r.widthCm} x ${r.heightCm}, ok ${r.ok}, ${r.notes}")
         val tint = ObjectPick.tint(mask)
         val outline = mask.outline().flatMap { listOf(it.a / 480f, it.b / 640f) }
@@ -231,8 +232,8 @@ class ScreenshotTest {
             listOf("40", "30", "45"), calibrated = false)
         val m = model(Mode.NONE)
         val dm = id.ukurpaket.app.photo.DepthModel.ID
-        m.store.update { it.copy(photoCal = listOf(id.ukurpaket.app.photo.CalSample(listOf(46.0, 34.5, 23.0), listOf(40.0, 30.0, 20.0), model = dm),
-            id.ukurpaket.app.photo.CalSample(listOf(36.0, 28.0, 17.0), listOf(31.0, 24.5, 15.0), model = dm))) }
+        m.store.update { it.copy(photoCal = listOf(id.ukurpaket.app.photo.CalSample(listOf(46.0, 34.5, 23.0), listOf(40.0, 30.0, 20.0), model = dm, aiCameraM = 1.52),
+            id.ukurpaket.app.photo.CalSample(listOf(36.0, 28.0, 17.0), listOf(31.0, 24.5, 15.0), model = dm, aiCameraM = 1.47))) }
         screen("46_pengaturan_kalibrasi_foto_dt50", m, Screen.Settings)
         m.draft = Draft("TSA-90100000104", ResultData(r.lengthCm, r.widthCm, r.heightCm, r.confidence, Status.OK, 0.0, null, null, Mode.PHOTO))
         screen("47_berat_dari_foto_dt50", m, Screen.Weight)

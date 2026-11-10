@@ -1,0 +1,91 @@
+{
+    "index": 1,
+    "created": 1794216428319,
+    "stream": [
+        1280,
+        960
+    ],
+    "rotationDeg": 90,
+    "lens": {
+        "fx": 965.3602,
+        "fy": 965.3602,
+        "cx": 480.0,
+        "cy": 640.0,
+        "w": 960,
+        "h": 1280
+    },
+    "lensModel": {
+        "fx": 482.6801,
+        "fy": 482.6801,
+        "cx": 240.0,
+        "cy": 320.0,
+        "w": 480,
+        "h": 640
+    },
+    "accel": [
+        0.19885503,
+        6.6576986,
+        7.226341
+    ],
+    "accelSpread": 0.2260475,
+    "still": true,
+    "downDeg": 47.332596,
+    "pickMode": "box",
+    "tap": null,
+    "box": [
+        154.16846,
+        185.94518,
+        303.21213,
+        351.6176
+    ],
+    "maskScore": 1.003884,
+    "samMs": 2139,
+    "depthMs": 1876,
+    "depthSize": [
+        480,
+        640
+    ],
+    "result": {
+        "lengthCm": 57.3621928691864,
+        "widthCm": 26.2162446975708,
+        "heightCm": 28.32641303539276,
+        "rawCm": [
+            57.3621928691864,
+            26.2162446975708,
+            28.32641303539276
+        ],
+        "scale": 1.0,
+        "cameraHeightM": 1.3295687437057495,
+        "downDeg": 47.33259736683514,
+        "iou": 0.7632505893707275,
+        "boxLike": false,
+        "corners": [
+            0.5501162,
+            0.4978102,
+            0.46858343,
+            0.3576149,
+            0.3491069,
+            0.37173194,
+            0.4079327,
+            0.5191099,
+            0.5601967,
+            0.4074824,
+            0.46818918,
+            0.26947135,
+            0.3357774,
+            0.28269228,
+            0.3993035,
+            0.42856008
+        ],
+        "confidence": 40,
+        "ok": false,
+        "notes": [
+            "Bentuk tidak seperti kotak: ukuran perkiraan kasar (kotak terluar)",
+            "Mode foto belum dikalibrasi di HP ini: angka bisa meleset jauh"
+        ],
+        "floorInliers": 1267,
+        "floorTiltDeg": 14.408441543579102
+    },
+    "error": null,
+    "tapeCm": null
+}

@@ -23,17 +23,21 @@ import kotlin.math.min
  * without a working gyroscope (Urovo DT50). Android-free, so the PC tests run the same code.
  *
  * What is known for the picture: the lens (intrinsics, from Camera2), which way is up (the accelerometer while the phone
- * is still), the object's outline (MobileSAM, tap or box), and a depth map (YOLO26n-depth). The depth model is only
+ * is still), the object's outline (MobileSAM, tap or box), and a depth map (Depth Anything V2). The depth model is only
  * asked for ONE number: how high the camera is above the floor around the object (the median over thousands of floor
- * pixels). Everything else is plain geometry with that number (single-view metrology):
+ * pixels). Everything else is plain geometry with that number (single-view metrology), on the picture turned level
+ * when the phone was held tilted sideways:
  *   - the floor is the plane `up . X = -h`; every floor pixel's ray meets it at a known point
  *   - the outline's lower edge stands on the floor: the near half of the footprint
  *   - its left and right sides are vertical edges: their bottoms are on the floor, their tops give the height H
  *   - its upper edge is the far edge of the top, at H: the far half of the footprint
- *   - footprint = smallest rectangle round both halves; the box drawn from it is checked against the outline (IoU)
+ *   - footprint = smallest rectangle round both halves: the starting box
+ *   - that box is then fitted to the whole silhouette (BoxFit, 0.4.3): position, turn, length, width and height moved
+ *     until the box drawn into the picture covers the object's mask best (IoU)
  * Every size scales with h, so a wrong h scales the result and nothing else: that is what the per-phone calibration
- * corrects. A box-like object fits its outline almost exactly (IoU ~0,98); a sack or a bottle much less (~0,8) and is
- * flagged.
+ * corrects, with the courier's standing camera height learnt from the calibration photos. A carton fits its outline
+ * almost exactly (IoU ~0,99, 6 outline corners); a gallon is fitted as a cylinder; a sack or a plant gets its outer box
+ * and is flagged.
  */
 
 /** Pinhole camera of an upright picture of [w] x [h] pixels. */
@@ -126,13 +130,23 @@ data class PhotoResult(
     val notes: List<String>,
     val floorInliers: Int = 0,
     val floorTiltDeg: Double = 0.0,
+    /** The camera height the depth model gave (after the phone's factor), metres. */
+    val aiCameraM: Double = 0.0,
+    /** The courier's standing camera height it was combined with (0 = not used), metres. */
+    val standingM: Double = 0.0,
 )
 
 class PhotoFailed(message: String) : Exception(message)
 
 object PhotoMeasure {
-    /** The outline must fit a box this well to count as box-like. */
-    const val BOX_IOU = 0.92
+    /** The fitted box must cover the outline this well (IoU) to count as box-like... */
+    const val BOX_IOU = 0.90
+
+    /** ...and the outline have at most this many corners (a box seen from a corner has 6; a gallon's round ends 9+). */
+    const val MAX_BOX_CORNERS = 8
+
+    /** A cylinder must beat the best box by this much IoU to be taken as the shape. */
+    const val ROUND_MARGIN = 0.01f
 
     /**
      * Camera height above the floor from the depth map: floor candidates are the pixels round the object (a window
@@ -206,7 +220,15 @@ object PhotoMeasure {
      */
     class Metrology(val lengthM: Float, val widthM: Float, val heightM: Float, val corners: List<V3>, val iou: Float, val sideAlign: Float,
                     /** Read as an object lying flat (a phone, a mailer bag): its thickness is the uncertain part. */
-                    val flat: Boolean = false)
+                    val flat: Boolean = false,
+                    /** A box explains the outline (fit IoU and straight sides): otherwise the size is the object's outer box. */
+                    val boxLike: Boolean = true,
+                    /** Corners of the simplified outline: 4-7 for a box, more for round or soft shapes. */
+                    val outlineCorners: Int = 0,
+                    /** A standing cylinder fits better than a box: the size is its outer box (diameter x diameter x height). */
+                    val round: Boolean = false) {
+        fun withCorners(c: List<V3>) = Metrology(lengthM, widthM, heightM, c, iou, sideAlign, flat, boxLike, outlineCorners, round)
+    }
 
     /** A projected corner behind the camera (PhotoResult.corners): its edges are not drawn. */
     const val BEHIND = -100f
@@ -214,7 +236,53 @@ object PhotoMeasure {
     /** Thicknesses tried for an object lying flat (metres). */
     private val FLAT_H = floatArrayOf(0.005f, 0.01f, 0.015f, 0.02f, 0.03f, 0.04f, 0.05f, 0.06f, 0.08f)
 
+    /** Below this roll (degrees) the picture is measured as it is. */
+    private const val ROLL_MIN_DEG = 1.5
+
+    /**
+     * The picture as a camera turned about its optical axis would have taken it, so that 'up' points straight up in it:
+     * a phone held tilted sideways, even in landscape, then reads like an upright one (the outline's lower edge is
+     * the one standing on the floor, its leftmost and rightmost points are on its sides). The mask is resampled
+     * (nearest pixel) into a canvas holding the whole picture, at the same resolution; [toOriginal] turns a point of
+     * the new camera back into the phone's.
+     */
+    class Levelled(val mask: Mask, val k: Intrinsics, val up: V3, val rollDeg: Float, private val c: Float, private val s: Float) {
+        fun toOriginal(p: V3) = V3(c * p.x - s * p.y, s * p.x + c * p.y, p.z)
+    }
+
+    /** [mask] seen from the camera rolled level ('up' straight up in the picture); null when it already is. */
+    fun level(mask: Mask, k: Intrinsics, up: V3): Levelled? {
+        val roll = kotlin.math.atan2(up.x, -up.y)
+        if (abs(Math.toDegrees(roll.toDouble())) < ROLL_MIN_DEG) return null
+        val c = cos(roll); val s = kotlin.math.sin(roll)
+        // new camera = old turned by -roll about z: x' = c x + s y, y' = -s x + c y (normalised coordinates)
+        val f = (k.fx + k.fy) / 2
+        var minX = Float.MAX_VALUE; var minY = Float.MAX_VALUE; var maxX = -Float.MAX_VALUE; var maxY = -Float.MAX_VALUE
+        for ((px, py) in listOf(0f to 0f, k.w.toFloat() to 0f, 0f to k.h.toFloat(), k.w.toFloat() to k.h.toFloat())) {
+            val nx = (px - k.cx) / k.fx; val ny = (py - k.cy) / k.fy
+            val x = f * (c * nx + s * ny); val y = f * (-s * nx + c * ny)
+            minX = min(minX, x); maxX = max(maxX, x); minY = min(minY, y); maxY = max(maxY, y)
+        }
+        val w = ceil(maxX - minX).toInt(); val h = ceil(maxY - minY).toInt()
+        val nk = Intrinsics(f, f, -minX, -minY, w, h)
+        val bits = BooleanArray(w * h)
+        for (y in 0 until h) for (x in 0 until w) {
+            val nx = (x + 0.5f - nk.cx) / f; val ny = (y + 0.5f - nk.cy) / f
+            val ox = k.fx * (c * nx - s * ny) + k.cx; val oy = k.fy * (s * nx + c * ny) + k.cy
+            bits[y * w + x] = mask[ox, oy]
+        }
+        val nu = V3(c * up.x + s * up.y, -s * up.x + c * up.y, up.z)
+        return Levelled(Mask(w, h, bits), nk, nu, Math.toDegrees(roll.toDouble()).toFloat(), c, s)
+    }
+
     fun metrology(mask: Mask, k: Intrinsics, up: V3, hM: Float, forceH: Float? = null, trace: ((String) -> Unit)? = null): Metrology {
+        val lv = level(mask, k, up) ?: return metrologyLevel(mask, k, up, hM, forceH, trace)
+        trace?.invoke("picture levelled: phone rolled %.0f deg".format(java.util.Locale.US, lv.rollDeg))
+        val m = metrologyLevel(lv.mask, lv.k, lv.up, hM, forceH, trace)
+        return m.withCorners(m.corners.map { lv.toOriginal(it) })
+    }
+
+    private fun metrologyLevel(mask: Mask, k: Intrinsics, up: V3, hM: Float, forceH: Float?, trace: ((String) -> Unit)?): Metrology {
         // the outline: convex hull of the mask's pixel corners
         val pts = ArrayList<P2>()
         for (y in 0 until mask.h) {
@@ -229,6 +297,7 @@ object PhotoMeasure {
         var peri = 0f
         for (i in hull.indices) { val a = hull[i]; val c = hull[(i + 1) % hull.size]; peri += hypot(c.a - a.a, c.b - a.b) }
         val simp = simplifyClosed(hull, 0.012f * peri).let { if (it.size >= 3) it else hull }
+        trace?.invoke("outline: ${hull.size} hull points, ${simp.size} corners")
 
         class Side(val align: Float, val hM: Float, val bot: P2, val top: P2)
         fun side(iExt: Int): Side? {
@@ -297,33 +366,95 @@ object PhotoMeasure {
         if (forceH != null) { cands.clear(); cands += forceH }
         if (cands.isEmpty() && forceH != null) throw PhotoFailed("Tinggi objek tidak terbaca: foto dari pojok paket, agak dari atas")
         val align = listOfNotNull(sl?.align, sr?.align).minOrNull() ?: 0f
-        var best: Metrology? = null
+        var upright: Metrology? = null
         for (H in cands) {
             val f = footprint(H) ?: continue
             val cs = corners(f.second, H)
             val iou = silhouetteIou(cs, k, mask)
             trace?.invoke("upright H %.1f cm -> %.1f x %.1f, IoU %.3f".format(java.util.Locale.US, H * 100, f.first.max() * 100, f.first.min() * 100, iou))
-            if (best == null || iou > best.iou) best = Metrology(max(f.first[0], f.first[1]), min(f.first[0], f.first[1]), H, cs, iou, align)
+            if (upright == null || iou > upright.iou) upright = Metrology(max(f.first[0], f.first[1]), min(f.first[0], f.first[1]), H, cs, iou, align)
         }
-        // the same outline read as an object lying flat: kept when its box fits the outline better
+        // the same outline read as an object lying flat
+        var flat: Metrology? = null
         if (forceH == null) for (H in FLAT_H) {
             if (H > hM - 0.1f) break
             val f = footprint(H, flatLower, flatUpper) ?: continue
             val cs = corners(f.second, H)
             val iou = silhouetteIou(cs, k, mask)
             trace?.invoke("flat H %.1f cm -> %.1f x %.1f, IoU %.3f".format(java.util.Locale.US, H * 100, f.first.max() * 100, f.first.min() * 100, iou))
-            if (best == null || iou > best.iou) best = Metrology(max(f.first[0], f.first[1]), min(f.first[0], f.first[1]), H, cs, iou, align, flat = true)
+            if (flat == null || iou > flat.iou) flat = Metrology(max(f.first[0], f.first[1]), min(f.first[0], f.first[1]), H, cs, iou, align, flat = true)
         }
-        val b = best ?: throw PhotoFailed("Ukuran tidak terbaca dari foto ini: ulangi dari sudut lain")
-        // a few centimetres high, whichever reading won: a thickness the outline only hints at
-        return if (b.heightM < 0.04f && !b.flat) Metrology(b.lengthM, b.widthM, b.heightM, b.corners, b.iou, b.sideAlign, flat = true) else b
+        if (upright == null && flat == null) throw PhotoFailed("Ukuran tidak terbaca dari foto ini: ulangi dari sudut lain")
+
+        // both readings are only starting points: the box is then fitted to the whole silhouette (BoxFit), and the
+        // better fit wins. A few centimetres high, whichever won: a thickness the outline only hints at (flat)
+        val sil = Silhouette(mask)
+        var best: Pair<FloorBox, Float>? = null
+        var bestAlign = align
+        for ((name, m0) in listOf("upright" to upright, "flat" to flat)) {
+            if (m0 == null) continue
+            val b0 = FloorBox.of(m0.corners.take(4), m0.heightM, ax, ay, up, hM)
+            val iou0 = sil.iou(BoxFit.silhouette(m0.corners, k))
+            val (b, iou) = BoxFit.refine(b0, sil, k, up, hM, ax, ay, fixH = forceH)
+            trace?.invoke("fit from %s: %.1f x %.1f x %.1f cm, IoU %.3f -> %.3f".format(java.util.Locale.US, name, max(b.l, b.w) * 100,
+                min(b.l, b.w) * 100, b.hgt * 100, iou0, iou))
+            val pick = if (iou > iou0) b to iou else b0 to iou0
+            if (best == null || pick.second > best.second) { best = pick; bestAlign = m0.sideAlign }
+        }
+        var (box, iou) = best!!
+        // a standing cylinder instead (gallon, bottle, bucket): kept when it fits clearly better than any box
+        var round = false
+        if (forceH == null) {
+            val (c, ci) = BoxFit.cylinder(box, sil, k, up, hM, ax, ay)
+            trace?.invoke("cylinder: %.1f cm across, %.1f cm tall, IoU %.3f (box %.3f)".format(java.util.Locale.US, c.l * 100, c.hgt * 100, ci, iou))
+            if (ci > iou + ROUND_MARGIN) { box = c; iou = ci; round = true }
+        }
+        // a box explains the outline when it fits it closely and the outline has a box's few straight sides; a soft or
+        // irregular object (sack, plant) is measured by its outer box instead, the size its volumetric weight uses
+        val boxLike = !round && iou >= BOX_IOU && simp.size <= MAX_BOX_CORNERS
+        if (!boxLike && !round && forceH == null) {
+            // one view cannot tell how far a soft shape bulges where it is not seen: the smallest box whose silhouette
+            // covers it is a lower bound, and so is the box read from the outline's edges (its lower edge projected on
+            // the floor reaches out under the bulge). Each side is the larger of the two: the outer box, rough
+            var (o, oi) = BoxFit.cover(box, sil, k, up, hM, ax, ay)
+            val first = listOfNotNull(upright, flat).maxBy { it.iou }
+            val longAxis = o.l >= o.w
+            // the outline's edges can also be read badly (a cap, a handle): never more than 30 % beyond the covering box
+            fun outer(a: Float, b: Float) = max(a, min(b, 1.3f * a))
+            val l = outer(max(o.l, o.w), first.lengthM); val w = outer(min(o.l, o.w), first.widthM); val hh = outer(o.hgt, first.heightM)
+            o = FloorBox(o.u, o.v, o.yaw, if (longAxis) l else w, if (longAxis) w else l, hh)
+            oi = sil.iou(BoxFit.silhouette(o.corners(ax, ay, up, hM), k))
+            trace?.invoke("outer box (%d corners, IoU %.3f): %.1f x %.1f x %.1f cm, IoU %.3f".format(java.util.Locale.US, simp.size, iou,
+                max(o.l, o.w) * 100, min(o.l, o.w) * 100, o.hgt * 100, oi))
+            box = o; iou = oi
+        }
+        return Metrology(max(box.l, box.w), min(box.l, box.w), box.hgt, box.corners(ax, ay, up, hM), iou, bestAlign,
+            flat = box.hgt < 0.04f, boxLike = boxLike, outlineCorners = simp.size, round = round)
     }
 
     /**
      * One photo: floor -> camera height -> metrology -> checks. [scale]: this phone's calibration (1 = none yet).
      * [mask] and [k] at the same resolution.
      */
-    fun measure(mask: Mask, k: Intrinsics, up: V3, depth: DepthMap, scale: Float, calibrated: Boolean): PhotoResult {
+    /** How much the depth model's camera height is trusted after calibration (relative standard deviation). */
+    const val SIGMA_AI = 0.12
+
+    /**
+     * The camera height for the measurement: the depth model's [hAi], combined with the courier's standing camera height
+     * [standing] (learnt from the calibration photos) when both agree within a factor 1,43, weighted by how much each
+     * is trusted (in log space: both are scale errors). Returns the height and whether [standing] was used.
+     */
+    fun cameraHeight(hAi: Float, standing: Standing?): Pair<Float, Boolean> {
+        if (standing == null) return hAi to false
+        val r = hAi / standing.heightM
+        if (r < 0.7 || r > 1.43) return hAi to false
+        val sp = max(0.05, standing.spread / 2)
+        val wa = 1 / (SIGMA_AI * SIGMA_AI); val wp = 1 / (sp * sp)
+        val ln = (wa * kotlin.math.ln(hAi.toDouble()) + wp * kotlin.math.ln(standing.heightM)) / (wa + wp)
+        return kotlin.math.exp(ln).toFloat() to true
+    }
+
+    fun measure(mask: Mask, k: Intrinsics, up: V3, depth: DepthMap, scale: Float, calibrated: Boolean, standing: Standing? = null): PhotoResult {
         require(mask.w == k.w && mask.h == k.h) { "mask and intrinsics differ in size" }
         val b = mask.bounds() ?: throw PhotoFailed("Objek belum dipilih")
         val area = mask.bits.count { it }
@@ -331,18 +462,25 @@ object PhotoMeasure {
         val downDeg = Math.toDegrees(asin((-up.z).toDouble().coerceIn(-1.0, 1.0)))
         if (downDeg < 8) throw PhotoFailed("HP terlalu tegak: arahkan kamera miring ke bawah (30–60°)")
         val fl = floor(depth, mask, k, up)
-        val h = fl.heightM * scale
+        val hAi = fl.heightM * scale
+        val (h, usedStanding) = cameraHeight(hAi, standing)
         val met = metrology(mask, k, up, h)
         val notes = ArrayList<String>()
         var conf = 100.0
+        if (standing != null && !usedStanding) {
+            notes += "Tinggi kamera tidak seperti saat kalibrasi (AI ${"%.2f".format(hAi)} m, biasanya ${"%.2f".format(standing.heightM)} m): foto sambil berdiri, HP setinggi dada"
+            conf -= 15
+        }
+        if (hAi < 0.6f) { notes += "Foto terlalu dekat: AI kurang akurat dari dekat. Mundur, foto sambil berdiri"; conf -= 15 }
         // touching (or nearly touching) the picture's edge: part of the parcel may be outside it
         val margin = max(2, (0.012f * max(mask.w, mask.h)).toInt())
         val touches = b[0] < margin || b[1] < margin || b[2] >= mask.w - margin || b[3] >= mask.h - margin
         if (touches) { notes += "Paket terpotong atau terlalu mepet tepi foto: mundur sedikit supaya paket utuh dengan lantai di sekelilingnya"; conf -= 35 }
         if (met.flat) { notes += "Benda pipih: panjang × lebar terbaca, tebalnya hanya perkiraan (bisa meleset 1–3 cm)"; conf -= 15 }
-        val boxLike = met.iou >= BOX_IOU
-        if (!boxLike) { notes += "Bentuk tidak seperti kotak: ukuran perkiraan kasar (kotak terluar)"; conf -= 25 }
-        conf -= (0.99 - met.iou).coerceAtLeast(0.0) * 150
+        val boxLike = met.boxLike
+        if (met.round) { notes += "Bentuk bulat (seperti galon): ukuran kotak terluarnya, diameter × diameter × tinggi"; conf -= 25 }
+        else if (!boxLike) { notes += "Bentuk tidak seperti kotak: ukuran kotak terluarnya (dipakai untuk berat volumetrik)"; conf -= 25 }
+        else conf -= (0.97 - met.iou).coerceAtLeast(0.0) * 150
         if (downDeg < 25 || downDeg > 72) { notes += "Sudut foto ${downDeg.toInt()}°: paling pas 30–60° ke bawah"; conf -= 10 }
         if (h < 0.25f || h > 2.2f) { notes += "Jarak kamera ke lantai tidak wajar (${"%.2f".format(h)} m): ulangi foto"; conf -= 30 }
         if (met.heightM > h - 0.08f) { notes += "Kamera kurang tinggi dari paket: foto dari lebih atas"; conf -= 20 }
@@ -357,7 +495,8 @@ object PhotoMeasure {
         }
         return PhotoResult(met.lengthM * 100.0, met.widthM * 100.0, met.heightM * 100.0, raw, scale.toDouble(), h.toDouble(), downDeg,
             met.iou.toDouble(), boxLike, proj, c, ok = calibrated && boxLike && !touches && !met.flat && c >= 75, notes = notes,
-            floorInliers = fl.inliers, floorTiltDeg = fl.tiltDeg.toDouble())
+            floorInliers = fl.inliers, floorTiltDeg = fl.tiltDeg.toDouble(), aiCameraM = hAi.toDouble(),
+            standingM = if (usedStanding) standing!!.heightM else 0.0)
     }
 
     /** Several photos of one object: the median of each side; a spread over 10 % is flagged. */
@@ -373,7 +512,7 @@ object PhotoMeasure {
         val boxLike = rs.count { it.boxLike } * 2 > rs.size
         val conf = (rs.map { it.confidence }.average() - max(0.0, spread - 0.05) * 200).toInt().coerceIn(0, 100)
         val best = rs.maxBy { it.confidence }
-        return best.copy(lengthCm = l, widthCm = w, heightCm = h,
+        return best.copy(lengthCm = l, widthCm = w, heightCm = h, cameraHeightM = med(rs.map { it.cameraHeightM }), aiCameraM = med(rs.map { it.aiCameraM }),
             rawCm = listOf(med(rs.map { it.rawCm[0] }), med(rs.map { it.rawCm[1] }), med(rs.map { it.rawCm[2] })),
             boxLike = boxLike, confidence = conf, ok = rs.all { it.ok } && spread <= 0.10 && conf >= 75, notes = notes.toList())
     }
@@ -444,7 +583,15 @@ object PhotoMeasure {
 @Serializable
 data class CalSample(val rawCm: List<Double>, val tapeCm: List<Double>, val at: Long = System.currentTimeMillis(),
                      /** The depth model the sample was measured with: a new model needs a new calibration. */
-                     val model: String = "") {
+                     val model: String = "",
+                     /** The camera height the depth model gave for the photo (no factor), metres; 0 = not recorded. */
+                     val aiCameraM: Double = 0.0) {
+    /** How high the camera really was: the model's height times this carton's tape / measured; null if unknown. */
+    fun cameraM(): Double? {
+        val r = ratios().sorted(); if (aiCameraM <= 0 || r.isEmpty()) return null
+        return aiCameraM * (if (r.size % 2 == 1) r[r.size / 2] else (r[r.size / 2 - 1] + r[r.size / 2]) / 2)
+    }
+
     /** tape / measured for each side: length with length, width with width (both sorted long-short), height with height. */
     fun ratios(): List<Double> {
         val r = rawCm.take(2).sortedDescending() + rawCm[2]
@@ -470,6 +617,17 @@ object Calibration {
         return if (r.size % 2 == 1) r[r.size / 2] else (r[r.size / 2 - 1] + r[r.size / 2]) / 2
     }
 
+    /**
+     * The height the courier photographs from when standing, learnt from the calibration photos (each one's real camera
+     * height); null with fewer than two. [Standing.spread]: (highest - lowest) / median.
+     */
+    fun standing(samples: List<CalSample>): Standing? {
+        val hs = samples.mapNotNull { it.cameraM() }.sorted()
+        if (hs.size < 2) return null
+        val m = if (hs.size % 2 == 1) hs[hs.size / 2] else (hs[hs.size / 2 - 1] + hs[hs.size / 2]) / 2
+        return Standing(m, (hs.last() - hs.first()) / m, hs.size)
+    }
+
     /** How much the samples disagree: (largest - smallest ratio) / factor, 0 for one sample. */
     fun spread(samples: List<CalSample>): Double {
         val r = samples.flatMap { it.ratios() }
@@ -477,3 +635,6 @@ object Calibration {
         return if (r.size < 2) 0.0 else (r.max() - r.min()) / f
     }
 }
+
+/** The courier's camera height when standing, metres, from [samples] calibration photos. */
+data class Standing(val heightM: Double, val spread: Double, val samples: Int)

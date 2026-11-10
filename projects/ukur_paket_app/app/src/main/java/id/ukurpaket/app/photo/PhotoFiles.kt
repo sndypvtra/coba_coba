@@ -105,6 +105,15 @@ object PhotoFiles {
     val EDGES = listOf(0 to 1, 1 to 2, 2 to 3, 3 to 0, 4 to 5, 5 to 6, 6 to 7, 7 to 4, 0 to 4, 1 to 5, 2 to 6, 3 to 7)
 }
 
+/**
+ * The autofocus when the photo was taken: [diopters] = 1 / distance in metres (0 = infinity); [calibration] is how far
+ * the camera says that can be trusted ("calibrated", "approximate", "uncalibrated"). Recorded to judge, on the PC,
+ * whether the DT50's focus can serve as a physical check of the camera's distance.
+ */
+@Serializable
+data class FocusInfo(val diopters: Float, val calibration: String, val minFocusDiopters: Float? = null, val hyperfocalDiopters: Float? = null,
+                     val afState: Int? = null)
+
 /** What shot_N.json holds. */
 @Serializable
 data class ShotRecord(
@@ -131,4 +140,7 @@ data class ShotRecord(
     val error: String? = null,
     /** Tape-measure size typed for testing or calibration (cm), when given. */
     val tapeCm: List<Double>? = null,
+    val focus: FocusInfo? = null,
+    /** App version that took the photo. */
+    val app: String? = null,
 )

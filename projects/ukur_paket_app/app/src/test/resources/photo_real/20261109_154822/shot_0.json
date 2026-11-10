@@ -1,0 +1,89 @@
+{
+    "index": 0,
+    "created": 1794214118502,
+    "stream": [
+        1280,
+        960
+    ],
+    "rotationDeg": 90,
+    "lens": {
+        "fx": 965.3602,
+        "fy": 965.3602,
+        "cx": 480.0,
+        "cy": 640.0,
+        "w": 960,
+        "h": 1280
+    },
+    "lensModel": {
+        "fx": 482.6801,
+        "fy": 482.6801,
+        "cx": 240.0,
+        "cy": 320.0,
+        "w": 480,
+        "h": 640
+    },
+    "accel": [
+        1.1012429,
+        7.8818,
+        5.7818146
+    ],
+    "accelSpread": 0.13672939,
+    "still": true,
+    "downDeg": 35.998714,
+    "pickMode": "tap",
+    "tap": [
+        249.05411,
+        342.11942
+    ],
+    "box": null,
+    "maskScore": 0.9924717,
+    "samMs": 2396,
+    "depthMs": 2092,
+    "depthSize": [
+        480,
+        640
+    ],
+    "result": {
+        "lengthCm": 262.8382205963135,
+        "widthCm": 129.7395944595337,
+        "heightCm": 56.35535717010498,
+        "rawCm": [
+            262.8382205963135,
+            129.7395944595337,
+            56.35535717010498
+        ],
+        "scale": 1.0,
+        "cameraHeightM": 1.4279345273971558,
+        "downDeg": 35.99871615044473,
+        "iou": 0.9124515652656555,
+        "boxLike": false,
+        "corners": [
+            0.048159376,
+            0.47109103,
+            0.3575052,
+            0.7691932,
+            1.0749055,
+            0.44041818,
+            0.7467455,
+            0.3219882,
+            0.0054701488,
+            0.2977463,
+            0.37025565,
+            0.5718544,
+            1.1665616,
+            0.31034344,
+            0.78803736,
+            0.20835407
+        ],
+        "confidence": 60,
+        "ok": false,
+        "notes": [
+            "Bentuk tidak seperti kotak: ukuran perkiraan kasar (kotak terluar)",
+            "Mode foto belum dikalibrasi di HP ini: angka bisa meleset jauh"
+        ],
+        "floorInliers": 34966,
+        "floorTiltDeg": 14.213191986083984
+    },
+    "error": null,
+    "tapeCm": null
+}
