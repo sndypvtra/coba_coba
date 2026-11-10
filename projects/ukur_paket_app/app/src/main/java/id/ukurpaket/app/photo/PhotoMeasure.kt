@@ -141,7 +141,12 @@ data class PhotoResult(
      *  metre of camera height (from the box's geometry); 0 = none. */
     val focusDiopters: Double = 0.0,
     val focusDepthUnit: Double = 0.0,
-)
+    /** How sharp the object's outline is in the photo (Sharpness.atOutline; 0 = not measured): below 0,6 out of focus. */
+    val sharpness: Double = 0.0,
+) {
+    /** The object out of focus in the photo (its sharpness measured and under Sharpness.MIN). */
+    fun blurred() = sharpness > 0 && sharpness < Sharpness.MIN
+}
 
 class PhotoFailed(message: String) : Exception(message)
 
@@ -491,10 +496,12 @@ object PhotoMeasure {
 
     /**
      * One photo: floor -> camera height (depth model, autofocus, standing height) -> metrology -> checks.
-     * [focus]: the autofocus when the photo was taken; [focusCal]: how its diopters turn into real ones (null: not used).
+     * [focus]: the autofocus when the photo was taken; [focusCal]: how its diopters turn into real ones (null: not used);
+     * [sharpness]: how sharp the object's outline is in the photo: an object out of focus says the focus distance is not
+     * its distance (the lens settled on something else: a reflection on a glossy screen), so it is not used.
      */
     fun measure(mask: Mask, k: Intrinsics, up: V3, depth: DepthMap, scale: Float, calibrated: Boolean, standing: Standing? = null,
-                focus: FocusInfo? = null, focusCal: FocusCal? = null): PhotoResult {
+                focus: FocusInfo? = null, focusCal: FocusCal? = null, sharpness: Float? = null): PhotoResult {
         require(mask.w == k.w && mask.h == k.h) { "mask and intrinsics differ in size" }
         val b = mask.bounds() ?: throw PhotoFailed("Objek belum dipilih")
         val area = mask.bits.count { it }
@@ -507,7 +514,8 @@ object PhotoMeasure {
         // the autofocus: how far the lens says the middle of the picture is; the box's geometry says how far that is
         // per metre of camera height, so the two give the camera height. The shape does not depend on the height.
         val zUnit = focusDepth(met.corners, up, hAi, k)?.div(hAi)
-        val focusOk = focus != null && focus.usable()
+        val blurred = sharpness != null && sharpness < Sharpness.MIN
+        val focusOk = focus != null && focus.usable() && !blurred
         var hFocus: Float? = null; var sFocus = 0.0; var dTrue = 0.0
         if (zUnit != null && focusOk && focusCal != null) {
             dTrue = focusCal.factor * focus!!.diopters
@@ -518,6 +526,7 @@ object PhotoMeasure {
         if (abs(kotlin.math.ln(h / hAi)) > 0.03f) met = metrology(mask, k, up, h)
         val notes = ArrayList<String>()
         var conf = 100.0
+        if (blurred) notes += "Foto buram: kamera tidak fokus ke paket, jaraknya tidak bisa dipastikan. Ulangi foto: lingkaran tengah di paket, tahan diam sampai gambar tajam"
         if (pick.focus && !pick.ai) notes += "Jarak dari fokus kamera (${"%.2f".format(1 / dTrue)} m); tebakan AI (kamera ${"%.2f".format(hAi)} m) beda jauh, tidak dipakai"
         if (standing != null && !pick.standing) {
             notes += "Tinggi kamera tidak seperti saat kalibrasi (${"%.2f".format(h)} m, biasanya ${"%.2f".format(standing.heightM)} m): foto sambil berdiri, HP setinggi dada"
@@ -540,6 +549,7 @@ object PhotoMeasure {
         if (fl.wide || fl.inliers < 300) { notes += "Lantai di sekitar paket kurang terlihat"; conf -= 15 }
         if (fl.tiltDeg > 15) { notes += "Lantai tidak terbaca rata"; conf -= 15 }
         if (!calibrated) { notes += "Mode foto belum dikalibrasi di HP ini: angka bisa meleset jauh"; conf = min(conf, 60.0) }
+        if (blurred) conf = min(conf, 30.0)
         val c = conf.toInt().coerceIn(0, 100)
         // the same sizes at the depth model's own height (no factor, no other clue): what calibration compares with
         val raw = listOf(met.lengthM, met.widthM, met.heightM).map { it * 100.0 * fl.heightM / h }
@@ -548,16 +558,19 @@ object PhotoMeasure {
             if (p.z > 0.01f) k.project(p).let { listOf((it.a / k.w).coerceIn(-20f, 20f), (it.b / k.h).coerceIn(-20f, 20f)) } else listOf(BEHIND, BEHIND)
         }
         return PhotoResult(met.lengthM * 100.0, met.widthM * 100.0, met.heightM * 100.0, raw, scale.toDouble(), h.toDouble(), downDeg,
-            met.iou.toDouble(), boxLike, proj, c, ok = calibrated && boxLike && !touches && !met.flat && c >= 75, notes = notes,
+            met.iou.toDouble(), boxLike, proj, c, ok = calibrated && boxLike && !touches && !met.flat && !blurred && c >= 75, notes = notes,
             floorInliers = fl.inliers, floorTiltDeg = fl.tiltDeg.toDouble(), aiCameraM = hAi.toDouble(),
             standingM = if (pick.standing) standing!!.heightM else 0.0,
             focusCameraM = if (pick.focus) hFocus!!.toDouble() else 0.0, focusDistanceM = if (pick.focus) 1 / dTrue else 0.0,
-            focusDiopters = if (focusOk) focus!!.diopters.toDouble() else 0.0, focusDepthUnit = zUnit?.toDouble() ?: 0.0)
+            focusDiopters = if (focusOk) focus!!.diopters.toDouble() else 0.0, focusDepthUnit = zUnit?.toDouble() ?: 0.0,
+            sharpness = sharpness?.toDouble() ?: 0.0)
     }
 
     /** Several photos of one object: the median of each side; a spread over 10 % is flagged. */
-    fun combine(rs: List<PhotoResult>): PhotoResult {
-        require(rs.isNotEmpty())
+    fun combine(all: List<PhotoResult>): PhotoResult {
+        require(all.isNotEmpty())
+        // a blurred photo's distance is the weakest: left out when a sharp one is there
+        val rs = all.filter { !it.blurred() }.ifEmpty { all }
         if (rs.size == 1) return rs[0]
         fun med(v: List<Double>) = v.sorted().let { if (it.size % 2 == 1) it[it.size / 2] else (it[it.size / 2 - 1] + it[it.size / 2]) / 2 }
         val l = med(rs.map { it.lengthCm }); val w = med(rs.map { it.widthCm }); val h = med(rs.map { it.heightCm })

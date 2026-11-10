@@ -230,6 +230,10 @@ class ScreenshotTest {
         // a tape size the photo's shape does not match: the warning, saving still possible (it asks first)
         view("48_foto_kalibrasi_beda_bentuk_dt50", id.ukurpaket.app.ui.PhotoPurpose.CALIBRATE, id.ukurpaket.app.ui.previewShot(pic, raw, tint = tint, outline = outline), raw,
             listOf("40", "30", "45"), calibrated = false)
+        // a blurred photo (0.4.5): said first, the size not used for the parcel, the button asks for another photo
+        val blur = r.copy(sharpness = 0.36, ok = false, confidence = 30, focusCameraM = 0.0,
+            notes = listOf("Foto buram: kamera tidak fokus ke paket, jaraknya tidak bisa dipastikan. Ulangi foto: lingkaran tengah di paket, tahan diam sampai gambar tajam"))
+        view("49_foto_buram_dt50", id.ukurpaket.app.ui.PhotoPurpose.PARCEL, id.ukurpaket.app.ui.previewShot(pic, blur, tint = tint, outline = outline), blur)
         val m = model(Mode.NONE)
         val dm = id.ukurpaket.app.photo.DepthModel.ID
         m.store.update { it.copy(photoCal = listOf(id.ukurpaket.app.photo.CalSample(listOf(46.0, 34.5, 23.0), listOf(40.0, 30.0, 20.0), model = dm, aiCameraM = 1.52),

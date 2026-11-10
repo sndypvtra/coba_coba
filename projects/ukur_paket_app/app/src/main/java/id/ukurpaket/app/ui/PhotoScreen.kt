@@ -182,7 +182,7 @@ internal fun PhotoCameraChrome(title: String, subtitle: String, live: PhotoCamer
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (error != null) Banner(error, C.redL, C.red, "error")
             if (shots.isNotEmpty()) ShotStrip(shots, null, onOpen, onAdd = null)
-            PrimaryButton(if (capturing) "Tahan diam…" else "Ambil foto", if (capturing) "timer" else "photo_camera", Modifier.fillMaxWidth(),
+            PrimaryButton(if (capturing) "Tahan diam, memfokuskan…" else "Ambil foto", if (capturing) "timer" else "photo_camera", Modifier.fillMaxWidth(),
                 enabled = !capturing && error == null) { onShutter() }
             if (shots.isNotEmpty()) SecondaryButton("Kembali ke hasil", "arrow_back", Modifier.fillMaxWidth()) { onOpen(shots.last().index) }
         }
@@ -278,7 +278,9 @@ internal fun PhotoShotView(
                     val ok = tape.all { ObjectPick.cm(it) != null }
                     PrimaryButton("Simpan kalibrasi", "tune", Modifier.fillMaxWidth(), enabled = ok) { onSaveCal() }
                 }
-                isParcel && combined != null -> PrimaryButton("Pakai ukuran ini", "arrow_forward", Modifier.fillMaxWidth()) { onUse() }
+                // a size from blurred photos only is not used for a parcel: its distance is not known
+                isParcel && combined != null -> PrimaryButton(if (combined.blurred()) "Foto buram: ulangi foto" else "Pakai ukuran ini",
+                    if (combined.blurred()) "refresh" else "arrow_forward", Modifier.fillMaxWidth()) { if (combined.blurred()) onRetake() else onUse() }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 val three = purpose == PhotoPurpose.TEST
@@ -382,6 +384,7 @@ internal fun PhotoResultCard(purpose: PhotoPurpose, r: PhotoResult, each: List<P
             T(if (purpose == PhotoPurpose.CALIBRATE) "Ukuran terbaca (sebelum kalibrasi)" else "Ukuran", 15.sp, FontWeight.SemiBold, modifier = Modifier.weight(1f))
             when {
                 purpose == PhotoPurpose.CALIBRATE -> Chip("Kalibrasi", Tone.BRAND, "tune")
+                r.blurred() -> Chip("Foto buram · ulangi", Tone.RED, "error")
                 !calibrated -> Chip("Belum dikalibrasi", Tone.WARN, "warning")
                 r.ok -> Chip("Akurat · skor ${r.confidence}", Tone.OK, "check_circle")
                 else -> Chip("Perlu Dicek · skor ${r.confidence}", Tone.WARN, "warning")

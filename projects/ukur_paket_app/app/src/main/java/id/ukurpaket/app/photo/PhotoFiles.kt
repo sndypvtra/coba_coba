@@ -59,6 +59,19 @@ object PhotoFiles {
         return out
     }
 
+    /** NV21 (sensor orientation) -> the upright luma (0-255) at full resolution: for judging the photo's sharpness. */
+    fun uprightLuma(nv21: ByteArray, sw: Int, sh: Int, rotation: Int): ByteArray {
+        val rot = ((rotation % 360) + 360) % 360
+        val uw = if (rot == 90 || rot == 270) sh else sw; val uh = if (rot == 90 || rot == 270) sw else sh
+        val out = ByteArray(uw * uh)
+        for (uy in 0 until uh) for (ux in 0 until uw) {
+            val x: Int; val y: Int
+            when (rot) { 90 -> { x = uy; y = sh - 1 - ux }; 180 -> { x = sw - 1 - ux; y = sh - 1 - uy }; 270 -> { x = sw - 1 - uy; y = ux }; else -> { x = ux; y = uy } }
+            out[uy * uw + ux] = nv21[y * sw + x]
+        }
+        return out
+    }
+
     fun bitmap(argb: IntArray, w: Int, h: Int): Bitmap = Bitmap.createBitmap(argb, w, h, Bitmap.Config.ARGB_8888)
 
     fun saveJpeg(b: Bitmap, f: File, quality: Int = 88) { f.outputStream().buffered().use { b.compress(Bitmap.CompressFormat.JPEG, quality, it) } }
@@ -148,6 +161,8 @@ data class ShotRecord(
     /** Tape-measure size typed for testing or calibration (cm), when given. */
     val tapeCm: List<Double>? = null,
     val focus: FocusInfo? = null,
+    /** How sharp the object's outline is (Sharpness.atOutline): below 0,6 out of focus. */
+    val sharpness: Float? = null,
     /** App version that took the photo. */
     val app: String? = null,
 )

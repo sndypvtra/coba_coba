@@ -251,6 +251,34 @@ class PhotoMeasureTest {
         assertEquals(f[0], Calibration.focusFactor(PhotoMeasure.measure(shots[0].mask, shots[0].k, shots[0].up, shots[0].depth, 1f, false, null, shots[0].focus, null), shots[0].tape)!!, 0.03 * f[0])
     }
 
+    /**
+     * Whether the object is in focus, from the photo: the synthetic carton as rendered (edges about a pixel wide) reads
+     * sharp, the same photo blurred like the iPhone's (Gaussian, sigma 2 px) does not; the real photos measured 1,1-2,1
+     * in focus and 0,24-0,41 blurred (RealPhotoBenchTest has them).
+     */
+    @Test fun anObjectOutOfFocusIsToldFromThePhoto() {
+        val s = load("box_3"); val sh = s.shots[0]
+        val w = sh.argb.w; val h = sh.argb.h
+        val luma = ByteArray(w * h) { q -> val c = sh.argb.px[q]; (((c shr 16) and 255) * 0.299 + ((c shr 8) and 255) * 0.587 + (c and 255) * 0.114).toInt().toByte() }
+        fun blurred(src: ByteArray, sigma: Double): ByteArray {
+            val r = (3 * sigma).toInt(); val k = DoubleArray(2 * r + 1) { Math.exp(-((it - r) * (it - r)) / (2 * sigma * sigma)) }.let { kk -> val t = kk.sum(); DoubleArray(kk.size) { kk[it] / t } }
+            val a = DoubleArray(w * h); val out = ByteArray(w * h)
+            for (y in 0 until h) for (x in 0 until w) { var v = 0.0; for (i in -r..r) v += k[i + r] * (src[y * w + (x + i).coerceIn(0, w - 1)].toInt() and 255); a[y * w + x] = v }
+            for (y in 0 until h) for (x in 0 until w) { var v = 0.0; for (i in -r..r) v += k[i + r] * a[(y + i).coerceIn(0, h - 1) * w + x]; out[y * w + x] = v.toInt().toByte() }
+            return out
+        }
+        val sharp = id.ukurpaket.app.photo.Sharpness.atOutline(luma, w, h, sh.mask)!!
+        val soft = id.ukurpaket.app.photo.Sharpness.atOutline(blurred(luma, 2.0), w, h, sh.mask)!!
+        println(String.format(Locale.US, "sharpness: as rendered %.2f, blurred %.2f", sharp, soft))
+        assertTrue(sharp > id.ukurpaket.app.photo.Sharpness.MIN); assertTrue(soft < id.ukurpaket.app.photo.Sharpness.MIN)
+        // the measurement: a blurred photo does not take its distance from the focus, and says so first
+        val k = s.k; val up = sh.up
+        val depth = DepthMap(k.w, k.h, FloatArray(k.w * k.h) { i -> val den = -(k.ray(i % k.w + 0.5f, i / k.w + 0.5f) dot up); if (den > 1e-3f) sh.camH / den else 40f })
+        val focus = FocusInfo(1 / (3.0f * 0.9f), "calibrated", 20f, 0.2f, 4)
+        val r = PhotoMeasure.measure(sh.mask, k, up, depth, 1f, true, null, focus, Calibration.builtIn(focus), soft)
+        assertEquals(0.0, r.focusCameraM, 0.0); assertTrue(r.notes.first().startsWith("Foto buram")); assertFalse(r.ok)
+    }
+
     @Test fun everySizeScalesWithTheCameraHeight() {
         val s = load("box_3"); val sh = s.shots[0]
         val a = PhotoMeasure.metrology(sh.mask, s.k, sh.up, sh.camH)

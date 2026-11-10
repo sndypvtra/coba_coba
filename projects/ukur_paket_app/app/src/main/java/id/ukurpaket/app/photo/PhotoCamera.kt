@@ -77,6 +77,10 @@ class PhotoCamera(private val ctx: Context, private val cb: Callback) {
         }
     }
 
+    // the preview request, kept to send the autofocus trigger; whether a lock was asked for this photo
+    private var request: CaptureRequest.Builder? = null
+    @Volatile private var locking = false
+
     @Volatile private var pending: ((Shot) -> Unit)? = null
     @Volatile private var pendingSince = 0L
 
@@ -122,6 +126,7 @@ class PhotoCamera(private val ctx: Context, private val cb: Callback) {
                     }
                     // the lens must not move against the sensor: the measurement uses the factory focal length
                     b.set(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE, CameraMetadata.CONTROL_VIDEO_STABILIZATION_MODE_OFF)
+                    request = b
                     s.setRepeatingRequest(b.build(), frameCb, handler)
                 } catch (e: Exception) { cb.onError("Kamera berhenti: ${e.message}") }
             }
@@ -161,9 +166,23 @@ class PhotoCamera(private val ctx: Context, private val cb: Callback) {
     }
 
     /** Takes the next frame once the phone is still (at most [maxWaitMs] of waiting; then as it is). */
-    fun capture(maxWaitMs: Long = 2000, onShot: (Shot) -> Unit) {
-        handler.post { pending = onShot; pendingSince = SystemClock.elapsedRealtime() }
+    fun capture(maxWaitMs: Long = 2500, onShot: (Shot) -> Unit) {
+        handler.post { pending = onShot; pendingSince = SystemClock.elapsedRealtime(); locking = afTrigger(CameraMetadata.CONTROL_AF_TRIGGER_START) }
         this.maxWait = maxWaitMs
+    }
+
+    /**
+     * Sends an autofocus trigger: START makes the continuous autofocus finish its search and lock (focused or not: the
+     * camera says which), CANCEL lets it run again. False when the camera has no autofocus or no session.
+     */
+    private fun afTrigger(t: Int): Boolean {
+        val b = request ?: return false; val s = session ?: return false
+        val af = chars?.get(CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES)?.toList().orEmpty()
+        if (CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE !in af) return false
+        return try {
+            b.set(CaptureRequest.CONTROL_AF_TRIGGER, t); s.capture(b.build(), frameCb, handler)
+            b.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_IDLE); true
+        } catch (e: Exception) { false }
     }
     @Volatile private var maxWait = 2000L
 
@@ -174,11 +193,16 @@ class PhotoCamera(private val ctx: Context, private val cb: Callback) {
             val p = pending ?: return
             val (m, sp) = accelNow()
             val still = m != null && isStill(m, sp)
-            // also wait for the autofocus to settle: a lens still searching says nothing about the distance
-            val focused = afState.let { it == null || it == CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED || it == CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED ||
-                it == CaptureResult.CONTROL_AF_STATE_INACTIVE }
+            // also wait for the autofocus: locked after the trigger (focused, or the camera saying it could not), else
+            // settled; a lens still searching says nothing about the distance
+            val focused = afState.let {
+                if (locking) it == CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED || it == CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED
+                else it == null || it == CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED || it == CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED ||
+                    it == CaptureResult.CONTROL_AF_STATE_INACTIVE
+            }
             if (!(still && focused) && SystemClock.elapsedRealtime() - pendingSince < maxWait) return
             pending = null
+            if (locking) { locking = false; afTrigger(CameraMetadata.CONTROL_AF_TRIGGER_CANCEL) }
             val nv = SweepRecorder.toNv21(img)
             val shot = Shot(nv, img.width, img.height, rotation, lens(img.width, img.height), m ?: floatArrayOf(0f, 9.81f, 0f), sp, still,
                 System.currentTimeMillis(), focus())

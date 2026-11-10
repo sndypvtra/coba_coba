@@ -29,6 +29,7 @@ import id.ukurpaket.app.photo.FocusInfo
 import id.ukurpaket.app.photo.Standing
 import id.ukurpaket.app.photo.PhotoResult
 import id.ukurpaket.app.photo.ShotRecord
+import id.ukurpaket.app.photo.Sharpness
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -63,6 +64,10 @@ data class PhotoShotUi(
     val error: String? = null,
     /** The autofocus when the photo was taken: a physical clue to the distance. */
     val focus: FocusInfo? = null,
+    /** The full-resolution upright luma ([lumaW] x [lumaH]), kept to judge whether the object is in focus. */
+    val luma: ByteArray? = null,
+    val lumaW: Int = 0,
+    val lumaH: Int = 0,
 )
 
 /**
@@ -143,10 +148,11 @@ class PhotoFlow(private val model: AppModel) {
                 val a = PhotoFiles.uprightArgb(s.nv21, s.sw, s.sh, s.rotation, ow, oh)
                 a to PhotoFiles.bitmap(a, ow, oh)
             }
+            val luma = withContext(Dispatchers.Default) { PhotoFiles.uprightLuma(s.nv21, s.sw, s.sh, s.rotation) }
             val kSmall = s.k.scaled(ow, oh)
             val up = Intrinsics.upFromAccel(s.accel[0], s.accel[1], s.accel[2])
             val down = PhotoCamera.downDeg(s.accel)
-            shots.add(PhotoShotUi(index, pic, kSmall, up, down, s.still, stage = "Membaca foto…", focus = s.focus))
+            shots.add(PhotoShotUi(index, pic, kSmall, up, down, s.still, stage = "Membaca foto…", focus = s.focus, luma = luma, lumaW = uw, lumaH = uh))
             current = index; capturing = false
             records[index] = ShotRecord(index, s.timeMs, listOf(s.sw, s.sh), s.rotation, s.k, kSmall, s.accel.toList(), s.accelSpread, s.still, down,
                 focus = s.focus, app = id.ukurpaket.app.BuildConfigInfo.VERSION)
@@ -199,7 +205,9 @@ class PhotoFlow(private val model: AppModel) {
             if (dep == null) { update(index) { it.copy(stage = null, error = "Kedalaman tidak terbaca: ulangi foto") }; return@launch }
             rec(index) { it.copy(depthMs = dep.second, depthSize = listOf(dep.first.w, dep.first.h)) }
             val r = withContext(Dispatchers.Default) {
-                runCatching { PhotoMeasure.measure(m, shot.k, shot.up, dep.first, scale.toFloat(), calibrated, standing, shot.focus, focusCal(shot.focus)) }
+                val sharp = shot.luma?.let { Sharpness.atOutline(it, shot.lumaW, shot.lumaH, m) }
+                rec(index) { it.copy(sharpness = sharp) }
+                runCatching { PhotoMeasure.measure(m, shot.k, shot.up, dep.first, scale.toFloat(), calibrated, standing, shot.focus, focusCal(shot.focus), sharp) }
             }
             r.onSuccess { res -> update(index) { it.copy(stage = null, result = res) }; rec(index) { it.copy(result = res, error = null) } }
                 .onFailure { t ->

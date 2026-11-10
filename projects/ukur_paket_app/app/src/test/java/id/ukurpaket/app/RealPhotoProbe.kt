@@ -45,6 +45,8 @@ class RealPhotoProbe {
                 for (dy in 0 until f) for (dx in 0 until f) { val c = big.px[(y * f + dy) * big.w + x * f + dx]; r += (c shr 16) and 255; g += (c shr 8) and 255; b += c and 255 }
                 val n = f * f; (0xFF shl 24) or ((r / n) shl 16) or ((g / n) shl 8) or (b / n)
             }
+            val luma = ByteArray(big.w * big.h) { q -> val c = big.px[q]; (((c shr 16) and 255) * 0.299 + ((c shr 8) and 255) * 0.587 + (c and 255) * 0.114).toInt().toByte() }
+            println(String.format(Locale.US, "  sharpness at the outline: %s", id.ukurpaket.app.photo.Sharpness.atOutline(luma, big.w, big.h, mask)?.let { "%.3f".format(Locale.US, it) } ?: "-"))
             val ds = j["depthSize"]!!.jsonArray.map { it.jsonPrimitive.int }
             val old = File(dir, "depth_$i.u16").readBytes().let { bs -> DepthMap(ds[0], ds[1], FloatArray(ds[0] * ds[1]) { q -> ((bs[2 * q].toInt() and 255) or ((bs[2 * q + 1].toInt() and 255) shl 8)) / 1000f }) }
             val new = dm.run(small, k.w, k.h)
