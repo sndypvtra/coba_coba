@@ -149,7 +149,7 @@ def main(src: str, out: str) -> None:
     s = (H - 2 * M - 150) / im0.height
     pic = draw(src / "single0.jpeg", a, s, multi=False)
     cv = Image.new("RGB", (W, H), (241, 245, 249))
-    cv.paste(legend(W - 2 * M, 110, "Hasil apa adanya dari repo · kotak = posisi field di tiket dan di tabel"), (M, M - 10))
+    cv.paste(legend(W - 2 * M, 110, "Kotak berwarna menandai posisi setiap field di tiket dan di tabel hasil"), (M, M - 10))
     cv.paste(pic, ((W - pic.width) // 2, M + 140))
     cv.save(out / "UC8_document_ocr_1.png")
     json.dump(a, open(HERE / "mockup" / "data" / "ocr_boxes_single0.json", "w"))
@@ -161,7 +161,7 @@ def main(src: str, out: str) -> None:
         pics.append(draw(src / f"{n}.jpeg", a, (H - 2 * M - 150) / im.height, multi=True))
         json.dump(a, open(HERE / "mockup" / "data" / f"ocr_boxes_{n}.json", "w"))
     cv = Image.new("RGB", (W, H), (241, 245, 249))
-    cv.paste(legend(W - 2 * M, 110, "Hasil apa adanya dari repo · 2 tiket dan 3 tiket dalam satu foto"), (M, M - 10))
+    cv.paste(legend(W - 2 * M, 110, "2 tiket dan 3 tiket dalam satu foto · nomor tiket sama dengan nomor baris tabel"), (M, M - 10))
     gap = (W - sum(p.width for p in pics)) // 3
     x = gap
     for p in pics:

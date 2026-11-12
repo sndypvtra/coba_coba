@@ -67,8 +67,9 @@ class RealPhotoScreens {
         val up = Intrinsics.upFromAccel(r.accel[0], r.accel[1], r.accel[2])
         val base = PhotoShotUi(0, pic, r.lens, up, r.downDeg, r.still, ready = true)
         val purpose = PhotoPurpose.PARCEL
-        // the record says ok, which the engine gives only on a calibrated phone: the screen is drawn calibrated (its factor is not in the ZIP)
-        val calibrated = r.result?.ok == true
+        // calibrated unless the engine said otherwise (its note "Mode foto belum dikalibrasi ..."); ok is given only on a
+        // calibrated phone. The factor itself is not in the ZIP.
+        val calibrated = r.result?.let { res -> res.ok || res.notes.none { it.startsWith("Mode foto belum dikalibrasi") } } == true
         shot(File(out, "app_1_kamera.png")) { Box(Modifier.fillMaxSize().background(C.bg)) {
             PhotoCameraChrome("Ukur dengan foto", "foto dari pojok paket", PhotoCamera.Live(r.downDeg, r.still, 120.0, "${r.stream[0]}×${r.stream[1]}"),
                 false, null, emptyList(), {}, {}, {}) { Image(pic.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) } } }
