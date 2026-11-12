@@ -1,0 +1,31 @@
+{
+  "source": "https://github.com/sndypvtra/VL-Model-for-Taiwan-Railways-tickets-Extractor (results/: 18 single-ticket photos, 2 photos with several tickets)",
+  "model": "Qwen2.5-VL-3B-Instruct (vision-language model): single tickets give raw text parsed by rules, photos with several tickets give JSON per ticket",
+  "checked": "Every extracted field compared by eye with the ticket in the same picture (2026-11-12). Mileage is a station-table lookup, not read from the ticket, and is left out: the table gives 786.6 km for Hualien-Luodong (the long way round the island).",
+  "fields": ["date", "from", "to", "depart", "arrive", "price"],
+  "tickets": [
+    {"img": "single0", "kind": "TRA", "train": "410", "truth": ["2016.05.23", "Taipei", "Hualien", "08:00", "10:19", "440"], "read": ["2016.05.23", "Taipei", "Hualien", "08:00", "10:19", "440"]},
+    {"img": "single1", "kind": "TRA", "train": "222", "truth": ["2019.01.28", "Banqiao", "Hualien", "11:30", "13:57", "229"], "read": ["2019.01.28", "Banqiao", "Hualien", "11:30", "13:57", "229"]},
+    {"img": "single2", "kind": "TRA", "train": "235", "truth": ["2020.12.31", "Hualien", "Luodong", "18:00", "19:17", "197"], "read": ["2020.12.31", "Hualien", "Luodong", "18:00", "19:17", "197"]},
+    {"img": "single3", "kind": "TRA", "train": "1086", "truth": ["2011.04.30", "Taipei", "Hualien", "09:20", "11:30", "440"], "read": ["2011.04.30", "Taipei", "Hualien", "09:20", "11:30", "440"]},
+    {"img": "single4", "kind": "TRA", "train": "219", "truth": ["2019.03.18", "Hualien", "Songshan", "12:00", "14:02", "426"], "read": ["2019.03.18", "Hualien", "Songshan", "12:00", "14:02", "426"]},
+    {"img": "single5", "kind": "TRA", "train": "633", "truth": ["2015.11.13", "Hualien", "Luodong", "18:03", "19:33", "26"], "read": ["2015.11.13", "Hualien", "Luodong", "18:03", "19:33", "26"]},
+    {"img": "single6", "kind": "THSR", "train": "826", "truth": ["2021/10/16", "Taichung", "Miaoli", "13:36", "13:55", "270"], "read": ["2021/10/16", "Taichung", "Miaoli", "13:36", "13:55", "270"]},
+    {"img": "single7", "kind": "THSR", "train": "654", "truth": ["2021/10/21", "Tainan", "Banqiao", "15:13", "16:50", "1320"], "read": ["2021/10/21", "Tainan", "Banqiao", "15:13", "16:50", "1320"]},
+    {"img": "single8", "kind": "THSR", "train": "1234", "truth": ["2021/10/21", "Zuoying", "Tainan", "14:15", "14:27", "140"], "read": ["2021/10/21", "Zuoying", "Tainan", "14:15", "14:27", ""], "note": "harga tercetak kecil (NT$140), tidak terbaca"},
+    {"img": "single9", "kind": "THSR", "train": "837", "truth": ["2018/11/21", "Nangang", "Taipei", "15:00", "15:08", "40"], "read": ["2018/11/21", "Nangang", "Taipei", "15:00", "15:08", ""], "note": "harga sebagian tertutup jari"},
+    {"img": "single10", "kind": "THSR", "train": "663", "truth": ["2021/08/16", "Taoyuan", "Taichung", "17:10", "17:46", "540"], "read": ["2021/08/16", "Taoyuan", "Taichung", "17:10", "17:46", "540"]},
+    {"img": "single11", "kind": "THSR", "train": "614", "truth": ["2016/04/30", "Chiayi", "Taipei", "09:07", "10:36", "1080"], "read": ["2016/04/30", "Chiayi", "Taipei", "09:07", "10:36", "1080"]},
+    {"img": "single12", "kind": "THSR", "train": "833", "truth": ["2022/04/19", "Nangang", "Yunlin", "14:00", "15:41", "970"], "read": ["2022/04/19", "Nangang", "Yunlin", "14:00", "15:41", "970"]},
+    {"img": "single13", "kind": "THSR", "train": "833", "truth": ["2022/04/19", "Nangang", "Changhua", "14:00", "15:30", "870"], "read": ["2022/04/19", "Nangang", "Changhua", "14:00", "15:30", "780"], "note": "digit tertukar: 870 terbaca 780"},
+    {"img": "single14", "kind": "THSR", "train": "833", "truth": ["2022/04/19", "Nangang", "Zuoying", "14:00", "16:25", "1530"], "read": ["2022/04/19", "Nangang", "Zuoying", "14:00", "16:25", "1530"]},
+    {"img": "single15", "kind": "THSR", "train": "833", "truth": ["2022/04/19", "Nangang", "Miaoli", "14:00", "14:58", "480"], "read": ["2022/04/19", "Nangang", "Miaoli", "14:00", "14:58", "480"]},
+    {"img": "single16", "kind": "TRA", "train": "5234", "truth": ["2016.06.09", "Taipei", "Hualien", "07:43", "09:44", "440"], "read": ["", "Taipei", "Hualien", "07:43", "09:44", "440"], "note": "angka tahun terpotong di tepi foto"},
+    {"img": "single17", "kind": "THSR", "train": "1305", "truth": ["2016.02.10", "Taipei", "Yunlin", "07:06", "08:18", "930"], "read": ["2016.02.10", "TAIPEI", "YUNLIN", "07:06", "08:18", "930"]},
+    {"img": "multiple0", "kind": "TRA", "train": "230", "truth": ["2022.12.17", "Taipei", "Yilan", "13:45", "14:57", "218"], "read": ["2022.12.17", "Taipei", "Yilan", "13:45", "14:57", "218"]},
+    {"img": "multiple0", "kind": "TRA", "train": "219", "truth": ["2022.12.18", "Yilan", "Taipei", "13:10", "14:34", "218"], "read": ["2022.12.18", "Yilan", "Taipei", "13:10", "14:34", "218"]},
+    {"img": "multiple1", "kind": "TRA", "train": "133", "truth": ["2023.11.23", "Qingshui", "Changhua", "16:52", "17:16", "57"], "read": ["2023.11.23", "Qingshui", "Changhua", "16:52", "17:16", "57"]},
+    {"img": "multiple1", "kind": "TRA", "train": "102", "truth": ["2023.12.30", "Tianzhong", "Taipei", "05:17", "08:16", "474"], "read": ["2023.12.30", "Tianzhong", "Taipei", "05:17", "08:16", "474"]},
+    {"img": "multiple1", "kind": "TRA", "train": "181", "truth": ["2023.12.30", "Taipei", "Tianzhong", "19:30", "22:22", "474"], "read": ["2023.12.30", "Taipei", "Tianzhong", "19:30", "22:22", "474"]}
+  ]
+}
