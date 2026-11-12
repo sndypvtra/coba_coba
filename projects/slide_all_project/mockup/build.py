@@ -6,7 +6,8 @@ in the type and colours of the Factory Vision mockups (factory_mockup/look.py), 
   UkurPaket  the APK's own screens (RealPhotoScreens: the app's Compose code fed one shot of the tester's ZIP) and that
              shot's record, drawn beside the phone's depth map. The tester's photos stay out of the repository
              (img/ukur is ignored); data/ukur_results.json holds only numbers and outlines.
-  Plates     lpr/render.py's frames and log, from two CCTV recordings (data/lpr_log.json, img/lpr/).
+  Plates     lpr/render2.py's frames, plate crops and log from two CCTV recordings (img/lpr/, data/lpr_log.json); the
+             first picture of this use case is render2.py's own 4K still of the video.
 
 The OCR pictures are drawn on the extractor's own result pages by tools/ocr_mockup.py.
 
@@ -165,10 +166,77 @@ def ukur_how() -> str:
     return doc(f'<div class="cmp"><div style="display:flex;gap:30px;flex:1;min-height:0">{left}{right}</div>{foot}</div>')
 
 
+# ------------------------------------------------------------------ plates and vehicles (two CCTV cameras)
+LPR = DATA / "lpr_log.json"
+# what the page shows of each camera: a frame of the joined video (lpr/render2.py's key_<cam>_<frame>.jpg, the same
+# overlay as the video) and the part of it to zoom into, in the camera's pixels (x, y, w, h)
+LPR_VIEW = {"CAM1": {"frame": 300, "crop": (1000, 290, 920, 484)}, "CAM2": {"frame": 300, "crop": (330, 530, 1100, 579)}}
+CLS_ID = {"motorcycle": ("Motor", "#f59e0b"), "car": ("Mobil", "#3b82f6"), "truck": ("Truk / bus", "#8b5cf6")}
+
+
+def zoom(cam: str, w: int, h: int, caption: str) -> str:
+    v = LPR_VIEW[cam]; x, y, cw, ch = v["crop"]; s = w / cw
+    W0, H0 = (1920, 1080) if cam == "CAM1" else (2560, 1440)
+    return (f'<div class="fig" style="width:{w}px;height:{h}px"><img src="../img/lpr/key_{cam}_{v["frame"]:04d}.jpg" '
+            f'style="position:absolute;width:{W0 * s:.1f}px;height:{H0 * s:.1f}px;left:{-x * s:.1f}px;top:{-y * s:.1f}px;object-fit:fill">'
+            f'<span class="cap">{caption}</span></div>')
+
+
+def lpr_proof() -> str:
+    L = json.loads(LPR.read_text()); c1, c2 = L["CAM 1"], L["CAM 2"]
+    figs = (f'<div style="display:flex;gap:22px">{zoom("CAM1", 893, 470, "CAM 1 · Gerbang 5 · motor bergerak dihitung")}'
+            f'{zoom("CAM2", 893, 470, "CAM 2 · Area parkir · plat nomor terbaca")}</div>')
+    rows = "".join(
+        f'<tr><td><i style="background:{col}"></i>{name}</td><td class="tn"><b>{c1["moving"].get(k, 0)}</b></td>'
+        f'<td class="tn">{c1["in_picture_last_frame"].get(k, 0)}</td></tr>' for k, (name, col) in CLS_ID.items())
+    mv = sorted([r for r in c1["vehicles"] if r["moving"]], key=lambda r: r["moved_video_s"])
+    moves = ('<div class="mvlog">' + "".join(
+        f'<span><i style="background:{CLS_ID[r["cls"] if r["cls"] in CLS_ID else "truck"][1]}"></i>'
+        f'{CLS_ID[r["cls"] if r["cls"] in CLS_ID else "truck"][0].split(" ")[0]} #{r["id"]} · detik {num(r["moved_video_s"], 1)}</span>'
+        for r in mv) + '</div>')
+    count = (f'<div class="panel" style="flex:1"><div class="sect">CAM 1 · kendaraan terhitung</div>'
+             f'<table class="ct"><tr><th>Jenis</th><th>Bergerak</th><th>Di area (akhir video)</th></tr>{rows}</table>'
+             f'<p class="note">Bergerak: berpindah lebih jauh dari lebar kotaknya sejak pertama terlihat, dihitung sekali per '
+             f'ID tracking. Di area: terlihat di gambar pada akhir video, termasuk yang parkir.</p>{moves}</div>')
+    cards = ""
+    for r in [r for r in c2["vehicles"] if r["plate"]]:
+        name = CLS_ID[r["cls"] if r["cls"] in CLS_ID else "truck"][0]
+        cards += (f'<div class="plate"><img src="../img/lpr/CAM2_plate_{r["id"]}.png"><div><div class="pt">{r["plate_pretty"]}</div>'
+                  f'<p>{name} #{r["id"]} · {r["votes"]} dari {r["reads"]} bacaan sama ({num(100 * r["votes"] / r["reads"], 0)}%)</p>'
+                  f'<p class="ok">{I("check_circle", fill=True, size=16)}cek manual: sesuai plat di video</p></div></div>')
+    plates = (f'<div class="panel" style="flex:1.15"><div class="sect">CAM 2 · plat nomor terbaca</div>{cards}'
+              f'<p class="note" style="margin-top:14px">Plat di CAM 1 tidak dibaca: terlalu jauh dari kamera. Untuk membaca plat di '
+              f'gerbang, kamera dipasang dekat jalur masuk, seperti CAM 2.</p></div>')
+    steps = [("Deteksi kendaraan", "RF-DETR membaca motor, mobil, truk/bus di setiap frame."),
+             ("Tracking ID", "Satu kendaraan satu ID; dihitung sekali, setelah terlihat 15 frame."),
+             ("Deteksi plat", "YOLOv9 mencari plat di dalam kotak kendaraan."),
+             ("OCR plat + voting", "fast-plate-ocr membaca setiap frame; plat ditetapkan setelah bacaan konsisten."),
+             ("Log berfoto", "Plat, jenis, kamera, dan waktu tersimpan dengan foto plat.")]
+    st = "".join(f'<div class="step sm"><span class="n">{i}</span><div><b>{t}</b><p>{d}</p></div></div>' for i, (t, d) in enumerate(steps, 1))
+    how = f'<div class="panel" style="flex:1.1;padding-top:12px;padding-bottom:6px"><div class="sect" style="margin:8px 0 0">Cara kerja</div>{st}</div>'
+    foot = (f'<div class="foot">{I("info", size=17)}Video: 2 kamera CCTV aktual (NVR) dari dataset publik Hugging Face '
+            f'rithwikn/ai_cctv_videos, digabung dalam satu video · CAM 1 dari 2 potongan rekaman gerbang yang sama; '
+            f'bagian rekaman yang beku dilewati · plat nomor Tanzania</div>')
+    css = ('<style>.ct{width:100%;border-collapse:collapse;font-size:16px;margin-top:6px}.ct th{font-size:13px;font-weight:600;color:var(--text-3);'
+           'text-align:left;padding:6px 0;border-bottom:1px solid var(--hair)}.ct td{padding:11px 0;border-bottom:1px solid var(--hair)}'
+           '.ct td b{font-size:26px}.ct i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:10px}'
+           '.note{font-size:13px;color:var(--text-3);line-height:1.45;margin-top:10px}'
+           '.mvlog{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}.mvlog span{display:inline-flex;align-items:center;gap:7px;'
+           'font-size:13.5px;background:#f1f5f9;border:1px solid var(--hair);border-radius:7px;padding:5px 9px}'
+           '.mvlog i{width:10px;height:10px;border-radius:3px;display:inline-block}'
+           '.plate{display:flex;gap:16px;align-items:center;padding:12px 0;border-bottom:1px solid var(--hair)}.plate:last-child{border-bottom:none}'
+           '.plate img{width:190px;height:76px;object-fit:contain;background:#0b1220;border-radius:8px;image-rendering:auto}'
+           '.pt{font-size:28px;font-weight:700;letter-spacing:.02em}.plate p{font-size:14px;color:var(--text-2);margin-top:3px}'
+           '.plate .ok{color:#067647;display:flex;align-items:center;gap:6px}.step.sm{padding:8px 0}.step.sm p{font-size:13.5px}</style>')
+    return doc(f'{css}<div class="cmp"><div style="display:flex;flex-direction:column;gap:22px;flex:1;min-height:0">{figs}'
+               f'<div style="display:flex;gap:22px;flex:1;min-height:0">{count}{plates}{how}</div></div>{foot}</div>')
+
+
 # ------------------------------------------------------------------ pages
 PAGES_ALL = {
     "UKUR_01_alur_apk": ukur_flow,
     "UKUR_02_cara_hitung": ukur_how,
+    "LPR_02_hasil": lpr_proof,
 }
 
 

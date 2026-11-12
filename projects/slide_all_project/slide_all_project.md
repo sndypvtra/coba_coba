@@ -27,7 +27,7 @@ Ditambah sampul dan penutup, total **18 slide**.
   (revolusioner, canggih, mutakhir, seamless, game changer, dan sejenisnya).
 - Angka hanya dari gambar atau dari dokumen ini. Angka hasil uji selalu diberi label **PoC**. Angka di layar mockup
   UC1–UC4 dan UC6 adalah ilustrasi kecuali bertanda PoC (sudah tertulis di gambar), jangan disebut sebagai hasil.
-- Tidak ada harga, rupiah, atau perhitungan pajak di deck ini.
+- Tidak ada harga atau angka rupiah di deck ini.
 
 ## 2. Gambar yang dipakai (16 file)
 
@@ -45,12 +45,13 @@ Ditambah sampul dan penutup, total **18 slide**.
 | | `UC5_ukurpaket_2.png` | Foto + segmentasi + kotak 3D berdampingan dengan depth map, plus 5 langkah cara hitung | baru, dari data ZIP yang sama |
 | UC6 Warehouse Live Ops | `UC6_warehouse_1.png` | Live Monitoring: auto-popup kamera saat near miss, alert, mini map | mockup existing `03_live_monitoring` |
 | | `UC6_warehouse_2.png` | Detail Insiden & Bukti: klip 10 detik, timeline, CAPA, ekspor PDF | mockup existing `06_detail_insiden` |
-| UC7 Plate & Vehicle (CCTV parkir) | `UC7_plate_vehicle_1.png` | <<UC7_IMG1>> | baru, dari video hasil `plate_vehicle_cctv.mp4` |
-| | `UC7_plate_vehicle_2.png` | <<UC7_IMG2>> | baru, dari video hasil yang sama |
+| UC7 Plate & Vehicle (CCTV parkir) | `UC7_plate_vehicle_1.png` | Satu frame video hasil: CAM 1 gerbang (motor, mobil, truk dihitung) dan CAM 2 area parkir (plat terbaca), dengan panel hitungan dan log plat | baru, dari video hasil `plate_vehicle_cctv.mp4` |
+| | `UC7_plate_vehicle_2.png` | Bukti: zoom kedua kamera, tabel hitungan per jenis, foto plat dengan jumlah bacaan yang konsisten, dan cara kerja 5 langkah | baru, dari video hasil yang sama |
 | UC8 Document OCR | `UC8_document_ocr_1.png` | Hasil repo apa adanya, 1 tiket → 1 baris tabel, dengan bounding box per field | baru, dari `results/single0.jpeg` |
 | | `UC8_document_ocr_2.png` | Hasil repo apa adanya, 2 tiket dan 3 tiket dalam satu foto → 1 baris per tiket | baru, dari `results/multiple0.jpeg` dan `multiple1.jpeg` |
 
-Video pendukung (tidak masuk deck, diputar terpisah atau ditautkan di slide UC7): `plate_vehicle_cctv.mp4`.
+Video pendukung (tidak masuk deck, diputar terpisah atau ditautkan di slide UC7): `plate_vehicle_cctv.mp4`
+(1920 × 1080, H.264, 39,9 detik).
 
 ## 3. Susunan deck (18 slide)
 
@@ -69,8 +70,8 @@ Video pendukung (tidak masuk deck, diputar terpisah atau ditautkan di slide UC7)
 | 11 | UC5 · B | `UC5_ukurpaket_2.png` | Dimensi dihitung dari satu foto: segmentasi, depth map, dan kotak 3D |
 | 12 | UC6 · A | `UC6_warehouse_1.png` | Saat AI mendeteksi bahaya, kameranya langsung tampil di layar operator |
 | 13 | UC6 · B | `UC6_warehouse_2.png` | Setiap insiden punya bukti lengkap dan tindakan perbaikan |
-| 14 | UC7 · A | `UC7_plate_vehicle_1.png` | <<UC7_TITLE_A>> |
-| 15 | UC7 · B | `UC7_plate_vehicle_2.png` | <<UC7_TITLE_B>> |
+| 14 | UC7 · A | `UC7_plate_vehicle_1.png` | Motor dan mobil terhitung otomatis, plat nomor terbaca dari CCTV yang sudah ada |
+| 15 | UC7 · B | `UC7_plate_vehicle_2.png` | Setiap kendaraan dihitung sekali, setiap plat tercatat dengan foto |
 | 16 | UC8 · A | `UC8_document_ocr_1.png` | Foto tiket langsung menjadi data tabel, tanpa ketik ulang |
 | 17 | UC8 · B | `UC8_document_ocr_2.png` | Beberapa tiket dalam satu foto tetap terbaca satu per satu |
 | 18 | Penutup | – | Ringkasan 8 use case: masalah → hasil, lalu langkah pilot |
@@ -311,7 +312,48 @@ Video pendukung (tidak masuk deck, diputar terpisah atau ditautkan di slide UC7)
 
 ### UC7 · Plate Recognition & Vehicle Counting (CCTV parkir)
 
-<<UC7_SECTION>>
+**Untuk:** pengelola parkir, depot dan gudang distribusi, kawasan industri, gedung perkantoran.
+
+#### Slide 14 · UC7 · A · Masalah & Solusi
+- **Label:** `USE CASE 7 · PLATE & VEHICLE · MASALAH & SOLUSI`
+- **Judul:** Motor dan mobil terhitung otomatis, plat nomor terbaca dari CCTV yang sudah ada
+- **Gambar:** `UC7_plate_vehicle_1.png` (satu frame dari video hasil)
+- **Masalah:**
+  - Kendaraan masuk, keluar, dan parkir dicatat manual oleh petugas; plat ditulis tangan, rawan salah dan
+    terlewat saat ramai.
+  - Tidak ada data jumlah motor, mobil, dan truk per jam; mencari kapan kendaraan tertentu datang berarti playback
+    rekaman CCTV.
+- **Solusi:**
+  - CCTV existing dan edge AI mendeteksi serta melacak setiap kendaraan; motor, mobil, dan truk/bus dihitung
+    sekali per ID tracking.
+  - Plat nomor dibaca dari kamera yang cukup dekat (deteksi plat + OCR) dan dicatat bersama foto plat, jenis
+    kendaraan, kamera, dan waktu.
+- **Catatan kaki:** Video: 2 kamera CCTV aktual (NVR), dataset publik Hugging Face `rithwikn/ai_cctv_videos`,
+  digabung dalam satu video · plat nomor Tanzania
+- **Speaker notes:** Video ini menggabungkan dua kamera CCTV aktual: CAM 1 di gerbang untuk menghitung
+  kendaraan, CAM 2 di area parkir untuk membaca plat. Setiap kendaraan diberi ID tracking, jadi dihitung sekali;
+  yang bergerak diberi label "bergerak", yang parkir tetap masuk hitungan "di area". Plat baru tampil setelah
+  beberapa bacaan konsisten, bukan dari satu frame.
+
+#### Slide 15 · UC7 · B · Hasil & Bukti
+- **Label:** `USE CASE 7 · PLATE & VEHICLE · HASIL & BUKTI`
+- **Judul:** Setiap kendaraan dihitung sekali, setiap plat tercatat dengan foto
+- **Gambar:** `UC7_plate_vehicle_2.png`
+- **Poin:**
+  - **PoC CAM 1 (gerbang, 2 potongan rekaman):** 3 motor dan 1 truk bergerak, masing-masing terhitung sekali;
+    5 mobil terdeteksi parkir di area (0 mobil bergerak). Dicek manual terhadap video: sesuai.
+  - **PoC CAM 2 (area parkir):** 2 plat terbaca, **T 649 EHP** (970 dari 998 frame membaca sama, 97%) dan
+    **T 119 ELM** (874 dari 998, 88%); keduanya dicek manual sesuai plat di video.
+  - Kondisi lapangan yang ditangani: orang pembawa barang yang sempat terbaca "motor" dibuang, kabin truk yang
+    masuk lebih dulu digabung ke truknya, dan bagian rekaman NVR yang beku dilewati tanpa menghitung truk dua kali.
+  - Batas: plat di CAM 1 tidak terbaca karena terlalu jauh dari kamera. Di pilot, kamera baca plat dipasang dekat
+    jalur masuk, dan hitungan per jam dibandingkan dengan hitungan manual.
+- **Catatan kaki:** sama dengan slide 14 · CAM 1 berasal dari 2 potongan rekaman gerbang yang sama; bagian
+  rekaman yang beku (gangguan NVR) dilewati
+- **Speaker notes:** Di gerbang, tiga motor dan satu truk yang lewat terhitung masing-masing sekali; mobil di
+  area ini semuanya parkir, jadi hitungan mobil bergerak nol. Di area parkir, dua plat terbaca konsisten di hampir
+  semua frame dan sudah dicek manual. Sampaikan juga batasnya: plat di gerbang tidak terbaca karena kamera terlalu
+  jauh, jadi di pilot kamera baca plat dipasang dekat jalur masuk.
 
 ---
 
@@ -371,7 +413,7 @@ dinas, rekap biaya).
 | Parcel Dimensioning | ukuran paket tidak diketahui | P × L × T setiap paket; truk dan tagihan dari volume | 8/8 terhitung; 340,5 vs 340 mm |
 | UkurPaket | ukur manual di pickup/counter | P × L × T dari satu foto di HP kurir | tampilan aktual APK, skor 100 pada sesi uji |
 | Warehouse Live Ops | bahaya ketahuan setelah terjadi | alert real-time, bukti dan CAPA per insiden | error posisi 0,19 m; line crossing 6/6 |
-| Plate & Vehicle | <<UC7_SUM_PROBLEM>> | <<UC7_SUM_RESULT>> | <<UC7_SUM_POC>> |
+| Plate & Vehicle | kendaraan dan plat dicatat manual | motor, mobil, truk dihitung per jenis; plat tercatat dengan foto | 3 motor + 1 truk terhitung benar; 2/2 plat benar |
 | Document OCR | tiket dan dokumen diketik ulang | field langsung jadi tabel | 134/138 field benar |
 
 - **Baris bawah:** Langkah berikutnya: pilot 30 hari per use case, dengan blind test oleh tim klien. Besaran manfaat
@@ -386,5 +428,5 @@ dinas, rekap biaya).
 - [ ] Tidak ada kata "nyata"; dipakai "aktual".
 - [ ] Setiap angka hasil uji diberi label PoC; angka ilustrasi tidak disebut sebagai hasil.
 - [ ] Catatan kaki sumber ada di setiap slide use case.
-- [ ] Tidak ada harga, rupiah, atau perhitungan pajak.
+- [ ] Tidak ada harga atau angka rupiah.
 - [ ] Speaker notes terisi di semua slide.
