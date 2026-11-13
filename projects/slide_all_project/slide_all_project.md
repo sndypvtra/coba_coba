@@ -35,11 +35,13 @@ Unggah dokumen ini bersama ke-16 gambar ke Claude Design, lalu buat **17 slide**
   dan bisnis, termasuk istilah Inggris yang sudah lazim.
 - Judul menyebut hasil untuk bisnis, bukan nama fitur. Satu gagasan per poin.
 - Hindari kata promosi seperti revolusioner, canggih, mutakhir, seamless, dan game changer.
-- **Tanpa angka di teks slide dan speaker notes.** Jangan tulis jumlah, persentase, ukuran, waktu, atau perkiraan.
-  - Gambar boleh berisi angka (tampilan layar), tetapi angka itu tidak dikutip di teks.
-  - Angka di mockup UC1–UC4 dan UC6 adalah ilustrasi.
-  - Nama produk atau model yang mengandung angka (misalnya YOLOv9) dan istilah seperti 3D atau P × L × T bukan angka
-    dalam aturan ini.
+- **Tanpa angka asumsi.** Jangan tulis angka ilustrasi, perkiraan, atau hasil uji (PoC) di teks slide dan speaker notes.
+  - Angka di mockup UC1–UC4 dan UC6 adalah ilustrasi. Angka itu tetap ada di gambar, tetapi tidak dikutip di teks.
+- **Angka aktual hasil aplikasi wajib dipertahankan persis seperti di dokumen ini dan di gambar**, tanpa dibulatkan
+  atau diubah. Angka ini hanya ada di UC5 (hasil ukur APK UkurPaket) dan UC7 (hasil video CCTV), dan ditandai
+  "Hasil aktual" di bagian 6.
+- Nama produk atau model yang mengandung angka (misalnya YOLOv9) dan istilah seperti 3D atau P × L × T bukan angka
+  dalam aturan ini.
 
 **Istilah yang dipakai dan yang dihindari**
 
@@ -304,11 +306,18 @@ Video pendukung UC7 (`plate_vehicle_cctv.mp4`) tidak masuk deck. Putar terpisah 
   - Quality gate memberi status Akurat atau Perlu Dicek, misalnya untuk foto buram, objek terpotong, atau bentuk yang
     bukan kotak.
   - Status dan foto bukti tersimpan bersama ukuran, sehingga admin atau hub bisa mengecek ulang.
+- **Hasil aktual APK (tampilkan persis):**
+  - HP dengan clear case: **15,5 × 6,4 × 1,8 cm** (P × L × T), berat volumetrik **0,03 kg**, status
+    **Akurat · skor 100**.
+  - Gelas dengan sedotan: **7,1 × 7,1 × 23,7 cm** (diameter × diameter × tinggi), berat volumetrik **0,20 kg**, jarak
+    lensa ke objek **24 cm** (autofocus), tinggi kamera di atas meja **30 cm**, kecocokan kotak 3D (IoU) **0,85**,
+    status **Perlu Dicek · skor 75**.
 - **Catatan kaki:** Data: hasil ukur dan depth map yang disimpan APK UkurPaket · kotak 3D digambar dari koordinat yang
   dihitung APK
 - **Speaker notes:** Di setiap baris, kiri adalah foto dengan hasil segmentasi dan kotak 3D, dan tengah adalah depth
-  map: merah berarti dekat, biru berarti jauh. Garis putus-putus adalah garis kotak yang tertutup dari kamera. Benda
-  kotak mendapat status Akurat, sedangkan benda bulat tetap diukur tetapi diberi status Perlu Dicek. Hasil berstatus
+  map: merah berarti dekat, biru berarti jauh. Garis putus-putus adalah garis kotak yang tertutup dari kamera. HP
+  terukur 15,5 × 6,4 × 1,8 cm dengan status Akurat. Gelas terukur 7,1 × 7,1 × 23,7 cm, dibaca diameter × diameter ×
+  tinggi dengan tinggi termasuk sedotan, dan diberi status Perlu Dicek karena bentuknya bukan kotak. Hasil berstatus
   Perlu Dicek tetap bisa dipakai kurir, dan ukurannya tersimpan bersama foto bukti untuk dicek ulang.
 
 ---
@@ -361,6 +370,8 @@ Video pendukung UC7 (`plate_vehicle_cctv.mp4`) tidak masuk deck. Putar terpisah 
   - CCTV di gerbang dan edge AI mendeteksi serta melacak setiap kendaraan, lalu menghitungnya sekali per ID tracking.
   - Hitungan dipisah per jenis kendaraan (motor, mobil, truk/bus) dan membedakan kendaraan yang bergerak dari yang parkir.
   - Beberapa kamera dipantau sekaligus di satu layar.
+- **Hasil aktual pada video (tampilkan persis):** kendaraan yang bergerak di gerbang terhitung **3 motor** dan
+  **1 truk**, masing-masing sekali.
 - **Catatan kaki:** Video: rekaman CCTV aktual dari dataset publik Hugging Face `rithwikn/ai_cctv_videos`, dua kamera
   digabung dalam satu video
 - **Speaker notes:** Video ini menggabungkan dua kamera CCTV aktual. Kamera gerbang menghitung kendaraan, dan setiap
@@ -377,6 +388,8 @@ Video pendukung UC7 (`plate_vehicle_cctv.mp4`) tidak masuk deck. Putar terpisah 
   - Plat ditetapkan setelah beberapa bacaan sama, bukan dari satu frame saja.
   - Setiap plat tercatat bersama foto plat, jenis kendaraan, kamera, dan waktu.
   - Kamera untuk baca plat dipasang dekat jalur masuk, supaya plat terlihat cukup besar.
+- **Hasil aktual pada video (tampilkan persis):** plat terbaca **T 649 EHP** dan **T 119 ELM**, keduanya sesuai dengan
+  plat di video.
 - **Catatan kaki:** sama dengan slide 14
 - **Speaker notes:** Di area parkir, plat dibaca dari banyak frame dan baru ditetapkan setelah bacaannya konsisten,
   sehingga hasilnya stabil. Plat di kamera gerbang tidak dibaca karena terlalu jauh. Karena itu, kamera baca plat
@@ -424,7 +437,8 @@ perjalanan dinas dan rekap biaya.
 
 - [ ] Total 17 slide: sampul, lalu 2 slide per use case, dan setiap slide berisi satu masalah dan solusinya.
 - [ ] Tidak ada slide bukti atau hasil uji, model bisnis, harga, pilot, timeline, atau langkah berikutnya.
-- [ ] Tidak ada angka di teks slide dan speaker notes (lihat bagian 3).
+- [ ] Tidak ada angka asumsi, ilustrasi, perkiraan, atau hasil uji di teks slide dan speaker notes (lihat bagian 3).
+- [ ] Angka "Hasil aktual" di UC5 dan UC7 tampil persis seperti di dokumen ini.
 - [ ] Ke-16 gambar dari `images/` dipakai dengan nama file persis seperti di bagian 4, utuh dan tidak diedit.
 - [ ] Tidak ada kata "nyata", "rusuk", atau "apa adanya". Istilah mengikuti tabel di bagian 3.
 - [ ] Setiap slide use case punya catatan kaki sumber.
