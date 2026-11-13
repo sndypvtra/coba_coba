@@ -168,10 +168,8 @@ def ukur_how() -> str:
     h = 452
     row = lambda r, nm, ex: (f'<div style="display:flex;gap:14px;min-height:0">{fig(r, False, h, "Foto · segmentasi · kotak 3D")}'  # noqa: E731
                              f'{fig(r, True, h, "Depth map")}{card(r, nm, ex)}</div>')
-    sc = GELAS["scale_check_cm"]
-    ex_g = (f'<p class="note" style="font-size:12.5px;color:var(--text-3);line-height:1.45;margin-top:10px">Tinggi termasuk sedotan. '
-            f'Cek skala dengan benda lain di foto yang sama: kaki gelas {num(sc["kaki gelas"], 1)} cm, piring {num(sc["piring"], 0)} cm, '
-            f'garpu {num(sc["garpu"], 0)} cm.</p>')
+    ex_g = ('<p class="note" style="font-size:12.5px;color:var(--text-3);line-height:1.45;margin-top:10px">Benda bulat dibaca '
+            'diameter × diameter × tinggi; tinggi termasuk sedotan. Status Perlu Dicek karena bentuknya bukan kotak.</p>')
     ex_h = (f'<p class="note" style="font-size:12.5px;color:var(--text-3);line-height:1.45;margin-top:10px">Outline tajam '
             f'(skor ketajaman {num(HP["sharpness"], 2)}, batas 0,6) dan kotak 3D pas dengan outline.</p>')
     left = (f'<div style="display:flex;flex-direction:column;gap:16px">{row(HP, "Objek 1 · HP dengan clear case", ex_h)}'

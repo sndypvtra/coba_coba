@@ -1121,13 +1121,7 @@
     7.090663524339188,
     7.090659280922805,
     23.716615402400496
-   ],
-   "scale_check_cm": {
-    "kaki gelas": 8.1,
-    "piring": 30.0,
-    "garpu": 21.1
-   },
-   "scale_check_note": "Same scale as the APK (camera height above the table), points back-projected onto the table: the glass foot on the table; the plate along x=200 px with its rim 2 cm up; the fork from its tines (1.5 cm up) to its handle end resting on the rim (4.5 cm up)."
+   ]
   }
  ]
 }
