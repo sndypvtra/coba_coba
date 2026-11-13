@@ -1,7 +1,8 @@
 # Brief Claude Design: AI Vision untuk Operasional (Masalah & Solusi)
 
-Dokumen ini adalah instruksi lengkap untuk membuat satu deck dari 16 gambar di folder `images/`.
-Unggah dokumen ini bersama ke-16 gambar ke Claude Design, lalu buat **17 slide** sesuai bagian 5 dan 6.
+Dokumen ini adalah instruksi lengkap untuk membuat satu deck dari 16 gambar mockup (PNG, 3840 × 2160).
+Unggah dokumen ini bersama ke-16 gambar ke Claude Design, lalu buat **tepat 17 slide** sesuai bagian 5 dan 6.
+Deck selesai di slide 17; jangan menambah slide lain.
 
 ## 1. Tujuan dan audiens
 
@@ -9,8 +10,17 @@ Unggah dokumen ini bersama ke-16 gambar ke Claude Design, lalu buat **17 slide**
   ruangan. Setiap slide harus bisa dipahami kedua kelompok tanpa penjelasan tambahan.
 - **Isi deck:** hanya **masalah bisnis dan solusinya**. Setiap use case punya tepat 2 slide, dan setiap slide berisi
   satu masalah beserta solusinya, dengan gambar layar yang menyelesaikan masalah tersebut.
-- **Yang tidak dimasukkan:** slide bukti atau hasil uji (PoC), model bisnis, harga, pilot, timeline, langkah berikutnya,
-  dan permintaan keputusan.
+- **Slide yang tidak boleh dibuat.** Deck ini bukan proposal bisnis. Jangan membuat slide seperti tiga slide terakhir
+  deck *Warehouse Live Ops*, dan jangan menyisipkan isinya ke slide lain:
+  1. **Model bisnis:** pendapatan berulang, langganan per kamera, paket layanan, pendapatan pendukung (sewa perangkat,
+     onboarding, add-on), go-to-market, target pasar, dan harga.
+  2. **Bukti PoC:** rangkuman hasil uji dalam angka, seperti akurasi, error posisi, jumlah kamera yang lolos kalibrasi,
+     hasil blind test, dan fokus pilot.
+  3. **Langkah berikutnya:** pilot, kebutuhan dari klien (akses CCTV, perangkat, PIC), hal yang didapat klien,
+     timeline per bulan, permintaan persetujuan, dan pendanaan.
+  - Juga tidak ada slide ringkasan manfaat, anggaran atau RAB, harga, agenda, penutup, atau "terima kasih".
+  - Pengecualian: angka "Hasil aktual" di UC5 dan UC7 adalah output aplikasi, bukan slide bukti. Tampilkan angka itu
+    di slide use case-nya sendiri, persis seperti tertulis di bagian 6.
 - **Nada:** profesional, faktual, dan ringkas. Klaim hanya sebatas yang terlihat di gambar dan tertulis di dokumen ini.
 
 ## 2. Aturan desain
@@ -436,10 +446,12 @@ perjalanan dinas dan rekap biaya.
 ## 7. Checklist sebelum selesai
 
 - [ ] Total 17 slide: sampul, lalu 2 slide per use case, dan setiap slide berisi satu masalah dan solusinya.
-- [ ] Tidak ada slide bukti atau hasil uji, model bisnis, harga, pilot, timeline, atau langkah berikutnya.
+- [ ] Tidak ada slide model bisnis, bukti PoC, atau langkah berikutnya (pilot, timeline, permintaan keputusan),
+      dan isinya tidak disisipkan ke slide lain.
+- [ ] Tidak ada slide ringkasan, anggaran, harga, agenda, penutup, atau "terima kasih"; slide terakhir adalah slide 17.
 - [ ] Tidak ada angka asumsi, ilustrasi, perkiraan, atau hasil uji di teks slide dan speaker notes (lihat bagian 3).
 - [ ] Angka "Hasil aktual" di UC5 dan UC7 tampil persis seperti di dokumen ini.
-- [ ] Ke-16 gambar dari `images/` dipakai dengan nama file persis seperti di bagian 4, utuh dan tidak diedit.
+- [ ] Ke-16 gambar mockup dipakai dengan nama file persis seperti di bagian 4, utuh dan tidak diedit.
 - [ ] Tidak ada kata "nyata", "rusuk", atau "apa adanya". Istilah mengikuti tabel di bagian 3.
 - [ ] Setiap slide use case punya catatan kaki sumber.
 - [ ] Speaker notes terisi di semua slide.
