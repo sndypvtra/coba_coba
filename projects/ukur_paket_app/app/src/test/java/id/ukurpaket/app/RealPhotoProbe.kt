@@ -27,7 +27,7 @@ class RealPhotoProbe {
     @Test fun probe() {
         val root = System.getProperty("ukur.real")
         assumeTrue(root != null)
-        val dm = DepthModel(File("src/main/assets/${DepthModel.ASSET}").readBytes())
+        val dm = DepthModel(File("../core/src/main/assets/${DepthModel.ASSET}").readBytes())
         for (rec in File(root!!).walk().filter { it.name.startsWith("shot_") && it.name.endsWith(".json") }.sorted()) {
             val dir = rec.parentFile; val i = rec.name.removePrefix("shot_").removeSuffix(".json")
             val j = Json.parseToJsonElement(rec.readText()).jsonObject

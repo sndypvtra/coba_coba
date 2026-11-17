@@ -24,7 +24,7 @@ class LiveSegVideoTest {
         val out = System.getProperty("ukur.videoOut")?.let(::File)?.also { it.mkdirs() }
         val box = (System.getProperty("ukur.videoBox") ?: "185,255,360,685").split(',').map { it.toFloat() }
         val files = dir!!.listFiles { f -> f.name.endsWith(".jpg") }!!.sortedBy { it.name }
-        val sam = Segmenter(File("src/main/assets/sam/encoder512.onnx").readBytes(), File("src/main/assets/sam/decoder512.onnx").readBytes())
+        val sam = Segmenter(File("../core/src/main/assets/sam/encoder512.onnx").readBytes(), File("../core/src/main/assets/sam/decoder512.onnx").readBytes())
         val refines = (System.getProperty("ukur.videoRefine") ?: "RECURSIVE").split(',').map { LiveSegmenter.Refine.valueOf(it) }
         for (rf in refines) for (every in listOf(12, 30)) {
             val first = TestImages.read(files[0].inputStream())
@@ -68,7 +68,7 @@ class LiveSegVideoTest {
         val refDir = System.getProperty("ukur.videoRef")?.let(::File)
         val box = (System.getProperty("ukur.videoBox") ?: "185,255,360,685").split(',').map { it.toFloat() }
         val files = dir!!.listFiles { f -> f.name.endsWith(".jpg") }!!.sortedBy { it.name }
-        val sam = Segmenter(File("src/main/assets/sam/encoder512.onnx").readBytes(), File("src/main/assets/sam/decoder512.onnx").readBytes())
+        val sam = Segmenter(File("../core/src/main/assets/sam/encoder512.onnx").readBytes(), File("../core/src/main/assets/sam/decoder512.onnx").readBytes())
         val first = TestImages.read(files[0].inputStream()); val w = first.w; val h = first.h
         val rt = id.ukurpaket.app.vio.RecordingTracker()
         val masks = java.util.concurrent.ConcurrentHashMap<Int, Mask>()

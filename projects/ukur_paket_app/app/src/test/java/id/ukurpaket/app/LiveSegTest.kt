@@ -67,7 +67,7 @@ class LiveSegTest {
     }
 
     @Test fun followsTheBoxOnEveryFrame() {
-        Segmenter(File("src/main/assets/sam/encoder512.onnx").readBytes(), File("src/main/assets/sam/decoder512.onnx").readBytes()).use { sam ->
+        Segmenter(File("../core/src/main/assets/sam/encoder512.onnx").readBytes(), File("../core/src/main/assets/sam/decoder512.onnx").readBytes()).use { sam ->
             assertEquals(512, sam.size)
             for (name in listOf("box_dt50", "sack_dt50")) {
                 val ious = run(name, sam)

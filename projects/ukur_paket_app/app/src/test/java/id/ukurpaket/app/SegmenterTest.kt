@@ -61,7 +61,7 @@ class SegmenterTest {
      */
     @Test fun light512AgreesWithThe1024Model() {
         val img = TestImages.read(javaClass.getResourceAsStream("/conveyor/frame.jpg")!!)
-        Segmenter(File("src/main/assets/sam/encoder512.onnx").readBytes(), File("src/main/assets/sam/decoder512.onnx").readBytes()).use { sam ->
+        Segmenter(File("../core/src/main/assets/sam/encoder512.onnx").readBytes(), File("../core/src/main/assets/sam/decoder512.onnx").readBytes()).use { sam ->
             assertTrue(sam.size == 512)
             val t0 = System.nanoTime()
             val e = sam.embed(img.px, img.w, img.h)

@@ -13,4 +13,4 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "UkurPaket"
-include(":app")
+include(":app", ":core")

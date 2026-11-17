@@ -432,8 +432,8 @@ class PhotoMeasureTest {
 
     /** The real models on the synthetic photos: MobileSAM-512 cuts the object from its box, Depth Anything V2 gives the height. */
     @Test fun withTheRealModels() {
-        val sam = Segmenter(File("src/main/assets/sam/encoder512.onnx").readBytes(), File("src/main/assets/sam/decoder512.onnx").readBytes())
-        val depth = DepthModel(File("src/main/assets/${DepthModel.ASSET}").readBytes())
+        val sam = Segmenter(File("../core/src/main/assets/sam/encoder512.onnx").readBytes(), File("../core/src/main/assets/sam/decoder512.onnx").readBytes())
+        val depth = DepthModel(File("../core/src/main/assets/${DepthModel.ASSET}").readBytes())
         assertEquals(280, depth.inW); assertEquals(378, depth.inH)
         sam.use { depth.use {
             for (name in sets) {

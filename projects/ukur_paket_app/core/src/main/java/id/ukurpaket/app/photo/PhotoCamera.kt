@@ -24,7 +24,6 @@ import android.os.HandlerThread
 import android.os.SystemClock
 import android.util.Size
 import android.view.Surface
-import id.ukurpaket.app.dt.SweepRecorder
 import kotlin.math.asin
 import kotlin.math.min
 import kotlin.math.sqrt
@@ -109,6 +108,19 @@ class PhotoCamera(private val ctx: Context, private val cb: Callback) {
 
     @Volatile private var pending: ((Shot) -> Unit)? = null
     @Volatile private var pendingSince = 0L
+    /** Asked with the photo before the focus sweep: false skips it (a printed marker already gives the distance). */
+    @Volatile private var sweepIf: ((Shot) -> Boolean)? = null
+
+    /**
+     * Preview frames for a live check (UkurAja's marker detector): offered every [PREVIEW_EVERY]th frame while no photo is
+     * being taken; the luma is copied only when [PreviewListener.wants] says the listener is free.
+     */
+    interface PreviewListener {
+        fun wants(): Boolean
+        /** [luma]: [w] x [h] in the sensor's orientation; [rotation] turns it upright (clockwise degrees). */
+        fun onFrame(luma: ByteArray, w: Int, h: Int, rotation: Int)
+    }
+    @Volatile var preview: PreviewListener? = null
 
     @SuppressLint("MissingPermission")
     fun open(texture: SurfaceTexture) {
@@ -117,7 +129,7 @@ class PhotoCamera(private val ctx: Context, private val cb: Callback) {
                 ?: cm.cameraIdList.first()
             val c = cm.getCameraCharacteristics(id).also { chars = it }
             val sizes = c.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)!!.getOutputSizes(ImageFormat.YUV_420_888)
-            size = SweepRecorder.pickSize(sizes.map { it.width to it.height })?.let { Size(it.first, it.second) } ?: sizes.first()
+            size = CameraFrames.pickSize(sizes.map { it.width to it.height })?.let { Size(it.first, it.second) } ?: sizes.first()
             texture.setDefaultBufferSize(size.width, size.height)
             surface = Surface(texture)
             reader = ImageReader.newInstance(size.width, size.height, ImageFormat.YUV_420_888, 3).apply {
@@ -193,9 +205,13 @@ class PhotoCamera(private val ctx: Context, private val cb: Callback) {
         return m to sqrt(s / acc.size)
     }
 
-    /** Takes the next frame once the phone is still (at most [maxWaitMs] of waiting; then as it is). */
-    fun capture(maxWaitMs: Long = 2500, onShot: (Shot) -> Unit) {
+    /**
+     * Takes the next frame once the phone is still (at most [maxWaitMs] of waiting; then as it is), then the focus sweep
+     * unless [sweepIf] says it is not needed for this photo (it runs on the camera thread: keep it short).
+     */
+    fun capture(maxWaitMs: Long = 2500, sweepIf: ((Shot) -> Boolean)? = null, onShot: (Shot) -> Unit) {
         handler.post {
+            this.sweepIf = sweepIf
             pending = onShot; pendingSince = SystemClock.elapsedRealtime(); phase = Phase.SHOT
             locking = afTrigger(CameraMetadata.CONTROL_AF_TRIGGER_START)
         }
@@ -283,10 +299,13 @@ class PhotoCamera(private val ctx: Context, private val cb: Callback) {
     private fun onImage(r: ImageReader) {
         val img = try { r.acquireNextImage() } catch (e: Exception) { null } ?: return
         try {
-            if (++frames % 8 == 1) brightness = SweepRecorder.meanLuma(img)
-            if (pending == null) return
+            if (++frames % 8 == 1) brightness = CameraFrames.meanLuma(img)
+            if (pending == null) {
+                preview?.let { l -> if (frames % PREVIEW_EVERY == 0 && l.wants()) l.onFrame(CameraFrames.luma(img), img.width, img.height, rotation) }
+                return
+            }
             when (phase) {
-                Phase.SHOT -> held[img.timestamp] = Held(SweepRecorder.toNv21(img), img.width, img.height)
+                Phase.SHOT -> held[img.timestamp] = Held(CameraFrames.toNv21(img), img.width, img.height)
                 Phase.SWEEP -> held[img.timestamp] = Held(yPlane(img), img.width, img.height)
                 Phase.IDLE -> return
             }
@@ -321,7 +340,8 @@ class PhotoCamera(private val ctx: Context, private val cb: Callback) {
                 held.clear()
                 val shot = Shot(f.data, f.w, f.h, rotation, lens(f.w, f.h), m ?: floatArrayOf(0f, 9.81f, 0f), sp, still, System.currentTimeMillis(), focus(meta[ts]))
                 locking = false
-                if (startSweep()) { base = shot; phase = Phase.SWEEP }
+                val wanted = runCatching { sweepIf?.invoke(shot) ?: true }.getOrDefault(true)
+                if (wanted && startSweep()) { base = shot; phase = Phase.SWEEP }
                 else { afTrigger(CameraMetadata.CONTROL_AF_TRIGGER_CANCEL); pending = null; phase = Phase.IDLE; p(shot) }
             }
             Phase.SWEEP -> {
@@ -399,6 +419,9 @@ class PhotoCamera(private val ctx: Context, private val cb: Callback) {
     companion object {
         /** Lens positions in the focus sweep. */
         const val SWEEP_STEPS = 16
+
+        /** Every how many preview frames one goes to the [PreviewListener]. */
+        const val PREVIEW_EVERY = 3
 
         /** Still: the acceleration wandered less than 0,25 m/s² rms over 0,4 s and is close to g (no swing). */
         fun isStill(m: FloatArray, spread: Float): Boolean {

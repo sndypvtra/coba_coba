@@ -1,5 +1,8 @@
 package id.ukurpaket.app.photo
 
+import id.ukurpaket.app.marker.MarkerFit
+import id.ukurpaket.app.marker.MarkerObservation
+import id.ukurpaket.app.marker.MarkerScale
 import id.ukurpaket.app.measure.Mask
 import id.ukurpaket.app.measure.P2
 import id.ukurpaket.app.measure.V3
@@ -147,12 +150,23 @@ data class PhotoResult(
      *  sweep's height; calibration learns the factor from it. And how many outline points had a clear focus peak. */
     val sweepHeightUnit: Double = 0.0,
     val sweepPoints: Int = 0,
+    /** The printed marker the scale came from (MarkerScale; -1 = none in the photo), the camera height it gave (0 = not
+     *  used), its side in the picture (pixels), its misfit and relative error; [markerNote] why it was not used. */
+    val markerId: Int = -1,
+    val markerCameraM: Double = 0.0,
+    val markerSidePx: Double = 0.0,
+    val markerResidual: Double = 0.0,
+    val markerSigma: Double = 0.0,
+    val markerNote: String? = null,
 ) {
     /**
      * The object out of focus in the photo (its sharpness measured and under Sharpness.MIN) with no distance from the
-     * focus for it: its size rests on the depth model alone.
+     * focus or a marker for it: its size rests on the depth model alone.
      */
-    fun blurred() = sharpness > 0 && sharpness < Sharpness.MIN && focusCameraM <= 0
+    fun blurred() = sharpness > 0 && sharpness < Sharpness.MIN && focusCameraM <= 0 && markerCameraM <= 0
+
+    /** The scale came from a printed marker in the photo. */
+    fun markerUsed() = markerCameraM > 0
 }
 
 class PhotoFailed(message: String) : Exception(message)
@@ -472,7 +486,7 @@ object PhotoMeasure {
     const val FOCUS_SIGMA_D = 0.15
 
     /** Which clues the camera height came from. */
-    data class HeightPick(val heightM: Float, val ai: Boolean, val standing: Boolean, val focus: Boolean)
+    data class HeightPick(val heightM: Float, val ai: Boolean, val standing: Boolean, val focus: Boolean, val marker: Boolean = false)
 
     /**
      * The camera height for the measurement from up to three clues, each a scale error of its own, combined in log space
@@ -481,15 +495,31 @@ object PhotoMeasure {
      * calibration photos. The lens is a physical measurement and the depth model a guess: when the two disagree beyond
      * what both allow, the guess is dropped. The standing height joins only within a factor 1,43 of the others (not when
      * crouching or with the parcel on a table).
+     *
+     * A printed marker of known size in the photo ([hMarker], relative error [sigmaMarker]: about 1-2 %) is a
+     * measurement, not a guess: it joins first, and any other clue that disagrees with it beyond what both allow is
+     * dropped (the depth model's guess, or the focus when it settled on something else).
      */
-    fun cameraHeight(hAi: Float, standing: Standing?, hFocus: Float? = null, sigmaFocus: Double = 0.0): HeightPick {
+    fun cameraHeight(hAi: Float, standing: Standing?, hFocus: Float? = null, sigmaFocus: Double = 0.0,
+                     hMarker: Float? = null, sigmaMarker: Double = 0.0): HeightPick {
         val sAi = if (hAi < 0.6f) SIGMA_AI_CLOSE else SIGMA_AI
         val clues = ArrayList<Pair<Double, Double>>()                // ln height, sigma
         var useAi = true
-        if (hFocus != null && hFocus > 0f) {
+        var useFocus = hFocus != null && hFocus > 0f
+        val useMarker = hMarker != null && hMarker > 0f
+        if (useMarker) {
+            val sm = max(0.005, sigmaMarker)
+            clues += kotlin.math.ln(hMarker!!.toDouble()) to sm
+            if (abs(kotlin.math.ln(hAi.toDouble() / hMarker)) > 3 * kotlin.math.sqrt(sAi * sAi + sm * sm)) useAi = false
+            if (useFocus) {
+                val sf = max(0.01, sigmaFocus)
+                if (abs(kotlin.math.ln(hFocus!!.toDouble() / hMarker)) > 3 * kotlin.math.sqrt(sf * sf + sm * sm)) useFocus = false
+            }
+        }
+        if (useFocus) {
             val sf = max(0.01, sigmaFocus)
-            if (abs(kotlin.math.ln(hAi.toDouble() / hFocus)) > 3 * kotlin.math.sqrt(sAi * sAi + sf * sf)) useAi = false
-            clues += kotlin.math.ln(hFocus.toDouble()) to sf
+            if (useAi && abs(kotlin.math.ln(hAi.toDouble() / hFocus!!)) > 3 * kotlin.math.sqrt(sAi * sAi + sf * sf)) useAi = false
+            clues += kotlin.math.ln(hFocus!!.toDouble()) to sf
         }
         if (useAi) clues += kotlin.math.ln(hAi.toDouble()) to sAi
         fun mean() = clues.sumOf { it.first / (it.second * it.second) } / clues.sumOf { 1 / (it.second * it.second) }
@@ -498,7 +528,7 @@ object PhotoMeasure {
         if (standing != null && abs(kotlin.math.ln(standing.heightM) - m) < kotlin.math.ln(1.43)) {
             clues += kotlin.math.ln(standing.heightM) to max(0.05, standing.spread / 2); useSt = true; m = mean()
         }
-        return HeightPick(kotlin.math.exp(m).toFloat(), useAi, useSt, hFocus != null && hFocus > 0f)
+        return HeightPick(kotlin.math.exp(m).toFloat(), useAi, useSt, useFocus, useMarker)
     }
 
     /**
@@ -506,9 +536,12 @@ object PhotoMeasure {
      * [focus]: the autofocus when the photo was taken; [focusCal]: how its diopters turn into real ones (null: not used);
      * [sharpness]: how sharp the object's outline is in the photo: an object out of focus says the focus distance is not
      * its distance (the lens settled on something else: a reflection on a glossy screen), so it is not used.
+     * [markers]: printed markers found in the photo (in [k]'s pixels): their camera height is the scale when they lie
+     * flat on the parcel's floor (MarkerScale); none: the photo is measured exactly as without them.
      */
     fun measure(mask: Mask, k: Intrinsics, up: V3, depth: DepthMap, scale: Float, calibrated: Boolean, standing: Standing? = null,
-                focus: FocusInfo? = null, focusCal: FocusCal? = null, sharpness: Float? = null, sweep: SweepData? = null): PhotoResult {
+                focus: FocusInfo? = null, focusCal: FocusCal? = null, sharpness: Float? = null, sweep: SweepData? = null,
+                markers: List<MarkerObservation> = emptyList()): PhotoResult {
         require(mask.w == k.w && mask.h == k.h) { "mask and intrinsics differ in size" }
         val b = mask.bounds() ?: throw PhotoFailed("Objek belum dipilih")
         val area = mask.bits.count { it }
@@ -534,19 +567,38 @@ object PhotoMeasure {
             dTrue = focusCal.factor * focus!!.diopters
             hFocus = (1.0 / dTrue / zUnit).toFloat(); sFocus = kotlin.math.sqrt((FOCUS_SIGMA_D / dTrue).let { it * it } + focusCal.sigma * focusCal.sigma)
         }
-        val pick = cameraHeight(hAi, standing, hFocus, sFocus)
+        // printed markers: each must lie flat and level, big enough in the picture, on the same plane as the floor round
+        // the parcel (the depth map's ratio of the two heights: its own scale cancels)
+        val fits = markers.map { o ->
+            val f = MarkerScale.fit(o, k, up)
+            if (!f.usable || fl.wide || fl.inliers < 300) f
+            else {
+                val ratio = MarkerScale.planeRatio(o, depth, k, up, fl.heightM)
+                if (ratio != null && abs(kotlin.math.ln(ratio)) > kotlin.math.ln(MarkerScale.MAX_PLANE_RATIO))
+                    f.reject(if (ratio > 1) "Marker tidak sebidang dengan dasar paket (paket di meja, marker di lantai?): taruh marker di bidang yang sama"
+                             else "Marker tidak sebidang dengan dasar paket (di atas paket?): taruh marker di lantai/meja di sebelah paket")
+                else f
+            }
+        }
+        val mk: MarkerFit? = MarkerScale.combine(fits)
+        val pick = cameraHeight(hAi, standing, hFocus, sFocus, mk?.heightM?.toFloat(), mk?.sigma ?: 0.0)
         val h = pick.heightM
         if (abs(kotlin.math.ln(h / hAi)) > 0.03f) met = metrology(mask, k, up, h)
         val notes = ArrayList<String>()
         var conf = 100.0
-        if (blurred && sw == null) notes += "Foto buram: kamera tidak fokus ke paket, jaraknya tidak bisa dipastikan. Ulangi foto: lingkaran tengah di paket, tahan diam sampai gambar tajam"
-        if (blurred && sw != null) { notes += "Foto agak buram; jaraknya tetap terbaca dari sapuan fokus di tepi paket"; conf -= 20 }
-        if (pick.focus && !pick.ai) notes += "Jarak dari fokus kamera (${"%.2f".format(1 / dTrue)} m); tebakan AI (kamera ${"%.2f".format(hAi)} m) beda jauh, tidak dipakai"
-        if (standing != null && !pick.standing) {
+        if (blurred && pick.marker) { notes += "Foto agak buram; jaraknya tetap terbaca dari marker, tepi paket bisa kurang tajam"; conf -= 20 }
+        else if (blurred && sw == null) notes += "Foto buram: kamera tidak fokus ke paket, jaraknya tidak bisa dipastikan. Ulangi foto: lingkaran tengah di paket, tahan diam sampai gambar tajam"
+        else if (blurred) { notes += "Foto agak buram; jaraknya tetap terbaca dari sapuan fokus di tepi paket"; conf -= 20 }
+        if (markers.isNotEmpty() && !pick.marker) {
+            notes += fits.firstOrNull { !it.usable }?.reason?.let { "Marker tidak dipakai: $it" } ?: "Marker tidak dipakai: beda jauh dengan petunjuk jarak lain"
+            conf -= 10
+        }
+        if (pick.focus && !pick.ai && !pick.marker) notes += "Jarak dari fokus kamera (${"%.2f".format(1 / dTrue)} m); tebakan AI (kamera ${"%.2f".format(hAi)} m) beda jauh, tidak dipakai"
+        if (standing != null && !pick.standing && !pick.marker) {
             notes += "Tinggi kamera tidak seperti saat kalibrasi (${"%.2f".format(h)} m, biasanya ${"%.2f".format(standing.heightM)} m): foto sambil berdiri, HP setinggi dada"
             conf -= 15
         }
-        if (!pick.focus && hAi < 0.6f) { notes += "Foto terlalu dekat: AI kurang akurat dari dekat. Mundur, foto sambil berdiri"; conf -= 15 }
+        if (!pick.focus && !pick.marker && hAi < 0.6f) { notes += "Foto terlalu dekat: AI kurang akurat dari dekat. Mundur, foto sambil berdiri"; conf -= 15 }
         // touching (or nearly touching) the picture's edge: part of the parcel may be outside it
         val margin = max(2, (0.012f * max(mask.w, mask.h)).toInt())
         val touches = b[0] < margin || b[1] < margin || b[2] >= mask.w - margin || b[3] >= mask.h - margin
@@ -558,12 +610,12 @@ object PhotoMeasure {
         else conf -= (0.97 - met.iou).coerceAtLeast(0.0) * 150
         if (downDeg < 25 || downDeg > 72) { notes += "Sudut foto ${downDeg.toInt()}°: paling pas 30–60° ke bawah"; conf -= 10 }
         // a camera a few centimetres up is real close up when the focus says so; from the depth model alone it is not
-        if (h < (if (pick.focus) 0.03f else 0.25f) || h > 2.2f) { notes += "Jarak kamera ke lantai tidak wajar (${"%.2f".format(h)} m): ulangi foto"; conf -= 30 }
+        if (h < (if (pick.focus || pick.marker) 0.03f else 0.25f) || h > 2.2f) { notes += "Jarak kamera ke lantai tidak wajar (${"%.2f".format(h)} m): ulangi foto"; conf -= 30 }
         if (met.heightM > h - max(0.01f, 0.06f * h)) { notes += "Kamera kurang tinggi dari paket: foto dari lebih atas"; conf -= 20 }
         if (fl.wide || fl.inliers < 300) { notes += "Lantai di sekitar paket kurang terlihat"; conf -= 15 }
         if (fl.tiltDeg > 15) { notes += "Lantai tidak terbaca rata"; conf -= 15 }
-        if (!calibrated) { notes += "Mode foto belum dikalibrasi di HP ini: angka bisa meleset jauh"; conf = min(conf, 60.0) }
-        if (blurred && !pick.focus) conf = min(conf, 30.0)
+        if (!calibrated && !pick.marker) { notes += "Mode foto belum dikalibrasi di HP ini: angka bisa meleset jauh"; conf = min(conf, 60.0) }
+        if (blurred && !pick.focus && !pick.marker) conf = min(conf, 30.0)
         val c = conf.toInt().coerceIn(0, 100)
         // the same sizes at the depth model's own height (no factor, no other clue): what calibration compares with
         val raw = listOf(met.lengthM, met.widthM, met.heightM).map { it * 100.0 * fl.heightM / h }
@@ -572,12 +624,16 @@ object PhotoMeasure {
             if (p.z > 0.01f) k.project(p).let { listOf((it.a / k.w).coerceIn(-20f, 20f), (it.b / k.h).coerceIn(-20f, 20f)) } else listOf(BEHIND, BEHIND)
         }
         return PhotoResult(met.lengthM * 100.0, met.widthM * 100.0, met.heightM * 100.0, raw, scale.toDouble(), h.toDouble(), downDeg,
-            met.iou.toDouble(), boxLike, proj, c, ok = calibrated && boxLike && !touches && !met.flat && !blurred && c >= 75, notes = notes,
+            met.iou.toDouble(), boxLike, proj, c, ok = (calibrated || pick.marker) && boxLike && !touches && !met.flat && !blurred && c >= 75, notes = notes,
             floorInliers = fl.inliers, floorTiltDeg = fl.tiltDeg.toDouble(), aiCameraM = hAi.toDouble(),
             standingM = if (pick.standing) standing!!.heightM else 0.0,
             focusCameraM = if (pick.focus) hFocus!!.toDouble() else 0.0, focusDistanceM = if (pick.focus) 1 / dTrue else 0.0,
             focusDiopters = if (focusOk) focus!!.diopters.toDouble() else 0.0, focusDepthUnit = zUnit?.toDouble() ?: 0.0,
-            sharpness = sharpness?.toDouble() ?: 0.0, sweepHeightUnit = sw?.heightM?.toDouble() ?: 0.0, sweepPoints = sw?.points ?: 0)
+            sharpness = sharpness?.toDouble() ?: 0.0, sweepHeightUnit = sw?.heightM?.toDouble() ?: 0.0, sweepPoints = sw?.points ?: 0,
+            markerId = (mk ?: fits.firstOrNull())?.id ?: -1, markerCameraM = if (pick.marker) mk!!.heightM else 0.0,
+            markerSidePx = (mk ?: fits.firstOrNull())?.sidePx ?: 0.0, markerResidual = (mk ?: fits.firstOrNull())?.residual ?: 0.0,
+            markerSigma = if (pick.marker) mk!!.sigma else 0.0,
+            markerNote = if (markers.isNotEmpty() && !pick.marker) fits.firstOrNull { !it.usable }?.reason ?: "beda jauh dengan petunjuk jarak lain" else null)
     }
 
     /** Several photos of one object: the median of each side; a spread over 10 % is flagged. */
@@ -708,7 +764,20 @@ data class CalSample(val rawCm: List<Double>, val tapeCm: List<Double>, val at: 
                      /** The camera height the depth model gave for the photo (no factor), metres; 0 = not recorded. */
                      val aiCameraM: Double = 0.0,
                      /** Real / reported autofocus diopters from this carton's photos taken close (see Calibration.focusFactor). */
-                     val focusFactors: List<Double> = emptyList()) {
+                     val focusFactors: List<Double> = emptyList(),
+                     /** Where the truth came from: "tape" (a carton measured with a tape) or "marker" (a printed marker's camera height). */
+                     val source: String = "tape") {
+    companion object {
+        /**
+         * A sample from a photo whose camera height a printed marker measured: every size scales with the camera height,
+         * so marker height / the depth model's own height is exactly the tape / read ratio a carton would give, on all
+         * three sides alike.
+         */
+        fun fromMarker(aiRawCameraM: Double, markerCameraM: Double, focusFactors: List<Double> = emptyList()) =
+            CalSample(listOf(100.0, 100.0, 100.0), List(3) { 100.0 * markerCameraM / aiRawCameraM }, model = DepthModel.ID,
+                aiCameraM = aiRawCameraM, focusFactors = focusFactors, source = "marker")
+    }
+
     /** How high the camera really was: the model's height times this carton's tape / measured; null if unknown. */
     fun cameraM(): Double? {
         val r = ratios().sorted(); if (aiCameraM <= 0 || r.isEmpty()) return null
@@ -772,7 +841,12 @@ object Calibration {
     fun focusFactor(r: PhotoResult, tapeCm: List<Double>): Double? {
         if (r.aiCameraM <= 0) return null
         val q = CalSample(r.rawCm, tapeCm).ratios().sorted(); if (q.isEmpty()) return null
-        val hTrue = r.aiCameraM * q[q.size / 2]
+        return focusFactorAt(r, r.aiCameraM * q[q.size / 2])
+    }
+
+    /** The same from a known real camera height [hTrue] (a printed marker's), metres. */
+    fun focusFactorAt(r: PhotoResult, hTrue: Double): Double? {
+        if (hTrue <= 0) return null
         // the focus sweep when it answered: its height at a factor of 1 over the real height is the factor
         if (r.sweepHeightUnit > 0 && r.focusDepthUnit > 0 && r.focusDepthUnit * hTrue <= 0.8) return r.sweepHeightUnit / hTrue
         if (r.focusDiopters <= 0 || r.focusDepthUnit <= 0) return null

@@ -54,8 +54,9 @@ android {
 dependencies {
     implementation("com.google.ar:core:1.47.0")
     implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
-    // MobileSAM (Apache 2.0) runs on the phone through ONNX Runtime (MIT): tap or box -> parcel mask
-    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.20.0")
+    // the measuring engine shared with UkurAja (photo mode, MobileSAM-512, Depth Anything, marker scale, scanner);
+    // MobileSAM-1024 for the ARCore path stays in this app's assets
+    implementation(project(":core"))
 
     implementation(platform("androidx.compose:compose-bom:2024.12.01"))
     implementation("androidx.compose.ui:ui")

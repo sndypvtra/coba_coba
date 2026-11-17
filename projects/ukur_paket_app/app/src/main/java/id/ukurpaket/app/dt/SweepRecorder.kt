@@ -26,6 +26,7 @@ import android.os.SystemClock
 import android.util.Range
 import android.util.Size
 import android.view.Surface
+import id.ukurpaket.app.photo.CameraFrames
 import java.io.BufferedWriter
 import java.io.File
 import java.text.SimpleDateFormat
@@ -419,46 +420,20 @@ class SweepRecorder(private val ctx: Context, val dir: File, private val cb: Cal
         }
 
         /** 4:3, about 1280 wide (label still readable, small files); else the nearest 4:3 at least 640 wide. */
-        fun pickSize(sizes: List<Pair<Int, Int>>): Pair<Int, Int>? {
-            val four3 = sizes.filter { (w, h) -> w * 3 == h * 4 && w >= 640 }
-            return four3.filter { it.first <= 1280 }.maxByOrNull { it.first } ?: four3.minByOrNull { it.first }
-                ?: sizes.filter { it.first >= 640 }.minByOrNull { it.first * it.second }
-        }
+        fun pickSize(sizes: List<Pair<Int, Int>>): Pair<Int, Int>? = CameraFrames.pickSize(sizes)
 
         fun newDir(root: File): File =
             File(root, SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())).apply { mkdirs() }
 
         /** YUV_420_888 (any strides) to NV21. */
-        fun toNv21(img: Image): ByteArray {
-            val w = img.width; val h = img.height
-            val out = ByteArray(w * h * 3 / 2)
-            val y = img.planes[0]; val u = img.planes[1]; val v = img.planes[2]
-            val yb = y.buffer; var o = 0
-            for (row in 0 until h) {
-                yb.position(row * y.rowStride)
-                if (y.pixelStride == 1) { yb.get(out, o, w); o += w }
-                else for (x in 0 until w) out[o++] = yb.get(row * y.rowStride + x * y.pixelStride)
-            }
-            val ub = u.buffer; val vb = v.buffer
-            for (row in 0 until h / 2) for (x in 0 until w / 2) {
-                out[o++] = vb.get(row * v.rowStride + x * v.pixelStride)
-                out[o++] = ub.get(row * u.rowStride + x * u.pixelStride)
-            }
-            return out
-        }
+        fun toNv21(img: Image): ByteArray = CameraFrames.toNv21(img)
 
         /** Variance of the Laplacian on the luma, every 4th pixel: higher is sharper (motion blur lowers it). */
         /** Above this the recording takes over the exposure (1/80 s). */
         const val MAX_EXPOSURE_NS = 12_500_000L
 
         /** Mean luma of a camera image, every 16th pixel. */
-        fun meanLuma(img: Image): Double {
-            val pl = img.planes[0]; val buf = pl.buffer; val rs = pl.rowStride; val ps = pl.pixelStride
-            var sum = 0L; var n = 0
-            var y = 0
-            while (y < img.height) { var x = 0; while (x < img.width) { sum += buf.get(y * rs + x * ps).toInt() and 255; n++; x += 16 }; y += 16 }
-            return if (n == 0) 128.0 else sum.toDouble() / n
-        }
+        fun meanLuma(img: Image): Double = CameraFrames.meanLuma(img)
 
         fun sharpness(luma: ByteArray, w: Int, h: Int): Double {
             var sum = 0.0; var sq = 0.0; var n = 0

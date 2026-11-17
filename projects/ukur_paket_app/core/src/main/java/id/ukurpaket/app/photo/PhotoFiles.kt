@@ -106,8 +106,11 @@ object PhotoFiles {
         f.writeBytes(bytes)
     }
 
-    /** The photo with the measured box drawn (the record's evidence), at the photo's own size. */
-    fun evidence(photo: Bitmap, corners: List<Float>, outline: List<Float>?, out: File) {
+    /**
+     * The photo with the measured box drawn (the record's evidence), at the photo's own size; with [marker] (its four
+     * corners as fractions of the photo) the printed marker the scale came from is outlined and labelled [markerLabel].
+     */
+    fun evidence(photo: Bitmap, corners: List<Float>, outline: List<Float>?, out: File, marker: List<Float>? = null, markerLabel: String? = null) {
         val b = photo.copy(Bitmap.Config.ARGB_8888, true)
         val c = Canvas(b)
         val w = b.width.toFloat(); val h = b.height.toFloat()
@@ -124,6 +127,19 @@ object PhotoFiles {
             val paint = Paint().apply { color = 0xFF3CDC3C.toInt(); strokeWidth = 3.5f * s; isAntiAlias = true; strokeCap = Paint.Cap.ROUND }
             fun pt(i: Int) = floatArrayOf(corners[2 * i] * w, corners[2 * i + 1] * h)
             for ((a, e) in EDGES) { if (!drawable(corners, a) || !drawable(corners, e)) continue; val p = pt(a); val q = pt(e); c.drawLine(p[0], p[1], q[0], q[1], paint) }
+        }
+        if (marker != null && marker.size == 8) {
+            val paint = Paint().apply { color = 0xFFFFCB08.toInt(); strokeWidth = 3f * s; isAntiAlias = true; style = Paint.Style.STROKE; strokeJoin = Paint.Join.ROUND }
+            val p = android.graphics.Path().apply { moveTo(marker[0] * w, marker[1] * h); for (i in 1 until 4) lineTo(marker[2 * i] * w, marker[2 * i + 1] * h); close() }
+            c.drawPath(p, paint)
+            if (markerLabel != null) {
+                val tp = Paint().apply { color = Color.WHITE; textSize = 15f * s; isAntiAlias = true; typeface = android.graphics.Typeface.DEFAULT_BOLD }
+                val bg = Paint().apply { color = 0xCC0F172A.toInt(); isAntiAlias = true }
+                val x = (0 until 4).minOf { marker[2 * it] } * w; val y = (0 until 4).maxOf { marker[2 * it + 1] } * h + 6 * s
+                val tw = tp.measureText(markerLabel)
+                c.drawRoundRect(x, y, x + tw + 12 * s, y + 22 * s, 6 * s, 6 * s, bg)
+                c.drawText(markerLabel, x + 6 * s, y + 16 * s, tp)
+            }
         }
         saveJpeg(b, out, 85)
     }
@@ -184,4 +200,6 @@ data class ShotRecord(
     val sweepSize: List<Int>? = null,
     /** App version that took the photo. */
     val app: String? = null,
+    /** Printed markers found in the photo, corners in the upright full picture's pixels (UkurAja). */
+    val markers: List<id.ukurpaket.app.marker.MarkerObservation>? = null,
 )
