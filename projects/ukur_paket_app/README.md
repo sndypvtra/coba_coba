@@ -268,9 +268,16 @@ pick, timings, the result, the tape size when typed), `evidence.jpg` once used. 
 
 ## Build
 
+Three modules: `:app` (UkurPaket), `:core` (the measuring engine both apps share: photo mode, MobileSAM-512 and Depth
+Anything models, the ArUco marker scale, the Urovo scanner) and `:ukuraja` (UkurAja, the field app with the printed
+marker: see `ukuraja/README.md`). The engine's code keeps its `id.ukurpaket.app.*` packages; the 1024 MobileSAM for the
+ARCore path stays in `:app`.
+
 ```bash
 ./gradlew :app:assembleRelease      # app/build/outputs/apk/release/app-release.apk (signed with the debug key)
 ./gradlew :app:testDebugUnitTest    # all tests below + screenshots of every screen into app/screenshots/
+./gradlew :core:testDebugUnitTest   # the engine's marker tests
+./gradlew :ukuraja:assembleRelease  # UkurAja
 ```
 
 JDK 17+ and the Android SDK (platform 35). AGP 8.7.3, Kotlin 2.1.0, Compose BOM 2024.12.01, ARCore 1.47.0,

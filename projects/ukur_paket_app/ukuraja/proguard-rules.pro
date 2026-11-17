@@ -1,0 +1,4 @@
+-keepattributes *Annotation*, InnerClasses
+-keep,includedescriptorclasses class id.ukuraja.app.**$$serializer { *; }
+-keepclassmembers class id.ukuraja.app.** { *** Companion; }
+-keepclasseswithmembers class id.ukuraja.app.** { kotlinx.serialization.KSerializer serializer(...); }

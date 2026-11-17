@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <!-- a parcel on the floor with the printed marker beside it -->
+    <path android:fillColor="#FFFFFF" android:pathData="M58,28 L80,40 L58,52 L36,40 Z" />
+    <path android:fillColor="#FFE3F0" android:pathData="M36,40 L58,52 L58,76 L36,64 Z" />
+    <path android:fillColor="#FFC2DD" android:pathData="M80,40 L58,52 L58,76 L80,64 Z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M24,64 L40,72 L28,79 L12,71 Z" />
+    <path android:fillColor="#0F172A" android:pathData="M24,66.2 L36.2,72.3 L28,77 L15.8,70.9 Z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M25.2,69.6 L29.6,71.8 L27.2,73.2 L22.8,71 Z" />
+    <path android:strokeColor="#FFCB08" android:strokeWidth="3" android:strokeLineCap="round"
+        android:pathData="M84,44 L84,70" />
+</vector>

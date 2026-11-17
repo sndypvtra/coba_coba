@@ -132,7 +132,7 @@ def sketch(c, x, y, w, s):
 def make(name: str, out: Path) -> Path:
     (pw, ph), mid, side, top, s = SHEETS[name]
     f = out / f"UkurAja_marker_{name}.pdf"
-    c = canvas.Canvas(str(f), pagesize=(pw * mm, ph * mm))
+    c = canvas.Canvas(str(f), pagesize=(pw * mm, ph * mm), invariant=1)   # reproducible bytes
     c.setTitle(f"Marker UkurAja {name}")
     c.setAuthor("UkurAja")
     c.setSubject(f"ArUco DICT_4X4_50 id {mid}, black square {side} mm")
@@ -179,5 +179,10 @@ def make(name: str, out: Path) -> Path:
 
 if __name__ == "__main__":
     out = Path(sys.argv[1] if len(sys.argv) > 1 else "marker"); out.mkdir(parents=True, exist_ok=True)
+    assets = HERE / "ukuraja" / "src" / "main" / "assets" / "marker"
     for n in SHEETS:
-        print(make(n, out))
+        f = make(n, out)
+        print(f)
+        # the app carries the same sheets (Panduan marker: print or share them from the phone)
+        if assets.is_dir():
+            (assets / f.name).write_bytes(f.read_bytes())
