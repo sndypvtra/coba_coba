@@ -34,7 +34,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.scale
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -113,7 +115,7 @@ private fun LiveCamera(model: AppModel, f: PhotoFlow, subtitle: String) {
     val seen = marker.takeIf { it.id != null && now - it.atMs < 800 }
     PhotoCameraChrome("Ukur paket", subtitle, live, seen, f.capturing, error, f.shots,
         onBack = { model.back() },
-        onGuide = { model.go(Screen.Guide) },
+        onGuide = { model.go(Screen.Guide(3)) },
         onShutter = {
             if (!f.capturing && error == null) {
                 f.capturing = true
@@ -162,39 +164,24 @@ internal fun PhotoCameraChrome(title: String, subtitle: String, live: PhotoCamer
                     // the sheet as the live check sees it
                     marker?.corners?.let { q -> drawQuad(q, size.width, size.height, if (marker.big) C.yellow else C.warn, 3.dp.toPx()) }
                 }
-                Column(Modifier.align(Alignment.TopStart).padding(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        val d = live?.downDeg
-                        when {
-                            d == null -> Chip("Sudut …", Tone.GREY, "3d_rotation")
-                            d < 25f -> Chip("Sudut ${d.toInt()}° · miringkan ke bawah", Tone.WARN, "3d_rotation")
-                            d > 72f -> Chip("Sudut ${d.toInt()}° · sedikit dari samping", Tone.WARN, "3d_rotation")
-                            else -> Chip("Sudut ${d.toInt()}° pas", Tone.OK, "3d_rotation")
-                        }
-                        if (live != null) Chip(if (live.still) "HP diam" else "Tahan diam", if (live.still) Tone.OK else Tone.GREY, if (live.still) "check" else "timer")
-                    }
-                    when {
-                        marker == null -> Chip("Marker belum terlihat", Tone.GREY, "qr_code_2")
-                        marker.big -> Chip("Marker ${MarkerSheet.of(marker.id ?: -1)?.label ?: ""} terbaca", Tone.OK, "qr_code_2")
-                        else -> Chip("Marker terlalu kecil: dekatkan", Tone.WARN, "qr_code_2")
-                    }
-                    if ((live?.brightness ?: 128.0) < 55) Chip("Terlalu gelap: tambah cahaya", Tone.RED, "light_mode")
-                }
-                Box(Modifier.align(Alignment.BottomCenter).padding(10.dp).clip(RoundedCornerShape(12.dp)).background(C.glass).padding(horizontal = 12.dp, vertical = 8.dp)) {
-                    T(if (marker != null && marker.big) "Marker siap · lingkaran tengah di paket · paket dan marker utuh di foto"
-                      else "Taruh marker rata di sebelah paket · berdiri di pojok paket · miring 30–60° ke bawah · paket dan marker utuh di foto",
-                        12.5.sp, color = Color.White)
-                }
+                if ((live?.brightness ?: 128.0) < 55) Box(Modifier.align(Alignment.TopStart).padding(8.dp)) { Chip("Terlalu gelap: tambah cahaya", Tone.RED, "light_mode") }
             }
         }
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (error != null) Banner(error, C.redL, C.red, "error")
+            // below the picture, so it never hides the parcel or the sheet
+            if (error == null) Readiness(live, marker, Modifier)
             if (shots.isNotEmpty()) ShotStrip(shots, null, onOpen, onAdd = null)
+            // all three checks green: the button breathes, the courier knows it is the moment
+            val ready = !capturing && error == null && ready(live) && marker?.big == true
+            val t = loopClock(1400, still = 0f)
+            val pulse = if (ready) 1f + 0.025f * kotlin.math.sin(t * 2 * Math.PI.toFloat()) else 1f
             PrimaryButton(when {
-                    !capturing -> "Ambil foto"
-                    marker != null && marker.big -> "Tahan diam…"
-                    else -> "Tahan diam, mengukur jarak…"
-                }, if (capturing) "timer" else "photo_camera", Modifier.fillMaxWidth(), enabled = !capturing && error == null) { onShutter() }
+                    capturing && marker?.big == true -> "Tahan diam…"
+                    capturing -> "Tahan diam, mengukur jarak…"
+                    marker?.big != true -> "Ambil foto tanpa marker"
+                    else -> "Ambil foto"
+                }, if (capturing) "timer" else "photo_camera", Modifier.fillMaxWidth().scale(pulse), enabled = !capturing && error == null) { onShutter() }
             if (shots.isNotEmpty()) SecondaryButton("Kembali ke hasil", "arrow_back", Modifier.fillMaxWidth()) { onOpen(shots.last().index) }
         }
     }
@@ -238,11 +225,7 @@ internal fun PhotoShotView(
                     onBox = { r -> drag = null; if (abs(r[2] - r[0]) > 12 && abs(r[3] - r[1]) > 12) onPick(null, r.toList()) })
             }
             when {
-                shot.stage != null -> Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (LocalStill.current) Sym("sync", 18.dp, C.brand) else CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = C.brand)
-                    T(shot.stage + if (shot.stage == "Membaca foto…" && shot.mask == null) " Sambil menunggu, ketuk paketnya." else "",
-                        13.5.sp, FontWeight.SemiBold, C.brandD, modifier = Modifier.padding(start = 10.dp))
-                }
+                shot.stage != null -> ProcessSteps(shot.stage, picked = shot.tap != null || shot.box != null)
                 shot.error != null -> Banner(shot.error, C.redL, C.red, "error")
                 shot.mask == null -> T(if (mode == PickMode.TAP) "Ketuk paketnya di foto." else "Tarik kotak di sekeliling paket.", 14.sp, FontWeight.SemiBold)
                 shot.result != null -> T("Kotak hijau = ukuran terbaca · garis kuning = marker. Salah pilih? Ketuk paketnya lagi.", 12.5.sp, color = C.t3)
@@ -317,6 +300,83 @@ private fun ShotImage(shot: PhotoShotUi, mode: PickMode, drag: FloatArray?, enab
                 if (shot.markers.isNotEmpty()) Chip("Marker ${shot.markers.joinToString("+") { MarkerSheet.of(it.id)?.label ?: "?" }}", Tone.ACCENT, "qr_code_2")
                 if (!shot.still) Chip("HP bergoyang", Tone.WARN, "warning")
             }
+        }
+    }
+}
+
+/** The angle is right (30–60° is best; 25–72° is accepted) and the phone is held still. */
+private fun ready(live: PhotoCamera.Live?) = live?.downDeg?.let { it in 25f..72f } == true && live.still
+
+/**
+ * The three things a good photo needs, as checks that turn green, and the one thing to do next: the angle, a still phone,
+ * the marker in view and big enough. The marker is not required (the photo works without it) but is asked for.
+ */
+@Composable
+private fun Readiness(live: PhotoCamera.Live?, marker: LiveMarkerState?, modifier: Modifier) {
+    val d = live?.downDeg
+    val angleOk = d != null && d in 25f..72f
+    val still = live?.still == true
+    val mk = marker != null && marker.big
+    val msg = when {
+        d == null -> "Arahkan kamera ke paket"
+        d < 25f -> "Miringkan HP ke bawah: sekarang ${d.toInt()}°, pas 30–60°"
+        d > 72f -> "Terlalu tegak dari atas: mundur sedikit, miring 30–60°"
+        marker == null -> "Marker belum terlihat: taruh rata di sebelah paket"
+        !marker.big -> "Marker terlalu kecil: dekatkan HP atau pakai A3"
+        !still -> "Tahan HP diam sebentar"
+        else -> "Siap · lingkaran tengah di paket, tekan Ambil foto"
+    }
+    val all = angleOk && still && mk
+    Column(modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(if (all) C.greenL else Color.White)
+        .border(1.dp, if (all) C.green.copy(alpha = 0.5f) else C.line, RoundedCornerShape(14.dp)).padding(10.dp),
+        verticalArrangement = Arrangement.spacedBy(7.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            ReadyCheck(if (d != null) "Sudut ${d.toInt()}°" else "Sudut", angleOk)
+            ReadyCheck("HP diam", still)
+            ReadyCheck(if (marker?.id != null) "Marker ${MarkerSheet.of(marker.id)?.label ?: ""}" else "Marker", mk)
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Sym(if (all) "check_circle" else "info", 18.dp, if (all) C.green else C.brand, filled = true)
+            T(msg, 13.sp, FontWeight.SemiBold, if (all) C.green else C.ink, modifier = Modifier.padding(start = 6.dp))
+        }
+    }
+}
+
+@Composable
+private fun ReadyCheck(text: String, ok: Boolean) {
+    Row(Modifier.clip(RoundedCornerShape(50)).background(if (ok) Color.White else Color(0xFFEEF1F5)).border(1.dp, if (ok) C.green else Color.Transparent, RoundedCornerShape(50))
+        .padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Sym(if (ok) "check_circle" else "radio_button_unchecked", 15.dp, if (ok) C.green else C.t3, filled = ok)
+        T(text, 12.sp, FontWeight.SemiBold, if (ok) C.green else C.t2, maxLines = 1)
+    }
+}
+
+/** What the phone is doing with the photo: read it, cut the parcel out, compute the size; done steps ticked. */
+@Composable
+private fun ProcessSteps(stage: String, picked: Boolean) {
+    val idx = when (stage) { "Membaca foto…" -> 0; "Memotong paket…" -> 1; else -> 2 }
+    val t = loopClock(1000, still = 1f)
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color.White).border(1.dp, C.line, RoundedCornerShape(14.dp)).padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            listOf("Baca foto", "Potong paket", "Hitung ukuran").forEachIndexed { i, label ->
+                val done = i < idx; val on = i == idx
+                Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(22.dp).clip(CircleShape).background(when { done -> C.green; on -> C.brand.copy(alpha = 0.55f + 0.45f * t); else -> C.line }),
+                        contentAlignment = Alignment.Center) {
+                        if (done) Sym("check", 15.dp, Color.White) else T("${i + 1}", 11.sp, FontWeight.Bold, if (on) Color.White else C.t3)
+                    }
+                    T(label, 12.sp, if (on) FontWeight.SemiBold else FontWeight.Normal, if (on) C.brandD else if (done) C.ink else C.t3,
+                        modifier = Modifier.padding(start = 5.dp), maxLines = 1)
+                }
+            }
+        }
+        if (LocalStill.current) LinearProgressIndicator(progress = { (idx + 0.5f) / 3f }, modifier = Modifier.fillMaxWidth(), color = C.brand, trackColor = C.brandL,
+            gapSize = 0.dp, drawStopIndicator = {})
+        else LinearProgressIndicator(modifier = Modifier.fillMaxWidth(), color = C.brand, trackColor = C.brandL)
+        if (idx == 0 && !picked) Row(verticalAlignment = Alignment.CenterVertically) {
+            Sym("touch_app", 18.dp, C.brand, filled = true)
+            T("Sambil menunggu, ketuk paketnya di foto.", 13.sp, FontWeight.SemiBold, C.brandD, modifier = Modifier.padding(start = 6.dp))
         }
     }
 }

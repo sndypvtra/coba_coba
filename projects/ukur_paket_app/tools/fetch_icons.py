@@ -17,7 +17,7 @@ settings share delete edit_note keyboard add search smartphone error tune folder
 radio_button_checked expand_more task_alt help warehouse highlight_alt location_off check_box check_box_outline_blank
 videocam sensors memory stop_circle speed monitor_heart 3d_rotation biotech""".split()))
 if MODULE == "ukuraja":
-    NAMES = sorted(set(NAMES) | {"print", "layers", "table_view"})
+    NAMES = sorted(set(NAMES) | {"print", "layers", "table_view", "radio_button_unchecked", "chevron_left", "menu_book", "replay", "cancel", "swipe_left"})
 
 for fill, fn in ((0, "msym_line.ttf"), (1, "msym_fill.ttf")):
     url = ("https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,"

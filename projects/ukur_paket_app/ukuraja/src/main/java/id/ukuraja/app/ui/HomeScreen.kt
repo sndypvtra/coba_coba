@@ -59,7 +59,7 @@ fun HomeScreen(model: AppModel, activity: Activity) {
                 T("UkurAja", 16.sp, FontWeight.Bold)
                 T(settings.operator.ifBlank { "Ukur paket dengan foto" }, 12.sp, color = C.t2, maxLines = 1)
             }
-            Chip("Panduan marker", Tone.GREY, "help") { model.go(Screen.Guide) }
+            Chip("Panduan ukur", Tone.GREY, "menu_book") { model.go(Screen.Guide()) }
         }
         LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
@@ -86,7 +86,7 @@ fun HomeScreen(model: AppModel, activity: Activity) {
                     SecondaryButton("Ketik Resi", "keyboard", Modifier.fillMaxWidth()) { typing = true }
                 }
             }
-            if (!settings.guideSeen) item { MarkerTip { model.store.update { it.copy(guideSeen = true) }; model.go(Screen.Guide) } }
+            if (!settings.guideSeen) item { GuideTip { model.go(Screen.Guide()) } }
             item {
                 Spacer(Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.Bottom) {
@@ -129,15 +129,15 @@ fun HomeScreen(model: AppModel, activity: Activity) {
     if (typing) ResiDialog(onDismiss = { typing = false }) { typing = false; model.openResi(it) }
 }
 
-/** The first-run hint: the printed sheet next to the parcel makes the size exact. */
+/** Until the guide has been gone through once: how to measure, in six illustrated steps. */
 @Composable
-private fun MarkerTip(onOpen: () -> Unit) {
+private fun GuideTip(onOpen: () -> Unit) {
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(C.yellowL).clickable(onClick = onOpen).padding(14.dp),
         verticalAlignment = Alignment.CenterVertically) {
-        MarkerGlyph(40.dp)
+        Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(Color.White), contentAlignment = Alignment.Center) { MarkerGlyph(30.dp) }
         Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
-            T("Pakai marker untuk hasil akurat", 14.5.sp, FontWeight.SemiBold, C.onYellow)
-            T("Cetak marker A4/A3, taruh di sebelah paket saat foto. Ukuran langsung tepat, tanpa kalibrasi.", 12.5.sp, color = C.onYellow)
+            T("Baru pakai UkurAja?", 14.5.sp, FontWeight.SemiBold, C.onYellow)
+            T("Lihat Panduan ukur: 6 langkah bergambar, sekitar 1 menit. Pakai marker supaya ukuran langsung tepat.", 12.5.sp, color = C.onYellow)
         }
         Sym("chevron_right", 22.dp, C.onYellow)
     }

@@ -20,6 +20,7 @@ import id.ukuraja.app.ui.App
 import id.ukuraja.app.ui.AppModel
 import id.ukuraja.app.ui.C
 import id.ukuraja.app.ui.Draft
+import id.ukuraja.app.ui.GuideScreen
 import id.ukuraja.app.ui.LiveMarkerState
 import id.ukuraja.app.ui.LocalStill
 import id.ukuraja.app.ui.PhotoCameraChrome
@@ -128,7 +129,8 @@ class ScreenshotTest {
         records(dir, ev).forEach { m.store.save(it) }
         m.store.update { it.copy(operator = "Andi · Counter Bekasi") }
         screen("01_beranda", m, Screen.Home)
-        screen("02_panduan_marker", m, Screen.Guide)
+        listOf("siapkan", "taruh", "posisi", "foto", "ketuk", "hasil").forEachIndexed { i, n -> screen("02_panduan_ukur_${i + 1}_$n", m, Screen.Guide(i)) }
+        shot("02_panduan_ukur_2_contoh_salah") { GuideScreen(m, LocalContext.current as Activity, 1, showWrong = true) }
 
         // the camera: marker in view and big enough / not in view
         val live = PhotoCamera.Live(45f, true, 120.0, "1280×960")
@@ -140,10 +142,14 @@ class ScreenshotTest {
             }
         }
         val noMarker = measure(Scene(marker = false))
-        shot("04_kamera_tanpa_marker") {
-            PhotoCameraChrome("Ukur paket", "Resi TSA-80745081104 · foto dari pojok paket", live, null, false, null, emptyList(), {}, {}, {}, {}) {
+        shot("04_kamera_belum_siap") {
+            PhotoCameraChrome("Ukur paket", "Resi TSA-80745081104 · foto dari pojok paket", PhotoCamera.Live(18f, false, 120.0, "1280×960"), null, false, null, emptyList(), {}, {}, {}, {}) {
                 Image(noMarker.pic.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             }
+        }
+        shot("05a_proses") {
+            PhotoShotView(withMarker.shot.copy(result = null, mask = null, tint = null, outline = null, stage = "Memotong paket…"), listOf(withMarker.shot), null,
+                "Resi TSA-80745081104 · 1 foto", 6000, null, {}, { _, _ -> }, {}, {}, {}, {}, {})
         }
         shot("05_hasil_dengan_marker") {
             PhotoShotView(withMarker.shot, listOf(withMarker.shot), r, "Resi TSA-80745081104 · 1 foto", 6000, "Marker A4", {}, { _, _ -> }, {}, {}, {}, {}, {})

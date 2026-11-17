@@ -16,9 +16,15 @@ Test APK: `../release/UkurAja-1.0.0.apk` (65 MB, app id `id.ukuraja.app`, arm64-
 signed with the debug key: install it directly, and use your own key for Play. Marker sheets: `../marker/UkurAja_marker_A4.pdf` and
 `UkurAja_marker_A3.pdf`; the app carries both and prints them through Android's print dialog.
 
-| Beranda | Panduan marker | Kamera: marker terbaca | Hasil dengan marker | Hasil tanpa marker |
-|---|---|---|---|---|
-| ![](docs/01_beranda.png) | ![](docs/02_panduan_marker.png) | ![](docs/03_kamera_marker_terbaca.png) | ![](docs/05_hasil_dengan_marker.png) | ![](docs/06_hasil_tanpa_marker.png) |
+| Beranda | Kamera: siap foto | Kamera: belum siap | Proses | Hasil dengan marker | Hasil tanpa marker |
+|---|---|---|---|---|---|
+| ![](docs/01_beranda.png) | ![](docs/03_kamera_marker_terbaca.png) | ![](docs/04_kamera_belum_siap.png) | ![](docs/05a_proses.png) | ![](docs/05_hasil_dengan_marker.png) | ![](docs/06_hasil_tanpa_marker.png) |
+
+**Panduan ukur** (6 steps, each with its own looping animation; swipe, tap a step number, or use Lanjut / Kembali):
+
+| 1 Siapkan | 2 Taruh | 2 Salah | 3 Posisi | 4 Foto | 5 Ketuk | 6 Hasil |
+|---|---|---|---|---|---|---|
+| ![](docs/02_panduan_ukur_1_siapkan.png) | ![](docs/02_panduan_ukur_2_taruh.png) | ![](docs/02_panduan_ukur_2_contoh_salah.png) | ![](docs/02_panduan_ukur_3_posisi.png) | ![](docs/02_panduan_ukur_4_foto.png) | ![](docs/02_panduan_ukur_5_ketuk.png) | ![](docs/02_panduan_ukur_6_hasil.png) |
 
 The photo screens show the real engine's answer on a synthetic photo (`ScreenshotTest`). The scene is a
 40 × 30 × 20 cm carton with the A4 sheet beside it, and the depth model's height is set 30 % off. With the marker
@@ -30,7 +36,10 @@ the result is 40,0 × 30,0 × 20,0 cm (Akurat, score 100). Without it the result
 |---|---|
 | **Scan Resi** | Google's code scanner reads linear barcodes only, so the label's QR codes are never picked up. **Ketik Resi** takes a typed number. On a Urovo PDA the scan key works too (`HardwareScanner`: Intent or keyboard output). A resi that is already measured opens its record. |
 | **Ukur dengan foto** | Steps: stand at a corner of the parcel, take the photo, tap the parcel (or drag a box), read the size. **Tambah foto** from another corner gives the median of all photos. **Ulangi foto** drops a bad photo. |
-| **Marker** | A chip in the live camera says **Marker A4 terbaca** (green), **Marker terlalu kecil: dekatkan** (orange) or **Marker belum terlihat**. The sheet is outlined on the preview. When a sheet is in the photo, the focus sweep (up to 6 s of holding still) is skipped. The result card says where the scale came from (**Skala: Marker A4**, with its precision) or **Skala: AI (tanpa marker)**. |
+| **Panduan ukur** | Six illustrated steps for field staff, each a short looping animation:<br>1. Print the sheet, with a ruler checking the black square (A4 / A3 switch, print or share the PDF).<br>2. Place it beside the parcel, with the 5 cm gap; a **Benar / Salah** switch cycles through four wrong ways: on the parcel, folded, parcel on a table with the sheet on the floor, covered.<br>3. Stand at the corner, phone at chest height tilting to 45°.<br>4. The camera's three checks turning green.<br>5. A tap on the parcel, its cut-out and the green box drawing itself.<br>6. What Akurat / Perlu Dicek / Ukur di Hub ask the courier to do.<br>Opened from home (shown until gone through once), from Settings, and from the camera's **?** (at step 4). |
+| **Kamera** | Below the picture, never over it, three checks turn green: **Sudut**, **HP diam** and **Marker A4/A3**, with the one thing to do next ("Miringkan HP ke bawah…", "Marker terlalu kecil: dekatkan HP atau pakai A3"…). When all three are green the panel turns green and the shutter breathes. Without a marker the button says **Ambil foto tanpa marker**. The sheet is outlined on the preview. With a sheet in the photo, the focus sweep (up to 6 s of holding still) is skipped. |
+| **Proses** | Read photo, cut the parcel, compute the size: three numbered steps, done ones ticked, with a progress bar. The courier may tap the parcel while the photo is still being read. |
+| **Hasil** | The result card says where the scale came from (**Skala: Marker A4**, with its precision) or **Skala: AI (tanpa marker)**, and what to do about a note. |
 | **Belajar dari foto marker** | Every photo whose scale came from a marker also teaches the phone. It learns the depth model's factor, the courier's standing camera height and the focus factor (`CalSample.fromMarker`, the latest 20 kept). Photos *without* a marker get better too. There is no tape-measure calibration to do. |
 | **Berat** | Berat aktual (typed, optional) against berat volumetrik (P × L × T ÷ 4.000 / 5.000 / 6.000); the larger is the **Berat Tagih**. |
 | **Bukti** | Every record keeps an evidence photo. It shows the measured 3D box, the parcel's outline, and the marker outlined in yellow with its size (`docs/bukti_foto.jpg`). The record also keeps time, GPS (if allowed) and the operator's name. The numbers cannot be edited. |

@@ -1,17 +1,11 @@
 package id.ukuraja.app.ui
 
 import android.app.Activity
-import android.os.Bundle
-import android.os.CancellationSignal
-import android.os.ParcelFileDescriptor
-import android.print.PageRange
-import android.print.PrintAttributes
-import android.print.PrintDocumentAdapter
-import android.print.PrintDocumentInfo
-import android.print.PrintManager
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,152 +14,185 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import id.ukuraja.app.data.Settings
 import id.ukuraja.app.data.id
-import id.ukurpaket.app.marker.Aruco
-import id.ukurpaket.app.marker.MarkerSheet
-import java.io.File
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
-/** A small drawing of the A4 sheet's marker (its real pattern), as an icon. */
-@Composable
-fun MarkerGlyph(size: Dp, id: Int = MarkerSheet.A4.id) {
-    Canvas(Modifier.size(size).clip(RoundedCornerShape(size / 8)).background(Color.White).padding(size / 10)) {
-        val c = this.size.width / Aruco.GRID
-        drawRect(C.ink)
-        val code = Aruco.DICT_4X4_50[id]
-        for (i in 0 until 4) for (j in 0 until 4) if ((code shr (15 - (i * 4 + j))) and 1 == 1)
-            drawRect(Color.White, Offset((j + 1) * c, (i + 1) * c), androidx.compose.ui.geometry.Size(c + 0.5f, c + 0.5f))
-    }
-}
+/** One step of the guide: its short title (the step bar), title, what to do, and a few points to remember. */
+private class GuideStep(val short: String, val title: String, val text: String, val points: List<String>)
 
-/** How to print the sheet, check it and lay it next to the parcel; printing straight from the phone. */
+private val STEPS = listOf(
+    GuideStep("Siapkan", "Siapkan marker",
+        "Cetak marker di kertas A4 atau A3. Ukur kotak hitamnya dengan penggaris: harus sama dengan angka di kertas.",
+        listOf("Cetak skala 100% (Actual size), jangan Fit to page", "Laminasi atau tempel di karton supaya tetap rata", "Paket besar atau difoto dari jauh: pakai A3")),
+    GuideStep("Taruh", "Taruh di sebelah paket",
+        "Letakkan marker rata di lantai atau meja yang sama dengan paket, di sisi yang menghadap Anda, berjarak ±5 cm.",
+        listOf("Seluruh kotak hitam terlihat, tidak tertutup apa pun", "Jangan di atas paket, jangan dilipat")),
+    GuideStep("Posisi", "Berdiri di pojok paket",
+        "Pegang HP setinggi dada dan miringkan ke bawah 30–60°. Dari pojok, dua sisi dan bagian atas paket terlihat.",
+        listOf("Jangan memotret dari samping dengan HP tegak", "Jangan terlalu dekat: paket dan marker harus muat di layar")),
+    GuideStep("Foto", "Tunggu tiga tanda hijau",
+        "Di layar kamera ada tiga tanda: Sudut, HP diam, dan Marker. Setelah ketiganya hijau, tekan Ambil foto lalu tahan HP sebentar.",
+        listOf("Lingkaran di tengah layar diarahkan ke paket", "Tempat terang, hindari silau di kertas marker")),
+    GuideStep("Ketuk", "Ketuk paketnya",
+        "Di foto, ketuk paket yang mau diukur. Paket ditandai warna merah muda, lalu kotak hijau dan ukurannya muncul.",
+        listOf("Kalau yang terpilih salah, pakai Tarik kotak di sekeliling paket", "Paket lain di dekatnya beri jarak supaya tidak ikut terpilih")),
+    GuideStep("Hasil", "Cek hasilnya",
+        "Lihat status di atas ukuran. Baris Skala: Marker A4 berarti ukuran dihitung dari marker, paling tepat.",
+        listOf("Akurat: lanjut isi berat dan simpan", "Perlu Dicek: tambah 1–2 foto dari pojok lain", "Tidak bisa diukur: tandai Ukur di Hub")),
+)
+
+private val WRONG = listOf("Marker di atas paket", "Marker terlipat atau melengkung", "Paket di meja, marker di lantai", "Marker tertutup paket")
+
+/** The measuring guide: six steps, each with a moving picture; swipe or use the buttons. [startPage]: 0-based. */
 @Composable
-fun GuideScreen(model: AppModel, activity: Activity) {
+fun GuideScreen(model: AppModel, activity: Activity, startPage: Int = 0, showWrong: Boolean = false) {
     val s by model.store.settings.collectAsState()
+    val pager = rememberPagerState(initialPage = startPage.coerceIn(0, STEPS.lastIndex)) { STEPS.size }
+    val scope = rememberCoroutineScope()
+    fun done() { if (!s.guideSeen) model.store.update { it.copy(guideSeen = true) }; model.back() }
     Column(Modifier.fillMaxSize()) {
-        TopBar("Panduan marker", "ukuran tepat tanpa kalibrasi", onBack = { model.back() })
-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Card(padding = 0.dp) { Scene(Modifier.fillMaxWidth().height(190.dp)) }
-            T("Marker adalah kertas bergambar kotak hitam yang ukurannya pasti. Dari kotak itu UkurAja tahu jarak kamera ke lantai dengan tepat, " +
-                "jadi panjang, lebar, dan tinggi paket ikut tepat. Tanpa marker, jarak itu ditebak AI dan bisa meleset.", 13.5.sp, color = C.t2)
-            Step(1, "print", "Cetak marker", "A4: kotak hitam ${(s.markerA4Mm / 10).id(1).removeSuffix(",0")} cm · A3: ${(s.markerA3Mm / 10).id(1).removeSuffix(",0")} cm. " +
-                "Cetak skala 100% (Actual size), jangan Fit to page; kertas doff.") {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Chip("Cetak A4", Tone.BRAND, "print") { printMarker(activity, model, "A4") }
-                    Chip("Cetak A3", Tone.BRAND, "print") { printMarker(activity, model, "A3") }
-                    Chip("Bagikan PDF", Tone.GREY, "share") { model.share(activity, model.markerPdf("A4"), "application/pdf", "Marker A4") }
+        TopBar("Panduan ukur", "${STEPS.size} langkah · sekitar 1 menit", onBack = { model.back() }) {
+            Box(Modifier.clip(RoundedCornerShape(50)).clickable { done() }.padding(horizontal = 12.dp, vertical = 8.dp)) { T("Lewati", 14.sp, FontWeight.SemiBold, C.t2) }
+        }
+        StepBar(pager.currentPage) { i -> scope.launch { pager.animateScrollToPage(i) } }
+        HorizontalPager(pager, Modifier.weight(1f).fillMaxWidth(), beyondViewportPageCount = 0) { page ->
+            GuidePage(page, s, model, activity, showWrong)
+        }
+        Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            if (pager.currentPage > 0) SecondaryButton("Kembali", "chevron_left", Modifier.weight(1f)) { scope.launch { pager.animateScrollToPage(pager.currentPage - 1) } }
+            val last = pager.currentPage == STEPS.lastIndex
+            PrimaryButton(if (last) "Mulai ukur" else "Lanjut", if (last) "check" else "arrow_forward", Modifier.weight(1.4f)) {
+                if (last) done() else scope.launch { pager.animateScrollToPage(pager.currentPage + 1) }
+            }
+        }
+    }
+}
+
+/** The steps as numbered circles joined by a line: done ones ticked, the current one in brand colour; tap to jump. */
+@Composable
+private fun StepBar(current: Int, onPick: (Int) -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            STEPS.indices.forEach { i ->
+                val done = i < current; val on = i == current
+                Box(Modifier.size(30.dp).clip(CircleShape).background(if (done || on) C.brand else Color.White)
+                    .border(1.5.dp, if (done || on) C.brand else C.line, CircleShape).clickable { onPick(i) }, contentAlignment = Alignment.Center) {
+                    if (done) Sym("check", 18.dp, Color.White) else T("${i + 1}", 13.sp, FontWeight.Bold, if (on) Color.White else C.t3)
+                }
+                if (i < STEPS.lastIndex) Box(Modifier.weight(1f).height(2.dp).background(if (i < current) C.brand else C.line))
+            }
+        }
+        Spacer(Modifier.height(4.dp))
+        Row(Modifier.fillMaxWidth()) {
+            STEPS.forEachIndexed { i, st ->
+                T(st.short, 10.5.sp, if (i == current) FontWeight.SemiBold else FontWeight.Normal, if (i == current) C.brandD else C.t3,
+                    modifier = Modifier.weight(1f), maxLines = 1)
+            }
+        }
+    }
+}
+
+@Composable
+private fun GuidePage(page: Int, s: Settings, model: AppModel, activity: Activity, showWrong: Boolean) {
+    val st = STEPS[page]
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        var a3 by remember { mutableStateOf(false) }
+        var wrong by remember { mutableStateOf(showWrong) }
+        var which by remember { mutableIntStateOf(0) }
+        if (page == 1 && wrong && !LocalStill.current) LaunchedEffect(Unit) { while (true) { delay(2600); which = (which + 1) % WRONG.size } }
+        Card(padding = 0.dp) {
+            val art = Modifier.fillMaxWidth().height(230.dp)
+            Box(art.clickable(enabled = page == 1 && wrong) { which = (which + 1) % WRONG.size }) {
+                when (page) {
+                    0 -> ArtPrint(art, a3)
+                    1 -> ArtPlace(art, if (wrong) which else null)
+                    2 -> ArtAngle(art)
+                    3 -> ArtReady(art)
+                    4 -> ArtTap(art)
+                    else -> ArtResult(art)
+                }
+                if (page == 1 && wrong) Row(Modifier.align(Alignment.BottomCenter).padding(10.dp).clip(RoundedCornerShape(50)).background(C.red).padding(horizontal = 12.dp, vertical = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Sym("cancel", 16.dp, Color.White, filled = true)
+                    T("${WRONG[which]} · ${which + 1}/${WRONG.size}", 12.5.sp, FontWeight.SemiBold, Color.White, modifier = Modifier.padding(start = 6.dp))
                 }
             }
-            Step(2, "straighten", "Cek dengan penggaris", "Ukur sisi kotak hitam. Kalau hasil cetak beda (printer mengecilkan), isi angka hasil ukur di Pengaturan → Marker.") {}
-            Step(3, "layers", "Jaga tetap rata", "Jangan dilipat. Tempel di karton tebal atau laminasi doff supaya tidak melengkung dan tidak silau.") {}
-            Step(4, "crop_free", "Taruh di sebelah paket", "Rata di lantai atau meja yang sama dengan paket, di sisi yang menghadap kamera, ±5 cm dari paket. Jangan di atas paket.") {}
-            Step(5, "photo_camera", "Foto dari pojok paket", "Paket dan seluruh kotak hitam masuk foto. Tunggu chip \"Marker terbaca\" hijau, lalu Ambil foto. " +
-                "Dengan marker, foto juga lebih cepat: sapuan fokus tidak perlu.") {}
-            Card {
+        }
+        // a segmented switch under the pictures that have a choice
+        if (page == 0) Segmented(listOf("A4 · 16 cm", "A3 · 24 cm"), if (a3) 1 else 0) { a3 = it == 1 }
+        if (page == 1) Segmented(listOf("Benar", "Salah"), if (wrong) 1 else 0, listOf(C.green, C.red)) { wrong = it == 1; which = 0 }
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            T("Langkah ${page + 1} dari ${STEPS.size}", 12.5.sp, FontWeight.SemiBold, C.brand)
+            T(st.title, 21.sp, FontWeight.Bold)
+            T(st.text, 14.5.sp, color = C.t2, lineHeight = 21.sp)
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            st.points.forEach { p ->
+                Row(verticalAlignment = Alignment.Top) {
+                    Box(Modifier.padding(top = 7.dp).size(6.dp).clip(CircleShape).background(C.brand))
+                    T(p, 13.5.sp, color = C.ink, modifier = Modifier.padding(start = 10.dp))
+                }
+            }
+        }
+        if (page == 0) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Chip("Cetak A4", Tone.BRAND, "print") { printMarker(activity, model, "A4") }
+                Chip("Cetak A3", Tone.BRAND, "print") { printMarker(activity, model, "A3") }
+                Chip("Bagikan PDF", Tone.GREY, "share") { model.share(activity, model.markerPdf(if (a3) "A3" else "A4"), "application/pdf", "Marker ${if (a3) "A3" else "A4"}") }
+            }
+            val a4 = s.markerA4Mm != 160.0; val a3m = s.markerA3Mm != 240.0
+            if (a4 || a3m) T("Ukuran tersimpan di Pengaturan: A4 ${(s.markerA4Mm / 10).id(1)} cm · A3 ${(s.markerA3Mm / 10).id(1)} cm.", 12.sp, color = C.t3)
+        }
+        if (page == 4) Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(C.brandL).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Sym("touch_app", 22.dp, C.brand, filled = true)
+            T("Sambil foto diproses, paket sudah bisa diketuk. Hasil keluar begitu proses selesai.", 13.sp, color = C.brandD, modifier = Modifier.padding(start = 10.dp))
+        }
+        if (page == STEPS.lastIndex) Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(C.yellowL).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            MarkerGlyph(26.dp)
+            T("Tanpa marker, UkurAja tetap mengukur dengan AI, tapi hasilnya lebih sering Perlu Dicek.", 13.sp, color = C.onYellow, modifier = Modifier.padding(start = 10.dp))
+        }
+        Spacer(Modifier.height(4.dp))
+    }
+}
+
+/** Two or three options as one rounded switch; [colors]: the chosen option's colour per option (brand by default). */
+@Composable
+private fun Segmented(options: List<String>, selected: Int, colors: List<Color>? = null, onPick: (Int) -> Unit) {
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color(0xFFE9EDF2)).padding(3.dp)) {
+        options.forEachIndexed { i, o ->
+            val on = i == selected; val c = colors?.getOrNull(i) ?: C.brand
+            Box(Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).background(if (on) Color.White else Color.Transparent).clickable { onPick(i) }.padding(vertical = 9.dp),
+                contentAlignment = Alignment.Center) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Sym("info", 20.dp, C.t2)
-                    T("Tidak bawa marker?", 14.sp, FontWeight.SemiBold, modifier = Modifier.padding(start = 8.dp))
+                    if (colors != null) { Sym(if (i == 0) "check_circle" else "cancel", 16.dp, if (on) c else C.t3, filled = on); Spacer(Modifier.width(5.dp)) }
+                    T(o, 13.5.sp, FontWeight.SemiBold, if (on) (if (colors != null) c else C.ink) else C.t3)
                 }
-                Spacer(Modifier.height(4.dp))
-                T("UkurAja tetap mengukur dengan AI. Setiap foto yang memakai marker juga melatih HP ini, jadi foto tanpa marker ikut makin tepat. " +
-                    "Tanpa marker hasilnya lebih sering Perlu Dicek.", 12.5.sp, color = C.t2)
-            }
-            Spacer(Modifier.height(4.dp))
-        }
-        PrimaryButton("Mengerti", "check", Modifier.fillMaxWidth().padding(16.dp)) {
-            if (!s.guideSeen) model.store.update { it.copy(guideSeen = true) }
-            model.back()
-        }
-    }
-}
-
-@Composable
-private fun Step(n: Int, icon: String, title: String, text: String, extra: @Composable () -> Unit) {
-    Card {
-        Row {
-            IconTile(icon, size = 36.dp)
-            Column(Modifier.padding(start = 12.dp).weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                T("$n. $title", 14.5.sp, FontWeight.SemiBold)
-                T(text, 12.5.sp, color = C.t2)
-                extra()
             }
         }
-    }
-}
-
-/** The scene drawn: floor, the parcel, the sheet beside it, the phone at the corner looking down. */
-@Composable
-private fun Scene(modifier: Modifier) {
-    Canvas(modifier.background(Color(0xFFEDF0F4))) {
-        val w = size.width; val h = size.height
-        // floor in perspective
-        val floor = Path().apply { moveTo(w * 0.05f, h * 0.95f); lineTo(w * 0.95f, h * 0.95f); lineTo(w * 0.80f, h * 0.30f); lineTo(w * 0.20f, h * 0.30f); close() }
-        drawPath(floor, Color(0xFFD9DEE5))
-        // the parcel: an isometric box
-        fun p(x: Float, y: Float) = Offset(w * x, h * y)
-        val top = Path().apply { moveTo(p(0.52f, 0.30f).x, p(0.52f, 0.30f).y); lineTo(p(0.70f, 0.38f).x, p(0.70f, 0.38f).y); lineTo(p(0.56f, 0.47f).x, p(0.56f, 0.47f).y); lineTo(p(0.38f, 0.39f).x, p(0.38f, 0.39f).y); close() }
-        val left = Path().apply { moveTo(p(0.38f, 0.39f).x, p(0.38f, 0.39f).y); lineTo(p(0.56f, 0.47f).x, p(0.56f, 0.47f).y); lineTo(p(0.56f, 0.72f).x, p(0.56f, 0.72f).y); lineTo(p(0.38f, 0.64f).x, p(0.38f, 0.64f).y); close() }
-        val right = Path().apply { moveTo(p(0.56f, 0.47f).x, p(0.56f, 0.47f).y); lineTo(p(0.70f, 0.38f).x, p(0.70f, 0.38f).y); lineTo(p(0.70f, 0.63f).x, p(0.70f, 0.63f).y); lineTo(p(0.56f, 0.72f).x, p(0.56f, 0.72f).y); close() }
-        drawPath(top, Color(0xFFE9C9A0)); drawPath(left, Color(0xFFD6AD7C)); drawPath(right, Color(0xFFC49663))
-        // the green measured box
-        for (path in listOf(top, left, right)) drawPath(path, Color(0xFF3CDC3C), style = Stroke(2.dp.toPx()))
-        // the sheet on the floor, in front of the parcel, a little apart
-        val sheet = Path().apply { moveTo(p(0.17f, 0.70f).x, p(0.17f, 0.70f).y); lineTo(p(0.33f, 0.66f).x, p(0.33f, 0.66f).y); lineTo(p(0.38f, 0.85f).x, p(0.38f, 0.85f).y); lineTo(p(0.20f, 0.90f).x, p(0.20f, 0.90f).y); close() }
-        drawPath(sheet, Color.White)
-        val sq = Path().apply { moveTo(p(0.200f, 0.715f).x, p(0.200f, 0.715f).y); lineTo(p(0.315f, 0.687f).x, p(0.315f, 0.687f).y); lineTo(p(0.345f, 0.815f).x, p(0.345f, 0.815f).y); lineTo(p(0.222f, 0.848f).x, p(0.222f, 0.848f).y); close() }
-        drawPath(sq, C.ink)
-        drawPath(sq, C.yellow, style = Stroke(2.5.dp.toPx()))
-        val inner = Path().apply { moveTo(p(0.240f, 0.740f).x, p(0.240f, 0.740f).y); lineTo(p(0.278f, 0.731f).x, p(0.278f, 0.731f).y); lineTo(p(0.291f, 0.785f).x, p(0.291f, 0.785f).y); lineTo(p(0.251f, 0.795f).x, p(0.251f, 0.795f).y); close() }
-        drawPath(inner, Color.White)
-        // the phone above the near corner, its view lines down to the parcel and the sheet
-        val phone = p(0.86f, 0.12f)
-        drawRoundRect(C.ink, Offset(phone.x - 14.dp.toPx(), phone.y - 22.dp.toPx()), androidx.compose.ui.geometry.Size(28.dp.toPx(), 44.dp.toPx()),
-            androidx.compose.ui.geometry.CornerRadius(5.dp.toPx()))
-        val dash = PathEffect.dashPathEffect(floatArrayOf(8f, 8f))
-        drawLine(C.brand, phone, p(0.56f, 0.60f), 2.dp.toPx(), pathEffect = dash)
-        drawLine(C.brand, phone, p(0.27f, 0.78f), 2.dp.toPx(), pathEffect = dash)
-    }
-}
-
-// ------------------------------------------------------------------ printing
-/** The bundled marker PDF to Android's print dialog, at its own size (A4 or A3 page, no scaling). */
-fun printMarker(activity: Activity, model: AppModel, sheet: String) {
-    val pm = activity.getSystemService(PrintManager::class.java) ?: run { model.toast("HP ini tidak punya layanan cetak. Bagikan PDF-nya."); return }
-    val f = runCatching { model.markerPdf(sheet) }.getOrNull() ?: run { model.toast("PDF marker tidak ditemukan"); return }
-    val attrs = PrintAttributes.Builder()
-        .setMediaSize(if (sheet == "A3") PrintAttributes.MediaSize.ISO_A3 else PrintAttributes.MediaSize.ISO_A4)
-        .setColorMode(PrintAttributes.COLOR_MODE_MONOCHROME)
-        .setMinMargins(PrintAttributes.Margins.NO_MARGINS)
-        .build()
-    pm.print("Marker UkurAja $sheet", PdfAdapter(f), attrs)
-}
-
-private class PdfAdapter(private val file: File) : PrintDocumentAdapter() {
-    override fun onLayout(old: PrintAttributes?, new: PrintAttributes, cancel: CancellationSignal?, cb: LayoutResultCallback, extras: Bundle?) {
-        if (cancel?.isCanceled == true) { cb.onLayoutCancelled(); return }
-        cb.onLayoutFinished(PrintDocumentInfo.Builder(file.name).setContentType(PrintDocumentInfo.CONTENT_TYPE_DOCUMENT).setPageCount(1).build(), old != new)
-    }
-
-    override fun onWrite(pages: Array<out PageRange>, dest: ParcelFileDescriptor, cancel: CancellationSignal?, cb: WriteResultCallback) {
-        runCatching { file.inputStream().use { i -> java.io.FileOutputStream(dest.fileDescriptor).use { o -> i.copyTo(o) } } }
-            .onSuccess { cb.onWriteFinished(arrayOf(PageRange.ALL_PAGES)) }
-            .onFailure { cb.onWriteFailed(it.message) }
     }
 }

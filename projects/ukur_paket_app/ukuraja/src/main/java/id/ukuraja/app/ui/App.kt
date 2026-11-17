@@ -50,7 +50,7 @@ fun App(model: AppModel, activity: Activity) {
                 Screen.Home -> HomeScreen(model, activity)
                 Screen.History -> HistoryScreen(model, activity)
                 Screen.Settings -> SettingsScreen(model, activity)
-                Screen.Guide -> GuideScreen(model, activity)
+                is Screen.Guide -> GuideScreen(model, activity, s.page)
                 Screen.Photo -> PhotoScreen(model, activity)
                 Screen.Weight -> WeightScreen(model)
                 is Screen.Saved -> SavedScreen(model, activity, s.id)

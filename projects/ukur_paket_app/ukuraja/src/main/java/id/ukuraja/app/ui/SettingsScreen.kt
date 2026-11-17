@@ -101,7 +101,7 @@ private fun MarkerCard(model: AppModel, activity: Activity, s: Settings) {
                 T("Marker", 15.sp, FontWeight.SemiBold)
                 T("Sisi kotak hitam hasil cetak, diukur dengan penggaris.", 12.5.sp, color = C.t2)
             }
-            Chip("Panduan", Tone.GREY, "help") { model.go(Screen.Guide) }
+            Chip("Panduan ukur", Tone.GREY, "menu_book") { model.go(Screen.Guide()) }
         }
         Spacer(Modifier.height(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {

@@ -31,8 +31,8 @@ sealed class Screen {
     object Home : Screen()
     object History : Screen()
     object Settings : Screen()
-    /** How to print and place the marker sheet. */
-    object Guide : Screen()
+    /** How to measure: six illustrated steps; [page] is the one it opens on (0-based). */
+    data class Guide(val page: Int = 0) : Screen()
     /** Photos of the parcel: taken, picked and measured on the phone. */
     object Photo : Screen()
     object Weight : Screen()
@@ -118,7 +118,7 @@ class AppModel @JvmOverloads constructor(app: Application, preload: Boolean = tr
         internal set
 
     /** Screens where a hardware scan opens a parcel; they have no text field, so keyboard-output scans are read too. */
-    val takesHardwareScan get() = screen.let { it == Screen.Home || it == Screen.History || it == Screen.Guide || it is Screen.Saved || it is Screen.Detail }
+    val takesHardwareScan get() = screen.let { it == Screen.Home || it == Screen.History || it is Screen.Guide || it is Screen.Saved || it is Screen.Detail }
 
     fun onHardwareScan(raw: String) {
         hardwareScanner = true
