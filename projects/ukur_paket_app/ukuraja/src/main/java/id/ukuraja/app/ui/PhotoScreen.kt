@@ -115,7 +115,7 @@ private fun LiveCamera(model: AppModel, f: PhotoFlow, subtitle: String) {
     val seen = marker.takeIf { it.id != null && now - it.atMs < 800 }
     PhotoCameraChrome("Ukur paket", subtitle, live, seen, f.capturing, error, f.shots,
         onBack = { model.back() },
-        onGuide = { model.go(Screen.Guide(3)) },
+        onGuide = { model.go(Screen.Guide(GuidePages.PHOTO)) },
         onShutter = {
             if (!f.capturing && error == null) {
                 f.capturing = true

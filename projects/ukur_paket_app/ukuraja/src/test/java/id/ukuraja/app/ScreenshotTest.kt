@@ -21,6 +21,7 @@ import id.ukuraja.app.ui.AppModel
 import id.ukuraja.app.ui.C
 import id.ukuraja.app.ui.Draft
 import id.ukuraja.app.ui.GuideScreen
+import id.ukuraja.app.ui.GuidePages
 import id.ukuraja.app.ui.LiveMarkerState
 import id.ukuraja.app.ui.LocalStill
 import id.ukuraja.app.ui.PhotoCameraChrome
@@ -189,19 +190,19 @@ class ScreenshotTest {
         val aiming = ResiReader().offer(listOf(order), 0)
         assertEquals(Hint.MOVE_INTO_WINDOW, aiming.hint)
         shot("01b_scan_resi") {
-            ScanChrome(ScanStep(null, null, emptyList(), Hint.AIM), true, true, false, false, null, {}, {}, {}) {
+            ScanChrome(ScanStep(null, null, emptyList(), Hint.AIM), true, true, false, false, null, {}, {}, {}, {}) {
                 Image(label.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             }
         }
         val read = ResiReader().offer(listOf(order, resiBox), 0)
         assertEquals("TSA-80745081104", read.resi)
         shot("01c_scan_resi_terbaca") {
-            ScanChrome(read, true, true, false, false, null, {}, {}, {}) {
+            ScanChrome(read, true, true, false, false, null, {}, {}, {}, {}) {
                 Image(label.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             }
         }
-        listOf("siapkan", "taruh", "posisi", "foto", "ketuk", "hasil").forEachIndexed { i, n -> screen("02_panduan_ukur_${i + 1}_$n", m, Screen.Guide(i)) }
-        shot("02_panduan_ukur_2_contoh_salah") { GuideScreen(m, LocalContext.current as Activity, 1, showWrong = true) }
+        listOf("siapkan", "scan", "taruh", "posisi", "foto", "ketuk", "hasil").forEachIndexed { i, n -> screen("02_panduan_ukur_${i + 1}_$n", m, Screen.Guide(i)) }
+        shot("02_panduan_ukur_3_contoh_salah") { GuideScreen(m, LocalContext.current as Activity, GuidePages.PLACE, showWrong = true) }
 
         // the camera: marker in view and big enough / not in view
         val live = PhotoCamera.Live(45f, true, 120.0, "1280×960")

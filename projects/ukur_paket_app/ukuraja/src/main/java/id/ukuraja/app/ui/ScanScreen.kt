@@ -97,7 +97,8 @@ private fun LiveScanner(model: AppModel) {
     ScanChrome(step, ready, torchAvailable, torch, dark, error,
         onBack = { model.back() },
         onTorch = { torch = !torch; cam.torch(torch) },
-        onType = { typing = true }) {
+        onType = { typing = true },
+        onGuide = { model.go(Screen.Guide(GuidePages.SCAN)) }) {
         AndroidView(factory = { c ->
             PreviewView(c).apply {
                 scaleType = PreviewView.ScaleType.FIT_CENTER
@@ -121,9 +122,10 @@ private fun beep() {
 /** The scanner screen around its preview (also drawn by the screenshot test with a still picture). */
 @Composable
 internal fun ScanChrome(step: ScanStep, ready: Boolean, hasTorch: Boolean, torch: Boolean, dark: Boolean, error: String?,
-                        onBack: () -> Unit, onTorch: () -> Unit, onType: () -> Unit, preview: @Composable () -> Unit) {
+                        onBack: () -> Unit, onTorch: () -> Unit, onType: () -> Unit, onGuide: () -> Unit, preview: @Composable () -> Unit) {
     Column(Modifier.fillMaxSize()) {
         TopBar("Scan resi", "Barcode garis di label paket", onBack = onBack) {
+            Box(Modifier.size(44.dp).clip(RoundedCornerShape(22.dp)).clickable(onClick = onGuide), contentAlignment = Alignment.Center) { Sym("help", 22.dp, C.ink) }
             if (hasTorch) Box(Modifier.size(44.dp).clip(RoundedCornerShape(22.dp)).background(if (torch) C.yellow else Color.Transparent)
                 .clickable(onClick = onTorch), contentAlignment = Alignment.Center) {
                 Sym(if (torch) "flashlight_on" else "flashlight_off", 22.dp, if (torch) C.onYellow else C.ink, filled = torch)

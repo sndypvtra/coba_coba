@@ -43,32 +43,50 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /** One step of the guide: its short title (the step bar), title, what to do, and a few points to remember. */
-private class GuideStep(val short: String, val title: String, val text: String, val points: List<String>)
+/** What a step shows; its place in the guide follows from [STEPS], so a new step never shifts another's picture. */
+private enum class GuideKind { PRINT, SCAN, PLACE, ANGLE, READY, TAP, RESULT }
+
+private class GuideStep(val kind: GuideKind, val short: String, val title: String, val text: String, val points: List<String>)
 
 private val STEPS = listOf(
-    GuideStep("Siapkan", "Siapkan marker",
+    GuideStep(GuideKind.PRINT, "Siapkan", "Siapkan marker",
         "Cetak marker di kertas A4 atau A3. Ukur kotak hitamnya dengan penggaris: harus sama dengan angka di kertas.",
         listOf("Cetak skala 100% (Actual size), jangan Fit to page", "Laminasi atau tempel di karton supaya tetap rata", "Paket besar atau difoto dari jauh: pakai A3")),
-    GuideStep("Taruh", "Taruh di sebelah paket",
+    GuideStep(GuideKind.SCAN, "Scan", "Scan resi paket",
+        "Tekan Scan resi, lalu arahkan kotak di layar ke barcode garis resi di label. Setelah bunyi bip dan tulisan Terbaca, layar foto paket terbuka.",
+        listOf("Jarak 10–25 cm. Hanya barcode di dalam kotak yang dibaca; kode QR tidak dibaca",
+            "Cek tulisan Terbaca: harus nomor resi, bukan nomor order",
+            "Tempat gelap: nyalakan senter. Tetap tidak terbaca: pakai Ketik resi",
+            "Di PDA: cukup tekan tombol scan di samping HP")),
+    GuideStep(GuideKind.PLACE, "Taruh", "Taruh di sebelah paket",
         "Letakkan marker rata di lantai atau meja yang sama dengan paket, di sisi yang menghadap Anda, berjarak ±5 cm.",
         listOf("Seluruh kotak hitam terlihat, tidak tertutup apa pun", "Jangan di atas paket, jangan dilipat")),
-    GuideStep("Posisi", "Berdiri di pojok paket",
+    GuideStep(GuideKind.ANGLE, "Posisi", "Berdiri di pojok paket",
         "Pegang HP setinggi dada dan miringkan ke bawah 30–60°. Dari pojok, dua sisi dan bagian atas paket terlihat.",
         listOf("Jangan memotret dari samping dengan HP tegak", "Jangan terlalu dekat: paket dan marker harus muat di layar")),
-    GuideStep("Foto", "Tunggu tiga tanda hijau",
+    GuideStep(GuideKind.READY, "Foto", "Tunggu tiga tanda hijau",
         "Di layar kamera ada tiga tanda: Sudut, HP diam, dan Marker. Setelah ketiganya hijau, tekan Ambil foto lalu tahan HP sebentar.",
         listOf("Lingkaran di tengah layar diarahkan ke paket", "Tempat terang, hindari silau di kertas marker")),
-    GuideStep("Ketuk", "Ketuk paketnya",
+    GuideStep(GuideKind.TAP, "Ketuk", "Ketuk paketnya",
         "Di foto, ketuk paket yang mau diukur. Paket ditandai warna merah muda, lalu kotak hijau dan ukurannya muncul.",
         listOf("Kalau yang terpilih salah, pakai Tarik kotak di sekeliling paket", "Paket lain di dekatnya beri jarak supaya tidak ikut terpilih")),
-    GuideStep("Hasil", "Cek hasilnya",
+    GuideStep(GuideKind.RESULT, "Hasil", "Cek hasilnya",
         "Lihat status di atas ukuran. Baris Skala: Marker A4 berarti ukuran dihitung dari marker, paling tepat.",
-        listOf("Akurat: lanjut isi berat dan simpan", "Perlu Dicek: tambah 1–2 foto dari pojok lain", "Tidak bisa diukur: tandai Ukur di Hub")),
+        listOf("Akurat: lanjut isi berat dan simpan", "Perlu Dicek: tambah 1–2 foto dari pojok lain", "Tidak bisa diukur: tandai Ukur di Hub",
+            "Akhir hari: Pengaturan → Ekspor Excel, kirim ke koordinator")),
 )
+
+/** Where the screens' help (?) opens the guide. */
+internal object GuidePages {
+    val SCAN get() = STEPS.indexOfFirst { it.kind == GuideKind.SCAN }
+    val PLACE get() = STEPS.indexOfFirst { it.kind == GuideKind.PLACE }
+    val PHOTO get() = STEPS.indexOfFirst { it.kind == GuideKind.READY }
+    val COUNT get() = STEPS.size
+}
 
 private val WRONG = listOf("Marker di atas paket", "Marker terlipat atau melengkung", "Paket di meja, marker di lantai", "Marker tertutup paket")
 
-/** The measuring guide: six steps, each with a moving picture; swipe or use the buttons. [startPage]: 0-based. */
+/** The measuring guide: from the label scan to the result, each step with a moving picture; swipe or use the buttons. [startPage]: 0-based. */
 @Composable
 fun GuideScreen(model: AppModel, activity: Activity, startPage: Int = 0, showWrong: Boolean = false) {
     val s by model.store.settings.collectAsState()
@@ -124,19 +142,21 @@ private fun GuidePage(page: Int, s: Settings, model: AppModel, activity: Activit
         var a3 by remember { mutableStateOf(false) }
         var wrong by remember { mutableStateOf(showWrong) }
         var which by remember { mutableIntStateOf(0) }
-        if (page == 1 && wrong && !LocalStill.current) LaunchedEffect(Unit) { while (true) { delay(2600); which = (which + 1) % WRONG.size } }
+        val place = st.kind == GuideKind.PLACE
+        if (place && wrong && !LocalStill.current) LaunchedEffect(Unit) { while (true) { delay(2600); which = (which + 1) % WRONG.size } }
         Card(padding = 0.dp) {
             val art = Modifier.fillMaxWidth().height(230.dp)
-            Box(art.clickable(enabled = page == 1 && wrong) { which = (which + 1) % WRONG.size }) {
-                when (page) {
-                    0 -> ArtPrint(art, a3)
-                    1 -> ArtPlace(art, if (wrong) which else null)
-                    2 -> ArtAngle(art)
-                    3 -> ArtReady(art)
-                    4 -> ArtTap(art)
-                    else -> ArtResult(art)
+            Box(art.clickable(enabled = place && wrong) { which = (which + 1) % WRONG.size }) {
+                when (st.kind) {
+                    GuideKind.PRINT -> ArtPrint(art, a3)
+                    GuideKind.SCAN -> ArtScan(art)
+                    GuideKind.PLACE -> ArtPlace(art, if (wrong) which else null)
+                    GuideKind.ANGLE -> ArtAngle(art)
+                    GuideKind.READY -> ArtReady(art)
+                    GuideKind.TAP -> ArtTap(art)
+                    GuideKind.RESULT -> ArtResult(art)
                 }
-                if (page == 1 && wrong) Row(Modifier.align(Alignment.BottomCenter).padding(10.dp).clip(RoundedCornerShape(50)).background(C.red).padding(horizontal = 12.dp, vertical = 5.dp),
+                if (place && wrong) Row(Modifier.align(Alignment.BottomCenter).padding(10.dp).clip(RoundedCornerShape(50)).background(C.red).padding(horizontal = 12.dp, vertical = 5.dp),
                     verticalAlignment = Alignment.CenterVertically) {
                     Sym("cancel", 16.dp, Color.White, filled = true)
                     T("${WRONG[which]} · ${which + 1}/${WRONG.size}", 12.5.sp, FontWeight.SemiBold, Color.White, modifier = Modifier.padding(start = 6.dp))
@@ -144,8 +164,8 @@ private fun GuidePage(page: Int, s: Settings, model: AppModel, activity: Activit
             }
         }
         // a segmented switch under the pictures that have a choice
-        if (page == 0) Segmented(listOf("A4 · 16 cm", "A3 · 24 cm"), if (a3) 1 else 0) { a3 = it == 1 }
-        if (page == 1) Segmented(listOf("Benar", "Salah"), if (wrong) 1 else 0, listOf(C.green, C.red)) { wrong = it == 1; which = 0 }
+        if (st.kind == GuideKind.PRINT) Segmented(listOf("A4 · 16 cm", "A3 · 24 cm"), if (a3) 1 else 0) { a3 = it == 1 }
+        if (place) Segmented(listOf("Benar", "Salah"), if (wrong) 1 else 0, listOf(C.green, C.red)) { wrong = it == 1; which = 0 }
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             T("Langkah ${page + 1} dari ${STEPS.size}", 12.5.sp, FontWeight.SemiBold, C.brand)
             T(st.title, 21.sp, FontWeight.Bold)
@@ -159,7 +179,7 @@ private fun GuidePage(page: Int, s: Settings, model: AppModel, activity: Activit
                 }
             }
         }
-        if (page == 0) {
+        if (st.kind == GuideKind.PRINT) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Chip("Cetak A4", Tone.BRAND, "print") { printMarker(activity, model, "A4") }
                 Chip("Cetak A3", Tone.BRAND, "print") { printMarker(activity, model, "A3") }
@@ -168,7 +188,7 @@ private fun GuidePage(page: Int, s: Settings, model: AppModel, activity: Activit
             val a4 = s.markerA4Mm != 160.0; val a3m = s.markerA3Mm != 240.0
             if (a4 || a3m) T("Ukuran tersimpan di Pengaturan: A4 ${(s.markerA4Mm / 10).id(1)} cm · A3 ${(s.markerA3Mm / 10).id(1)} cm.", 12.sp, color = C.t3)
         }
-        if (page == 4) Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(C.brandL).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (st.kind == GuideKind.TAP) Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(C.brandL).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Sym("touch_app", 22.dp, C.brand, filled = true)
             T("Sambil foto diproses, paket sudah bisa diketuk. Hasil keluar begitu proses selesai.", 13.sp, color = C.brandD, modifier = Modifier.padding(start = 10.dp))
         }

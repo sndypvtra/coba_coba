@@ -129,7 +129,7 @@ fun HomeScreen(model: AppModel, activity: Activity) {
     if (typing) ResiDialog(onDismiss = { typing = false }) { typing = false; model.openResi(it) }
 }
 
-/** Until the guide has been gone through once: how to measure, in six illustrated steps. */
+/** Until the guide has been gone through once: how to measure, step by illustrated step. */
 @Composable
 private fun GuideTip(onOpen: () -> Unit) {
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(C.yellowL).clickable(onClick = onOpen).padding(14.dp),
@@ -137,7 +137,7 @@ private fun GuideTip(onOpen: () -> Unit) {
         Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(Color.White), contentAlignment = Alignment.Center) { MarkerGlyph(30.dp) }
         Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
             T("Baru pakai UkurAja?", 14.5.sp, FontWeight.SemiBold, C.onYellow)
-            T("Lihat Panduan ukur: 6 langkah bergambar, sekitar 1 menit. Pakai marker supaya ukuran langsung tepat.", 12.5.sp, color = C.onYellow)
+            T("Lihat Panduan ukur: ${GuidePages.COUNT} langkah bergambar, dari scan resi sampai hasil. Pakai marker supaya ukuran langsung tepat.", 12.5.sp, color = C.onYellow)
         }
         Sym("chevron_right", 22.dp, C.onYellow)
     }

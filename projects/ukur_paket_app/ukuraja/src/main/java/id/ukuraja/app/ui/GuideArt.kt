@@ -31,6 +31,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -222,7 +223,7 @@ object Spot {
     const val SX = 3.9f; const val SY = BY + BD + 0.5f
 }
 
-/** Step 2: the sheet slides in beside the parcel, the 5 cm gap shows, a tick. Or one of the [wrong] ways (0-3), with a cross. */
+/** Step 3: the sheet slides in beside the parcel, the 5 cm gap shows, a tick. Or one of the [wrong] ways (0-3), with a cross. */
 @Composable
 fun ArtPlace(modifier: Modifier, wrong: Int?) {
     val t = loopClock(3600, still = 0.95f)
@@ -310,7 +311,7 @@ fun ArtPrint(modifier: Modifier, a3: Boolean) {
     }
 }
 
-/** Step 3, seen from the side: the courier at the corner, the phone at chest height tilting down to 45°. */
+/** Step 4, seen from the side: the courier at the corner, the phone at chest height tilting down to 45°. */
 @Composable
 fun ArtAngle(modifier: Modifier) {
     val t = loopClock(3800, still = 1f)
@@ -382,7 +383,7 @@ private fun MiniCheck(text: String, on: Float) {
     }
 }
 
-/** Step 4: the camera screen; the three checks turn green one by one, the sheet is outlined, the shutter pulses. */
+/** Step 5: the camera screen; the three checks turn green one by one, the sheet is outlined, the shutter pulses. */
 @Composable
 fun ArtReady(modifier: Modifier) {
     val t = loopClock(4200, still = 0.95f)
@@ -423,7 +424,92 @@ fun ArtReady(modifier: Modifier) {
     }
 }
 
-/** Step 5: a tap on the parcel, the cut-out appears, the green box draws itself, the size shows. */
+/**
+ * Step 2: the scanner screen over a parcel label. The label has the order number's barcode and a QR code at the top
+ * and the resi's barcode in the window; the scan line sweeps, the window turns green round the resi, a beep, Terbaca.
+ */
+@Composable
+fun ArtScan(modifier: Modifier) {
+    val t = loopClock(4200, still = 0.95f)
+    val read = phase(t, 0.5f, 0.58f)
+    Row(modifier.background(Art.sky).padding(vertical = 10.dp), horizontalArrangement = Arrangement.Center) {
+        PhoneFrame(Modifier) {
+            Canvas(Modifier.fillMaxSize()) {
+                val w = size.width; val h = size.height
+                drawRect(Art.boxTop)                                                     // the carton
+                drawRoundRect(Art.paper, Offset(w * 0.07f, h * 0.08f), Size(w * 0.86f, h * 0.84f), CornerRadius(3.dp.toPx()))
+                bars(Offset(w * 0.14f, h * 0.15f), Size(w * 0.42f, h * 0.07f), 7)       // the order number's barcode
+                qr(Offset(w * 0.66f, h * 0.13f), w * 0.2f)
+                val resi = Rect(w * 0.15f, h * 0.43f, w * 0.85f, h * 0.55f)
+                bars(resi.topLeft, resi.size, 3)                                          // the resi's barcode
+                drawRoundRect(C.t2, Offset(w * 0.3f, h * 0.585f), Size(w * 0.4f, h * 0.022f), CornerRadius(2.dp.toPx()))
+                for (i in 0 until 3) drawRoundRect(Color(0xFFCBD5E1), Offset(w * 0.15f, h * (0.68f + i * 0.055f)), Size(w * (0.6f - i * 0.12f), h * 0.02f), CornerRadius(2.dp.toPx()))
+                // the window: the rest dimmed, its corners white, then green once read
+                val win = Rect(w * 0.1f, h * 0.38f, w * 0.9f, h * 0.62f)
+                drawPath(Path().apply { fillType = androidx.compose.ui.graphics.PathFillType.EvenOdd; addRect(Rect(Offset.Zero, size)); addRect(win) }, Color.Black.copy(alpha = 0.32f))
+                val corner = lerp(Color.White, C.live, read); val l = w * 0.09f; val sw = 2.5.dp.toPx()
+                for ((x, y, dx, dy) in listOf(listOf(win.left, win.top, 1f, 1f), listOf(win.right, win.top, -1f, 1f),
+                        listOf(win.left, win.bottom, 1f, -1f), listOf(win.right, win.bottom, -1f, -1f))) {
+                    drawLine(corner, Offset(x, y), Offset(x + dx * l, y), sw); drawLine(corner, Offset(x, y), Offset(x, y + dy * l), sw)
+                }
+                if (read < 1f) {                                                          // the scan line sweeps until the read
+                    val p = (t / 0.5f).coerceIn(0f, 1f).let { if (it < 0.5f) it * 2 else 2 - it * 2 }
+                    val y = win.top + 4.dp.toPx() + p * (win.height - 8.dp.toPx())
+                    drawLine(C.brand.copy(alpha = 1f - read), Offset(win.left + 4.dp.toPx(), y), Offset(win.right - 4.dp.toPx(), y), 1.5.dp.toPx())
+                }
+                if (read > 0f) {
+                    drawRect(C.live.copy(alpha = read), Offset(resi.left - 3.dp.toPx(), resi.top - 3.dp.toPx()),
+                        Size(resi.width + 6.dp.toPx(), resi.height + 6.dp.toPx()), style = Stroke(2.dp.toPx()))
+                    val beep = phase(t, 0.5f, 0.75f)                                       // the beep, as a ripple
+                    if (beep in 0.01f..0.99f) drawCircle(C.live.copy(alpha = (1 - beep) * 0.6f), w * (0.1f + 0.45f * beep), resi.center, style = Stroke(2.dp.toPx()))
+                }
+            }
+            Row(Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp).alpha(phase(t, 0.58f, 0.68f)).clip(RoundedCornerShape(50))
+                .background(C.greenL).padding(horizontal = 7.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                Sym("check_circle", 12.dp, C.green, filled = true)
+                T("Terbaca", 9.5.sp, FontWeight.Bold, C.green, modifier = Modifier.padding(start = 3.dp))
+            }
+        }
+        Column(Modifier.padding(start = 14.dp).align(Alignment.CenterVertically), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            for ((i, s) in listOf("Kotak di barcode resi", "Jarak 10–25 cm", "Bip: resi terbaca").withIndex()) {
+                val on = when (i) { 0 -> phase(t, 0.08f, 0.18f); 1 -> phase(t, 0.26f, 0.36f); else -> read }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Sym(if (on > 0.5f) "check_circle" else "radio_button_unchecked", 18.dp, lerp(C.t3, C.green, on), filled = on > 0.5f)
+                    T(s, 13.sp, FontWeight.SemiBold, lerp(C.t3, C.ink, on), modifier = Modifier.padding(start = 6.dp))
+                }
+            }
+            Row(Modifier.alpha(phase(t, 0.72f, 0.8f)).clip(RoundedCornerShape(50)).background(C.brand).padding(horizontal = 10.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                Sym("photo_camera", 14.dp, Color.White); T("Lanjut foto paket", 12.sp, FontWeight.SemiBold, Color.White, modifier = Modifier.padding(start = 4.dp))
+            }
+        }
+    }
+}
+
+/** A linear barcode's bars filling [at] + [size]; [seed] picks the pattern (the same every frame). */
+private fun DrawScope.bars(at: Offset, size: Size, seed: Int) {
+    var r = seed * 7919 + 17
+    val widths = ArrayList<Int>()
+    while (widths.sum() < 90) { r = (r * 1103515245 + 12345) and 0x7fffffff; widths += 1 + (r shr 16) % 3 }
+    val unit = size.width / widths.sum()
+    var x = at.x
+    widths.forEachIndexed { i, wd -> if (i % 2 == 0) drawRect(C.ink, Offset(x, at.y), Size(unit * wd, size.height)); x += unit * wd }
+}
+
+/** A small QR-like square: three finder corners and a fixed scatter of modules. */
+private fun DrawScope.qr(at: Offset, side: Float) {
+    val n = 9; val c = side / n
+    fun mod(i: Int, j: Int) = drawRect(C.ink, Offset(at.x + i * c, at.y + j * c), Size(c, c))
+    for ((fi, fj) in listOf(0 to 0, n - 3 to 0, 0 to n - 3)) for (i in 0 until 3) for (j in 0 until 3) if (i != 1 || j != 1) mod(fi + i, fj + j)
+    var r = 41
+    for (i in 0 until n) for (j in 0 until n) {
+        val finder = (i < 3 && j < 3) || (i >= n - 3 && j < 3) || (i < 3 && j >= n - 3)
+        r = (r * 1103515245 + 12345) and 0x7fffffff
+        if (!finder && (r shr 16) % 2 == 0) mod(i, j)
+    }
+}
+
+/** Step 6: a tap on the parcel, the cut-out appears, the green box draws itself, the size shows. */
 @Composable
 fun ArtTap(modifier: Modifier) {
     val t = loopClock(4200, still = 1f)
@@ -448,7 +534,7 @@ fun ArtTap(modifier: Modifier) {
     }
 }
 
-/** Step 6: what each status means and what to do, appearing one after another. */
+/** Step 7: what each status means and what to do, appearing one after another. */
 @Composable
 fun ArtResult(modifier: Modifier) {
     val t = loopClock(4000, still = 1f)
