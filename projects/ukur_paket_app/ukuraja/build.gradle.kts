@@ -15,7 +15,7 @@ android {
         applicationId = "id.ukuraja.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 2          // 1.0.0 build 2: the in-app label scanner
+        versionCode = 3          // 1.0.0 build 3: the Excel report
         versionName = "1.0.0"
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
     }

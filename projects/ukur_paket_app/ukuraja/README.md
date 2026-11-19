@@ -12,7 +12,7 @@ fit, focus sweep). On top of that engine sits a **printed ArUco marker**. The ma
 which is the one number the photo mode had to guess. With a marker in the photo, the size is right without any
 calibration.
 
-Test APK: `../release/UkurAja-1.0.0.apk` (70 MB, app id `id.ukuraja.app`, version 1.0.0 build 2, arm64-v8a + armeabi-v7a, minSdk 26). It is
+Test APK: `../release/UkurAja-1.0.0.apk` (70 MB, app id `id.ukuraja.app`, version 1.0.0 build 3, arm64-v8a + armeabi-v7a, minSdk 26). It is
 signed with the debug key: install it directly, and use your own key for Play. Marker sheets: `../marker/UkurAja_marker_A4.pdf` and
 `UkurAja_marker_A3.pdf`; the app carries both and prints them through Android's print dialog.
 
@@ -45,8 +45,15 @@ the result is 40,0 × 30,0 × 20,0 cm (Akurat, score 100). Without it the result
 | **Bukti** | Every record keeps an evidence photo. It shows the measured 3D box, the parcel's outline, and the marker outlined in yellow with its size (`docs/bukti_foto.jpg`). The record also keeps time, GPS (if allowed) and the operator's name. The numbers cannot be edited. |
 | **Ukur di Hub** | For a parcel the photo cannot read: one tap with a reason. The record is saved without a size, and the hub measures it. |
 | **Riwayat** | Search by resi; detail; delete; **Ukur ulang** replaces the record. |
+| **Ekspor Excel** | Pengaturan → **Ekspor Excel (XLSX)**, for **Hari ini / 7 hari terakhir / 30 hari terakhir / Semua data** (each with its count; an empty one cannot be picked). One `.xlsx` file, shared like the others, with four sheets:<br>**Ringkasan**: the period, petugas, the time of export, the app and phone, the divisor; counts per status with shares; marker use; total weights (aktual, volumetrik, tagih); a table per day with totals.<br>**Data Ukur**: one row per parcel, under group bands. Identitas: no, resi, tanggal, jam, petugas. Ukuran: P, L, T, volume. Berat: aktual, pembagi, volumetrik, **tagih**, dasar tagih. Kualitas: status in colour, skor, sumber skala, tinggi kamera, jumlah foto, catatan. Lokasi: lat, lon, akurasi, a **Buka peta** link to Google Maps. Bukti: **the evidence photo in the cell** (at most 200 × 192 px, twice the cell, so it stays sharp when zoomed in).<br>**Ukur di Hub**: the hub's list with the reason and photo.<br>**Keterangan**: what every column and status means.<br>The header is frozen with a filter, and resi and Petugas stay in view. The resi is text, so a long numeric resi never turns into 8,07E+14. Numbers and dates are real numbers and dates. Every sheet prints one page wide, the data in landscape with its header on every page. The file is written by the app itself (`data/Xlsx.kt`, `data/Report.kt`): no spreadsheet library, so the APK does not grow. Sample: `docs/contoh_laporan.xlsx`, from the screenshots' records. |
 | **Ekspor** | **CSV** (semicolon-separated with decimal commas, UTF-8 with BOM, so Excel and Sheets open it as columns). **ZIP**: the CSV plus every evidence photo, `foto/<resi>_<time>.jpg`, named in the CSV. **Data foto untuk analisis (ZIP)**: the raw photo sessions for a PC: photos, masks, depth maps, `shot_N.json` with the markers' corners. |
 | **Pengaturan** | Operator name and volumetric divisor. The printed marker sides as measured with a ruler (a printer that shrinks the page is corrected here). Print or share the sheets. Learning from marker photos on/off, and reset. |
+
+**Build 3 (still 1.0.0)** adds the Excel report (tested in `ReportTest`; the sample opened in LibreOffice and openpyxl).
+
+| Pengaturan | Ekspor Excel |
+|---|---|
+| ![](docs/11_pengaturan.png) | ![](docs/12_ekspor_excel.png) |
 
 **Build 2 (still 1.0.0).** Up to build 1, **Scan pakai kamera** used the Google Play services code scanner. That scanner fails on a phone without Play services, or until its module has been downloaded over the network. On the PDA it answered only "Scan kamera tidak bisa dibuka". Build 2 reads the label in the app (`scan/ResiReader.kt`, `scan/ScanCamera.kt`, tested in `ResiReaderTest`), and installs over build 1 (same key).
 
@@ -133,7 +140,7 @@ marker's corners.
 
 ```bash
 ./gradlew :ukuraja:assembleRelease     # ukuraja/build/outputs/apk/release/ukuraja-release.apk
-./gradlew :ukuraja:testDebugUnitTest   # flow, scanner, export and screenshot tests (screenshots into ukuraja/screenshots/)
+./gradlew :ukuraja:testDebugUnitTest   # flow, scanner, export, Excel report and screenshot tests (screenshots into ukuraja/screenshots/)
 ./gradlew :core:testDebugUnitTest      # the engine's marker tests
 python tools/marker/make_marker_pdf.py marker   # the sheets (reportlab), also copied into ukuraja/src/main/assets/marker/
 ```

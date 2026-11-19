@@ -11,7 +11,12 @@ import androidx.compose.runtime.setValue
 import androidx.core.content.FileProvider
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import id.ukuraja.app.Version
 import id.ukuraja.app.data.Locator
+import id.ukuraja.app.data.Period
+import id.ukuraja.app.data.Report
+import id.ukuraja.app.data.ReportInfo
+import id.ukuraja.app.data.Thumbs
 import id.ukuraja.app.data.Measurement
 import id.ukuraja.app.data.Status
 import id.ukuraja.app.data.Store
@@ -194,6 +199,18 @@ class AppModel @JvmOverloads constructor(app: Application, preload: Boolean = tr
             val f = runCatching { withContext(Dispatchers.IO) { build() } }.getOrNull()
             if (f == null) toast("File tidak bisa dibuat. Coba lagi.") else { message = null; share(activity, f, mime, title) }
         }
+    }
+
+    /**
+     * The Excel report for [period]: summary, every record with its evidence photo, the hub's list and what the columns
+     * mean (Report). Built off the main thread, then shared.
+     */
+    fun exportXlsx(activity: Activity, period: Period) {
+        val now = System.currentTimeMillis()
+        val all = store.measurements.value
+        if (period.of(all, now).isEmpty()) { toast("Tidak ada paket untuk periode \"${period.label}\"."); return }
+        val info = ReportInfo(period, now, "UkurAja ${Version.NAME}", listOf(Build.MANUFACTURER, Build.MODEL).filter { !it.isNullOrBlank() }.joinToString(" "))
+        shareFile(activity, Report.MIME, "Ekspor Excel") { Report.write(all, info, cacheFile(Report.fileName(info))) { Thumbs.of(it.photo) } }
     }
 
     fun share(activity: Activity, file: File, mime: String, title: String) {

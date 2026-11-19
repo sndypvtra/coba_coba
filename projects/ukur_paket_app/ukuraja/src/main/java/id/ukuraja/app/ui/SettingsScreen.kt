@@ -1,6 +1,8 @@
 package id.ukuraja.app.ui
 
 import android.app.Activity
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -24,12 +27,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import id.ukuraja.app.Version
 import id.ukuraja.app.data.Export
+import id.ukuraja.app.data.Measurement
+import id.ukuraja.app.data.Period
 import id.ukuraja.app.data.Settings
 import id.ukuraja.app.data.id
 import id.ukuraja.app.data.parseDecimal
@@ -40,6 +46,7 @@ import id.ukurpaket.app.photo.DepthModel
 fun SettingsScreen(model: AppModel, activity: Activity) {
     val s by model.store.settings.collectAsState()
     val ms by model.store.measurements.collectAsState()
+    var excel by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize()) {
         TopBar("Pengaturan")
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -67,7 +74,13 @@ fun SettingsScreen(model: AppModel, activity: Activity) {
                 T("Data", 15.sp, FontWeight.SemiBold)
                 T("${ms.size} paket tersimpan di HP ini. Hasil hanya keluar dari HP kalau dibagikan.", 12.5.sp, color = C.t2)
                 Spacer(Modifier.height(8.dp))
-                SecondaryButton("Ekspor tabel (CSV)", "table_view", Modifier.fillMaxWidth()) {
+                PrimaryButton("Ekspor Excel (XLSX)", "table_view", Modifier.fillMaxWidth()) {
+                    if (ms.isEmpty()) model.toast("Belum ada paket yang diukur.") else excel = true
+                }
+                T("Ringkasan, data lengkap tiap paket dengan foto, daftar Ukur di Hub, dan keterangan kolom.", 12.sp, color = C.t3,
+                    modifier = Modifier.padding(top = 4.dp))
+                Spacer(Modifier.height(10.dp))
+                SecondaryButton("Ekspor tabel (CSV)", "download", Modifier.fillMaxWidth()) {
                     if (ms.isEmpty()) model.toast("Belum ada paket yang diukur.")
                     else model.shareFile(activity, "text/csv", "Ekspor hasil ukur") { Export.writeCsv(ms, model.cacheFile("ukuraja_${stamp()}.csv")) }
                 }
@@ -88,6 +101,37 @@ fun SettingsScreen(model: AppModel, activity: Activity) {
             Spacer(Modifier.height(4.dp))
         }
         BottomNav(model, Screen.Settings)
+    }
+    if (excel) ExcelDialog(ms, onDismiss = { excel = false }) { p -> excel = false; model.exportXlsx(activity, p) }
+}
+
+/** The Excel report: which period, with how many parcels in each. */
+@Composable
+private fun ExcelDialog(ms: List<Measurement>, onDismiss: () -> Unit, onPick: (Period) -> Unit) {
+    AlertDialog(onDismissRequest = onDismiss,
+        title = { T("Ekspor Excel", 18.sp, FontWeight.SemiBold) },
+        text = { ExcelChoices(ms, System.currentTimeMillis(), onPick) },
+        confirmButton = {}, dismissButton = { TextButton(onClick = onDismiss) { T("Batal", color = C.t2) } })
+}
+
+/** The periods to choose from (also drawn by the screenshot test). An empty period cannot be picked. */
+@Composable
+internal fun ExcelChoices(ms: List<Measurement>, now: Long, onPick: (Period) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        T("Pilih periode. File berisi ringkasan, data lengkap tiap paket dengan fotonya, daftar Ukur di Hub, dan keterangan kolom.",
+            13.sp, color = C.t2)
+        Period.entries.forEach { p ->
+            val n = p.of(ms, now).size
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).border(1.dp, C.line, RoundedCornerShape(12.dp))
+                .clickable(enabled = n > 0) { onPick(p) }.padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    T(p.label, 15.sp, FontWeight.SemiBold, if (n > 0) C.ink else C.t3)
+                    T(if (n > 0) "$n paket" else "Tidak ada paket", 12.5.sp, color = if (n > 0) C.t2 else C.t3)
+                }
+                Sym("chevron_right", 20.dp, if (n > 0) C.t2 else C.line)
+            }
+        }
     }
 }
 

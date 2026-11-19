@@ -29,6 +29,20 @@ import id.ukuraja.app.ui.PhotoOutcome
 import id.ukuraja.app.ui.PhotoShotUi
 import id.ukuraja.app.ui.PhotoShotView
 import id.ukuraja.app.ui.ScanChrome
+import id.ukuraja.app.ui.ExcelChoices
+import id.ukuraja.app.ui.T
+import id.ukuraja.app.data.Period
+import id.ukuraja.app.data.Report
+import id.ukuraja.app.data.ReportInfo
+import id.ukuraja.app.data.Thumbs
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import id.ukuraja.app.scan.Hint
 import id.ukuraja.app.scan.ResiReader
 import id.ukuraja.app.scan.ScanStep
@@ -223,5 +237,14 @@ class ScreenshotTest {
         screen("09_riwayat", m, Screen.History)
         screen("10_detail", m, Screen.Detail(m.store.measurements.value.first().id))
         screen("11_pengaturan", m, Screen.Settings)
+        // Pengaturan -> Ekspor Excel: the period dialog, and the file it makes from these records
+        shot("12_ekspor_excel") {
+            Column(Modifier.padding(24.dp).fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(androidx.compose.ui.graphics.Color.White).padding(24.dp)) {
+                T("Ekspor Excel", 18.sp, FontWeight.SemiBold); androidx.compose.foundation.layout.Spacer(Modifier.padding(6.dp))
+                ExcelChoices(m.store.measurements.value, System.currentTimeMillis()) {}
+            }
+        }
+        val info = ReportInfo(Period.ALL, System.currentTimeMillis(), "UkurAja 1.0.0", "Urovo DT50")
+        Report.write(m.store.measurements.value, info, File("screenshots/contoh_laporan.xlsx")) { Thumbs.of(it.photo) }
     }
 }
