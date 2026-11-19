@@ -11,9 +11,6 @@ import androidx.compose.runtime.setValue
 import androidx.core.content.FileProvider
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.mlkit.vision.barcode.common.Barcode
-import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
-import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import id.ukuraja.app.data.Locator
 import id.ukuraja.app.data.Measurement
 import id.ukuraja.app.data.Status
@@ -31,6 +28,8 @@ sealed class Screen {
     object Home : Screen()
     object History : Screen()
     object Settings : Screen()
+    /** The label scanner: the camera reads the resi's barcode. */
+    object Scan : Screen()
     /** How to measure: six illustrated steps; [page] is the one it opens on (0-based). */
     data class Guide(val page: Int = 0) : Screen()
     /** Photos of the parcel: taken, picked and measured on the phone. */
@@ -102,23 +101,21 @@ class AppModel @JvmOverloads constructor(app: Application, preload: Boolean = tr
     }
 
     // ---------------------------------------------------------- scanning
-    /** Reads the label's barcode (linear codes only, so its QR codes are never picked up) and opens the parcel. */
-    fun scanResi(activity: Activity) {
-        val options = GmsBarcodeScannerOptions.Builder()
-            .setBarcodeFormats(LINEAR_BARCODES.first(), *LINEAR_BARCODES.drop(1).toIntArray())
-            .enableAutoZoom()
-            .build()
-        GmsBarcodeScanning.getClient(activity, options).startScan()
-            .addOnSuccessListener { b -> b.rawValue?.let { openResi(it) } }
-            .addOnFailureListener { toast("Scan kamera tidak bisa dibuka. Ketik nomor resi.") }
-    }
+    /**
+     * Opens the app's own label scanner ([ScanScreen]). It runs on the bundled ML Kit model and CameraX, so it works
+     * without Google Play services and offline, as on a PDA. Linear codes only: the label's QR codes are never read.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    fun scanResi(activity: Activity) = go(Screen.Scan)
 
     /** A built-in scanner key (Urovo PDA): shown on home; also switched on by the first hardware scan. */
     var hardwareScanner by mutableStateOf(HardwareScanner.builtIn(Build.MANUFACTURER, Build.BRAND))
         internal set
 
     /** Screens where a hardware scan opens a parcel; they have no text field, so keyboard-output scans are read too. */
-    val takesHardwareScan get() = screen.let { it == Screen.Home || it == Screen.History || it is Screen.Guide || it is Screen.Saved || it is Screen.Detail }
+    val takesHardwareScan get() = screen.let {
+        it == Screen.Home || it == Screen.Scan || it == Screen.History || it is Screen.Guide || it is Screen.Saved || it is Screen.Detail
+    }
 
     fun onHardwareScan(raw: String) {
         hardwareScanner = true
@@ -213,13 +210,5 @@ class AppModel @JvmOverloads constructor(app: Application, preload: Boolean = tr
         val f = cacheFile("UkurAja_marker_$sheet.pdf")
         getApplication<Application>().assets.open("marker/UkurAja_marker_$sheet.pdf").use { i -> f.outputStream().use { i.copyTo(it) } }
         return f
-    }
-
-    companion object {
-        /** Every linear (1D) barcode type; QR, Data Matrix, PDF417 and Aztec (2D codes) are left out. */
-        val LINEAR_BARCODES = listOf(
-            Barcode.FORMAT_CODE_128, Barcode.FORMAT_CODE_39, Barcode.FORMAT_CODE_93, Barcode.FORMAT_CODABAR,
-            Barcode.FORMAT_EAN_13, Barcode.FORMAT_EAN_8, Barcode.FORMAT_ITF, Barcode.FORMAT_UPC_A, Barcode.FORMAT_UPC_E,
-        )
     }
 }

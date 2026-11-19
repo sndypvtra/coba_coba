@@ -50,6 +50,7 @@ fun App(model: AppModel, activity: Activity) {
                 Screen.Home -> HomeScreen(model, activity)
                 Screen.History -> HistoryScreen(model, activity)
                 Screen.Settings -> SettingsScreen(model, activity)
+                Screen.Scan -> ScanScreen(model, activity)
                 is Screen.Guide -> GuideScreen(model, activity, s.page)
                 Screen.Photo -> PhotoScreen(model, activity)
                 Screen.Weight -> WeightScreen(model)
@@ -78,7 +79,7 @@ fun CameraPermission(model: AppModel, activity: Activity, content: @Composable (
     if (!granted) {
         Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             TopBar("Izin kamera", onBack = { model.back() })
-            T("UkurAja memakai kamera untuk mengukur paket. Foto diproses di HP ini dan tidak dikirim ke mana pun. " +
+            T("UkurAja memakai kamera untuk scan resi dan mengukur paket. Foto diproses di HP ini dan tidak dikirim ke mana pun. " +
                 "Lokasi (boleh ditolak) dicatat bersama hasil ukur sebagai bukti tempat pengukuran.", 15.sp, color = C.t2)
             PrimaryButton("Izinkan kamera", "photo_camera", Modifier.fillMaxWidth()) { ask.launch(perms) }
         }

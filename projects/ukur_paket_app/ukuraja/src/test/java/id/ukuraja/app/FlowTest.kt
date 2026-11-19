@@ -119,6 +119,19 @@ class FlowTest {
         assertTrue(m.store.settings.value.photoCal.isEmpty())
     }
 
+    @Test fun theCameraScanOpensTheAppsOwnScannerAndItsResultTheParcel() {
+        val m = model()
+        // the button no longer depends on Google Play services: it opens the scanner screen in the app
+        m.scanResi(org.robolectric.Robolectric.buildActivity(MainActivity::class.java).get())
+        assertEquals(Screen.Scan, m.screen)
+        // the PDA's scan key works on the scanner screen too
+        assertTrue(m.takesHardwareScan)
+        m.onHardwareScan("TSA-80745081104\n")
+        assertEquals(Screen.Photo, m.screen)
+        assertEquals(listOf(Screen.Home, Screen.Photo), m.stack.toList())
+        assertEquals("TSA-80745081104", m.draft!!.resi)
+    }
+
     @Test fun markerSidesFromSettings() {
         val s = Settings(markerA4Mm = 158.0)
         assertEquals(0.158, s.markerSideM(1)!!, 1e-12)

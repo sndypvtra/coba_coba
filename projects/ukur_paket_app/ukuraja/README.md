@@ -12,13 +12,13 @@ fit, focus sweep). On top of that engine sits a **printed ArUco marker**. The ma
 which is the one number the photo mode had to guess. With a marker in the photo, the size is right without any
 calibration.
 
-Test APK: `../release/UkurAja-1.0.0.apk` (65 MB, app id `id.ukuraja.app`, arm64-v8a + armeabi-v7a, minSdk 26). It is
+Test APK: `../release/UkurAja-1.0.0.apk` (70 MB, app id `id.ukuraja.app`, version 1.0.0 build 2, arm64-v8a + armeabi-v7a, minSdk 26). It is
 signed with the debug key: install it directly, and use your own key for Play. Marker sheets: `../marker/UkurAja_marker_A4.pdf` and
 `UkurAja_marker_A3.pdf`; the app carries both and prints them through Android's print dialog.
 
-| Beranda | Kamera: siap foto | Kamera: belum siap | Proses | Hasil dengan marker | Hasil tanpa marker |
-|---|---|---|---|---|---|
-| ![](docs/01_beranda.png) | ![](docs/03_kamera_marker_terbaca.png) | ![](docs/04_kamera_belum_siap.png) | ![](docs/05a_proses.png) | ![](docs/05_hasil_dengan_marker.png) | ![](docs/06_hasil_tanpa_marker.png) |
+| Beranda | Scan resi | Resi terbaca | Kamera: siap foto | Kamera: belum siap | Proses | Hasil dengan marker | Hasil tanpa marker |
+|---|---|---|---|---|---|---|---|
+| ![](docs/01_beranda.png) | ![](docs/01b_scan_resi.png) | ![](docs/01c_scan_resi_terbaca.png) | ![](docs/03_kamera_marker_terbaca.png) | ![](docs/04_kamera_belum_siap.png) | ![](docs/05a_proses.png) | ![](docs/05_hasil_dengan_marker.png) | ![](docs/06_hasil_tanpa_marker.png) |
 
 **Panduan ukur** (6 steps, each with its own looping animation; swipe, tap a step number, or use Lanjut / Kembali):
 
@@ -34,7 +34,7 @@ the result is 40,0 × 30,0 × 20,0 cm (Akurat, score 100). Without it the result
 
 | Feature | How it works |
 |---|---|
-| **Scan Resi** | Google's code scanner reads linear barcodes only, so the label's QR codes are never picked up. **Ketik Resi** takes a typed number. On a Urovo PDA the scan key works too (`HardwareScanner`: Intent or keyboard output). A resi that is already measured opens its record. |
+| **Scan Resi** | The app's own scanner (`ScanScreen`): the bundled ML Kit barcode model on a CameraX preview. It needs no Google Play services and no network, so it works on a PDA without them. Only linear barcodes are read, so the label's QR codes are never picked up. Only the barcode inside the window counts, the one nearest its middle (a label carries several). Codes without a check character (Code 39, Codabar, ITF) must read the same twice. A read gives a beep and a buzz. The screen also has: a torch, with a hint when the picture is dark; tap to focus; zoom on a small barcode, up to 3×; **Ketik resi**. On a Urovo PDA the scan key works too, on the scanner screen as well (`HardwareScanner`: Intent or keyboard output). A resi that is already measured opens its record. |
 | **Ukur dengan foto** | Steps: stand at a corner of the parcel, take the photo, tap the parcel (or drag a box), read the size. **Tambah foto** from another corner gives the median of all photos. **Ulangi foto** drops a bad photo. |
 | **Panduan ukur** | Six illustrated steps for field staff, each a short looping animation:<br>1. Print the sheet, with a ruler checking the black square (A4 / A3 switch, print or share the PDF).<br>2. Place it beside the parcel, with the 5 cm gap; a **Benar / Salah** switch cycles through four wrong ways: on the parcel, folded, parcel on a table with the sheet on the floor, covered.<br>3. Stand at the corner, phone at chest height tilting to 45°.<br>4. The camera's three checks turning green.<br>5. A tap on the parcel, its cut-out and the green box drawing itself.<br>6. What Akurat / Perlu Dicek / Ukur di Hub ask the courier to do.<br>Opened from home (shown until gone through once), from Settings, and from the camera's **?** (at step 4). |
 | **Kamera** | Below the picture, never over it, three checks turn green: **Sudut**, **HP diam** and **Marker A4/A3**, with the one thing to do next ("Miringkan HP ke bawah…", "Marker terlalu kecil: dekatkan HP atau pakai A3"…). When all three are green the panel turns green and the shutter breathes. Without a marker the button says **Ambil foto tanpa marker**. The sheet is outlined on the preview. With a sheet in the photo, the focus sweep (up to 6 s of holding still) is skipped. |
@@ -47,6 +47,8 @@ the result is 40,0 × 30,0 × 20,0 cm (Akurat, score 100). Without it the result
 | **Riwayat** | Search by resi; detail; delete; **Ukur ulang** replaces the record. |
 | **Ekspor** | **CSV** (semicolon-separated with decimal commas, UTF-8 with BOM, so Excel and Sheets open it as columns). **ZIP**: the CSV plus every evidence photo, `foto/<resi>_<time>.jpg`, named in the CSV. **Data foto untuk analisis (ZIP)**: the raw photo sessions for a PC: photos, masks, depth maps, `shot_N.json` with the markers' corners. |
 | **Pengaturan** | Operator name and volumetric divisor. The printed marker sides as measured with a ruler (a printer that shrinks the page is corrected here). Print or share the sheets. Learning from marker photos on/off, and reset. |
+
+**Build 2 (still 1.0.0).** Up to build 1, **Scan pakai kamera** used the Google Play services code scanner. That scanner fails on a phone without Play services, or until its module has been downloaded over the network. On the PDA it answered only "Scan kamera tidak bisa dibuka". Build 2 reads the label in the app (`scan/ResiReader.kt`, `scan/ScanCamera.kt`, tested in `ResiReaderTest`), and installs over build 1 (same key).
 
 Left out on purpose (they stay in UkurPaket):
 - ARCore measuring and its device check;
@@ -131,7 +133,7 @@ marker's corners.
 
 ```bash
 ./gradlew :ukuraja:assembleRelease     # ukuraja/build/outputs/apk/release/ukuraja-release.apk
-./gradlew :ukuraja:testDebugUnitTest   # flow, export and screenshot tests (screenshots into ukuraja/screenshots/)
+./gradlew :ukuraja:testDebugUnitTest   # flow, scanner, export and screenshot tests (screenshots into ukuraja/screenshots/)
 ./gradlew :core:testDebugUnitTest      # the engine's marker tests
 python tools/marker/make_marker_pdf.py marker   # the sheets (reportlab), also copied into ukuraja/src/main/assets/marker/
 ```

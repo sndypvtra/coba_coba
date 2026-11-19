@@ -28,6 +28,17 @@ import id.ukuraja.app.ui.PhotoFlow
 import id.ukuraja.app.ui.PhotoOutcome
 import id.ukuraja.app.ui.PhotoShotUi
 import id.ukuraja.app.ui.PhotoShotView
+import id.ukuraja.app.ui.ScanChrome
+import id.ukuraja.app.scan.Hint
+import id.ukuraja.app.scan.ResiReader
+import id.ukuraja.app.scan.ScanStep
+import id.ukuraja.app.scan.Seen
+import com.google.mlkit.vision.barcode.common.Barcode
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.MultiFormatWriter
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Typeface
 import id.ukuraja.app.ui.Screen
 import id.ukuraja.app.ui.UkurAjaTheme
 import id.ukurpaket.app.marker.Aruco
@@ -96,6 +107,36 @@ class ScreenshotTest {
         return Measured(pic, full, shot, r)
     }
 
+    /**
+     * A parcel label held up to the scanner (the preview, 3:4): the resi's Code 128 in the window, the order number's
+     * barcode above it and a QR code beside. Returns the picture and the two barcodes' boxes as fractions.
+     */
+    private fun labelPhoto(): Triple<Bitmap, Seen, Seen> {
+        val w = 960; val h = 1280
+        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        val c = Canvas(bmp)
+        c.drawColor(0xFFB98B5A.toInt())                                   // carton
+        val p = Paint(Paint.ANTI_ALIAS_FLAG)
+        p.color = 0xFFFCFCF8.toInt(); c.drawRect(40f, 150f, 920f, 1180f, p)  // the label
+        fun bars(text: String, x: Float, y: Float, bw: Float, bh: Float): Seen {
+            val m = MultiFormatWriter().encode(text, BarcodeFormat.CODE_128, 0, 1)
+            val unit = bw / m.width
+            p.color = 0xFF111111.toInt()
+            for (i in 0 until m.width) if (m.get(i, 0)) c.drawRect(x + i * unit, y, x + (i + 1) * unit, y + bh, p)
+            return Seen(text, Barcode.FORMAT_CODE_128, x / w, y / h, (x + bw) / w, (y + bh) / h)
+        }
+        val order = bars("ORD99120034", 90f, 205f, 420f, 90f)
+        p.typeface = Typeface.DEFAULT_BOLD; p.textSize = 30f; c.drawText("No. Order ORD99120034", 90f, 335f, p)
+        val qr = MultiFormatWriter().encode("https://anteraja.id", BarcodeFormat.QR_CODE, 0, 0)
+        val qs = 200f / qr.width
+        for (y in 0 until qr.height) for (x in 0 until qr.width) if (qr.get(x, y)) c.drawRect(680 + x * qs, 170 + y * qs, 680 + (x + 1) * qs, 170 + (y + 1) * qs, p)
+        val resi = bars("TSA-80745081104", 110f, 520f, 740f, 190f)
+        p.textSize = 44f; c.drawText("TSA-80745081104", 300f, 770f, p)
+        p.typeface = Typeface.DEFAULT; p.textSize = 30f; p.color = 0xFF333333.toInt()
+        listOf("Penerima: Budi S.", "Jl. Melati No. 12, Bekasi Timur", "Berat: 2,4 kg · REG").forEachIndexed { i, t -> c.drawText(t, 90f, 880f + i * 50, p) }
+        return Triple(bmp, order, resi)
+    }
+
     private fun records(dir: File, evidence: File?): List<Measurement> {
         val now = System.currentTimeMillis()
         return listOf(
@@ -129,6 +170,22 @@ class ScreenshotTest {
         records(dir, ev).forEach { m.store.save(it) }
         m.store.update { it.copy(operator = "Andi · Counter Bekasi") }
         screen("01_beranda", m, Screen.Home)
+        // the label scanner: aiming (the order number's barcode is outside the window, so it is not taken), then read
+        val (label, order, resiBox) = labelPhoto()
+        val aiming = ResiReader().offer(listOf(order), 0)
+        assertEquals(Hint.MOVE_INTO_WINDOW, aiming.hint)
+        shot("01b_scan_resi") {
+            ScanChrome(ScanStep(null, null, emptyList(), Hint.AIM), true, true, false, false, null, {}, {}, {}) {
+                Image(label.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            }
+        }
+        val read = ResiReader().offer(listOf(order, resiBox), 0)
+        assertEquals("TSA-80745081104", read.resi)
+        shot("01c_scan_resi_terbaca") {
+            ScanChrome(read, true, true, false, false, null, {}, {}, {}) {
+                Image(label.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            }
+        }
         listOf("siapkan", "taruh", "posisi", "foto", "ketuk", "hasil").forEachIndexed { i, n -> screen("02_panduan_ukur_${i + 1}_$n", m, Screen.Guide(i)) }
         shot("02_panduan_ukur_2_contoh_salah") { GuideScreen(m, LocalContext.current as Activity, 1, showWrong = true) }
 

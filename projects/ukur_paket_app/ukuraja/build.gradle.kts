@@ -15,7 +15,7 @@ android {
         applicationId = "id.ukuraja.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
+        versionCode = 2          // 1.0.0 build 2: the in-app label scanner
         versionName = "1.0.0"
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
     }
@@ -48,7 +48,12 @@ android {
 
 dependencies {
     implementation(project(":core"))
-    implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
+    // The label scanner runs in the app: ML Kit's barcode model is bundled in the APK (no Google Play services, no
+    // download, works offline), on a CameraX preview and analysis stream.
+    implementation("com.google.mlkit:barcode-scanning:17.3.0")
+    implementation("androidx.camera:camera-camera2:1.4.1")
+    implementation("androidx.camera:camera-lifecycle:1.4.1")
+    implementation("androidx.camera:camera-view:1.4.1")
 
     implementation(platform("androidx.compose:compose-bom:2024.12.01"))
     implementation("androidx.compose.ui:ui")
@@ -66,6 +71,7 @@ dependencies {
     testImplementation("io.github.takahirom.roborazzi:roborazzi:1.40.1")
     testImplementation("io.github.takahirom.roborazzi:roborazzi-compose:1.40.1")
     testImplementation("androidx.compose.ui:ui-test-junit4")
+    testImplementation("com.google.zxing:core:3.5.3")   // draws the label's barcodes for the scanner screenshot
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
 
